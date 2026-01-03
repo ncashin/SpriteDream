@@ -167,16 +167,74 @@
             };
         }
         
-        // Listen for messages from the extension
+        // Bridge messages between iframe and extension
+        const iframe = document.getElementById('viteFrame');
+        let requestIdCounter = 0;
+        const pendingRequests = new Map();
+
+        // Single message handler that routes messages from iframe and extension
         window.addEventListener('message', event => {
             const message = event.data;
-            console.log('Received message from extension:', message);
+            const isFromIframe = event.source === iframe.contentWindow;
             
-            if (message.command === 'viteRestarted') {
-                showStatus('Server restarted successfully', 'success');
-                const iframe = document.getElementById('viteFrame');
-                iframe.src = iframe.src;
-                checkServer();
+            if (isFromIframe) {
+                // Messages from the iframe - forward file operations to extension
+                if (message.command === 'readFile' || 
+                    message.command === 'writeFile' || 
+                    message.command === 'listFiles' || 
+                    message.command === 'getWorkspaceRoot') {
+                    
+                    // Generate request ID if not provided
+                    if (!message.requestId) {
+                        message.requestId = `req_${++requestIdCounter}`;
+                    }
+                    
+                    // Store callback info to forward response back to iframe
+                    pendingRequests.set(message.requestId, {
+                        command: message.command,
+                        resolve: (response) => {
+                            iframe.contentWindow.postMessage({
+                                command: message.command + 'Response',
+                                requestId: message.requestId,
+                                ...response
+                            }, '*');
+                        }
+                    });
+                    
+                    // Forward to extension
+                    vscode.postMessage(message);
+                }
+            } else {
+                // Messages from the extension (VS Code webview API)
+                // Handle extension responses
+                if (message.command && message.command.endsWith('Response') && message.requestId) {
+                    const request = pendingRequests.get(message.requestId);
+                    if (request) {
+                        request.resolve({
+                            success: message.success,
+                            content: message.content,
+                            files: message.files,
+                            root: message.root,
+                            error: message.error
+                        });
+                        pendingRequests.delete(message.requestId);
+                    }
+                }
+                
+                // Handle other extension messages
+                if (message.command === 'viteRestarted') {
+                    showStatus('Server restarted successfully', 'success');
+                    const iframe = document.getElementById('viteFrame');
+                    iframe.src = iframe.src;
+                    checkServer();
+                }
+                
+                if (message.command === 'openScene') {
+                    iframe.contentWindow.postMessage({
+                        command: 'openScene',
+                        path: message.path
+                    }, '*');
+                }
             }
         });
         

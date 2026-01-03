@@ -1,7 +1,4 @@
 {
-  "scripts": [
-    "src/main.ts"
-  ],
   "gameState": {
     "player": {
       "name": "Player1",
