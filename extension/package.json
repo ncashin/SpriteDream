@@ -11,7 +11,9 @@
   ],
   "activationEvents": [
     "onCommand:natstack.helloWorld",
-    "onCommand:natstack.showWebView"
+    "onCommand:natstack.showWebView",
+    "onCommand:natstack.stopVite",
+    "onCommand:natstack.restartVite"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -22,7 +24,15 @@
       },
       {
         "command": "natstack.showWebView",
-        "title": "Show WebView"
+        "title": "Show NatStack Runtime"
+      },
+      {
+        "command": "natstack.stopVite",
+        "title": "Stop Vite Dev Server"
+      },
+      {
+        "command": "natstack.restartVite",
+        "title": "Restart Vite Dev Server"
       }
     ]
   },

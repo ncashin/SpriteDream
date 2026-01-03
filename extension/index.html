@@ -3,63 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebView Content</title>
+    <title>NatStack Runtime</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
             background-color: var(--vscode-editor-background);
             color: var(--vscode-editor-foreground);
+            font-family: var(--vscode-font-family);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
-        h1 {
-            color: var(--vscode-textLink-foreground);
+        
+        .controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
+            background: var(--vscode-editor-background);
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid var(--vscode-panel-border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
+        
+        .controls button {
+            padding: 6px 12px;
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: var(--vscode-font-family);
+        }
+        
+        .controls button:hover {
+            background: var(--vscode-button-hoverBackground);
+        }
+        
+        .status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+            background: var(--vscode-editor-background);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--vscode-panel-border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .status.error {
+            color: var(--vscode-errorForeground);
+            border-color: var(--vscode-errorBorder);
+        }
+        
+        .status.success {
+            color: var(--vscode-charts-green);
+            border-color: var(--vscode-charts-green);
+        }
+        
+        .status.warning {
+            color: var(--vscode-charts-orange);
+            border-color: var(--vscode-charts-orange);
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100vh;
+            border: none;
+            display: block;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 999;
+        }
+        
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--vscode-panel-border);
+            border-top: 3px solid var(--vscode-textLink-foreground);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to the WebView!</h1>
-        <p>This is an HTML page displayed inside a VS Code extension webview tab.</p>
-        <p>You can add any HTML content here, including interactive elements.</p>
-        
-        <div>
-            <h2>Features</h2>
-            <ul>
-                <li>Styled with VS Code theme variables</li>
-                <li>Responsive design</li>
-                <li>Can communicate with the extension</li>
-            </ul>
-        </div>
-
-        <div>
-            <h2>Example Interaction</h2>
-            <button onclick="showMessage()">Click me!</button>
-            <p id="message"></p>
-        </div>
-    </div>
+    <iframe 
+        id="viteFrame"
+        src="http://localhost:5173" 
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals">
+    </iframe>
 
     <script>
         const vscode = acquireVsCodeApi();
         
-        function showMessage() {
-            const message = document.getElementById('message');
-            message.textContent = 'Button was clicked! This could communicate with the extension.';
-            
-            // Example of sending a message to the extension
-            vscode.postMessage({
-                command: 'buttonClicked',
-                text: 'Hello from the webview!'
-            });
+        function restartVite() {
+            showStatus('Restarting server...', 'warning');
+            showLoading(true);
+            vscode.postMessage({ command: 'restartVite' });
         }
-
+        
+        function reloadFrame() {
+            const iframe = document.getElementById('viteFrame');
+            iframe.src = iframe.src;
+            showStatus('Reloading...', 'warning');
+        }
+        
+        function openInBrowser() {
+            vscode.postMessage({ command: 'openInBrowser' });
+        }
+        
+        function showStatus(message, type = '') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+        
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            loading.className = show ? 'loading' : 'loading hidden';
+        }
+        
+        function checkServer() {
+            const iframe = document.getElementById('viteFrame');
+            
+            // Check if iframe can load
+            iframe.onload = () => {
+                showLoading(false);
+                showStatus('Server running at http://localhost:5173', 'success');
+            };
+            
+            iframe.onerror = () => {
+                showLoading(false);
+                showStatus('Failed to connect to server', 'error');
+            };
+        }
+        
         // Listen for messages from the extension
         window.addEventListener('message', event => {
             const message = event.data;
             console.log('Received message from extension:', message);
+            
+            if (message.command === 'viteRestarted') {
+                showStatus('Server restarted successfully', 'success');
+                const iframe = document.getElementById('viteFrame');
+                iframe.src = iframe.src;
+                checkServer();
+            }
+        });
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            checkServer();
         });
     </script>
 </body>
