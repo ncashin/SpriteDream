@@ -10,29 +10,17 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:natstack.helloWorld",
-    "onCommand:natstack.showWebView",
-    "onCommand:natstack.stopVite",
-    "onCommand:natstack.restartVite"
+    "onLanguage:scene",
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
+    "languages": [
       {
-        "command": "natstack.helloWorld",
-        "title": "Hello World"
-      },
-      {
-        "command": "natstack.showWebView",
-        "title": "Show NatStack Runtime"
-      },
-      {
-        "command": "natstack.stopVite",
-        "title": "Stop Vite Dev Server"
-      },
-      {
-        "command": "natstack.restartVite",
-        "title": "Restart Vite Dev Server"
+        "id": "scene",
+        "aliases": ["Scene", "scene"],
+        "extensions": [".scene"],
+        "configuration": "./language-configuration.json"
       }
     ]
   },
