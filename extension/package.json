@@ -22,6 +22,18 @@
         "extensions": [".scene"],
         "configuration": "./language-configuration.json"
       }
+    ],
+    "customEditors": [
+      {
+        "viewType": "natstack.sceneEditor",
+        "displayName": "Scene Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.scene"
+          }
+        ],
+        "priority": "default"
+      }
     ]
   },
   "scripts": {

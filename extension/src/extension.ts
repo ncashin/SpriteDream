@@ -1,18 +1,187 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { spawn } from 'child_process';
 
 let viteProcess: any = null;
-let webviewPanel: vscode.WebviewPanel | null = null;
 
-export function activate(context: vscode.ExtensionContext) {
-    function startViteServer() {
+class SceneEditorProvider implements vscode.CustomTextEditorProvider {
+    private static readonly viewType = 'natstack.sceneEditor';
+
+    constructor(private context: vscode.ExtensionContext) {}
+
+    public static register(context: vscode.ExtensionContext): vscode.Disposable {
+        const provider = new SceneEditorProvider(context);
+        return vscode.window.registerCustomEditorProvider(
+            SceneEditorProvider.viewType,
+            provider,
+            {
+                webviewOptions: {
+                    retainContextWhenHidden: true,
+                },
+                supportsMultipleEditorsPerDocument: false,
+            }
+        );
+    }
+
+    public async resolveCustomTextEditor(
+        document: vscode.TextDocument,
+        webviewPanel: vscode.WebviewPanel,
+        _token: vscode.CancellationToken
+    ): Promise<void> {
+        await this.startViteServer();
+
+        // Setup webview
+        webviewPanel.webview.options = {
+            enableScripts: true,
+            localResourceRoots: []
+        };
+
+        const htmlPath = path.join(this.context.extensionPath, 'index.html');
+        const html = fs.readFileSync(htmlPath, 'utf8');
+        webviewPanel.webview.html = html;
+
+        // Track if we're updating from webview to prevent feedback loop
+        let isUpdatingFromWebview = false;
+
+        // Send initial document content
+        this.updateWebview(document, webviewPanel);
+
+        // Handle document changes from outside the editor
+        const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(e => {
+            if (e.document.uri.toString() === document.uri.toString() && !isUpdatingFromWebview) {
+                this.updateWebview(document, webviewPanel);
+            }
+        });
+
+        // Handle messages from the webview
+        webviewPanel.webview.onDidReceiveMessage(async (message) => {
+            switch (message.command) {
+                case 'readFile':
+                    try {
+                        const uri = vscode.Uri.file(message.path);
+                        const doc = await vscode.workspace.openTextDocument(uri);
+                        const content = doc.getText();
+                        webviewPanel.webview.postMessage({
+                            command: 'readFileResponse',
+                            requestId: message.requestId,
+                            success: true,
+                            content: content
+                        });
+                    } catch (error: any) {
+                        webviewPanel.webview.postMessage({
+                            command: 'readFileResponse',
+                            requestId: message.requestId,
+                            success: false,
+                            error: error.message
+                        });
+                    }
+                    break;
+
+                case 'writeFile':
+                    try {
+                        const uri = vscode.Uri.file(message.path);
+                        // If updating the current document, set flag to prevent feedback loop
+                        if (uri.toString() === document.uri.toString()) {
+                            isUpdatingFromWebview = true;
+                        }
+                        const edit = new vscode.WorkspaceEdit();
+                        edit.replace(uri, new vscode.Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), message.content);
+                        await vscode.workspace.applyEdit(edit);
+                        // Reset flag after a short delay
+                        setTimeout(() => {
+                            isUpdatingFromWebview = false;
+                        }, 100);
+                        webviewPanel.webview.postMessage({
+                            command: 'writeFileResponse',
+                            requestId: message.requestId,
+                            success: true
+                        });
+                    } catch (error: any) {
+                        isUpdatingFromWebview = false;
+                        webviewPanel.webview.postMessage({
+                            command: 'writeFileResponse',
+                            requestId: message.requestId,
+                            success: false,
+                            error: error.message
+                        });
+                    }
+                    break;
+
+                case 'listFiles':
+                    try {
+                        const uri = vscode.Uri.file(message.path);
+                        const files = await vscode.workspace.fs.readDirectory(uri);
+                        webviewPanel.webview.postMessage({
+                            command: 'listFilesResponse',
+                            requestId: message.requestId,
+                            success: true,
+                            files: files
+                        });
+                    } catch (error: any) {
+                        webviewPanel.webview.postMessage({
+                            command: 'listFilesResponse',
+                            requestId: message.requestId,
+                            success: false,
+                            error: error.message
+                        });
+                    }
+                    break;
+
+                case 'getWorkspaceRoot':
+                    try {
+                        const workspaceFolders = vscode.workspace.workspaceFolders;
+                        if (workspaceFolders && workspaceFolders.length > 0) {
+                            webviewPanel.webview.postMessage({
+                                command: 'getWorkspaceRootResponse',
+                                requestId: message.requestId,
+                                success: true,
+                                root: workspaceFolders[0].uri.fsPath
+                            });
+                        } else {
+                            webviewPanel.webview.postMessage({
+                                command: 'getWorkspaceRootResponse',
+                                requestId: message.requestId,
+                                success: false,
+                                error: 'No workspace folder open'
+                            });
+                        }
+                    } catch (error: any) {
+                        webviewPanel.webview.postMessage({
+                            command: 'getWorkspaceRootResponse',
+                            requestId: message.requestId,
+                            success: false,
+                            error: error.message
+                        });
+                    }
+                    break;
+            }
+        });
+
+        // Clean up
+        webviewPanel.onDidDispose(() => {
+            changeDocumentSubscription.dispose();
+        });
+    }
+
+    private updateWebview(document: vscode.TextDocument, webviewPanel: vscode.WebviewPanel) {
+        // Send the document content to the webview
+        setTimeout(() => {
+            webviewPanel.webview.postMessage({
+                command: 'openScene',
+                path: document.fileName,
+                content: document.getText()
+            });
+        }, 500);
+    }
+
+    private async startViteServer(): Promise<void> {
         if (viteProcess) {
             return Promise.resolve();
         }
 
         return new Promise<void>((resolve) => {
-            const runtimePath = path.join(__dirname, '..', '..', 'runtime');
+            const runtimePath = path.join(this.context.extensionPath, '..', 'runtime');
             
             viteProcess = spawn('npm', ['run', 'dev'], {
                 cwd: runtimePath,
@@ -32,182 +201,15 @@ export function activate(context: vscode.ExtensionContext) {
             });
         });
     }
+}
 
-    async function showWebView(document?: vscode.TextDocument) {
-        if (webviewPanel) {
-            webviewPanel.reveal();
-            if (document) {
-                webviewPanel.webview.postMessage({
-                    command: 'openScene',
-                    path: document.fileName
-                });
-            }
-            return;
-        }
-
-        await startViteServer();
-        
-        webviewPanel = vscode.window.createWebviewPanel(
-            'webViewContent',
-            'NatStack Runtime',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-                localResourceRoots: []
-            }
-        );
-
-        const htmlPath = path.join(context.extensionPath, 'index.html');
-        const html = require('fs').readFileSync(htmlPath, 'utf8');
-        webviewPanel.webview.html = html;
-        
-        const activeEditor = vscode.window.activeTextEditor;
-        const sceneDocument = document || (activeEditor && 
-            (activeEditor.document.languageId === 'scene' || activeEditor.document.fileName.endsWith('.scene')) 
-            ? activeEditor.document 
-            : null);
-        
-        if (sceneDocument) {
-            setTimeout(() => {
-                webviewPanel?.webview.postMessage({
-                    command: 'openScene',
-                    path: sceneDocument.fileName
-                });
-            }, 1000);
-        }
-
-        // Handle messages from the webview (which forwards messages from the iframe)
-        webviewPanel.webview.onDidReceiveMessage(async (message) => {
-            switch (message.command) {
-                case 'readFile':
-                    try {
-                        const uri = vscode.Uri.file(message.path);
-                        const document = await vscode.workspace.openTextDocument(uri);
-                        const content = document.getText();
-                        webviewPanel?.webview.postMessage({
-                            command: 'readFileResponse',
-                            requestId: message.requestId,
-                            success: true,
-                            content: content
-                        });
-                    } catch (error: any) {
-                        webviewPanel?.webview.postMessage({
-                            command: 'readFileResponse',
-                            requestId: message.requestId,
-                            success: false,
-                            error: error.message
-                        });
-                    }
-                    break;
-
-                case 'writeFile':
-                    try {
-                        const uri = vscode.Uri.file(message.path);
-                        const edit = new vscode.WorkspaceEdit();
-                        edit.replace(uri, new vscode.Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), message.content);
-                        await vscode.workspace.applyEdit(edit);
-                        webviewPanel?.webview.postMessage({
-                            command: 'writeFileResponse',
-                            requestId: message.requestId,
-                            success: true
-                        });
-                    } catch (error: any) {
-                        webviewPanel?.webview.postMessage({
-                            command: 'writeFileResponse',
-                            requestId: message.requestId,
-                            success: false,
-                            error: error.message
-                        });
-                    }
-                    break;
-
-                case 'listFiles':
-                    try {
-                        const uri = vscode.Uri.file(message.path);
-                        const files = await vscode.workspace.fs.readDirectory(uri);
-                        webviewPanel?.webview.postMessage({
-                            command: 'listFilesResponse',
-                            requestId: message.requestId,
-                            success: true,
-                            files: files
-                        });
-                    } catch (error: any) {
-                        webviewPanel?.webview.postMessage({
-                            command: 'listFilesResponse',
-                            requestId: message.requestId,
-                            success: false,
-                            error: error.message
-                        });
-                    }
-                    break;
-
-                case 'getWorkspaceRoot':
-                    try {
-                        const workspaceFolders = vscode.workspace.workspaceFolders;
-                        if (workspaceFolders && workspaceFolders.length > 0) {
-                            webviewPanel?.webview.postMessage({
-                                command: 'getWorkspaceRootResponse',
-                                requestId: message.requestId,
-                                success: true,
-                                root: workspaceFolders[0].uri.fsPath
-                            });
-                        } else {
-                            webviewPanel?.webview.postMessage({
-                                command: 'getWorkspaceRootResponse',
-                                requestId: message.requestId,
-                                success: false,
-                                error: 'No workspace folder open'
-                            });
-                        }
-                    } catch (error: any) {
-                        webviewPanel?.webview.postMessage({
-                            command: 'getWorkspaceRootResponse',
-                            requestId: message.requestId,
-                            success: false,
-                            error: error.message
-                        });
-                    }
-                    break;
-            }
-        });
-
-        webviewPanel.onDidDispose(() => {
-            webviewPanel = null;
-        });
-    }
-
-    vscode.workspace.onDidOpenTextDocument((document) => {
-        if (document.languageId === 'scene' || document.fileName.endsWith('.scene')) {
-            showWebView(document);
-        }
-    });
-
-    vscode.window.onDidChangeActiveTextEditor((editor) => {
-        if (editor && (editor.document.languageId === 'scene' || editor.document.fileName.endsWith('.scene'))) {
-            if (webviewPanel) {
-                webviewPanel.webview.postMessage({
-                    command: 'openScene',
-                    path: editor.document.fileName
-                });
-            }
-        }
-    });
-
-    vscode.workspace.textDocuments.forEach((document) => {
-        if (document.languageId === 'scene' || document.fileName.endsWith('.scene')) {
-            showWebView(document);
-        }
-    });
+export function activate(context: vscode.ExtensionContext) {
+    context.subscriptions.push(SceneEditorProvider.register(context));
 }
 
 export function deactivate() {
     if (viteProcess) {
         viteProcess.kill();
         viteProcess = null;
-    }
-    if (webviewPanel) {
-        webviewPanel.dispose();
-        webviewPanel = null;
     }
 }
