@@ -386,7 +386,6 @@ registerCollider(CIRCLE_COLLIDER);
 registerResolver(BOUNCY_RESOLVER);
 
 /* CollisionObject Examples */
-// @ts-expect-error unused
 const staticRectangleObject: RectangleCollisionObject = {
   colliderName: "rectangle",
   resolverName: "static",
@@ -402,7 +401,6 @@ const staticRectangleObject: RectangleCollisionObject = {
   collisionEnabled: true,
 };
 
-// @ts-expect-error unused
 const bouncyCircleObject: CircleCollisionObject = {
   colliderName: "circle",
   resolverName: "bouncy",
