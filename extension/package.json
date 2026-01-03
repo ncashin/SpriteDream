@@ -1,7 +1,7 @@
 {
-  "name": "hello-world-extension",
-  "displayName": "Hello World Extension",
-  "description": "A minimal VS Code extension that says hello",
+  "name": "natstack",
+  "displayName": "NatStack",
+  "description": "A VS Code extension for NatStack",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.74.0"
@@ -10,14 +10,19 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:hello-world.helloWorld"
+    "onCommand:natstack.helloWorld",
+    "onCommand:natstack.showWebView"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "hello-world.helloWorld",
+        "command": "natstack.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "natstack.showWebView",
+        "title": "Show WebView"
       }
     ]
   },

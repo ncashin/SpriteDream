@@ -9,7 +9,7 @@
       "label": "npm: compile",
       "detail": "tsc -p ./",
       "options": {
-        "cwd": "${workspaceFolder}/hello-world-extension"
+        "cwd": "${workspaceFolder}/extension"
       }
     },
     {
@@ -20,7 +20,7 @@
       "label": "npm: watch",
       "detail": "tsc -watch -p ./",
       "options": {
-        "cwd": "${workspaceFolder}/hello-world-extension"
+        "cwd": "${workspaceFolder}/extension"
       }
     }
   ]

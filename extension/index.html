@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebView Content</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+        }
+        h1 {
+            color: var(--vscode-textLink-foreground);
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to the WebView!</h1>
+        <p>This is an HTML page displayed inside a VS Code extension webview tab.</p>
+        <p>You can add any HTML content here, including interactive elements.</p>
+        
+        <div>
+            <h2>Features</h2>
+            <ul>
+                <li>Styled with VS Code theme variables</li>
+                <li>Responsive design</li>
+                <li>Can communicate with the extension</li>
+            </ul>
+        </div>
+
+        <div>
+            <h2>Example Interaction</h2>
+            <button onclick="showMessage()">Click me!</button>
+            <p id="message"></p>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        
+        function showMessage() {
+            const message = document.getElementById('message');
+            message.textContent = 'Button was clicked! This could communicate with the extension.';
+            
+            // Example of sending a message to the extension
+            vscode.postMessage({
+                command: 'buttonClicked',
+                text: 'Hello from the webview!'
+            });
+        }
+
+        // Listen for messages from the extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            console.log('Received message from extension:', message);
+        });
+    </script>
+</body>
+</html>
