@@ -1,14 +1,12 @@
+import type { Vector } from "./vector";
 import {
-  Vector,
   create,
-  clone,
   add,
   sub,
   scale,
   dot,
   length,
   normalize,
-  rotate,
 } from "./vector";
 
 export type CollisionObject = {
@@ -28,7 +26,6 @@ export type ColliderDefinition<T extends CollisionObject = CollisionObject> = {
   debugDraw?: (collisionObject: T, context: CanvasRenderingContext2D) => void;
 };
 
-// objA = object associated with resolver, objB = other object involved in the collision
 export type ResolverDefinition<T extends CollisionObject = CollisionObject> = {
   name: string;
   resolveCollision: (
@@ -55,13 +52,6 @@ export const unregisterCollider = (name: string) => {
   delete colliders[name];
 };
 
-// object needs
-// - collider - normals, closestPoint for circles, calculateProjection
-// - resolver - handleCollision given overlap, normal and other object
-
-// Why is this hard just make it a big object - I want this to be json serializable which means functions make me sad and can't coexist with data
-
-// don't worry I am aware how horrifically unoptimized this is currently only for a small example
 export const handleCollisionPair = (objA: CollisionObject, objB: CollisionObject) => {
   if (!objA.collisionEnabled || !objB.collisionEnabled) return;
   
@@ -144,14 +134,13 @@ export const debugDrawColliders = (collisionObjects: CollisionObject[], context:
   });
 };
 
-/* Example Collision Object types */
 export type RectangleCollisionObject = CollisionObject & {
   position: Vector;
   width: number;
   height: number;
   color?: string;
   isColliding?: boolean;
-  velocity?: Vector;
+  velocity: Vector;
   angle: number;
   angularVelocity?: number;
 };
@@ -164,7 +153,6 @@ export type CircleCollisionObject = CollisionObject & {
   isColliding?: boolean;
 };
 
-/* Collider and Resolver Examples */
 export const RECTANGLE_COLLIDER: ColliderDefinition<RectangleCollisionObject> = {
   name: "rectangle",
   getNormals: (collisionObject, _other) => {
@@ -378,35 +366,47 @@ export const BOUNCY_RESOLVER: ResolverDefinition<CircleCollisionObject> = {
   },
 };
 
-// Register the colliders and resolvers
+export const PLATFORMER_RESOLVER: ResolverDefinition<RectangleCollisionObject> = {
+  name: "platformer",
+  resolveCollision: (objA, _objB, overlapAmount, overlapNormal) => {
+    const n = normalize(overlapNormal);
+    objA.position = add(
+      objA.position,
+      scale(n, overlapAmount)
+    );
+
+    if (!objA.velocity) {
+      objA.velocity = create(0, 0);
+    }
+
+    const vDotN = dot(objA.velocity, n);
+
+    if (vDotN < 0) {
+      objA.velocity = sub(objA.velocity, scale(n, vDotN));
+    }
+
+    if (n[1] < -0.5) {
+      objA.velocity = create(objA.velocity[0], 0);
+    }
+
+    if (Math.abs(n[1]) < 0.7) {
+      const friction = 0.8;
+      objA.velocity = scale(objA.velocity, friction);
+    }
+
+    const VELOCITY_EPSILON = 1;
+    let vx = objA.velocity[0];
+    let vy = objA.velocity[1];
+    if (Math.abs(vx) < VELOCITY_EPSILON) vx = 0;
+    if (Math.abs(vy) < VELOCITY_EPSILON) vy = 0;
+    objA.velocity = create(vx, vy);
+  },
+};
+
 registerCollider(RECTANGLE_COLLIDER);
 registerResolver(STATIC_RESOLVER);
 
 registerCollider(CIRCLE_COLLIDER);
 registerResolver(BOUNCY_RESOLVER);
 
-/* CollisionObject Examples */
-const staticRectangleObject: RectangleCollisionObject = {
-  colliderName: "rectangle",
-  resolverName: "static",
-
-  position: create(600, 300),
-  width: 300,
-  height: 100,
-  color: "#ffaa00",
-  isColliding: false,
-  velocity: create(0, 0),
-  angle: 0,
-  angularVelocity: 0,
-  collisionEnabled: true,
-};
-
-const bouncyCircleObject: CircleCollisionObject = {
-  colliderName: "circle",
-  resolverName: "bouncy",
-
-  position: create(700, 500),
-  velocity: create(0, 0),
-  radius: 10,
-  collisionEnabled: true,
-};
+registerResolver(PLATFORMER_RESOLVER);

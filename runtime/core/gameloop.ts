@@ -1,13 +1,13 @@
 
 export type CallbackId = number;
 
-const updateCallbacks: Record<CallbackId, () => void> = {};
+const updateCallbacks: Record<CallbackId, (deltaTime: number) => void> = {};
 const drawCallbacks: Record<CallbackId, () => void> = {};
 const editorCallbacks: Record<CallbackId, () => void> = {};
 
 let nextCallbackId = 1;
 
-export let updateEnabled = true;
+export let updateEnabled = false;
 export let drawEnabled = true;
 export let editorEnabled = true;
 
@@ -15,7 +15,11 @@ export const setUpdateEnabled = (enabled: boolean) => { updateEnabled = enabled;
 export const setDrawEnabled = (enabled: boolean) => { drawEnabled = enabled; };
 export const setEditorEnabled = (enabled: boolean) => { editorEnabled = enabled; };
 
-export const addUpdateCallback = (callback: () => void): CallbackId => {
+export const isUpdateEnabled = () => updateEnabled;
+export const isDrawEnabled = () => drawEnabled;
+export const isEditorEnabled = () => editorEnabled;
+
+export const addUpdateCallback = (callback: (deltaTime: number) => void): CallbackId => {
     const id = nextCallbackId++;
     updateCallbacks[id] = callback;
     return id;
@@ -57,10 +61,16 @@ export const removeEditorCallback = (id: CallbackId): boolean => {
     return false;
 };
 
-const gameloop = () => {
+let lastTime = performance.now();
+
+const gameloop = (currentTime: number) => {
+    const deltaTime = (currentTime - lastTime) / 1000;
+    lastTime = currentTime;
+    const clampedDelta = Math.min(deltaTime, 0.1);
+    
     if (updateEnabled) {
         for (const callback of Object.values(updateCallbacks)) {
-            callback();
+            callback(clampedDelta);
         }
     }
     if (drawEnabled) {
@@ -75,4 +85,7 @@ const gameloop = () => {
     }
     requestAnimationFrame(gameloop);
 }
+
+// Start the gameloop
+requestAnimationFrame(gameloop);
 

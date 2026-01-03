@@ -202,7 +202,6 @@ export const queryComponents = <const ComposedType extends Component[]>(
     (COMPONENT_TYPE_DEF) => COMPONENT_TYPE_DEF.type,
   ).reduce((previous, current) => `${previous} ${current}`);
 
-  // early return if composed pool already exists
   if (instance.composedPools[combination] !== undefined) {
     return instance.composedPools[combination];
   }
