@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "src/core/fileUtilities.ts"]
+  "include": ["source", "source/core/fileUtilities.ts"]
 }

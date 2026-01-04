@@ -2,7 +2,7 @@ import "./style.css";
 import { readFile } from "./core/fileUtilities";
 import { setSceneFile } from "./core/scene/scene";
 import { initializeEditor } from "./core/editor/editor";
-import { main } from "./entrypoint";
+import { main } from "./main";
 
 const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
 
@@ -32,3 +32,4 @@ window.addEventListener("message", async (event: MessageEvent) => {
     }
   }
 });
+
