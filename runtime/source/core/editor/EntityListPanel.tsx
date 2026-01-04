@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Entity } from '../ecs/ecs';
+import { addDrawCallback, removeDrawCallback } from '../gameloop';
 
 interface EntityListPanelProps {
   ecsContext: {
@@ -34,17 +35,30 @@ function getAllEntities(ecsContext: EntityListPanelProps['ecsContext']): Entity[
 export function EntityListPanel({ ecsContext, onEntityClick }: EntityListPanelProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [entities, setEntities] = useState<Entity[]>([]);
+  const callbackIdRef = useRef<number | null>(null);
 
+  // Update entities every frame via game loop
   useEffect(() => {
     const updateEntities = () => {
       const allEntities = getAllEntities(ecsContext);
       setEntities(allEntities);
     };
 
+    // Initial update
     updateEntities();
-    const interval = setInterval(updateEntities, 1000);
 
-    return () => clearInterval(interval);
+    // Register draw callback to update every frame (runs regardless of editorEnabled state)
+    const callbackId = addDrawCallback(() => {
+      updateEntities();
+    });
+    callbackIdRef.current = callbackId;
+
+    return () => {
+      if (callbackIdRef.current !== null) {
+        removeDrawCallback(callbackIdRef.current);
+        callbackIdRef.current = null;
+      }
+    };
   }, [ecsContext]);
 
   return (

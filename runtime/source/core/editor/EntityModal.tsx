@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import type { Component, Entity } from '../ecs/ecs';
+import { addDrawCallback, removeDrawCallback } from '../gameloop';
 
 interface EntityModalProps {
   isOpen: boolean;
@@ -19,14 +20,14 @@ export function EntityModal({ isOpen, entity, ecsContext, onClose }: EntityModal
   const [isValid, setIsValid] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const callbackIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!isOpen || !entity || !ecsContext) {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+      if (callbackIdRef.current !== null) {
+        removeDrawCallback(callbackIdRef.current);
+        callbackIdRef.current = null;
       }
       return;
     }
@@ -48,8 +49,11 @@ export function EntityModal({ isOpen, entity, ecsContext, onClose }: EntityModal
     // Update immediately
     updateEntityData();
 
-    // Update periodically
-    intervalRef.current = setInterval(updateEntityData, 500);
+    // Register draw callback to update every frame (runs regardless of editorEnabled state)
+    const callbackId = addDrawCallback(() => {
+      updateEntityData();
+    });
+    callbackIdRef.current = callbackId;
 
     // Handle Escape key
     const handleEscape = (e: KeyboardEvent) => {
@@ -61,8 +65,9 @@ export function EntityModal({ isOpen, entity, ecsContext, onClose }: EntityModal
     document.addEventListener('keydown', handleEscape);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+      if (callbackIdRef.current !== null) {
+        removeDrawCallback(callbackIdRef.current);
+        callbackIdRef.current = null;
       }
       document.removeEventListener('keydown', handleEscape);
     };
