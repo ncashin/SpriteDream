@@ -1,7 +1,8 @@
 import "./style.css";
+import "@vscode/codicons/dist/codicon.css";
 import { readFile } from "./core/fileUtilities";
 import { setSceneFile } from "./core/scene/scene";
-import { initializeEditor } from "./core/editor/editor";
+import { initializeEditor } from "./core/editor/Editor.tsx";
 import { resetAllCallbacks } from "./core/gameloop";
 import { main } from "./main";
 

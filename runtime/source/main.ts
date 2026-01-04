@@ -6,7 +6,7 @@ import {
   type SpriteComponent,
 } from "./core/sprite";
 import { inputPlugin } from "./core/input";
-import { ecsEditorPlugin } from "./core/editor/ecsEditorPlugin";
+import { ecsEditorPlugin } from "./core/editor/ecsEditorPlugin.tsx";
 import { addStartCallback } from "./core/initialization";
 import { addUpdateCallback } from "./core/gameloop";
 import type { Component } from "./core/ecs/ecs";
