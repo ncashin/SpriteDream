@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "./fileUtilities";
+import { readFile, writeFile } from "../fileUtilities";
 
 let currentScene: any = null;
 let currentFilePath: string | null = null;

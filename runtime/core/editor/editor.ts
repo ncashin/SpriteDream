@@ -1,5 +1,5 @@
 import { setEditorEnabled, setUpdateEnabled, isUpdateEnabled } from '../gameloop'
-import { setPersistenceEnabled, saveSceneSnapshot, restoreSceneFromSnapshot, getScene } from '../scene'
+import { setPersistenceEnabled, saveSceneSnapshot, restoreSceneFromSnapshot, getScene } from '../scene/scene'
 
 export function initializeEditor() {
   const editor = document.querySelector<HTMLDivElement>('#editor')

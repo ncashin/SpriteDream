@@ -1,6 +1,6 @@
 import "./style.css";
 import { readFile } from "../core/fileUtilities";
-import { setSceneFile } from "../core/scene";
+import { setSceneFile } from "../core/scene/scene";
 import { initializeEditor } from "../core/editor/editor";
 import { main } from "./entrypoint";
 
