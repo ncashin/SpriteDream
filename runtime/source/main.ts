@@ -77,7 +77,6 @@ export function main(initialContext: InitialGameContext) {
   const playerEntityId = "player";
   let playerEntity: any | null = null;
   
-  // Drag state
   let draggedEntityId: string | null = null;
   let dragStartEntityX: number = 0;
   let dragStartEntityY: number = 0;
