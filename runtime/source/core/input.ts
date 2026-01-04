@@ -12,6 +12,15 @@ export type InputState = {
       right: boolean;
     };
   };
+  drag: {
+    isDragging: boolean;
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+    offsetX: number;
+    offsetY: number;
+  };
 };
 
 export type InputAPI = {
@@ -22,6 +31,10 @@ export type InputAPI = {
     getMousePosition: () => { x: number; y: number };
     isMouseButtonPressed: (button: "left" | "middle" | "right") => boolean;
     getState: () => InputState;
+    getDragState: () => InputState["drag"];
+    startDrag: (x: number, y: number) => void;
+    updateDrag: (x: number, y: number) => void;
+    endDrag: () => void;
   };
 };
 
@@ -39,6 +52,15 @@ export function inputPlugin<T extends InitialGameContext>(
       middle: false,
       right: false,
     },
+  };
+  const drag = {
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0,
+    offsetX: 0,
+    offsetY: 0,
   };
 
   // Set up keyboard event listeners
@@ -106,7 +128,29 @@ export function inputPlugin<T extends InitialGameContext>(
           y: mouse.y,
           buttons: { ...mouse.buttons },
         },
+        drag: { ...drag },
       }),
+      getDragState: () => ({ ...drag }),
+      startDrag: (x: number, y: number) => {
+        drag.isDragging = true;
+        drag.startX = x;
+        drag.startY = y;
+        drag.currentX = x;
+        drag.currentY = y;
+        drag.offsetX = 0;
+        drag.offsetY = 0;
+      },
+      updateDrag: (x: number, y: number) => {
+        if (drag.isDragging) {
+          drag.currentX = x;
+          drag.currentY = y;
+          drag.offsetX = x - drag.startX;
+          drag.offsetY = y - drag.startY;
+        }
+      },
+      endDrag: () => {
+        drag.isDragging = false;
+      },
     },
   };
 

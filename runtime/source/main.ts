@@ -8,7 +8,7 @@ import {
 import { inputPlugin } from "./core/input";
 import { ecsEditorPlugin } from "./core/editor/ecsEditorPlugin.tsx";
 import { addStartCallback } from "./core/initialization";
-import { addUpdateCallback } from "./core/gameloop";
+import { addUpdateCallback, addEditorCallback } from "./core/gameloop";
 import type { Component } from "./core/ecs/ecs";
 import {
   PositionComponentDefinition,
@@ -56,6 +56,18 @@ function checkAABBCollision(
   return left1 < right2 && right1 > left2 && top1 < bottom2 && bottom1 > top2;
 }
 
+export type EditorDragCallback = (
+  entityId: string,
+  newX: number,
+  newY: number
+) => void;
+
+let editorDragCallback: EditorDragCallback | null = null;
+
+export function setEditorDragCallback(callback: EditorDragCallback | null) {
+  editorDragCallback = callback;
+}
+
 export function main(initialContext: InitialGameContext) {
   const gameContext = initializePlugins({
     initialContext,
@@ -64,6 +76,11 @@ export function main(initialContext: InitialGameContext) {
 
   const playerEntityId = "player";
   let playerEntity: any | null = null;
+  
+  // Drag state
+  let draggedEntityId: string | null = null;
+  let dragStartEntityX: number = 0;
+  let dragStartEntityY: number = 0;
 
   addStartCallback(() => {
     playerEntity = gameContext.ecs.getEntity(playerEntityId);
@@ -153,5 +170,63 @@ export function main(initialContext: InitialGameContext) {
         }
       }
     );
+  });
+
+  addEditorCallback(() => {
+    const mousePos = gameContext.input.getMousePosition();
+    const isMouseDown = gameContext.input.isMouseButtonPressed("left");
+    
+    if (isMouseDown && !gameContext.input.getDragState().isDragging) {
+      let clickedEntity: string | null = null;
+      
+      gameContext.ecs.runQuery(
+        [PositionComponentDefinition, SpriteComponentDefinition],
+        (entity, components) => {
+          if (clickedEntity) return;
+          
+          const [position, sprite] = components;
+          
+          const left = position.x - sprite.width / 2;
+          const right = position.x + sprite.width / 2;
+          const top = position.y - sprite.height / 2;
+          const bottom = position.y + sprite.height / 2;
+          
+          if (
+            mousePos.x >= left &&
+            mousePos.x <= right &&
+            mousePos.y >= top &&
+            mousePos.y <= bottom
+          ) {
+            clickedEntity = entity;
+            draggedEntityId = entity;
+            dragStartEntityX = position.x;
+            dragStartEntityY = position.y;
+            gameContext.input.startDrag(mousePos.x, mousePos.y);
+          }
+        }
+      );
+    }
+    
+    if (gameContext.input.getDragState().isDragging && draggedEntityId) {
+      gameContext.input.updateDrag(mousePos.x, mousePos.y);
+      const dragState = gameContext.input.getDragState();
+      
+      const entity = gameContext.ecs.getEntity(draggedEntityId);
+      if (entity && entity.position) {
+        const newX = dragStartEntityX + dragState.offsetX;
+        const newY = dragStartEntityY + dragState.offsetY;
+        entity.position.x = newX;
+        entity.position.y = newY;
+        
+        if (editorDragCallback) {
+          editorDragCallback(draggedEntityId, newX, newY);
+        }
+      }
+    }
+    
+    if (!isMouseDown && gameContext.input.getDragState().isDragging) {
+      gameContext.input.endDrag();
+      draggedEntityId = null;
+    }
   });
 }
