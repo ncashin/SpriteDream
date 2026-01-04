@@ -1,7 +1,8 @@
 import { initializePlugins, type InitialGameContext } from "./core/gameContext";
-import {  ecsPlugin } from "./core/scene/ecsAdapter";
+import { ecsPlugin } from "./core/scene/ecsAdapter";
 import { SpriteComponentDefinition, spritePlugin } from "./core/sprite";
 import { PositionComponentDefinition } from "./core/ecs/defaultComponents";
+import { addStartCallback } from "./core/initialization";
 
 export function main(initialContext: InitialGameContext) {
   const gameContext = initializePlugins({
@@ -9,23 +10,25 @@ export function main(initialContext: InitialGameContext) {
     plugins: [ecsPlugin, spritePlugin],
   });
 
-  const spriteEntity = gameContext.ecs.createEntity();
+  addStartCallback(() => {
+    const spriteEntity = gameContext.ecs.createEntity();
 
-  gameContext.ecs.addComponent(spriteEntity, {
-    ...PositionComponentDefinition,
-    x: 400,
-    y: 300,
+    gameContext.ecs.addComponent(spriteEntity, {
+      ...PositionComponentDefinition,
+      x: 400,
+      y: 300,
+    });
+
+    gameContext.ecs.addComponent(spriteEntity, {
+      ...SpriteComponentDefinition,
+      width: 64,
+      height: 64,
+      color: "#ff6b6b",
+    });
+
+    const component = document.createElement("div");
+    component.textContent = "Game started!";
+    gameContext.rootElement.appendChild(component);
+    console.log("HERE");
   });
-
-  gameContext.ecs.addComponent(spriteEntity, {
-    ...SpriteComponentDefinition,
-    width: 64,
-    height: 64,
-    color: "#ff6b6b",
-  });
-
-  const component = document.createElement("div");
-  component.textContent = "Game started!";
-  gameContext.rootElement.appendChild(component);
-  console.log("HERE");
 }
