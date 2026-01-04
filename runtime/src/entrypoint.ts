@@ -4,7 +4,7 @@ import { spritePlugin } from "./core/sprite";
 import {
   PositionComponentDefinition,
   SpriteComponentDefinition,
-} from "./core/defaultComponents";
+} from "./core/ecs/defaultComponents";
 
 export function main(initialContext: InitialGameContext) {
   const gameContext = initializePlugins({

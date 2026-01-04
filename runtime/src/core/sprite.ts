@@ -1,13 +1,25 @@
 import type { ContextExtension, RequirePlugin } from "./gameContext";
-import type { Entity } from "./ecs/ecs";
+import type { Component, Entity } from "./ecs/ecs";
 import {
   PositionComponentDefinition,
-  SpriteComponentDefinition,
   type PositionComponent,
-  type SpriteComponent,
-} from "./defaultComponents";
+} from "./ecs/defaultComponents";
 import { sceneECSPlugin } from "./scene/ecsAdapter";
 import { addDrawCallback } from "./gameloop";
+
+export type SpriteComponent = Component & {
+  type: "sprite";
+  width: number;
+  height: number;
+  color: string;
+};
+export const SpriteComponentDefinition: SpriteComponent = {
+  type: "sprite",
+  width: 32,
+  height: 32,
+  color: "#ffffff",
+} as const;
+
 
 function initializeSprite(parent: HTMLElement): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
