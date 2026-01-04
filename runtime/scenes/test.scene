@@ -4,8 +4,8 @@
       "position": {
         "player": {
           "type": "position",
-          "x": 400,
-          "y": 668
+          "x": 100,
+          "y": 300
         }
       },
       "sprite": {
@@ -13,7 +13,7 @@
           "type": "sprite",
           "width": 32,
           "height": 32,
-          "color": "#ff6b6b"
+          "color": "#ff0000"
         }
       },
       "velocity": {
@@ -21,6 +21,14 @@
           "type": "velocity",
           "x": 0,
           "y": 0
+        }
+      },
+      "player": {
+        "player": {
+          "type": "player",
+          "speed": 0,
+          "gravity": 1800,
+          "jumpStrength": 350
         }
       }
     }

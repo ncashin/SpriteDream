@@ -95,8 +95,13 @@ const createComponentReference = <ComponentType extends Component>(
   if (instance.componentPools[COMPONENT_TYPE_DEF.type] === undefined) {
     instance.componentPools[COMPONENT_TYPE_DEF.type] = {};
   }
-  instance.componentPools[COMPONENT_TYPE_DEF.type][entity] =
-    structuredClone(COMPONENT_TYPE_DEF);
+  const existingComponent = instance.componentPools[COMPONENT_TYPE_DEF.type][entity];
+  if (existingComponent) {
+    Object.assign(existingComponent, COMPONENT_TYPE_DEF);
+  } else {
+    instance.componentPools[COMPONENT_TYPE_DEF.type][entity] =
+      structuredClone(COMPONENT_TYPE_DEF);
+  }
 };
 const lookupAssociatedComposedPoolKeys = <ComponentType extends Component>(
   instance: ECSInstance,
@@ -148,8 +153,21 @@ export const getComponent = <ComponentType extends Component>(
   return lookupComponent(instance, entity, COMPONENT_TYPE_DEF);
 };
 
-const invalidateEntityCache = (instance: ECSInstance, entity: Entity) => {
-  delete instance.entityCache[entity];
+const updateEntityCacheOnAdd = (instance: ECSInstance, entity: Entity, componentType: ComponentTypeString) => {
+  const cached = instance.entityCache[entity];
+  if (cached !== undefined) {
+    const component = lookupComponentPool(instance, componentType)[entity];
+    if (component !== undefined) {
+      cached[componentType] = component;
+    }
+  }
+};
+
+const updateEntityCacheOnRemove = (instance: ECSInstance, entity: Entity, componentType: ComponentTypeString) => {
+  const cached = instance.entityCache[entity];
+  if (cached !== undefined) {
+    delete cached[componentType];
+  }
 };
 
 export const getEntity = (
@@ -183,7 +201,7 @@ export const addComponent = <ComponentType extends Component>(
   COMPONENT_TYPE_DEF: ComponentType,
 ) => {
   createComponentReference(instance, entity, COMPONENT_TYPE_DEF);
-  invalidateEntityCache(instance, entity);
+  updateEntityCacheOnAdd(instance, entity, COMPONENT_TYPE_DEF.type);
   for (const keyToUpdate of lookupAssociatedComposedPoolKeys(
     instance,
     COMPONENT_TYPE_DEF,
@@ -225,7 +243,7 @@ export const removeComponent = <ComponentType extends Component>(
     instance.removeComponentCallback(entity, COMPONENT_TYPE_DEF);
   }
   delete lookupComponentPool(instance, COMPONENT_TYPE_DEF.type)[entity];
-  invalidateEntityCache(instance, entity);
+  updateEntityCacheOnRemove(instance, entity, COMPONENT_TYPE_DEF.type);
 };
 
 export const queryComponents = <const ComposedType extends Component[]>(

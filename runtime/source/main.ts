@@ -2,21 +2,22 @@ import { initializePlugins, type InitialGameContext } from "./core/gameContext";
 import { ecsPlugin } from "./core/scene/ecsAdapter";
 import { spritePlugin } from "./core/sprite";
 import { inputPlugin } from "./core/input";
+import { ecsEditorPlugin } from "./core/editor/ecsEditorPlugin";
 import { addStartCallback } from "./core/initialization";
 import { addUpdateCallback } from "./core/gameloop";
 
 export function main(initialContext: InitialGameContext) {
   const gameContext = initializePlugins({
     initialContext,
-    plugins: [ecsPlugin, spritePlugin, inputPlugin],
+    plugins: [ecsPlugin, spritePlugin, inputPlugin, ecsEditorPlugin],
   });
 
   const playerEntityId = "player";
-  let player: any | null = null;
-  const groundY = 700;
+  let playerEntity: any | null = null;
+  const groundY = 500;
 
   addStartCallback(() => {
-    player = gameContext.ecs.getEntity(playerEntityId);
+    playerEntity = gameContext.ecs.getEntity(playerEntityId);
 
     const component = document.createElement("div");
     component.textContent = "Game started!";
@@ -24,33 +25,33 @@ export function main(initialContext: InitialGameContext) {
   });
 
   addUpdateCallback((deltaTime: number) => {
-    if (!player || !player.position || !player.velocity) return;
+    if (!playerEntity || !playerEntity.position || !playerEntity.velocity || !playerEntity.player) return;
 
-    const speed = 200;
+    const speed = playerEntity.player.speed;
     const moveDistance = speed * deltaTime;
-    const gravity = 1800;
-    const jumpStrength = 350;
+    const gravity = playerEntity.player.gravity;
+    const jumpStrength = playerEntity.player.jumpStrength;
     const groundLevel = groundY;
 
-    const isOnGround = player.position.y >= groundLevel;
+    const isOnGround = playerEntity.position.y >= groundLevel;
 
     if (gameContext.input.isKeyPressed("a")) {
-      player.position.x -= moveDistance;
+      playerEntity.position.x -= moveDistance;
     }
     if (gameContext.input.isKeyPressed("d")) {
-      player.position.x += moveDistance;
+      playerEntity.position.x += moveDistance;
     }
 
     if (gameContext.input.isKeyPressed(" ") && isOnGround) {
-      player.velocity.y = -jumpStrength;
+      playerEntity.velocity.y = -jumpStrength;
     }
 
-    player.velocity.y += gravity * deltaTime;
-    player.position.y += player.velocity.y * deltaTime;
+    playerEntity.velocity.y += gravity * deltaTime;
+    playerEntity.position.y += playerEntity.velocity.y * deltaTime;
 
-    if (player.position.y >= groundLevel) {
-      player.position.y = groundLevel;
-      player.velocity.y = 0;
+    if (playerEntity.position.y >= groundLevel) {
+      playerEntity.position.y = groundLevel;
+      playerEntity.velocity.y = 0;
     }
   });
 }

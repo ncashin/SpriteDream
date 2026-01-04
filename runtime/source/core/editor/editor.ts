@@ -102,6 +102,7 @@ export function initializeEditor() {
       initializeGame();
     }
     updateButtonText();
+    runButton.blur();
   });
 
   // Create button container

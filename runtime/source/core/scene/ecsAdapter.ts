@@ -42,7 +42,12 @@ export function ecsPlugin<T extends InitialGameContext>(
       if (!ecsData.componentPools[componentType]) {
         ecsData.componentPools[componentType] = {};
       }
-      ecsData.componentPools[componentType][entity] = JSON.parse(JSON.stringify(component));
+      const existingComponent = ecsData.componentPools[componentType][entity];
+      if (existingComponent) {
+        Object.assign(existingComponent, component);
+      } else {
+        ecsData.componentPools[componentType][entity] = JSON.parse(JSON.stringify(component));
+      }
     },
     removeComponentCallback: (entity: Entity, COMPONENT_TYPE_DEF: Component) => {
       const componentType = COMPONENT_TYPE_DEF.type;
