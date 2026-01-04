@@ -9,7 +9,7 @@ const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
 // Initialize editor
 initializeEditor();
 
-function initializeGame() {
+export function initializeGame() {
   gameRoot.innerHTML = "";
   main({rootElement: gameRoot});
 }

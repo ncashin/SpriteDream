@@ -1,8 +1,7 @@
-export type Entity = number;
+export type Entity = string;
 export type ComponentTypeString = string;
 export type Component = { type: ComponentTypeString } & Record<string, unknown>;
 export type ECSInstance = {
-  entityIDCounter: number;
   componentPools: Record<ComponentTypeString, Record<Entity, Component>>;
   composedPools: Record<ComponentTypeString, Record<Entity, Component[]>>;
   associatedComposedPoolKeys: Record<ComponentTypeString, string[]>;
@@ -39,7 +38,6 @@ export type ECSInstanceCreateInfo = {
 export const createECSInstance = (
   ecsInstanceCreateInfo: ECSInstanceCreateInfo,
 ): ECSInstance => ({
-  entityIDCounter: 0,
   componentPools: {},
   composedPools: {},
   associatedComposedPoolKeys: {},
@@ -47,8 +45,8 @@ export const createECSInstance = (
   ...ecsInstanceCreateInfo,
 });
 
-export const createEntity = (instance: ECSInstance): Entity => {
-  return instance.entityIDCounter++;
+export const createEntity = (_instance: ECSInstance, name?: string): Entity => {
+  return name || crypto.randomUUID();
 };
 export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
   for (const composedPool of Object.values(instance.componentPools)) {
@@ -222,7 +220,7 @@ export const queryComponents = <const ComposedType extends Component[]>(
   for (const [entityID, component] of Object.entries(componentPool)) {
     const composedComponents = [component];
     for (let i = 1; i < componentTypes.length; i++) {
-      const component = lookupComponent(instance, Number(entityID), {
+      const component = lookupComponent(instance, entityID, {
         type: componentTypes[i],
       });
       if (component === undefined) break;
@@ -232,10 +230,10 @@ export const queryComponents = <const ComposedType extends Component[]>(
     if (composedComponents.length < componentTypes.length) {
       continue;
     }
-    poolComponents[Number(entityID)] = composedComponents;
+    poolComponents[entityID] = composedComponents;
   }
   instance.composedPools[combination] = poolComponents;
-  return instance.composedPools[combination] as Record<number, ComposedType>;
+  return instance.composedPools[combination] as Record<string, ComposedType>;
 };
 
 export const runQuery = <const ComposedType extends Component[]>(
@@ -248,19 +246,19 @@ export const runQuery = <const ComposedType extends Component[]>(
   )) {
     if (instance.componentProxyHandler) {
       const componentProxies = components.map((component) =>
-        createComponentProxy(instance, Number.parseInt(entity), component),
+        createComponentProxy(instance, entity, component),
       ) as ComposedType;
-      lambda(Number.parseInt(entity), componentProxies);
+      lambda(entity, componentProxies);
     }
 
-    lambda(Number.parseInt(entity), components as unknown as ComposedType);
+    lambda(entity, components as unknown as ComposedType);
   }
 };
 
 export const curryECSInstance = (instance: ECSInstance) => ({
   ecsInstance: instance,
 
-  createEntity: (): Entity => createEntity(instance),
+  createEntity: (name?: string): Entity => createEntity(instance, name),
   destroyEntity: (entity: Entity) => destroyEntity(instance, entity),
 
   addComponent: <ComponentType extends Component>(

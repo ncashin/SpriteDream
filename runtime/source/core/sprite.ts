@@ -4,7 +4,7 @@ import {
   PositionComponentDefinition,
   type PositionComponent,
 } from "./ecs/defaultComponents";
-import { sceneECSPlugin } from "./scene/ecsAdapter";
+import { ecsPlugin } from "./scene/ecsAdapter";
 import { addDrawCallback } from "./gameloop";
 
 export type SpriteComponent = Component & {
@@ -21,7 +21,7 @@ export const SpriteComponentDefinition: SpriteComponent = {
 } as const;
 
 
-function initializeSprite(parent: HTMLElement): HTMLCanvasElement {
+function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -41,20 +41,15 @@ function initializeSprite(parent: HTMLElement): HTMLCanvasElement {
   return canvas;
 }
 
-export interface SpriteRenderer {
-  renderSprites: () => void;
-  clear: () => void;
-}
-
 export function spritePlugin<
-  T extends RequirePlugin<[typeof sceneECSPlugin]>
+  T extends RequirePlugin<[typeof ecsPlugin]>
 >(
   context: T
 ): ContextExtension<
   T,
   { canvas: HTMLCanvasElement; context2D: CanvasRenderingContext2D }
 > {
-  const canvas = initializeSprite(context.rootElement);
+  const canvas = initializeCanvas(context.rootElement);
   const context2D = canvas.getContext("2d");
 
   if (!context2D) {

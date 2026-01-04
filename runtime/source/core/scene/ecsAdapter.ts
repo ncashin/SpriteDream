@@ -16,7 +16,6 @@ export function ecsPlugin<T extends InitialGameContext>(
 
   if (!scene.ecs) {
     scene.ecs = {
-      entityIDCounter: 0,
       componentPools: {},
     };
   }
@@ -61,19 +60,6 @@ export function ecsPlugin<T extends InitialGameContext>(
   });
 
   ecsInstance.componentPools = ecsData.componentPools || {};
-
-  Object.defineProperty(ecsInstance, "entityIDCounter", {
-    get: () => ecsData.entityIDCounter || 0,
-    set: (value: number) => {
-      ecsData.entityIDCounter = value;
-    },
-    enumerable: true,
-    configurable: true,
-  });
-
-  if (ecsData.entityIDCounter === undefined) {
-    ecsData.entityIDCounter = 0;
-  }
 
   const ecs = curryECSInstance(ecsInstance);
 
