@@ -57,6 +57,8 @@ export function spritePlugin<
   }
 
   addDrawCallback(() => {
+    context2D.clearRect(0, 0, canvas.width, canvas.height);
+
     context.ecs.runQuery(
       [PositionComponentDefinition, SpriteComponentDefinition],
       (_entity: Entity, components: [PositionComponent, SpriteComponent]) => {
@@ -71,7 +73,7 @@ export function spritePlugin<
         );
       }
     );
-  })
+  });
 
   return {
     ...context,

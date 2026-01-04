@@ -1,0 +1,28 @@
+{
+  "ecs": {
+    "componentPools": {
+      "position": {
+        "player": {
+          "type": "position",
+          "x": 400,
+          "y": 668
+        }
+      },
+      "sprite": {
+        "player": {
+          "type": "sprite",
+          "width": 32,
+          "height": 32,
+          "color": "#ff6b6b"
+        }
+      },
+      "velocity": {
+        "player": {
+          "type": "velocity",
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  }
+}
