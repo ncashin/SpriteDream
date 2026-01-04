@@ -18,6 +18,12 @@ type AccumulatePluginResults<
     : Acc
   : Acc;
 
+export type RequirePlugin<
+  T extends readonly Plugin<any, any>[]
+> = AccumulatePluginResults<T> & {
+  ecs: ReturnType<typeof import("./ecs/ecs").curryECSInstance>;
+};
+
 export const initializePlugins = <
   T extends readonly Plugin<any, any>[]
 >({
