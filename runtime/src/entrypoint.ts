@@ -1,10 +1,10 @@
 import { initializePlugins, type InitialGameContext } from "./core/gameContext";
-import { initializeSceneECS } from "./core/scene/ecsAdapter";
+import { sceneECSPlugin as sceneECSPlugin } from "./core/scene/ecsAdapter";
 
 export function main(initialContext: InitialGameContext) {
   const gameContext = initializePlugins({
     initialContext,
-    plugins: [initializeSceneECS],
+    plugins: [sceneECSPlugin],
   });
 
   const entity = gameContext.ecs.createEntity();

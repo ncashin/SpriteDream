@@ -9,7 +9,7 @@ import {
 } from "../ecs/ecs";
 import type { InitialGameContext, ContextExtension } from "../gameContext";
 
-export function initializeSceneECS<T extends InitialGameContext>(
+export function sceneECSPlugin<T extends InitialGameContext>(
   context: T
 ): ContextExtension<T, { ecs: ReturnType<typeof curryECSInstance> }> {
   const scene = getScene();
