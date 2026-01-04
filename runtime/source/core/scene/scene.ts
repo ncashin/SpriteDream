@@ -92,19 +92,106 @@ function scheduleSave(filePath: string): void {
   }, SAVE_DEBOUNCE_MS);
 }
 
+/**
+ * Deep merges a new scene file into the existing runtime scene.
+ * Preserves all existing runtime state while incorporating new entities/components from the file.
+ */
+function mergeSceneData(existingScene: any, newSceneData: any): any {
+  if (!existingScene) return newSceneData;
+  if (!newSceneData) return existingScene;
+
+  const merged = JSON.parse(JSON.stringify(existingScene));
+
+  // Merge ECS component pools if they exist
+  if (newSceneData.ecs?.componentPools && merged.ecs?.componentPools) {
+    const existingPools = merged.ecs.componentPools;
+    const newPools = newSceneData.ecs.componentPools;
+
+    // For each component type in the new file
+    for (const componentType in newPools) {
+      if (!existingPools[componentType]) {
+        // New component type - add it entirely
+        existingPools[componentType] = JSON.parse(JSON.stringify(newPools[componentType]));
+      } else {
+        // Component type exists - merge entities
+        const existingEntities = existingPools[componentType];
+        const newEntities = newPools[componentType];
+
+        // For each entity in the new file
+        for (const entityId in newEntities) {
+          if (!existingEntities[entityId]) {
+            // New entity - add it entirely
+            existingEntities[entityId] = JSON.parse(JSON.stringify(newEntities[entityId]));
+          } else {
+            // Entity exists in both - merge component properties
+            // Keep runtime values for existing properties, add new properties from file
+            const existingComponent = existingEntities[entityId];
+            const newComponent = newEntities[entityId];
+            
+            // Ensure type property is set (required for components)
+            if (newComponent.type && !existingComponent.type) {
+              existingComponent.type = newComponent.type;
+            }
+            
+            for (const prop in newComponent) {
+              // Only add properties that don't exist in runtime (preserve runtime state)
+              if (!(prop in existingComponent)) {
+                existingComponent[prop] = newComponent[prop];
+              }
+            }
+          }
+        }
+      }
+    }
+  } else if (newSceneData.ecs?.componentPools && !merged.ecs) {
+    // New scene has ECS data but runtime doesn't - initialize it
+    merged.ecs = {
+      componentPools: JSON.parse(JSON.stringify(newSceneData.ecs.componentPools))
+    };
+  } else if (newSceneData.ecs?.componentPools && !merged.ecs.componentPools) {
+    // Runtime has ecs but no componentPools - add them
+    merged.ecs.componentPools = JSON.parse(JSON.stringify(newSceneData.ecs.componentPools));
+  }
+
+  // Merge any other top-level properties (non-ECS data)
+  for (const key in newSceneData) {
+    if (key !== 'ecs' && !(key in merged)) {
+      merged[key] = JSON.parse(JSON.stringify(newSceneData[key]));
+    }
+  }
+
+  return merged;
+}
+
 async function initializeScene(
   filePath: string,
-  content?: string
+  content?: string,
+  isReload: boolean = false
 ): Promise<void> {
   try {
     const sceneContent =
       content !== undefined ? content : await readFile(filePath);
-    currentScene = createPersistentProxy(JSON.parse(sceneContent), filePath);
+    const newSceneData = JSON.parse(sceneContent);
+
+    // If this is a reload of the same file and we have existing scene data, merge instead of replace
+    if (isReload && currentScene && currentFilePath === filePath) {
+      const mergedData = mergeSceneData(currentScene, newSceneData);
+      // Recreate proxy with merged data
+      currentScene = createPersistentProxy(mergedData, filePath);
+    } else {
+      // First load or different file - replace entirely
+      currentScene = createPersistentProxy(newSceneData, filePath);
+    }
     currentFilePath = filePath;
   } catch (error) {
     console.error("Failed to load scene:", error);
-    currentScene = createPersistentProxy(DEFAULT_SCENE, filePath);
-    currentFilePath = filePath;
+    if (isReload && currentScene && currentFilePath === filePath) {
+      // On error during reload, keep existing scene
+      console.warn("Failed to reload scene file, keeping existing runtime state");
+    } else {
+      currentScene = createPersistentProxy(DEFAULT_SCENE, filePath);
+      currentFilePath = filePath;
+    }
   }
 }
 
@@ -112,7 +199,9 @@ export async function setSceneFile(
   filePath: string,
   content?: string
 ): Promise<void> {
-  await initializeScene(filePath, content);
+  // Check if this is a reload of the same file while game is running
+  const isReload = currentScene !== null && currentFilePath === filePath;
+  await initializeScene(filePath, content, isReload);
 }
 
 export function getScene(): any {
