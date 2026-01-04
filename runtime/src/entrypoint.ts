@@ -1,9 +1,7 @@
 import { initializePlugins, type InitialGameContext } from "./core/gameContext";
 import { sceneECSPlugin as sceneECSPlugin } from "./core/scene/ecsAdapter";
 import { SpriteComponentDefinition, spritePlugin } from "./core/sprite";
-import {
-  PositionComponentDefinition,
-} from "./core/ecs/defaultComponents";
+import { PositionComponentDefinition } from "./core/ecs/defaultComponents";
 
 export function main(initialContext: InitialGameContext) {
   const gameContext = initializePlugins({
