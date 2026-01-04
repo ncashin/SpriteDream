@@ -77,10 +77,6 @@ export function main(initialContext: InitialGameContext) {
   const playerEntityId = "player";
   let playerEntity: any | null = null;
   
-  let draggedEntityId: string | null = null;
-  let dragStartEntityX: number = 0;
-  let dragStartEntityY: number = 0;
-
   addStartCallback(() => {
     playerEntity = gameContext.ecs.getEntity(playerEntityId);
     
@@ -170,6 +166,11 @@ export function main(initialContext: InitialGameContext) {
       }
     );
   });
+
+
+  let draggedEntityId: string | null = null;
+  let dragStartEntityX: number = 0;
+  let dragStartEntityY: number = 0;
 
   addEditorCallback(() => {
     const mousePos = gameContext.input.getMousePosition();
