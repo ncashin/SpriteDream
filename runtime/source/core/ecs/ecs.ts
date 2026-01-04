@@ -5,6 +5,7 @@ export type ECSInstance = {
   componentPools: Record<ComponentTypeString, Record<Entity, Component>>;
   composedPools: Record<ComponentTypeString, Record<Entity, Component[]>>;
   associatedComposedPoolKeys: Record<ComponentTypeString, string[]>;
+  entityCache: Record<Entity, Record<string, Component>>;
 
   addComponentCallback?: (entity: Entity, component: Component) => void;
   removeComponentCallback?: (
@@ -41,6 +42,7 @@ export const createECSInstance = (
   componentPools: {},
   composedPools: {},
   associatedComposedPoolKeys: {},
+  entityCache: {},
 
   ...ecsInstanceCreateInfo,
 });
@@ -59,6 +61,8 @@ export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
       delete composedPool[entity];
     }
   }
+
+  delete instance.entityCache[entity];
 
   if (instance.destroyEntityCallback) {
     instance.destroyEntityCallback(entity);
@@ -143,12 +147,43 @@ export const getComponent = <ComponentType extends Component>(
   }
   return lookupComponent(instance, entity, COMPONENT_TYPE_DEF);
 };
+
+const invalidateEntityCache = (instance: ECSInstance, entity: Entity) => {
+  delete instance.entityCache[entity];
+};
+
+export const getEntity = (
+  instance: ECSInstance,
+  entity: Entity,
+): Record<string, Component> => {
+  // Check cache first
+  const cached = instance.entityCache[entity];
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // Build entity object from all component pools
+  const entityComponents: Record<string, Component> = {};
+  for (const [componentType, componentPool] of Object.entries(
+    instance.componentPools,
+  )) {
+    const component = componentPool[entity];
+    if (component !== undefined) {
+      entityComponents[componentType] = component;
+    }
+  }
+
+  // Memoize the result
+  instance.entityCache[entity] = entityComponents;
+  return entityComponents;
+};
 export const addComponent = <ComponentType extends Component>(
   instance: ECSInstance,
   entity: Entity,
   COMPONENT_TYPE_DEF: ComponentType,
 ) => {
   createComponentReference(instance, entity, COMPONENT_TYPE_DEF);
+  invalidateEntityCache(instance, entity);
   for (const keyToUpdate of lookupAssociatedComposedPoolKeys(
     instance,
     COMPONENT_TYPE_DEF,
@@ -190,6 +225,7 @@ export const removeComponent = <ComponentType extends Component>(
     instance.removeComponentCallback(entity, COMPONENT_TYPE_DEF);
   }
   delete lookupComponentPool(instance, COMPONENT_TYPE_DEF.type)[entity];
+  invalidateEntityCache(instance, entity);
 };
 
 export const queryComponents = <const ComposedType extends Component[]>(
@@ -275,6 +311,8 @@ export const curryECSInstance = (instance: ECSInstance) => ({
     COMPONENT_TYPE_DEF: ComponentType,
   ): ComponentType | undefined =>
     getComponent(instance, entity, COMPONENT_TYPE_DEF),
+  getEntity: (entity: Entity): Record<string, Component> =>
+    getEntity(instance, entity),
   queryComponents: <const ComposedType extends Component[]>(
     COMPONENT_TYPE_DEFS: ComposedType,
   ) => queryComponents(instance, COMPONENT_TYPE_DEFS),
