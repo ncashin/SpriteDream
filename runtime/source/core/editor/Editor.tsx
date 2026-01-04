@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EditorButton } from './EditorButton';
 import { SceneDataModal } from './SceneDataModal';
@@ -27,6 +27,7 @@ let editorState: {
 export function Editor() {
   const [isSceneDataModalOpen, setIsSceneDataModalOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(isUpdateEnabled());
+  const runButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     // Update button state when updateEnabled changes externally
@@ -59,6 +60,7 @@ export function Editor() {
     }
     
     setIsRunning(!wasRunning);
+    runButtonRef.current?.blur();
   };
 
   return (
@@ -76,7 +78,7 @@ export function Editor() {
       <EditorButton onClick={() => setIsSceneDataModalOpen(true)}>
         Scene Data
       </EditorButton>
-      <EditorButton onClick={handleRunStop}>
+      <EditorButton ref={runButtonRef} onClick={handleRunStop}>
         {isRunning ? 'Stop' : 'Run'}
       </EditorButton>
       <SceneDataModal
