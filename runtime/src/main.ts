@@ -1,7 +1,7 @@
 import "./style.css";
 import { readFile } from "../core/fileUtilities";
 import { setSceneFile } from "../core/scene";
-import { initializeEditor } from "../core/editor";
+import { initializeEditor } from "../core/editor/editor";
 import { main } from "./entrypoint";
 
 const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
