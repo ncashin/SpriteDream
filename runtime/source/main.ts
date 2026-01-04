@@ -1,8 +1,7 @@
 import { initializePlugins, type InitialGameContext } from "./core/gameContext";
 import { ecsPlugin } from "./core/scene/ecsAdapter";
-import { SpriteComponentDefinition, spritePlugin } from "./core/sprite";
+import { spritePlugin } from "./core/sprite";
 import { inputPlugin } from "./core/input";
-import { PositionComponentDefinition, VelocityComponentDefinition } from "./core/ecs/defaultComponents";
 import { addStartCallback } from "./core/initialization";
 import { addUpdateCallback } from "./core/gameloop";
 
