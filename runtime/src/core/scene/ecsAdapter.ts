@@ -7,8 +7,11 @@ import {
   type Entity,
   type ComponentProxyHandler,
 } from "../ecs/ecs";
+import type { InitialGameContext, ContextExtension } from "../gameContext";
 
-export function initializeSceneECS() {
+export function initializeSceneECS<T extends InitialGameContext>(
+  context: T
+): ContextExtension<T, { ecs: ReturnType<typeof curryECSInstance> }> {
   const scene = getScene();
 
   if (!scene.ecs) {
@@ -72,6 +75,11 @@ export function initializeSceneECS() {
     ecsData.entityIDCounter = 0;
   }
 
-  return curryECSInstance(ecsInstance);
+  const ecs = curryECSInstance(ecsInstance);
+
+  return {
+    ...context,
+    ecs,
+  };
 }
 

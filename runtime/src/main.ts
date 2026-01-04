@@ -1,7 +1,7 @@
 import "./style.css";
-import { readFile } from "../core/fileUtilities";
-import { setSceneFile } from "../core/scene/scene";
-import { initializeEditor } from "../core/editor/editor";
+import { readFile } from "./core/fileUtilities";
+import { setSceneFile } from "./core/scene/scene";
+import { initializeEditor } from "./core/editor/editor";
 import { main } from "./entrypoint";
 
 const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
@@ -11,7 +11,7 @@ initializeEditor();
 
 function initializeGame() {
   gameRoot.innerHTML = "";
-  main(gameRoot);
+  main({rootElement: gameRoot});
 }
 
 window.addEventListener("message", async (event: MessageEvent) => {
