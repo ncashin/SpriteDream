@@ -62,15 +62,13 @@ export const removeEditorCallback = (id: CallbackId): boolean => {
 };
 
 let lastTime = performance.now();
-
 const gameloop = (currentTime: number) => {
     const deltaTime = (currentTime - lastTime) / 1000;
     lastTime = currentTime;
-    const clampedDelta = Math.min(deltaTime, 0.1);
     
     if (updateEnabled) {
         for (const callback of Object.values(updateCallbacks)) {
-            callback(clampedDelta);
+            callback(deltaTime);
         }
     }
     if (drawEnabled) {

@@ -1,0 +1,121 @@
+{
+  "gameState": {
+    "level": 1,
+    "difficulty": "normal",
+    "settings": {
+      "soundEnabled": true,
+      "musicEnabled": true,
+      "volume": 0.8
+    }
+  },
+  "ecs": {
+    "entityIDCounter": 3,
+    "componentPools": {
+      "position": {
+        "0": {
+          "type": "position",
+          "x": 517.3333333333334,
+          "y": 388.66666666666663
+        },
+        "1": {
+          "type": "position",
+          "x": -410.4999999999998,
+          "y": 788.9999999999999
+        },
+        "2": {
+          "type": "position",
+          "x": 810,
+          "y": 231.99999999999994
+        }
+      },
+      "velocity": {
+        "0": {
+          "type": "velocity",
+          "x": 0,
+          "y": 0
+        },
+        "2": {
+          "type": "velocity",
+          "x": 0,
+          "y": 0
+        }
+      },
+      "sprite": {
+        "0": {
+          "type": "sprite",
+          "width": 32,
+          "height": 32,
+          "color": "#00ff00"
+        },
+        "1": {
+          "type": "sprite",
+          "width": 2000,
+          "height": 100,
+          "color": "#888888"
+        },
+        "2": {
+          "type": "sprite",
+          "width": 32,
+          "height": 32,
+          "color": "#0000ff"
+        }
+      },
+      "collider": {
+        "0": {
+          "type": "collider",
+          "width": 32,
+          "height": 32,
+          "colliderName": "rectangle",
+          "resolverName": "platformer",
+          "collisionEnabled": true
+        },
+        "1": {
+          "type": "collider",
+          "width": 2000,
+          "height": 100,
+          "colliderName": "rectangle",
+          "resolverName": "static",
+          "collisionEnabled": true
+        },
+        "2": {
+          "type": "collider",
+          "width": 32,
+          "height": 32,
+          "colliderName": "rectangle",
+          "resolverName": "platformer",
+          "collisionEnabled": true
+        }
+      },
+      "player": {
+        "0": {
+          "type": "player",
+          "speed": 200,
+          "jumpForce": 400,
+          "grounded": false
+        },
+        "2": {
+          "type": "player",
+          "speed": 200,
+          "jumpForce": 400,
+          "grounded": false
+        }
+      },
+      "platform": {
+        "1": {
+          "type": "platform",
+          "static": true
+        }
+      },
+      "gravity": {
+        "0": {
+          "type": "gravity",
+          "strength": 800
+        },
+        "2": {
+          "type": "gravity",
+          "strength": 800
+        }
+      }
+    }
+  }
+}

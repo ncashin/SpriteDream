@@ -191,7 +191,7 @@ class SceneEditorProvider implements vscode.CustomTextEditorProvider {
 
             viteProcess.stdout.on('data', (data: Buffer) => {
                 const output = data.toString();
-                if (output.includes('Local:') && output.includes('5173')) {
+                if (output.includes('Local:') && output.includes('7777')) {
                     resolve();
                 }
             });

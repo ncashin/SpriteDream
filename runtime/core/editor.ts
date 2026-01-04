@@ -1,6 +1,5 @@
-import { setEditorEnabled, setUpdateEnabled, isUpdateEnabled, addEditorCallback } from './gameloop'
+import { setEditorEnabled, setUpdateEnabled, isUpdateEnabled } from './gameloop'
 import { setPersistenceEnabled, saveSceneSnapshot, restoreSceneFromSnapshot, getScene } from './scene'
-import { reloadEntities, getECSInstance, getGameCanvas, getCameraPosition, getCameraZoom, saveEntitiesToScene, type PositionComponent, type ColliderComponent } from '../src/game'
 
 export function initializeEditor() {
   const editor = document.querySelector<HTMLDivElement>('#editor')
@@ -65,20 +64,15 @@ export function initializeEditor() {
   runButton.addEventListener('click', async () => {
     const isRunning = isUpdateEnabled()
     if (isRunning) {
-      // Stop: enable editor, disable update, enable persistence, restore scene
       setEditorEnabled(true)
       setUpdateEnabled(false)
       setPersistenceEnabled(true)
       
-      // Restore scene from snapshot if we have one
       if (sceneSnapshot !== null) {
         await restoreSceneFromSnapshot(sceneSnapshot)
-        // Reload entities to reflect the restored scene
-        reloadEntities()
         sceneSnapshot = null
       }
     } else {
-      // Run: save scene snapshot, disable editor, enable update, disable persistence
       sceneSnapshot = saveSceneSnapshot()
       setEditorEnabled(false)
       setUpdateEnabled(true)
@@ -303,168 +297,4 @@ export function initializeEditor() {
   
   // Add button container to editor
   editor.appendChild(buttonContainer)
-  
-  // Set up entity drag functionality
-  setupEntityDrag()
 }
-
-function setupEntityDrag() {
-  let isDragging = false
-  let draggedEntity: number | null = null
-  let dragStartX = 0
-  let dragStartY = 0
-  let dragStartEntityX = 0
-  let dragStartEntityY = 0
-  let dragListenersAttached = false
-  
-  const POSITION_COMPONENT: PositionComponent = { type: 'position', x: 0, y: 0 }
-  const COLLIDER_COMPONENT: ColliderComponent = { 
-    type: 'collider', 
-    width: 32, 
-    height: 32, 
-    colliderName: 'rectangle',
-    resolverName: 'static',
-    collisionEnabled: true
-  }
-  
-  function attachDragListeners(canvasElement: HTMLCanvasElement) {
-    if (dragListenersAttached) return
-    dragListenersAttached = true
-    
-    // Convert screen coordinates to world coordinates
-    function screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
-      const camera = getCameraPosition()
-      const zoom = getCameraZoom()
-      // In the render system: screenX = worldX * zoom - cameraX
-      // So: worldX = (screenX + cameraX) / zoom
-      return {
-        x: (screenX + camera.x) / zoom,
-        y: (screenY + camera.y) / zoom
-      }
-    }
-    
-    // Find entity at world coordinates
-    function findEntityAt(worldX: number, worldY: number): number | null {
-      const ecs = getECSInstance()
-      if (!ecs) return null
-      
-      let foundEntity: number | null = null
-      
-      ecs.runQuery([POSITION_COMPONENT, COLLIDER_COMPONENT], (entity, [position, collider]) => {
-        if (foundEntity !== null) return // Already found one
-        
-        const left = position.x
-        const right = position.x + collider.width
-        const top = position.y
-        const bottom = position.y + collider.height
-        
-        if (worldX >= left && worldX <= right && worldY >= top && worldY <= bottom) {
-          foundEntity = entity
-        }
-      })
-      
-      return foundEntity
-    }
-    
-    // Handle mouse down
-    canvasElement.addEventListener('mousedown', (e: MouseEvent) => {
-      // Only handle left mouse button for entity dragging
-      // Panning (also left mouse button) is handled in main.ts but checks for entities first
-      if (e.button !== 0) return
-      
-      const ecs = getECSInstance()
-      const canvas = getGameCanvas()
-      if (!ecs || !canvas) return
-      
-      const rect = canvas.getBoundingClientRect()
-      const screenX = e.clientX - rect.left
-      const screenY = e.clientY - rect.top
-      const world = screenToWorld(screenX, screenY)
-      
-      const entity = findEntityAt(world.x, world.y)
-      
-      if (entity !== null) {
-        const position = ecs.getComponent(entity, POSITION_COMPONENT)
-        if (position) {
-          isDragging = true
-          draggedEntity = entity
-          dragStartX = screenX
-          dragStartY = screenY
-          dragStartEntityX = position.x
-          dragStartEntityY = position.y
-          canvasElement.style.cursor = 'grabbing'
-          e.preventDefault()
-          e.stopPropagation() // Prevent panning when dragging entity
-        }
-      }
-    })
-    
-    // Handle mouse move
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging && draggedEntity !== null) {
-        const ecs = getECSInstance()
-        const canvas = getGameCanvas()
-        if (!ecs || !canvas) return
-        
-        const rect = canvas.getBoundingClientRect()
-        const screenX = e.clientX - rect.left
-        const screenY = e.clientY - rect.top
-        
-        // Calculate screen delta
-        const screenDeltaX = screenX - dragStartX
-        const screenDeltaY = screenY - dragStartY
-        
-        // Convert screen delta to world delta by accounting for zoom
-        // When zoomed in (zoom > 1), screen movement translates to less world movement
-        // When zoomed out (zoom < 1), screen movement translates to more world movement
-        const zoom = getCameraZoom()
-        const worldDeltaX = screenDeltaX / zoom
-        const worldDeltaY = screenDeltaY / zoom
-        
-        const position = ecs.getComponent(draggedEntity, POSITION_COMPONENT)
-        if (position) {
-          position.x = dragStartEntityX + worldDeltaX
-          position.y = dragStartEntityY + worldDeltaY
-        }
-        
-        e.preventDefault()
-        e.stopPropagation()
-      }
-    }
-    
-    canvasElement.addEventListener('mousemove', handleMouseMove)
-    
-    // Handle mouse up
-    const handleMouseUp = (e: MouseEvent) => {
-      if (isDragging && draggedEntity !== null) {
-        isDragging = false
-        
-        // Save to scene after drag completes
-        const ecs = getECSInstance()
-        if (ecs) {
-          saveEntitiesToScene(ecs)
-        }
-        
-        draggedEntity = null
-        const canvas = getGameCanvas()
-        if (canvas) {
-          canvas.style.cursor = 'default'
-        }
-        e.preventDefault()
-        e.stopPropagation()
-      }
-    }
-    
-    canvasElement.addEventListener('mouseup', handleMouseUp)
-    canvasElement.addEventListener('mouseleave', handleMouseUp)
-  }
-  
-  // Add editor callback to attach drag listeners when editor is enabled
-  addEditorCallback(() => {
-    const canvas = getGameCanvas()
-    if (canvas && !dragListenersAttached) {
-      attachDragListeners(canvas)
-    }
-  })
-}
-

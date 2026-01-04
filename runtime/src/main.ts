@@ -1,68 +1,34 @@
-import './style.css'
-import { readFile, writeFile } from './fileUtilities'
+import "./style.css";
+import { readFile } from "../core/fileUtilities";
+import { setSceneFile } from "../core/scene";
+import { initializeEditor } from "../core/editor";
+import { main } from "./entrypoint";
 
-const app = document.querySelector<HTMLDivElement>('#app')!
-let currentFilePath: string | null = null
-let textarea: HTMLTextAreaElement | null = null
-let saveTimeout: ReturnType<typeof setTimeout> | null = null
+const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
 
-function displaySceneContent(content: string, filePath: string) {
-  currentFilePath = filePath
-  
-  if (textarea) {
-    // Only update if content actually changed to avoid cursor position loss
-    if (textarea.value !== content) {
-      textarea.value = content
-    }
-    return
-  }
-  
-  textarea = document.createElement('textarea')
-  textarea.value = content
-  textarea.style.width = '100%'
-  textarea.style.height = '100%'
-  textarea.style.border = 'none'
-  textarea.style.outline = 'none'
-  textarea.style.padding = '1rem'
-  textarea.style.margin = '0'
-  textarea.style.fontFamily = 'monospace'
-  textarea.style.fontSize = '14px'
-  textarea.style.resize = 'none'
-  textarea.style.boxSizing = 'border-box'
-  textarea.style.overflow = 'auto'
-  
-  textarea.addEventListener('input', () => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout)
-    }
-    
-    saveTimeout = setTimeout(async () => {
-      if (currentFilePath && textarea) {
-        try {
-          await writeFile(currentFilePath, textarea.value)
-        } catch (error) {
-          console.error('Failed to save file:', error)
-        }
-      }
-    }, 500)
-  })
-  
-  app.innerHTML = ''
-  app.appendChild(textarea)
+// Initialize editor
+initializeEditor();
+
+function initializeGame() {
+  gameRoot.innerHTML = "";
+  main(gameRoot);
 }
 
-window.addEventListener('message', async (event: MessageEvent) => {
-  if (event.data.command === 'openScene' && event.data.path) {
+window.addEventListener("message", async (event: MessageEvent) => {
+  if (event.data.command === "openScene" && event.data.path) {
     try {
-      // If content is provided directly, use it; otherwise read from file
-      const content = event.data.content !== undefined 
-        ? event.data.content 
-        : await readFile(event.data.path)
-      displaySceneContent(content, event.data.path)
+      const content =
+        event.data.content !== undefined
+          ? event.data.content
+          : await readFile(event.data.path);
+
+      await setSceneFile(event.data.path, content);
+
+      initializeGame();
     } catch (error: any) {
-      app.innerHTML = error.message || 'Failed to load scene file'
+      gameRoot.innerHTML = `<div style="padding: 2rem; color: #ff0000;">${
+        error.message || "Failed to load scene file"
+      }</div>`;
     }
   }
-})
-
-app.innerHTML = ''
+});
