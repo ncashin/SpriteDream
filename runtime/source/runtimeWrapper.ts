@@ -2,14 +2,19 @@ import "./style.css";
 import { readFile } from "./core/fileUtilities";
 import { setSceneFile } from "./core/scene/scene";
 import { initializeEditor } from "./core/editor/editor";
+import { resetAllCallbacks } from "./core/gameloop";
 import { main } from "./main";
 
 const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
 
 // Initialize editor
-initializeEditor();
 
 export function initializeGame() {
+  // Reset all update and draw callbacks before reinitializing
+  resetAllCallbacks();
+  
+  initializeEditor();
+
   gameRoot.innerHTML = "";
   main({rootElement: gameRoot});
 }

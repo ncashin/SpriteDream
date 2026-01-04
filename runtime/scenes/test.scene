@@ -11,16 +11,6 @@
           "type": "position",
           "x": 500,
           "y": 800
-        },
-        "platform1": {
-          "type": "position",
-          "x": 200,
-          "y": 500
-        },
-        "platform2": {
-          "type": "position",
-          "x": 800,
-          "y": 600
         }
       },
       "sprite": {
@@ -35,25 +25,13 @@
           "width": 1000,
           "height": 300,
           "color": "#00ff00"
-        },
-        "platform1": {
-          "type": "sprite",
-          "width": 200,
-          "height": 50,
-          "color": "#00ff00"
-        },
-        "platform2": {
-          "type": "sprite",
-          "width": 200,
-          "height": 50,
-          "color": "#00ff00"
         }
       },
       "velocity": {
         "player": {
           "type": "velocity",
           "x": 0,
-          "y": 0
+          "y": 750.0600000000002
         }
       },
       "player": {
@@ -67,12 +45,6 @@
       },
       "platform": {
         "floor": {
-          "type": "platform"
-        },
-        "platform1": {
-          "type": "platform"
-        },
-        "platform2": {
           "type": "platform"
         }
       }

@@ -61,6 +61,26 @@ export const removeEditorCallback = (id: CallbackId): boolean => {
     return false;
 };
 
+export const resetAllCallbacks = (): void => {
+    // Clear all update callbacks
+    for (const id in updateCallbacks) {
+        delete updateCallbacks[id];
+    }
+    
+    // Clear all draw callbacks
+    for (const id in drawCallbacks) {
+        delete drawCallbacks[id];
+    }
+    
+    // Clear all editor callbacks
+    for (const id in editorCallbacks) {
+        delete editorCallbacks[id];
+    }
+    
+    // Reset callback ID counter
+    nextCallbackId = 1;
+};
+
 let lastTime = performance.now();
 const gameloop = (currentTime: number) => {
     const deltaTime = (currentTime - lastTime) / 1000;
