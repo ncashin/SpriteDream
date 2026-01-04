@@ -7,6 +7,7 @@ import {
   type SpriteComponent,
 } from "./defaultComponents";
 import { sceneECSPlugin } from "./scene/ecsAdapter";
+import { addDrawCallback } from "./gameloop";
 
 function initializeSprite(parent: HTMLElement): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
@@ -39,42 +40,35 @@ export function spritePlugin<
   context: T
 ): ContextExtension<
   T,
-  { canvas: HTMLCanvasElement; spriteRenderer: SpriteRenderer }
+  { canvas: HTMLCanvasElement; context2D: CanvasRenderingContext2D }
 > {
   const canvas = initializeSprite(context.rootElement);
-  const ctx = canvas.getContext("2d");
+  const context2D = canvas.getContext("2d");
 
-  if (!ctx) {
+  if (!context2D) {
     throw new Error("Failed to get 2D rendering context from canvas");
   }
 
-  const spriteRenderer: SpriteRenderer = {
-    renderSprites: () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  addDrawCallback(() => {
+    context.ecs.runQuery(
+      [PositionComponentDefinition, SpriteComponentDefinition],
+      (_entity: Entity, components: [PositionComponent, SpriteComponent]) => {
+        const [position, sprite] = components;
 
-      context.ecs.runQuery(
-        [PositionComponentDefinition, SpriteComponentDefinition],
-        (_entity: Entity, components: [PositionComponent, SpriteComponent]) => {
-          const [position, sprite] = components;
-
-          ctx.fillStyle = sprite.color;
-          ctx.fillRect(
-            position.x - sprite.width / 2,
-            position.y - sprite.height / 2,
-            sprite.width,
-            sprite.height
-          );
-        }
-      );
-    },
-    clear: () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    },
-  };
+        context2D.fillStyle = sprite.color;
+        context2D.fillRect(
+          position.x - sprite.width / 2,
+          position.y - sprite.height / 2,
+          sprite.width,
+          sprite.height
+        );
+      }
+    );
+  })
 
   return {
     ...context,
     canvas,
-    spriteRenderer,
+    context2D,
   };
 }

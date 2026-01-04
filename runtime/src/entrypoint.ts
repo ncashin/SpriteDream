@@ -1,15 +1,31 @@
 import { initializePlugins, type InitialGameContext } from "./core/gameContext";
 import { sceneECSPlugin as sceneECSPlugin } from "./core/scene/ecsAdapter";
+import { spritePlugin } from "./core/sprite";
+import {
+  PositionComponentDefinition,
+  SpriteComponentDefinition,
+} from "./core/defaultComponents";
 
 export function main(initialContext: InitialGameContext) {
   const gameContext = initializePlugins({
     initialContext,
-    plugins: [sceneECSPlugin],
+    plugins: [sceneECSPlugin, spritePlugin],
   });
 
-  const entity = gameContext.ecs.createEntity();
-  const testComponent = { type: "TestComponent", foo: 42, bar: "baz" };
-  gameContext.ecs.addComponent(entity, testComponent);
+  const spriteEntity = gameContext.ecs.createEntity();
+
+  gameContext.ecs.addComponent(spriteEntity, {
+    ...PositionComponentDefinition,
+    x: 400,
+    y: 300,
+  });
+
+  gameContext.ecs.addComponent(spriteEntity, {
+    ...SpriteComponentDefinition,
+    width: 64,
+    height: 64,
+    color: "#ff6b6b",
+  });
 
   const component = document.createElement("div");
   component.textContent = "Game started!";
