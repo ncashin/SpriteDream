@@ -71,37 +71,45 @@ function mergeSceneData(existing: any, incoming: any): any {
 
   const merged = JSON.parse(JSON.stringify(existing));
 
-  if (incoming.ecs?.componentPools) {
-    if (!merged.ecs) merged.ecs = { componentPools: {} };
-    if (!merged.ecs.componentPools) merged.ecs.componentPools = {};
-
-    const existingPools = merged.ecs.componentPools;
-    const newPools = incoming.ecs.componentPools;
-
-    for (const componentType in newPools) {
-      if (!existingPools[componentType]) {
-        existingPools[componentType] = JSON.parse(JSON.stringify(newPools[componentType]));
-      } else {
-        for (const entityId in newPools[componentType]) {
-          if (!existingPools[componentType][entityId]) {
-            existingPools[componentType][entityId] = JSON.parse(JSON.stringify(newPools[componentType][entityId]));
-          } else {
-            const existing = existingPools[componentType][entityId];
-            const incoming = newPools[componentType][entityId];
-            for (const prop in incoming) {
-              if (!(prop in existing)) {
-                existing[prop] = incoming[prop];
-              }
-            }
-          }
-        }
-      }
+  // Merge all top-level keys, handling deletions
+  for (const key in incoming) {
+    if (isObject(incoming[key]) && isObject(merged[key])) {
+      // Recursively merge nested objects
+      merged[key] = mergeObjects(merged[key], incoming[key]);
+    } else {
+      // Replace primitive values or add new keys
+      merged[key] = JSON.parse(JSON.stringify(incoming[key]));
     }
   }
 
+  // Remove keys that exist in existing but not in incoming (complete deletions)
+  for (const key in merged) {
+    if (!(key in incoming)) {
+      delete merged[key];
+    }
+  }
+
+  return merged;
+}
+
+function mergeObjects(existing: any, incoming: any): any {
+  const merged = JSON.parse(JSON.stringify(existing));
+
+  // Merge/add all properties from incoming
   for (const key in incoming) {
-    if (key !== 'ecs' && !(key in merged)) {
+    if (isObject(incoming[key]) && isObject(merged[key])) {
+      // Recursively merge nested objects
+      merged[key] = mergeObjects(merged[key], incoming[key]);
+    } else {
+      // Replace primitive values or add new keys
       merged[key] = JSON.parse(JSON.stringify(incoming[key]));
+    }
+  }
+
+  // Remove keys that exist in existing but not in incoming (complete deletions)
+  for (const key in merged) {
+    if (!(key in incoming)) {
+      delete merged[key];
     }
   }
 
