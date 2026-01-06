@@ -43,5 +43,9 @@ if (import.meta.hot) {
   import.meta.hot.accept(() => {
     initializeGame();
   });
+  
+  import.meta.hot.on('vite:afterUpdate', () => {
+    initializeGame();
+  });
 }
 

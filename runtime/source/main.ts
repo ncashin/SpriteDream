@@ -101,7 +101,7 @@ export function main(initialContext: InitialGameContext) {
 
     const speed = playerEntity.player.speed;
     const moveDistance = speed * deltaTime;
-    const gravity = -playerEntity.player.gravity;
+    const gravity = playerEntity.player.gravity;
     const jumpStrength = playerEntity.player.jumpStrength;
 
 

@@ -10,12 +10,12 @@
         "floor": {
           "type": "position",
           "x": 500,
-          "y": 800
+          "y": 839
         },
         "platform1": {
           "type": "position",
-          "x": 200,
-          "y": 450
+          "x": 285,
+          "y": 488
         },
         "platform2": {
           "type": "position",

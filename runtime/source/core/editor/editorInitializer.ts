@@ -1,7 +1,6 @@
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Editor } from './Editor.tsx';
-import { initializePluginUI } from '../ecs/editor/ECSEditorPlugin.tsx';
 
 const ROOT_PROP = '__reactRoot__';
 
@@ -26,8 +25,7 @@ export function initializeEditor() {
 
   root.render(React.createElement(Editor));
   
-  requestAnimationFrame(() => {
-    initializePluginUI();
-  });
+  // Note: ECS editor plugin UI is initialized by the plugin itself
+  // after the game context is ready, so we don't call it here
 }
 
