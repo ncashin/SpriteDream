@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import type { Component, Entity } from '../ecs/ecs';
-import { addDrawCallback, removeDrawCallback } from '../gameloop';
+import type { Component, Entity } from '../ecs';
+import { addDrawCallback, removeDrawCallback } from '../../gameloop';
 
 interface EntityModalProps {
   isOpen: boolean;
@@ -176,5 +176,4 @@ export function EntityModal({ isOpen, entity, ecsContext, onClose }: EntityModal
     </div>
   );
 }
-
 

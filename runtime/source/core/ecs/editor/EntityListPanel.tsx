@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Entity } from '../ecs/ecs';
-import { addDrawCallback, removeDrawCallback } from '../gameloop';
+import type { Entity } from '../ecs';
+import { addDrawCallback, removeDrawCallback } from '../../gameloop';
 
 interface EntityListPanelProps {
   ecsContext: {

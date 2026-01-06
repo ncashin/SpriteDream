@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EditorButton } from './EditorButton';
 import { SceneDataModal } from './SceneDataModal';
-import { initializePluginUI } from './ecsEditorPlugin.tsx';
+import { initializePluginUI } from '../ecs/editor/ECSEditorPlugin.tsx';
 import {
   setEditorEnabled,
   setUpdateEnabled,
@@ -15,7 +15,6 @@ import {
 } from '../scene/scene';
 import { initializeGame } from '../../runtimeWrapper';
 
-// Editor state that persists across reinitializations
 let editorState: {
   sceneSnapshot: any;
   reactRoot: ReturnType<typeof createRoot> | null;
@@ -30,7 +29,6 @@ export function Editor() {
   const runButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    // Update button state when updateEnabled changes externally
     setIsRunning(isUpdateEnabled());
   }, []);
 
@@ -38,7 +36,6 @@ export function Editor() {
     const wasRunning = isUpdateEnabled();
     
     if (wasRunning) {
-      // Stop: restore from snapshot
       setEditorEnabled(true);
       setUpdateEnabled(false);
 
@@ -51,7 +48,6 @@ export function Editor() {
       setPersistenceEnabled(true);
       initializeGame();
     } else {
-      // Start: save snapshot
       editorState.sceneSnapshot = saveSceneSnapshot();
       setEditorEnabled(false);
       setUpdateEnabled(true);
@@ -96,23 +92,17 @@ export function initializeEditor() {
     return;
   }
 
-  // Ensure editor has relative positioning for absolute children
   if (getComputedStyle(editor).position === 'static') {
     editor.style.position = 'relative';
   }
 
-  // Reuse existing root or create a new one
   if (!editorState.reactRoot) {
-    // Clear editor content only on first initialization
     editor.innerHTML = '';
     editorState.reactRoot = createRoot(editor);
   }
 
-  // Render or re-render the Editor component
   editorState.reactRoot.render(<Editor />);
   
-  // Re-initialize plugin UI after editor is rendered
-  // This ensures the plugin container is recreated if it was cleared
   requestAnimationFrame(() => {
     initializePluginUI();
   });

@@ -29,13 +29,10 @@ export function SceneDataModal({ isOpen, onClose }: SceneDataModalProps) {
       }
     };
 
-    // Update immediately
     updateSceneData();
 
-    // Update periodically
     intervalRef.current = setInterval(updateSceneData, 500);
 
-    // Handle Escape key
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
