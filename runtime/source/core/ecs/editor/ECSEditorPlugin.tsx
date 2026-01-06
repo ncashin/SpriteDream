@@ -7,6 +7,7 @@ import { EntityModal } from "./EntityModal";
 import type { Entity } from "../ecs";
 
 export let ecsContext: ReturnType<typeof ecsPlugin> | null = null;
+let editorRootElement: HTMLElement | null = null;
 
 let pluginState: {
   reactRoot: ReturnType<typeof createRoot> | null;
@@ -41,14 +42,13 @@ function ECSEditorPluginUI() {
 }
 
 export function initializePluginUI() {
-  const editor = document.querySelector<HTMLDivElement>("#editor");
-  if (!editor) {
-    console.warn("Editor element not found, cannot initialize ECS editor plugin UI");
+  if (!editorRootElement) {
+    console.warn("Editor root element not found, cannot initialize ECS editor plugin UI");
     return;
   }
 
-  if (getComputedStyle(editor).position === "static") {
-    editor.style.position = "relative";
+  if (getComputedStyle(editorRootElement).position === "static") {
+    editorRootElement.style.position = "relative";
   }
 
   let pluginContainer = document.querySelector<HTMLDivElement>("#ecs-editor-plugin-container");
@@ -56,7 +56,7 @@ export function initializePluginUI() {
   if (!pluginContainer) {
     pluginContainer = document.createElement("div");
     pluginContainer.id = "ecs-editor-plugin-container";
-    editor.appendChild(pluginContainer);
+    editorRootElement.appendChild(pluginContainer);
   }
 
   if (!pluginState.reactRoot || !pluginContainer.parentElement) {
@@ -74,6 +74,7 @@ export function ecsEditorPlugin<
   context: T
 ): ContextExtension<T, {}> {
   ecsContext = context;
+  editorRootElement = context.editorRootElement;
   
   requestAnimationFrame(() => {
     initializePluginUI();
@@ -81,4 +82,18 @@ export function ecsEditorPlugin<
   
   return context;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

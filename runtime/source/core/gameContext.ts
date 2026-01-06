@@ -1,6 +1,7 @@
 
 export type InitialGameContext = {
   rootElement: HTMLElement;
+  editorRootElement: HTMLElement;
 };
 
 export type ContextExtension<T extends InitialGameContext, Extension> = T & Extension;

@@ -177,3 +177,17 @@ export function EntityModal({ isOpen, entity, ecsContext, onClose }: EntityModal
   );
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

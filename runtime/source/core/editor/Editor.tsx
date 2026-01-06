@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { createRoot } from 'react-dom/client';
 import { EditorButton } from './EditorButton';
 import { SceneDataModal } from './SceneDataModal';
-import { initializePluginUI } from '../ecs/editor/ECSEditorPlugin.tsx';
 import {
   setEditorEnabled,
   setUpdateEnabled,
@@ -17,10 +15,8 @@ import { initializeGame } from '../../runtimeWrapper';
 
 let editorState: {
   sceneSnapshot: any;
-  reactRoot: ReturnType<typeof createRoot> | null;
 } = {
   sceneSnapshot: null,
-  reactRoot: null,
 };
 
 export function Editor() {
@@ -85,25 +81,3 @@ export function Editor() {
   );
 }
 
-export function initializeEditor() {
-  const editor = document.querySelector<HTMLDivElement>('#editor');
-  if (!editor) {
-    console.error('Could not find #editor element');
-    return;
-  }
-
-  if (getComputedStyle(editor).position === 'static') {
-    editor.style.position = 'relative';
-  }
-
-  if (!editorState.reactRoot) {
-    editor.innerHTML = '';
-    editorState.reactRoot = createRoot(editor);
-  }
-
-  editorState.reactRoot.render(<Editor />);
-  
-  requestAnimationFrame(() => {
-    initializePluginUI();
-  });
-}
