@@ -56,105 +56,86 @@ class SceneEditorProvider implements vscode.CustomTextEditorProvider {
 
         // Handle messages from the webview
         webviewPanel.webview.onDidReceiveMessage(async (message) => {
-            switch (message.command) {
-                case 'readFile':
-                    try {
-                        const uri = vscode.Uri.file(message.path);
-                        const doc = await vscode.workspace.openTextDocument(uri);
-                        const content = doc.getText();
-                        webviewPanel.webview.postMessage({
-                            command: 'readFileResponse',
-                            requestId: message.requestId,
-                            success: true,
-                            content: content
-                        });
-                    } catch (error: any) {
-                        webviewPanel.webview.postMessage({
-                            command: 'readFileResponse',
-                            requestId: message.requestId,
-                            success: false,
-                            error: error.message
-                        });
-                    }
-                    break;
-
-                case 'writeFile':
-                    try {
-                        const uri = vscode.Uri.file(message.path);
-                        // If updating the current document, set flag to prevent feedback loop
-                        if (uri.toString() === document.uri.toString()) {
-                            isUpdatingFromWebview = true;
-                        }
-                        const edit = new vscode.WorkspaceEdit();
-                        edit.replace(uri, new vscode.Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), message.content);
-                        await vscode.workspace.applyEdit(edit);
-                        // Reset flag after a short delay
-                        setTimeout(() => {
-                            isUpdatingFromWebview = false;
-                        }, 100);
-                        webviewPanel.webview.postMessage({
-                            command: 'writeFileResponse',
-                            requestId: message.requestId,
-                            success: true
-                        });
-                    } catch (error: any) {
-                        isUpdatingFromWebview = false;
-                        webviewPanel.webview.postMessage({
-                            command: 'writeFileResponse',
-                            requestId: message.requestId,
-                            success: false,
-                            error: error.message
-                        });
-                    }
-                    break;
-
-                case 'listFiles':
-                    try {
-                        const uri = vscode.Uri.file(message.path);
-                        const files = await vscode.workspace.fs.readDirectory(uri);
-                        webviewPanel.webview.postMessage({
-                            command: 'listFilesResponse',
-                            requestId: message.requestId,
-                            success: true,
-                            files: files
-                        });
-                    } catch (error: any) {
-                        webviewPanel.webview.postMessage({
-                            command: 'listFilesResponse',
-                            requestId: message.requestId,
-                            success: false,
-                            error: error.message
-                        });
-                    }
-                    break;
-
-                case 'getWorkspaceRoot':
-                    try {
-                        const workspaceFolders = vscode.workspace.workspaceFolders;
-                        if (workspaceFolders && workspaceFolders.length > 0) {
+            // Handle file operation requests
+            if (message.type && message.requestId) {
+                const requestId = message.requestId;
+                
+                try {
+                    switch (message.type) {
+                        case 'readFile': {
+                            const uri = vscode.Uri.file(message.path);
+                            const doc = await vscode.workspace.openTextDocument(uri);
+                            const content = doc.getText();
                             webviewPanel.webview.postMessage({
-                                command: 'getWorkspaceRootResponse',
-                                requestId: message.requestId,
+                                type: 'readFile',
+                                requestId,
                                 success: true,
-                                root: workspaceFolders[0].uri.fsPath
+                                content
                             });
-                        } else {
-                            webviewPanel.webview.postMessage({
-                                command: 'getWorkspaceRootResponse',
-                                requestId: message.requestId,
-                                success: false,
-                                error: 'No workspace folder open'
-                            });
+                            break;
                         }
-                    } catch (error: any) {
-                        webviewPanel.webview.postMessage({
-                            command: 'getWorkspaceRootResponse',
-                            requestId: message.requestId,
-                            success: false,
-                            error: error.message
-                        });
+
+                        case 'writeFile': {
+                            const uri = vscode.Uri.file(message.path);
+                            // Prevent feedback loop if updating current document
+                            if (uri.toString() === document.uri.toString()) {
+                                isUpdatingFromWebview = true;
+                            }
+                            const edit = new vscode.WorkspaceEdit();
+                            edit.replace(uri, new vscode.Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), message.content);
+                            await vscode.workspace.applyEdit(edit);
+                            setTimeout(() => { isUpdatingFromWebview = false; }, 100);
+                            webviewPanel.webview.postMessage({
+                                type: 'writeFile',
+                                requestId,
+                                success: true
+                            });
+                            break;
+                        }
+
+                        case 'listFiles': {
+                            const uri = vscode.Uri.file(message.path);
+                            const files = await vscode.workspace.fs.readDirectory(uri);
+                            webviewPanel.webview.postMessage({
+                                type: 'listFiles',
+                                requestId,
+                                success: true,
+                                files
+                            });
+                            break;
+                        }
+
+                        case 'getWorkspaceRoot': {
+                            const workspaceFolders = vscode.workspace.workspaceFolders;
+                            if (workspaceFolders && workspaceFolders.length > 0) {
+                                webviewPanel.webview.postMessage({
+                                    type: 'getWorkspaceRoot',
+                                    requestId,
+                                    success: true,
+                                    root: workspaceFolders[0].uri.fsPath
+                                });
+                            } else {
+                                webviewPanel.webview.postMessage({
+                                    type: 'getWorkspaceRoot',
+                                    requestId,
+                                    success: false,
+                                    error: 'No workspace folder open'
+                                });
+                            }
+                            break;
+                        }
                     }
-                    break;
+                } catch (error: any) {
+                    webviewPanel.webview.postMessage({
+                        type: message.type,
+                        requestId,
+                        success: false,
+                        error: error.message
+                    });
+                    if (message.type === 'writeFile') {
+                        isUpdatingFromWebview = false;
+                    }
+                }
             }
         });
 
@@ -182,11 +163,15 @@ class SceneEditorProvider implements vscode.CustomTextEditorProvider {
 
         return new Promise<void>((resolve) => {
             const runtimePath = path.join(this.context.extensionPath, '..', 'runtime');
+            const viteBin = process.platform === 'win32' 
+                ? path.join(runtimePath, 'node_modules', '.bin', 'vite.cmd')
+                : path.join(runtimePath, 'node_modules', '.bin', 'vite');
             
-            viteProcess = spawn('npm', ['run', 'dev'], {
+            viteProcess = spawn(viteBin, [], {
                 cwd: runtimePath,
                 stdio: 'pipe',
-                shell: true
+                shell: false,
+                env: { ...process.env }
             });
 
             viteProcess.stdout.on('data', (data: Buffer) => {
@@ -196,7 +181,19 @@ class SceneEditorProvider implements vscode.CustomTextEditorProvider {
                 }
             });
 
+            viteProcess.stderr.on('data', (data: Buffer) => {
+                const output = data.toString();
+                if (output.includes('Local:') && output.includes('7777')) {
+                    resolve();
+                }
+            });
+
             viteProcess.on('close', () => {
+                viteProcess = null;
+            });
+
+            viteProcess.on('error', (error: Error) => {
+                console.error('Failed to start Vite:', error);
                 viteProcess = null;
             });
         });

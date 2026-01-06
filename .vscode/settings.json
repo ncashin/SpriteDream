@@ -1,0 +1,15 @@
+{
+  "npm.exclude": "**/runtime/**",
+  "npm.scriptExplorerExclude": "**/runtime/**",
+  "files.watcherExclude": {
+    "**/runtime/**": true
+  },
+  "search.exclude": {
+    "**/runtime/node_modules": true,
+    "**/runtime/package-lock.json": true
+  },
+  "files.exclude": {
+    "**/runtime/node_modules": true
+  }
+}
+
