@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
-import { exportToElectron } from './export';
+import { exportToTauri } from './export';
 
 let viteProcess: any = null;
 
@@ -206,8 +206,8 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(SceneEditorProvider.register(context));
     
     // Register export command
-    const exportCommand = vscode.commands.registerCommand('natstack.exportToElectron', () => {
-        exportToElectron(context);
+    const exportCommand = vscode.commands.registerCommand('natstack.exportToTauri', () => {
+        exportToTauri(context);
     });
     context.subscriptions.push(exportCommand);
 }

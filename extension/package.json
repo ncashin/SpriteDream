@@ -37,8 +37,8 @@
     ],
     "commands": [
       {
-        "command": "natstack.exportToElectron",
-        "title": "Export to Electron Runtime"
+        "command": "natstack.exportToTauri",
+        "title": "Export to Tauri Runtime"
       }
     ]
   },
