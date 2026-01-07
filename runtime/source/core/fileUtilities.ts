@@ -52,6 +52,20 @@ async function requestFileOperation<T extends FileRequest>(
 }
 
 export async function readFile(filePath: string): Promise<string> {
+    // In Tauri production, try to use Tauri's resource API
+    if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+        try {
+            const { resolveResource } = await import('@tauri-apps/api/path');
+            const { readTextFile } = await import('@tauri-apps/plugin-fs');
+            const resourcePath = await resolveResource(filePath);
+            return await readTextFile(resourcePath);
+        } catch (error) {
+            // Fall back to message-based file reading if Tauri API fails
+            console.warn('Tauri resource read failed, falling back to message API:', error);
+        }
+    }
+    
+    // Use message-based file reading (for VSCode context or fallback)
     const response = await requestFileOperation({ type: 'readFile', path: filePath });
     if (!response.success) throw new Error(response.error);
     return response.content;

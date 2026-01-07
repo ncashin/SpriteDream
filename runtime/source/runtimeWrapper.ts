@@ -26,6 +26,13 @@ export function initializeGame() {
   main({rootElement: gameRoot, editorRootElement: editorRoot});
 }
 
+// Auto-initialize game on startup in production
+if (!import.meta.env?.DEV) {
+  // In production, initialize immediately with the default scene
+  // The scene is imported via Vite's ?raw import in main.ts
+  initializeGame();
+}
+
 window.addEventListener("message", async (event: MessageEvent) => {
   if (event.data.command === "openScene" && event.data.path) {
     try {
