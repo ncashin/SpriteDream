@@ -3,16 +3,25 @@ import "@vscode/codicons/dist/codicon.css";
 import { readFile } from "./core/fileUtilities";
 import { setSceneFile } from "./core/scene/scene";
 import { initializeEditor } from "./core/editor/editorInitializer";
-import { resetAllCallbacks } from "./core/gameloop";
+import { resetAllCallbacks, setEditorEnabled, setUpdateEnabled } from "./core/gameloop";
 import { main } from "./main";
 
 const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
 const editorRoot = document.querySelector<HTMLDivElement>("#editor")!;
 
+let firstInitialization = true;
 // Initialize editor
 export function initializeGame() {
   resetAllCallbacks();
-  initializeEditor();
+  if (import.meta.env && import.meta.env.DEV) {
+    initializeEditor();
+  } else  if(firstInitialization) {
+    setEditorEnabled(false);
+    setUpdateEnabled(true);
+    
+    firstInitialization = false;
+  }
+
   gameRoot.innerHTML = "";
   main({rootElement: gameRoot, editorRootElement: editorRoot});
 }
@@ -20,10 +29,19 @@ export function initializeGame() {
 window.addEventListener("message", async (event: MessageEvent) => {
   if (event.data.command === "openScene" && event.data.path) {
     try {
-      const content =
-        event.data.content !== undefined
-          ? event.data.content
-          : await readFile(event.data.path);
+      // Only handle file loading in development mode
+      // In production, scene data comes from Vite imports via initializeGameContext
+      const isDev = import.meta.env && import.meta.env.DEV;
+      let content = event.data.content;
+      
+      if (content === undefined && isDev) {
+        // Only try to read file in development
+        content = await readFile(event.data.path);
+      } else if (content === undefined) {
+        // In production, ignore if no content provided (scene should come from import)
+        console.warn("Scene content not provided and not in dev mode, skipping file load");
+        return;
+      }
 
       await setSceneFile(event.data.path, content);
       initializeGame();

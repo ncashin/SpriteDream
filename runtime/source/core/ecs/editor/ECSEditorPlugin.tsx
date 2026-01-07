@@ -5,6 +5,7 @@ import { useState } from "react";
 import { EntityListPanel } from "./EntityListPanel";
 import { EntityModal } from "./EntityModal";
 import type { Entity } from "../ecs";
+import { isEditorEnabled } from "../../gameloop";
 
 export let ecsContext: ReturnType<typeof ecsPlugin> | null = null;
 let editorRootElement: HTMLElement | null = null;
@@ -73,6 +74,13 @@ export function ecsEditorPlugin<
 >(
   context: T
 ): ContextExtension<T, {}> {
+  if (
+    !isEditorEnabled() ||
+    !(typeof import.meta !== "undefined" && import.meta.env && import.meta.env.DEV)
+  ) {
+    return context;
+  }
+  
   ecsContext = context;
   editorRootElement = context.editorRootElement;
   

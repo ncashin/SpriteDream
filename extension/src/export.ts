@@ -235,18 +235,10 @@ function createWindow() {
         }, 500);
     });
 
-    // Log console messages from renderer
-    win.webContents.on('console-message', (event, level, message) => {
-        console.log('[Renderer ' + level + ']:', message);
-    });
-
     // Handle page load errors
     win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
         console.error('Page failed to load:', errorCode, errorDescription);
     });
-
-    // Open DevTools for debugging (uncomment to debug)
-    win.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {

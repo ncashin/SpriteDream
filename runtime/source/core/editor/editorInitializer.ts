@@ -24,8 +24,5 @@ export function initializeEditor() {
   }
 
   root.render(React.createElement(Editor));
-  
-  // Note: ECS editor plugin UI is initialized by the plugin itself
-  // after the game context is ready, so we don't call it here
 }
 

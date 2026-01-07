@@ -118,8 +118,17 @@ function mergeObjects(existing: any, incoming: any): any {
 
 async function loadScene(filePath: string, content?: string, isReload: boolean = false): Promise<void> {
   try {
-    const fileContent = content !== undefined ? content : await readFile(filePath);
-    const sceneData = JSON.parse(fileContent);
+    // In production, content must be provided (from Vite import)
+    // Never attempt to read files in production
+    if (content === undefined) {
+      const isDev = typeof import.meta !== "undefined" && import.meta.env && import.meta.env.DEV;
+      if (!isDev) {
+        throw new Error("Scene content must be provided in production mode");
+      }
+      // Only read file in development
+      content = await readFile(filePath);
+    }
+    const sceneData = JSON.parse(content);
 
     if (isReload && currentScene && currentFilePath === filePath) {
       const merged = mergeSceneData(currentScene, sceneData);

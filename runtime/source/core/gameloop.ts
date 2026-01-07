@@ -48,9 +48,16 @@ export const removeDrawCallback = (id: CallbackId): boolean => {
 };
 
 export const addEditorCallback = (callback: () => void): CallbackId => {
-    const id = nextCallbackId++;
-    editorCallbacks[id] = callback;
-    return id;
+    if (
+        typeof import.meta !== "undefined" &&
+        import.meta.env &&
+        import.meta.env.DEV
+    ) {
+        const id = nextCallbackId++;
+        editorCallbacks[id] = callback;
+        return id;
+    }
+    return -1;
 };
 
 export const removeEditorCallback = (id: CallbackId): boolean => {

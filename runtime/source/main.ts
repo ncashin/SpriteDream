@@ -1,4 +1,4 @@
-import { initializePlugins, type InitialGameContext } from "./core/gameContext";
+import { initializeGameContext as initializeGameContext, type InitialGameContext } from "./core/gameContext";
 import { ecsPlugin } from "./core/scene/ecsAdapter";
 import {
   spritePlugin,
@@ -14,6 +14,7 @@ import {
   PositionComponentDefinition,
   type PositionComponent,
 } from "./core/ecs/defaultComponents";
+import initialScene from "../scenes/default.scene?raw";
 
 export type PlatformComponent = Component & {
   type: "platform";
@@ -69,9 +70,10 @@ export function setEditorDragCallback(callback: EditorDragCallback | null) {
 }
 
 export function main(initialContext: InitialGameContext) {
-  const gameContext = initializePlugins({
+  const gameContext = initializeGameContext({
     initialContext,
     plugins: [ecsPlugin, spritePlugin, inputPlugin, ecsEditorPlugin],
+    initialScene,
   });
 
   const playerEntityId = "player";

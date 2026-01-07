@@ -1,3 +1,4 @@
+import { setSceneFile } from "./scene/scene";
 
 export type InitialGameContext = {
   rootElement: HTMLElement;
@@ -25,15 +26,25 @@ export type RequirePlugin<
   ecs: ReturnType<typeof import("./ecs/ecs").curryECSInstance>;
 };
 
-export const initializePlugins = <
+export const initializeGameContext = <
   T extends readonly Plugin<any, any>[]
 >({
   initialContext,
   plugins,
+  initialScene,
 }: {
   initialContext: InitialGameContext;
   plugins: [...T];
+  initialScene?: string;
 }): AccumulatePluginResults<T> => {
+  // Set scene data from Vite import if provided
+  // This is the only place where scene data should be initialized
+  // In production, scene data comes from Vite's bundling (import sceneData from './scenes/default.scene?raw')
+  // In development, it can also come from here or be loaded via file operations
+  if (initialScene) {
+    void setSceneFile("", initialScene);
+  }
+
   return plugins.reduce(
     (context, plugin) => plugin(context),
     initialContext

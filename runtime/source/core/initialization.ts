@@ -6,6 +6,9 @@ export function addStartCallback(callback: () => void): void {
 }
 
 export function addEditorStartCallback(callback: () => void): void {
-  if (!isEditorEnabled()) return;
+  if (
+    !isEditorEnabled() ||
+    !(typeof import.meta !== "undefined" && import.meta.env && import.meta.env.DEV)
+  ) return;
   callback();
 }
