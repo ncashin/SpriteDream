@@ -10,7 +10,6 @@ const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
 const editorRoot = document.querySelector<HTMLDivElement>("#editor")!;
 
 let firstInitialization = true;
-// Initialize editor
 export function initializeGame() {
   resetAllCallbacks();
   if (import.meta.env && import.meta.env.DEV) {
@@ -26,27 +25,19 @@ export function initializeGame() {
   main({rootElement: gameRoot, editorRootElement: editorRoot});
 }
 
-// Auto-initialize game on startup in production
 if (!import.meta.env?.DEV) {
-  // In production, initialize immediately with the default scene
-  // The scene is imported via Vite's ?raw import in main.ts
   initializeGame();
 }
 
 window.addEventListener("message", async (event: MessageEvent) => {
   if (event.data.command === "openScene" && event.data.path) {
     try {
-      // Only handle file loading in development mode
-      // In production, scene data comes from Vite imports via initializeGameContext
       const isDev = import.meta.env && import.meta.env.DEV;
       let content = event.data.content;
       
       if (content === undefined && isDev) {
-        // Only try to read file in development
         content = await readFile(event.data.path);
       } else if (content === undefined) {
-        // In production, ignore if no content provided (scene should come from import)
-        console.warn("Scene content not provided and not in dev mode, skipping file load");
         return;
       }
 
