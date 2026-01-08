@@ -148,7 +148,7 @@ export function EntityModal({ isOpen, entity, ecsContext, onClose }: EntityModal
 
   return (
     <div className="w-full flex-1 flex flex-col bg-transparent font-[var(--vscode-font-family,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif)]">
-      <div className="pl-3 pr-2 py-1 text-[0.8125rem] font-normal rounded-sm border-0 bg-transparent text-[var(--vscode-button-foreground,rgba(255,255,255,0.9))] font-[var(--vscode-font-family,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif)] outline-none box-border inline-flex items-center justify-between min-h-[22px] leading-[1.4em] w-full select-none border-b border-[var(--vscode-panel-border,rgba(128,128,128,0.2))]">
+      <div className="pl-3 pr-2 pt-1.5 pb-1.5 text-[0.8125rem] font-normal rounded-sm border-0 bg-transparent text-[var(--vscode-button-foreground,rgba(255,255,255,0.9))] font-[var(--vscode-font-family,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif)] outline-none box-border inline-flex items-center justify-between min-h-[22px] leading-[1.4em] w-full select-none border-b border-[var(--vscode-panel-border,rgba(128,128,128,0.2))]">
         <span className="text-[0.8125rem] font-normal">
           {entity}
         </span>
