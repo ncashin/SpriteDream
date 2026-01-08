@@ -64,9 +64,7 @@ export function EntityListPanel({ ecsContext, onEntityClick }: EntityListPanelPr
   return (
     <div className="w-full bg-transparent flex flex-col font-[var(--vscode-font-family,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif)]">
       <button
-        className={`px-3 py-1 text-[0.8125rem] font-normal border-0 cursor-pointer bg-transparent text-[var(--vscode-button-foreground,rgba(255,255,255,0.9))] font-[var(--vscode-font-family,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif)] outline-none box-border inline-flex items-center justify-between min-h-[22px] leading-[1.4em] w-full select-none ${
-          isExpanded ? 'border-b border-[var(--vscode-panel-border,rgba(128,128,128,0.2))]' : ''
-        } hover:bg-[var(--vscode-button-hoverBackground,rgba(255,255,255,0.1))] active:bg-[var(--vscode-button-activeBackground,rgba(255,255,255,0.15))] focus:outline-none`}
+        className={`px-3 pt-2 pb-2 text-[0.8125rem] font-normal border-0 cursor-pointer bg-transparent text-[var(--vscode-button-foreground,rgba(255,255,255,0.9))] font-[var(--vscode-font-family,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif)] outline-none box-border inline-flex items-center justify-between min-h-[22px] leading-[1.4em] w-full select-none border-b border-[var(--vscode-panel-border,rgba(128,128,128,0.2))] hover:bg-[var(--vscode-button-hoverBackground,rgba(255,255,255,0.1))] active:bg-[var(--vscode-button-activeBackground,rgba(255,255,255,0.15))] focus:outline-none`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <span className="text-[0.8125rem] font-normal">

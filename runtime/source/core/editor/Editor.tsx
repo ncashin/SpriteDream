@@ -24,9 +24,9 @@ export function Editor() {
   const [isRunning, setIsRunning] = useState(isUpdateEnabled());
   const runButtonRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
+  useState(() => {
     setIsRunning(isUpdateEnabled());
-  }, []);
+  });
 
   const handleRunStop = async () => {
     const wasRunning = isUpdateEnabled();

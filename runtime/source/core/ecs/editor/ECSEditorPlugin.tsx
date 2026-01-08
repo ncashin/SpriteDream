@@ -64,7 +64,15 @@ export function initializePluginUI() {
     pluginState.reactRoot = createRoot(pluginContainer);
   }
 
-  if (pluginState.reactRoot && ecsContext) {
+  // Always render, even if ecsContext is null (component handles null gracefully)
+  // This ensures the component is rendered and will update when ecsContext becomes available
+  if (pluginState.reactRoot) {
+    pluginState.reactRoot.render(<ECSEditorPluginUI />);
+  }
+}
+
+function forceRerender() {
+  if (pluginState.reactRoot) {
     pluginState.reactRoot.render(<ECSEditorPluginUI />);
   }
 }
@@ -81,11 +89,21 @@ export function ecsEditorPlugin<
     return context;
   }
   
+  // Set ecsContext synchronously before any async operations
   ecsContext = context;
   editorRootElement = context.editorRootElement;
   
+  // Initialize UI - this will render the component with the updated ecsContext
+  // Use requestAnimationFrame to ensure DOM is ready, but ecsContext is already set above
   requestAnimationFrame(() => {
     initializePluginUI();
+  });
+  
+  // Also force a re-render in the next event loop tick to handle any race conditions
+  // where the component might have rendered before ecsContext was set
+  // This ensures the component always sees the latest ecsContext value
+  Promise.resolve().then(() => {
+    forceRerender();
   });
   
   return context;
