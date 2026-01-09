@@ -1,23 +1,29 @@
 import { readFile, writeFile } from "../fileUtilities";
 
-let currentScene: any = null;
+type SceneData = Record<string, unknown>;
+
+let currentScene: SceneData | null = null;
 let currentFilePath: string | null = null;
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 let persistenceEnabled = true;
-const SAVE_DEBOUNCE_MS = 500;
-const DEFAULT_SCENE = {};
 
-function isObject(value: any): boolean {
+const SAVE_DEBOUNCE_MS = 500;
+const DEFAULT_SCENE: SceneData = {};
+const ARRAY_MUTATION_METHODS = ["push", "pop", "shift", "unshift", "splice", "sort", "reverse"] as const;
+
+function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !(value instanceof Date);
 }
 
-function createPersistentProxy(obj: any, filePath: string): any {
+function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+function createPersistentProxy<T extends Record<string, unknown>>(obj: T, filePath: string): T {
   if (!isObject(obj)) return obj;
 
-  const arrayMethods = ["push", "pop", "shift", "unshift", "splice", "sort", "reverse"];
-
   return new Proxy(obj, {
-    set(target: any, property: string | symbol, value: any): boolean {
+    set(target: T, property: string | symbol, value: unknown): boolean {
       const newValue = isObject(value) ? createPersistentProxy(value, filePath) : value;
       Reflect.set(target, property, newValue);
       
@@ -27,7 +33,7 @@ function createPersistentProxy(obj: any, filePath: string): any {
       return true;
     },
 
-    deleteProperty(target: any, property: string | symbol): boolean {
+    deleteProperty(target: T, property: string | symbol): boolean {
       Reflect.deleteProperty(target, property);
       if (typeof property !== "symbol") {
         scheduleSave(filePath);
@@ -35,12 +41,12 @@ function createPersistentProxy(obj: any, filePath: string): any {
       return true;
     },
 
-    get(target: any, property: string | symbol): any {
+    get(target: T, property: string | symbol): unknown {
       const value = Reflect.get(target, property);
       
-      if (Array.isArray(target) && typeof property === "string" && arrayMethods.includes(property)) {
-        return (...args: any[]) => {
-          const result = (value as Function).apply(target, args);
+      if (Array.isArray(target) && typeof property === "string" && ARRAY_MUTATION_METHODS.includes(property as typeof ARRAY_MUTATION_METHODS[number])) {
+        return (...args: unknown[]) => {
+          const result = (value as (...args: unknown[]) => unknown).apply(target, args);
           scheduleSave(filePath);
           return result;
         };
@@ -65,24 +71,20 @@ function scheduleSave(filePath: string): void {
   }, SAVE_DEBOUNCE_MS);
 }
 
-function mergeSceneData(existing: any, incoming: any): any {
-  if (!existing) return JSON.parse(JSON.stringify(incoming));
-  if (!incoming) return JSON.parse(JSON.stringify(existing));
+function mergeObjects(existing: SceneData, incoming: SceneData): SceneData {
+  const merged = deepClone(existing);
 
-  const merged = JSON.parse(JSON.stringify(existing));
-
-  // Merge all top-level keys, handling deletions
   for (const key in incoming) {
-    if (isObject(incoming[key]) && isObject(merged[key])) {
-      // Recursively merge nested objects
-      merged[key] = mergeObjects(merged[key], incoming[key]);
+    const incomingValue = incoming[key];
+    const existingValue = merged[key];
+    
+    if (isObject(incomingValue) && isObject(existingValue)) {
+      merged[key] = mergeObjects(existingValue, incomingValue);
     } else {
-      // Replace primitive values or add new keys
-      merged[key] = JSON.parse(JSON.stringify(incoming[key]));
+      merged[key] = deepClone(incomingValue);
     }
   }
 
-  // Remove keys that exist in existing but not in incoming (complete deletions)
   for (const key in merged) {
     if (!(key in incoming)) {
       delete merged[key];
@@ -92,43 +94,22 @@ function mergeSceneData(existing: any, incoming: any): any {
   return merged;
 }
 
-function mergeObjects(existing: any, incoming: any): any {
-  const merged = JSON.parse(JSON.stringify(existing));
-
-  // Merge/add all properties from incoming
-  for (const key in incoming) {
-    if (isObject(incoming[key]) && isObject(merged[key])) {
-      // Recursively merge nested objects
-      merged[key] = mergeObjects(merged[key], incoming[key]);
-    } else {
-      // Replace primitive values or add new keys
-      merged[key] = JSON.parse(JSON.stringify(incoming[key]));
-    }
-  }
-
-  // Remove keys that exist in existing but not in incoming (complete deletions)
-  for (const key in merged) {
-    if (!(key in incoming)) {
-      delete merged[key];
-    }
-  }
-
-  return merged;
+function mergeSceneData(existing: SceneData | null, incoming: SceneData): SceneData {
+  if (!existing) return deepClone(incoming);
+  return mergeObjects(existing, incoming);
 }
 
 async function loadScene(filePath: string, content?: string, isReload: boolean = false): Promise<void> {
   try {
-    // In production, content must be provided (from Vite import)
-    // Never attempt to read files in production
     if (content === undefined) {
-      const isDev = typeof import.meta !== "undefined" && import.meta.env && import.meta.env.DEV;
+      const isDev = typeof import.meta !== "undefined" && import.meta.env?.DEV;
       if (!isDev) {
         throw new Error("Scene content must be provided in production mode");
       }
-      // Only read file in development
       content = await readFile(filePath);
     }
-    const sceneData = JSON.parse(content);
+    
+    const sceneData = JSON.parse(content) as SceneData;
 
     if (isReload && currentScene && currentFilePath === filePath) {
       const merged = mergeSceneData(currentScene, sceneData);
@@ -155,7 +136,7 @@ export async function setSceneFile(filePath: string, content?: string): Promise<
   await loadScene(filePath, content, isReload);
 }
 
-export function getScene(): any {
+export function getScene(): SceneData {
   if (!currentScene) {
     currentScene = createPersistentProxy(DEFAULT_SCENE, currentFilePath || "");
   }
@@ -174,14 +155,11 @@ export function isPersistenceEnabled(): boolean {
   return persistenceEnabled;
 }
 
-export function saveSceneSnapshot(): any {
-  return currentScene ? JSON.parse(JSON.stringify(currentScene)) : null;
+export function saveSceneSnapshot(): SceneData | null {
+  return currentScene ? deepClone(currentScene) : null;
 }
 
-export async function restoreSceneFromSnapshot(snapshot: any): Promise<void> {
+export async function restoreSceneFromSnapshot(snapshot: SceneData): Promise<void> {
   if (!snapshot || !currentFilePath) return;
-  currentScene = createPersistentProxy(
-    JSON.parse(JSON.stringify(snapshot)),
-    currentFilePath
-  );
+  currentScene = createPersistentProxy(deepClone(snapshot), currentFilePath);
 }

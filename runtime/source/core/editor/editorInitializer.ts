@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Editor } from './Editor.tsx';
 
-const ROOT_PROP = '__reactRoot__';
+const rootMap = new WeakMap<HTMLDivElement, Root>();
 
 export function initializeEditor() {
   const editor = document.querySelector<HTMLDivElement>('#editor');
@@ -15,12 +15,12 @@ export function initializeEditor() {
     editor.style.position = 'relative';
   }
 
-  let root = (editor as any)[ROOT_PROP] as Root | undefined;
+  let root = rootMap.get(editor);
   
   if (!root) {
     editor.innerHTML = '';
     root = createRoot(editor);
-    (editor as any)[ROOT_PROP] = root;
+    rootMap.set(editor, root);
   }
 
   root.render(React.createElement(Editor));

@@ -24,7 +24,7 @@ export function ecsPlugin<T extends InitialGameContext>(
 
   const componentProxyHandler: ComponentProxyHandler = {
     set: (entity: Entity, component: Component, property: string, newValue: unknown): boolean => {
-      (component as any)[property] = newValue;
+      (component as Record<string, unknown>)[property] = newValue;
       
       const componentType = component.type;
       if (ecsData.componentPools[componentType] && ecsData.componentPools[componentType][entity]) {

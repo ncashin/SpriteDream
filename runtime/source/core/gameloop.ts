@@ -111,6 +111,5 @@ const gameloop = (currentTime: number) => {
     requestAnimationFrame(gameloop);
 }
 
-// Start the gameloop
 requestAnimationFrame(gameloop);
 

@@ -30,28 +30,37 @@ if (!import.meta.env?.DEV) {
 }
 
 window.addEventListener("message", async (event: MessageEvent) => {
-  if (event.data.command === "openScene" && event.data.path) {
-    try {
-      const isDev = import.meta.env && import.meta.env.DEV;
-      let content = event.data.content;
-      
-      if (content === undefined && isDev) {
-        content = await readFile(event.data.path);
-      } else if (content === undefined) {
-        return;
-      }
+  const { command, path, content } = event.data;
+  switch (command) {
+    case "openScene":
+      if (path) {
+        try {
+          const isDev = import.meta.env && import.meta.env.DEV;
+          let fileContent = content;
+          
+          if (fileContent === undefined && isDev) {
+            fileContent = await readFile(path);
+          } else if (fileContent === undefined) {
+            return;
+          }
 
-      await setSceneFile(event.data.path, content);
-      initializeGame();
-    } catch (error: any) {
-      gameRoot.innerHTML = `<div style="padding: 2rem; color: #ff0000;">${
-        error.message || "Failed to load scene file"
-      }</div>`;
-    }
-  } else if (event.data.command === "ping") {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ command: "runtimeReady" }, "*");
-    }
+          await setSceneFile(path, fileContent);
+          initializeGame();
+        } catch (error: any) {
+          gameRoot.innerHTML = `<div style="padding: 2rem; color: #ff0000;">${
+            error.message || "Failed to load scene file"
+          }</div>`;
+        }
+      }
+      break;
+    case "ping":
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ command: "runtimeReady" }, "*");
+      }
+      break;
+    default:
+      // Ignore unknown commands
+      break;
   }
 });
 

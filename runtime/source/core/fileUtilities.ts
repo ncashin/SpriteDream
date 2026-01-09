@@ -1,3 +1,10 @@
+// Type declaration for Tauri window property
+declare global {
+    interface Window {
+        __TAURI__?: unknown;
+    }
+}
+
 // Message types for file operations
 type FileRequest = 
     | { type: 'readFile'; path: string }
@@ -39,7 +46,7 @@ async function requestFileOperation<T extends FileRequest>(
                 window.removeEventListener('message', handler);
                 
                 if (response.success) {
-                    resolve(response as any);
+                    resolve(response as Extract<FileResponse, { type: T['type'] }>);
                 } else {
                     reject(new Error(response.error || `${request.type} failed`));
                 }
@@ -53,7 +60,7 @@ async function requestFileOperation<T extends FileRequest>(
 
 export async function readFile(filePath: string): Promise<string> {
     // In Tauri production, try to use Tauri's resource API
-    if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+    if (typeof window !== 'undefined' && window.__TAURI__) {
         try {
             const { resolveResource } = await import('@tauri-apps/api/path');
             const { readTextFile } = await import('@tauri-apps/plugin-fs');

@@ -22,7 +22,7 @@ let pluginState: {
 
 function ECSEditorPluginUI() {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
-  
+
   pluginState.selectedEntity = selectedEntity;
   pluginState.setSelectedEntity = setSelectedEntity;
 
@@ -44,7 +44,9 @@ function ECSEditorPluginUI() {
 
 export function initializePluginUI() {
   if (!editorRootElement) {
-    console.warn("Editor root element not found, cannot initialize ECS editor plugin UI");
+    console.warn(
+      "Editor root element not found, cannot initialize ECS editor plugin UI"
+    );
     return;
   }
 
@@ -52,8 +54,10 @@ export function initializePluginUI() {
     editorRootElement.style.position = "relative";
   }
 
-  let pluginContainer = document.querySelector<HTMLDivElement>("#ecs-editor-plugin-container");
-  
+  let pluginContainer = document.querySelector<HTMLDivElement>(
+    "#ecs-editor-plugin-container"
+  );
+
   if (!pluginContainer) {
     pluginContainer = document.createElement("div");
     pluginContainer.id = "ecs-editor-plugin-container";
@@ -69,39 +73,24 @@ export function initializePluginUI() {
   }
 }
 
-export function ecsEditorPlugin<
-  T extends RequirePlugin<[typeof ecsPlugin]>
->(
+export function ecsEditorPlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   context: T
 ): ContextExtension<T, {}> {
   if (
     !isEditorEnabled() ||
-    !(typeof import.meta !== "undefined" && import.meta.env && import.meta.env.DEV)
+    !(
+      typeof import.meta !== "undefined" &&
+      import.meta.env &&
+      import.meta.env.DEV
+    )
   ) {
     return context;
   }
-  
+
   ecsContext = context;
   editorRootElement = context.editorRootElement;
-  
-  requestAnimationFrame(() => {
-    initializePluginUI();
-  });
-  
+
+  initializePluginUI();
+
   return context;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

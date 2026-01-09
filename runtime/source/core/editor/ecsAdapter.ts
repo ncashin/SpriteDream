@@ -6,25 +6,52 @@ import {
   type Component,
   type Entity,
   type ComponentProxyHandler,
+  type ComponentTypeString,
 } from "../ecs/ecs";
 import type { InitialGameContext, ContextExtension } from "../gameContext";
+
+type SceneECSData = {
+  componentPools: Record<ComponentTypeString, Record<Entity, Component>>;
+};
+
+function isSceneECSData(value: unknown): value is SceneECSData {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  if (typeof obj.componentPools !== "object" || obj.componentPools === null) {
+    return false;
+  }
+  return true;
+}
 
 export function initializeSceneECS<T extends InitialGameContext>(
   context: T
 ): ContextExtension<T, { ecs: ReturnType<typeof curryECSInstance> }> {
   const scene = getScene();
 
-  if (!scene.ecs) {
+  if (!scene.ecs || !isSceneECSData(scene.ecs)) {
     scene.ecs = {
       componentPools: {},
     };
   }
 
-  const ecsData = scene.ecs;
+  const ecsData: SceneECSData = isSceneECSData(scene.ecs) 
+    ? scene.ecs 
+    : { componentPools: {} };
 
   const componentProxyHandler: ComponentProxyHandler = {
     set: (entity: Entity, component: Component, property: string, newValue: unknown): boolean => {
-      (component as any)[property] = newValue;
+      if (property in component) {
+        (component as Record<string, unknown>)[property] = newValue;
+      } else {
+        Object.defineProperty(component, property, {
+          value: newValue,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+      }
       
       const componentType = component.type;
       if (ecsData.componentPools[componentType] && ecsData.componentPools[componentType][entity]) {
