@@ -1,4 +1,4 @@
-import { setSceneFile } from "./scene/scene";
+import { setSceneFile } from "./scene/sceneFileHandler";
 
 export type InitialGameContext = {
   rootElement: HTMLElement;
