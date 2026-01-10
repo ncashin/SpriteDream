@@ -24,6 +24,7 @@ export function EntityModal({
   const [entityData, setEntityData] = useState<string>("");
   const [isValid, setIsValid] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
+  const [isCloseHovered, setIsCloseHovered] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callbackIdRef = useRef<number | null>(null);
@@ -165,28 +166,107 @@ export function EntityModal({
   if (!isOpen || !entity) return null;
 
   return (
-    <div className="w-full flex-1 flex flex-col bg-transparent font-[var(--vscode-font-family,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif)]">
-      <div className="pl-3 pr-2 pt-1.5 pb-1.5 text-[0.8125rem] font-normal rounded-sm border-0 bg-transparent text-[var(--vscode-button-foreground,rgba(255,255,255,0.9))] font-[var(--vscode-font-family,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif)] outline-none box-border inline-flex items-center justify-between min-h-[22px] leading-[1.4em] w-full select-none border-b border-[var(--vscode-panel-border,rgba(128,128,128,0.2))]">
-        <span className="text-[0.8125rem] font-normal">{entity}</span>
+    <div
+      style={{
+        backgroundColor: "rgba(128, 128, 128, 0.3)",
+        borderRadius: "2px",
+        border: "none",
+        display: "flex",
+        flexDirection: "column",
+        fontFamily:
+          "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
+        minWidth: "400px",
+        maxWidth: "600px",
+        maxHeight: "500px",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+      }}
+    >
+      <div
+        style={{
+          padding: "0.25rem 0.5rem",
+          fontSize: "0.75rem",
+          fontWeight: "normal",
+          border: "none",
+          backgroundColor: "transparent",
+          color: "var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))",
+          fontFamily:
+            "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
+          outline: "none",
+          boxSizing: "border-box",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          minHeight: "20px",
+          lineHeight: "1.4em",
+          width: "100%",
+          userSelect: "none",
+          borderRadius: "2px 2px 0 0",
+        }}
+      >
+        <span style={{ fontSize: "0.75rem", fontWeight: "normal" }}>
+          {entity}
+        </span>
         <button
-          className="bg-transparent border-0 cursor-pointer p-1 w-6 h-6 rounded hover:bg-[var(--vscode-button-hoverBackground,rgba(255,255,255,0.1))] active:bg-[var(--vscode-button-activeBackground,rgba(255,255,255,0.15))] flex items-center justify-center text-[var(--vscode-foreground,#cccccc)]"
+          style={{
+            backgroundColor: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: "0.25rem",
+            width: "20px",
+            height: "20px",
+            borderRadius: "2px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--vscode-foreground, #cccccc)",
+            transition: "background-color 0.1s ease-out",
+            backgroundColor: isCloseHovered
+              ? "var(--vscode-button-hoverBackground, rgba(255, 255, 255, 0.1))"
+              : "transparent",
+          }}
           onClick={onClose}
+          onMouseEnter={() => setIsCloseHovered(true)}
+          onMouseLeave={() => setIsCloseHovered(false)}
         >
-          <span className="codicon codicon-close text-[0.75rem]" />
+          <span className="codicon codicon-close" style={{ fontSize: "0.75rem" }} />
         </button>
       </div>
-      <div className="flex-1 overflow-auto p-0 bg-transparent border-b border-[var(--vscode-panel-border,rgba(128,128,128,0.2))]">
+      <div
+        style={{
+          flex: 1,
+          overflow: "auto",
+          padding: 0,
+          backgroundColor: "transparent",
+          borderRadius: "0 0 2px 2px",
+        }}
+      >
         <textarea
           ref={textareaRef}
           value={entityData}
           onChange={handleTextareaChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className={`w-full h-full p-3 bg-transparent text-[var(--vscode-foreground,#cccccc)] text-[0.8125rem] font-[var(--vscode-editor-font-family,'Consolas','Courier New',monospace)] leading-[1.5] resize-none outline-none box-border whitespace-pre overflow-wrap-normal overflow-x-auto ${
-            isValid
-              ? "border-0"
-              : "border border-[var(--vscode-inputValidation-errorBorder,#f48771)]"
-          }`}
+          style={{
+            width: "100%",
+            height: "100%",
+            padding: "0.75rem",
+            backgroundColor: "transparent",
+            color: "var(--vscode-foreground, #cccccc)",
+            fontSize: "0.75rem",
+            fontFamily:
+              "var(--vscode-editor-font-family, 'Consolas', 'Courier New', monospace)",
+            lineHeight: "1.5",
+            resize: "none",
+            outline: "none",
+            boxSizing: "border-box",
+            whiteSpace: "pre",
+            overflowWrap: "normal",
+            overflowX: "auto",
+            border: isValid
+              ? "none"
+              : "1px solid var(--vscode-inputValidation-errorBorder, #f48771)",
+            minHeight: "300px",
+          }}
         />
       </div>
     </div>

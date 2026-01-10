@@ -54,7 +54,18 @@ function ECSEditorPluginUI() {
   }
 
   return (
-    <div className="absolute left-0 top-0 w-72 h-full bg-transparent z-[1000] flex flex-col font-[var(--vscode-font-family,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif)]">
+    <div
+      style={{
+        position: "absolute",
+        top: "0.5rem",
+        left: "0.5rem",
+        zIndex: 10000,
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.5rem",
+        alignItems: "flex-start",
+      }}
+    >
       <EntityListPanel
         ecsContext={ecsContext}
         onEntityClick={setSelectedEntity}
