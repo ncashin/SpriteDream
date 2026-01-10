@@ -1,20 +1,30 @@
-import {
-  getSceneFilePath as getFileHandlerPath,
-  setPersistenceEnabled as setFilePersistenceEnabled,
-  isPersistenceEnabled as isFilePersistenceEnabled,
-  createSaveCallback,
-} from "./sceneFileHandler";
+import { writeFile, readFile } from "../fileUtilities";
+import { isDevelopment } from "../utils";
 
 export type SceneData = Record<string, unknown>;
 
 let currentScene: SceneData | null = null;
-let saveCallback: ((sceneData: SceneData) => void) | null = null;
+let currentFilePath: string | null = null;
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+let persistenceEnabled = true;
+let sceneSnapshot: SceneData | null = null;
 
 const DEFAULT_SCENE: SceneData = {};
-const ARRAY_MUTATION_METHODS = ["push", "pop", "shift", "unshift", "splice", "sort", "reverse"] as const;
+const SAVE_DEBOUNCE_MS = 500;
+const ARRAY_MUTATION_METHODS = [
+  "push",
+  "pop",
+  "shift",
+  "unshift",
+  "splice",
+  "sort",
+  "reverse",
+] as const;
 
 function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !(value instanceof Date);
+  return (
+    typeof value === "object" && value !== null && !(value instanceof Date)
+  );
 }
 
 function deepClone<T>(obj: T): T {
@@ -29,9 +39,11 @@ function createPersistentProxy<T extends Record<string, unknown>>(
 
   return new Proxy(obj, {
     set(target: T, property: string | symbol, value: unknown): boolean {
-      const newValue = isObject(value) ? createPersistentProxy(value, onSave) : value;
+      const newValue = isObject(value)
+        ? createPersistentProxy(value, onSave)
+        : value;
       Reflect.set(target, property, newValue);
-      
+
       if (typeof property !== "symbol" && property !== "length") {
         onSave(currentScene!);
       }
@@ -48,15 +60,24 @@ function createPersistentProxy<T extends Record<string, unknown>>(
 
     get(target: T, property: string | symbol): unknown {
       const value = Reflect.get(target, property);
-      
-      if (Array.isArray(target) && typeof property === "string" && ARRAY_MUTATION_METHODS.includes(property as typeof ARRAY_MUTATION_METHODS[number])) {
+
+      if (
+        Array.isArray(target) &&
+        typeof property === "string" &&
+        ARRAY_MUTATION_METHODS.includes(
+          property as (typeof ARRAY_MUTATION_METHODS)[number]
+        )
+      ) {
         return (...args: unknown[]) => {
-          const result = (value as (...args: unknown[]) => unknown).apply(target, args);
+          const result = (value as (...args: unknown[]) => unknown).apply(
+            target,
+            args
+          );
           onSave(currentScene!);
           return result;
         };
       }
-      
+
       return isObject(value) ? createPersistentProxy(value, onSave) : value;
     },
   });
@@ -68,7 +89,7 @@ function mergeObjects(existing: SceneData, incoming: SceneData): SceneData {
   for (const key in incoming) {
     const incomingValue = incoming[key];
     const existingValue = merged[key];
-    
+
     if (isObject(incomingValue) && isObject(existingValue)) {
       merged[key] = mergeObjects(existingValue, incomingValue);
     } else {
@@ -85,7 +106,10 @@ function mergeObjects(existing: SceneData, incoming: SceneData): SceneData {
   return merged;
 }
 
-function mergeSceneData(existing: SceneData | null, incoming: SceneData): SceneData {
+function mergeSceneData(
+  existing: SceneData | null,
+  incoming: SceneData
+): SceneData {
   if (!existing) return deepClone(incoming);
   return mergeObjects(existing, incoming);
 }
@@ -94,15 +118,27 @@ export function mergeWithCurrentScene(incoming: SceneData): SceneData {
   return mergeSceneData(currentScene, incoming);
 }
 
-export function setScene(sceneData: SceneData): void {
-  const filePath = getFileHandlerPath();
-  if (filePath) {
-    saveCallback = createSaveCallback(filePath);
-  } else {
-    // If no file path, create a no-op save callback
-    saveCallback = () => {};
-  }
-  currentScene = createPersistentProxy(deepClone(sceneData), saveCallback);
+function saveScene(filePath: string, sceneData: SceneData): void {
+  if (!filePath || !persistenceEnabled) return;
+
+  if (saveTimeout) clearTimeout(saveTimeout);
+
+  saveTimeout = setTimeout(async () => {
+    try {
+      await writeFile(filePath, JSON.stringify(sceneData, null, 2));
+    } catch (error) {
+      console.error("Failed to save scene:", error);
+    }
+  }, SAVE_DEBOUNCE_MS);
+}
+
+export function setScene(sceneData: SceneData | string): void {
+  const parsedData: SceneData =
+    typeof sceneData === "string" ? JSON.parse(sceneData) : sceneData;
+  const onSave = currentFilePath
+    ? (data: SceneData) => saveScene(currentFilePath!, data)
+    : () => {};
+  currentScene = createPersistentProxy(deepClone(parsedData), onSave);
 }
 
 export function hasScene(): boolean {
@@ -111,32 +147,73 @@ export function hasScene(): boolean {
 
 export function getScene(): SceneData {
   if (!currentScene) {
-    const filePath = getFileHandlerPath() || "";
-    saveCallback = createSaveCallback(filePath);
-    currentScene = createPersistentProxy(DEFAULT_SCENE, saveCallback);
+    const onSave = currentFilePath
+      ? (data: SceneData) => saveScene(currentFilePath!, data)
+      : () => {};
+    currentScene = createPersistentProxy(DEFAULT_SCENE, onSave);
   }
   return currentScene;
 }
 
 export function getSceneFilePath(): string | null {
-  return getFileHandlerPath();
+  return currentFilePath;
 }
 
 export function setPersistenceEnabled(enabled: boolean): void {
-  setFilePersistenceEnabled(enabled);
+  persistenceEnabled = enabled;
 }
 
 export function isPersistenceEnabled(): boolean {
-  return isFilePersistenceEnabled();
+  return persistenceEnabled;
 }
 
-export function saveSceneSnapshot(): SceneData | null {
-  return currentScene ? deepClone(currentScene) : null;
+export function saveSceneSnapshot() {
+  sceneSnapshot = currentScene ? deepClone(currentScene) : null;
 }
 
-export async function restoreSceneFromSnapshot(snapshot: SceneData): Promise<void> {
-  const filePath = getFileHandlerPath();
-  if (!snapshot || !filePath) return;
-  saveCallback = createSaveCallback(filePath);
-  currentScene = createPersistentProxy(deepClone(snapshot), saveCallback);
+export async function restoreSceneFromSnapshot(): Promise<void> {
+  if (!sceneSnapshot) return;
+  const onSave = currentFilePath
+    ? (data: SceneData) => saveScene(currentFilePath!, data)
+    : () => {};
+  currentScene = createPersistentProxy(deepClone(sceneSnapshot), onSave);
+}
+
+export async function setSceneFile(
+  filePath: string,
+  content?: string
+): Promise<void> {
+  try {
+    let sceneData: SceneData;
+
+    if (content !== undefined) {
+      sceneData = JSON.parse(content) as SceneData;
+    } else {
+      if (!isDevelopment) {
+        throw new Error("Scene content must be provided in production mode");
+      }
+      const fileContent = await readFile(filePath);
+      sceneData = JSON.parse(fileContent) as SceneData;
+    }
+
+    const isReload = currentFilePath === filePath && hasScene();
+    currentFilePath = filePath;
+
+    if (isReload) {
+      const merged = mergeWithCurrentScene(sceneData);
+      setScene(merged);
+      return;
+    }
+
+    setScene(sceneData);
+  } catch (error) {
+    console.error("Failed to load scene:", error);
+    currentFilePath = filePath;
+
+    if (hasScene()) {
+      return;
+    }
+
+    setScene({});
+  }
 }

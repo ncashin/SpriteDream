@@ -47,6 +47,12 @@ export function EntityListPanel({ ecsContext, onEntityClick }: EntityListPanelPr
     // Initial update
     updateEntities();
 
+    // Also do an immediate update after a short delay to catch entities that might
+    // be added right after initialization
+    const timeoutId = setTimeout(() => {
+      updateEntities();
+    }, 100);
+
     // Register draw callback to update every frame (runs regardless of editorEnabled state)
     const callbackId = addDrawCallback(() => {
       updateEntities();
@@ -54,6 +60,7 @@ export function EntityListPanel({ ecsContext, onEntityClick }: EntityListPanelPr
     callbackIdRef.current = callbackId;
 
     return () => {
+      clearTimeout(timeoutId);
       if (callbackIdRef.current !== null) {
         removeDrawCallback(callbackIdRef.current);
         callbackIdRef.current = null;

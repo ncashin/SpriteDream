@@ -1,23 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
-import { EditorButton } from './EditorButton';
-import { SceneDataModal } from './SceneDataModal';
+import { useState, useRef } from "react";
+import { EditorButton } from "./EditorButton";
+import { SceneDataModal } from "./SceneDataModal";
 import {
   setEditorEnabled,
   setUpdateEnabled,
   isUpdateEnabled,
-} from '../gameloop';
+} from "../gameloop";
 import {
   setPersistenceEnabled,
   saveSceneSnapshot,
   restoreSceneFromSnapshot,
-} from '../scene/scene';
-import { initializeGame } from '../../runtimeWrapper';
-
-let editorState: {
-  sceneSnapshot: any;
-} = {
-  sceneSnapshot: null,
-};
+} from "../scene/scene";
+import { initializeGame } from "../../runtimeWrapper";
 
 export function Editor() {
   const [isSceneDataModalOpen, setIsSceneDataModalOpen] = useState(false);
@@ -30,27 +24,22 @@ export function Editor() {
 
   const handleRunStop = async () => {
     const wasRunning = isUpdateEnabled();
-    
+
     if (wasRunning) {
+      await restoreSceneFromSnapshot();
+      setPersistenceEnabled(true);
+
       setEditorEnabled(true);
       setUpdateEnabled(false);
-
-      if (editorState.sceneSnapshot !== null) {
-        await restoreSceneFromSnapshot(editorState.sceneSnapshot);
-        editorState.sceneSnapshot = null;
-      } else {
-        console.warn('No scene snapshot to restore from');
-      }
-      setPersistenceEnabled(true);
-      initializeGame();
     } else {
-      editorState.sceneSnapshot = saveSceneSnapshot();
+      saveSceneSnapshot();
+      setPersistenceEnabled(false);
+
       setEditorEnabled(false);
       setUpdateEnabled(true);
-      setPersistenceEnabled(false);
-      initializeGame();
     }
-    
+
+    initializeGame();
     setIsRunning(!wasRunning);
     runButtonRef.current?.blur();
   };
@@ -58,20 +47,20 @@ export function Editor() {
   return (
     <div
       style={{
-        position: 'absolute',
-        top: '0.5rem',
-        right: '0.5rem',
+        position: "absolute",
+        top: "0.5rem",
+        right: "0.5rem",
         zIndex: 10000,
-        display: 'flex',
-        gap: '0.5rem',
-        alignItems: 'center',
+        display: "flex",
+        gap: "0.5rem",
+        alignItems: "center",
       }}
     >
       <EditorButton onClick={() => setIsSceneDataModalOpen(true)}>
         Scene Data
       </EditorButton>
       <EditorButton ref={runButtonRef} onClick={handleRunStop}>
-        {isRunning ? 'Stop' : 'Run'}
+        {isRunning ? "Stop" : "Run"}
       </EditorButton>
       <SceneDataModal
         isOpen={isSceneDataModalOpen}
@@ -80,4 +69,3 @@ export function Editor() {
     </div>
   );
 }
-

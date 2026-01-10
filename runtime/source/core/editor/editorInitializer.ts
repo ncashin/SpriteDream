@@ -1,28 +1,37 @@
-import React from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import { Editor } from './Editor.tsx';
+import React from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { Editor } from "./Editor";
 
-const rootMap = new WeakMap<HTMLDivElement, Root>();
+let editorRoot: Root | null = null;
+let editorContainer: HTMLDivElement | null = null;
 
 export function initializeEditor() {
-  const editor = document.querySelector<HTMLDivElement>('#editor');
+  const editor = document.querySelector<HTMLDivElement>("#editor");
   if (!editor) {
-    console.error('Could not find #editor element');
+    console.error("Could not find #editor element");
     return;
   }
 
-  if (getComputedStyle(editor).position === 'static') {
-    editor.style.position = 'relative';
+  if (getComputedStyle(editor).position === "static") {
+    editor.style.position = "relative";
   }
 
-  let root = rootMap.get(editor);
-  
-  if (!root) {
-    editor.innerHTML = '';
-    root = createRoot(editor);
-    rootMap.set(editor, root);
+  // Create container and root only once and reuse them
+  if (!editorContainer || editorContainer.parentElement !== editor) {
+    if (editorContainer) {
+      editorContainer.remove();
+    }
+    editor.innerHTML = "";
+    editorContainer = document.createElement("div");
+    editor.appendChild(editorContainer);
+    editorRoot = createRoot(editorContainer);
   }
 
-  root.render(React.createElement(Editor));
+  if (editorRoot) {
+    editorRoot.render(React.createElement(Editor));
+  }
 }
 
+export function getEditorRoot(): Root | null {
+  return editorRoot;
+}

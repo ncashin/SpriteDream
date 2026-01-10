@@ -1,4 +1,7 @@
-import { initializeGameContext as initializeGameContext, type InitialGameContext } from "./core/gameContext";
+import {
+  initializeGameContext as initializeGameContext,
+  type InitialGameContext,
+} from "./core/gameContext";
 import { ecsPlugin } from "./core/scene/ecsAdapter";
 import {
   spritePlugin,
@@ -78,10 +81,10 @@ export function main(initialContext: InitialGameContext) {
 
   const playerEntityId = "player";
   let playerEntity: any | null = null;
-  
+
   addStartCallback(() => {
     playerEntity = gameContext.ecs.getEntity(playerEntityId);
-    
+
     if (playerEntity.player && playerEntity.player.isGrounded === undefined) {
       playerEntity.player.isGrounded = false;
     }
@@ -106,7 +109,6 @@ export function main(initialContext: InitialGameContext) {
     const gravity = playerEntity.player.gravity;
     const jumpStrength = playerEntity.player.jumpStrength;
 
-
     if (gameContext.input.isKeyPressed("a")) {
       playerEntity.position.x -= moveDistance;
     }
@@ -114,8 +116,7 @@ export function main(initialContext: InitialGameContext) {
       playerEntity.position.x += moveDistance;
     }
 
-    if (gameContext.input.isKeyPressed(" ") &&     playerEntity.player.isGrounded
-  ) {
+    if (gameContext.input.isKeyPressed(" ") && playerEntity.player.isGrounded) {
       playerEntity.velocity.y = -jumpStrength;
     }
 
@@ -155,8 +156,7 @@ export function main(initialContext: InitialGameContext) {
               platformTopY - playerEntity.sprite.height / 2;
             playerEntity.velocity.y = 0;
             playerEntity.player.isGrounded = true;
-          }
-          else if (
+          } else if (
             playerEntity.velocity.y < 0 &&
             playerTopY < platformBottomY
           ) {
@@ -169,7 +169,6 @@ export function main(initialContext: InitialGameContext) {
     );
   });
 
-
   let draggedEntityId: string | null = null;
   let dragStartEntityX: number = 0;
   let dragStartEntityY: number = 0;
@@ -177,22 +176,22 @@ export function main(initialContext: InitialGameContext) {
   addEditorCallback(() => {
     const mousePos = gameContext.input.getMousePosition();
     const isMouseDown = gameContext.input.isMouseButtonPressed("left");
-    
+
     if (isMouseDown && !gameContext.input.getDragState().isDragging) {
       let clickedEntity: string | null = null;
-      
+
       gameContext.ecs.runQuery(
         [PositionComponentDefinition, SpriteComponentDefinition],
         (entity, components) => {
           if (clickedEntity) return;
-          
+
           const [position, sprite] = components;
-          
+
           const left = position.x - sprite.width / 2;
           const right = position.x + sprite.width / 2;
           const top = position.y - sprite.height / 2;
           const bottom = position.y + sprite.height / 2;
-          
+
           if (
             mousePos.x >= left &&
             mousePos.x <= right &&
@@ -208,24 +207,24 @@ export function main(initialContext: InitialGameContext) {
         }
       );
     }
-    
+
     if (gameContext.input.getDragState().isDragging && draggedEntityId) {
       gameContext.input.updateDrag(mousePos.x, mousePos.y);
       const dragState = gameContext.input.getDragState();
-      
+
       const entity = gameContext.ecs.getEntity(draggedEntityId);
       if (entity && entity.position) {
         const newX = dragStartEntityX + dragState.offsetX;
         const newY = dragStartEntityY + dragState.offsetY;
         entity.position.x = newX;
         entity.position.y = newY;
-        
+
         if (editorDragCallback) {
           editorDragCallback(draggedEntityId, newX, newY);
         }
       }
     }
-    
+
     if (!isMouseDown && gameContext.input.getDragState().isDragging) {
       gameContext.input.endDrag();
       draggedEntityId = null;

@@ -1,11 +1,15 @@
-import { setSceneFile } from "./scene/sceneFileHandler";
+import { setScene } from "./scene/scene";
+import type { Root } from "react-dom/client";
+import { isDevelopment } from "./utils";
 
 export type InitialGameContext = {
   rootElement: HTMLElement;
   editorRootElement: HTMLElement;
+  editorRoot: Root | null;
 };
 
-export type ContextExtension<T extends InitialGameContext, Extension> = T & Extension;
+export type ContextExtension<T extends InitialGameContext, Extension> = T &
+  Extension;
 
 export type Plugin<Context = any, Result = any> = (context: Context) => Result;
 
@@ -20,29 +24,22 @@ type AccumulatePluginResults<
     : Acc
   : Acc;
 
-export type RequirePlugin<
-  T extends readonly Plugin<any, any>[]
-> = AccumulatePluginResults<T> & {
-  ecs: ReturnType<typeof import("./ecs/ecs").curryECSInstance>;
-};
+export type RequirePlugin<T extends readonly Plugin<any, any>[]> =
+  AccumulatePluginResults<T> & {
+    ecs: ReturnType<typeof import("./ecs/ecs").curryECSInstance>;
+  };
 
-export const initializeGameContext = <
-  T extends readonly Plugin<any, any>[]
->({
+export const initializeGameContext = <T extends readonly Plugin<any, any>[]>({
   initialContext,
   plugins,
   initialScene,
 }: {
   initialContext: InitialGameContext;
   plugins: [...T];
-  initialScene?: string;
+  initialScene: string;
 }): AccumulatePluginResults<T> => {
-  // Set scene data from Vite import if provided
-  // This is the only place where scene data should be initialized
-  // In production, scene data comes from Vite's bundling (import sceneData from './scenes/default.scene?raw')
-  // In development, it can also come from here or be loaded via file operations
-  if (initialScene) {
-    void setSceneFile("", initialScene);
+  if (!isDevelopment) {
+    void setScene(initialScene);
   }
 
   return plugins.reduce(

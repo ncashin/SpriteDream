@@ -6,8 +6,13 @@ import {
   type Component,
   type Entity,
   type ComponentProxyHandler,
+  type ComponentTypeString,
 } from "../ecs/ecs";
 import type { InitialGameContext, ContextExtension } from "../gameContext";
+
+type ECSData = {
+  componentPools: Record<ComponentTypeString, Record<Entity, Component>>;
+};
 
 export function ecsPlugin<T extends InitialGameContext>(
   context: T
@@ -20,17 +25,25 @@ export function ecsPlugin<T extends InitialGameContext>(
     };
   }
 
-  const ecsData = scene.ecs;
+  const ecsData = scene.ecs as ECSData;
 
   const componentProxyHandler: ComponentProxyHandler = {
-    set: (entity: Entity, component: Component, property: string, newValue: unknown): boolean => {
+    set: (
+      entity: Entity,
+      component: Component,
+      property: string,
+      newValue: unknown
+    ): boolean => {
       (component as Record<string, unknown>)[property] = newValue;
-      
+
       const componentType = component.type;
-      if (ecsData.componentPools[componentType] && ecsData.componentPools[componentType][entity]) {
+      if (
+        ecsData.componentPools[componentType] &&
+        ecsData.componentPools[componentType][entity]
+      ) {
         ecsData.componentPools[componentType][entity][property] = newValue;
       }
-      
+
       return true;
     },
   };
@@ -46,12 +59,20 @@ export function ecsPlugin<T extends InitialGameContext>(
       if (existingComponent) {
         Object.assign(existingComponent, component);
       } else {
-        ecsData.componentPools[componentType][entity] = JSON.parse(JSON.stringify(component));
+        ecsData.componentPools[componentType][entity] = JSON.parse(
+          JSON.stringify(component)
+        );
       }
     },
-    removeComponentCallback: (entity: Entity, COMPONENT_TYPE_DEF: Component) => {
+    removeComponentCallback: (
+      entity: Entity,
+      COMPONENT_TYPE_DEF: Component
+    ) => {
       const componentType = COMPONENT_TYPE_DEF.type;
-      if (ecsData.componentPools[componentType] && ecsData.componentPools[componentType][entity]) {
+      if (
+        ecsData.componentPools[componentType] &&
+        ecsData.componentPools[componentType][entity]
+      ) {
         delete ecsData.componentPools[componentType][entity];
       }
     },
@@ -73,4 +94,3 @@ export function ecsPlugin<T extends InitialGameContext>(
     ecs,
   };
 }
-

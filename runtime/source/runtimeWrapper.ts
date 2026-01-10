@@ -1,9 +1,16 @@
 import "./style.css";
 import "@vscode/codicons/dist/codicon.css";
 import { readFile } from "./core/fileUtilities";
-import { setSceneFile } from "./core/scene/sceneFileHandler";
-import { initializeEditor } from "./core/editor/editorInitializer";
-import { resetAllCallbacks, setEditorEnabled, setUpdateEnabled } from "./core/gameloop";
+import { setSceneFile } from "./core/scene/scene";
+import {
+  initializeEditor,
+  getEditorRoot,
+} from "./core/editor/editorInitializer";
+import {
+  resetAllCallbacks,
+  setEditorEnabled,
+  setUpdateEnabled,
+} from "./core/gameloop";
 import { main } from "./main";
 
 const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
@@ -14,15 +21,19 @@ export function initializeGame() {
   resetAllCallbacks();
   if (import.meta.env && import.meta.env.DEV) {
     initializeEditor();
-  } else  if(firstInitialization) {
+  } else if (firstInitialization) {
     setEditorEnabled(false);
     setUpdateEnabled(true);
-    
+
     firstInitialization = false;
   }
 
   gameRoot.innerHTML = "";
-  main({rootElement: gameRoot, editorRootElement: editorRoot});
+  main({
+    rootElement: gameRoot,
+    editorRootElement: editorRoot,
+    editorRoot: getEditorRoot(),
+  });
 }
 
 if (!import.meta.env?.DEV) {
@@ -37,7 +48,7 @@ window.addEventListener("message", async (event: MessageEvent) => {
         try {
           const isDev = import.meta.env && import.meta.env.DEV;
           let fileContent = content;
-          
+
           if (fileContent === undefined && isDev) {
             fileContent = await readFile(path);
           } else if (fileContent === undefined) {
@@ -47,9 +58,7 @@ window.addEventListener("message", async (event: MessageEvent) => {
           await setSceneFile(path, fileContent);
           initializeGame();
         } catch (error: any) {
-          gameRoot.innerHTML = `<div style="padding: 2rem; color: #ff0000;">${
-            error.message || "Failed to load scene file"
-          }</div>`;
+          gameRoot.innerHTML = "Failed to load scene file";
         }
       }
       break;
@@ -63,14 +72,3 @@ window.addEventListener("message", async (event: MessageEvent) => {
       break;
   }
 });
-
-if (import.meta.hot) {
-  import.meta.hot.accept(() => {
-    initializeGame();
-  });
-  
-  import.meta.hot.on('vite:afterUpdate', () => {
-    initializeGame();
-  });
-}
-
