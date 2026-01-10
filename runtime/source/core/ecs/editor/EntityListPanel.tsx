@@ -107,7 +107,6 @@ export function EntityListPanel({
           "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
         minWidth: "200px",
         maxWidth: "300px",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
       }}
     >
       <button
