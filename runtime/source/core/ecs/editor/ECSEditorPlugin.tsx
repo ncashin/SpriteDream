@@ -1,26 +1,30 @@
 import type { ContextExtension, RequirePlugin } from "../../gameContext";
 import { ecsPlugin } from "../../scene/ecsAdapter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { EntityListPanel } from "./EntityListPanel";
 import { EntityModal } from "./EntityModal";
 import type { Entity } from "../ecs";
-import {
-  isEditorEnabled,
-  addDrawCallback,
-  removeDrawCallback,
-  type CallbackId,
-} from "../../gameloop";
 
 export let ecsContext: ReturnType<typeof ecsPlugin> | null = null;
 
 let ecsEditorRoot: Root | null = null;
 let ecsEditorContainer: HTMLDivElement | null = null;
-let drawCallbackId: CallbackId | null = null;
+
+// Preserve state across HMR
+let preservedSelectedEntity: Entity | null = null;
 
 function ECSEditorPluginUI() {
-  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
+  // Restore preserved state on mount
+  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(
+    preservedSelectedEntity
+  );
+
+  // Update preserved state when it changes
+  useEffect(() => {
+    preservedSelectedEntity = selectedEntity;
+  }, [selectedEntity]);
 
   if (!ecsContext) {
     return null;
@@ -92,16 +96,13 @@ export function ecsEditorPlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     ecsEditorRoot = createRoot(ecsEditorContainer);
   }
 
-  if (drawCallbackId !== null) {
-    removeDrawCallback(drawCallbackId);
-    drawCallbackId = null;
+  // Re-render when context changes (e.g., on HMR)
+  // React will update the component (not remount) if the component type is the same,
+  // preserving internal state. Our module-level state preservation ensures state
+  // is restored even if React does remount.
+  if (ecsEditorRoot) {
+    ecsEditorRoot.render(React.createElement(ECSEditorPluginUI));
   }
-
-  drawCallbackId = addDrawCallback(() => {
-    if (ecsEditorRoot) {
-      ecsEditorRoot.render(React.createElement(ECSEditorPluginUI));
-    }
-  });
 
   return context;
 }

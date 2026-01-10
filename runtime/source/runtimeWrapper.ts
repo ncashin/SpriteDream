@@ -72,3 +72,13 @@ window.addEventListener("message", async (event: MessageEvent) => {
       break;
   }
 });
+
+if (import.meta.hot) {
+  import.meta.hot.on("vite:afterUpdate", () => {
+    initializeGame();
+  });
+
+  import.meta.hot.on("vite:error", (error) => {
+    console.error("HMR Error:", error);
+  });
+}

@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import type { Entity } from '../ecs';
-import { addDrawCallback, removeDrawCallback } from '../../gameloop';
+import { useState, useEffect, useRef } from "react";
+import type { Entity } from "../ecs";
+import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 
 interface EntityListPanelProps {
   ecsContext: {
@@ -14,17 +14,21 @@ interface EntityListPanelProps {
   onEntityClick: (entity: Entity) => void;
 }
 
-function getAllEntities(ecsContext: EntityListPanelProps['ecsContext']): Entity[] {
+function getAllEntities(
+  ecsContext: EntityListPanelProps["ecsContext"]
+): Entity[] {
   if (!ecsContext || !ecsContext.ecs) {
     return [];
   }
 
   const entitySet = new Set<Entity>();
   const componentPools = ecsContext.ecs.ecsInstance.componentPools;
-  
+
   for (const componentPool of Object.values(componentPools)) {
-    if (componentPool && typeof componentPool === 'object') {
-      for (const entity of Object.keys(componentPool as Record<string, unknown>)) {
+    if (componentPool && typeof componentPool === "object") {
+      for (const entity of Object.keys(
+        componentPool as Record<string, unknown>
+      )) {
         entitySet.add(entity);
       }
     }
@@ -32,16 +36,37 @@ function getAllEntities(ecsContext: EntityListPanelProps['ecsContext']): Entity[
   return Array.from(entitySet);
 }
 
-export function EntityListPanel({ ecsContext, onEntityClick }: EntityListPanelProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+// Preserve expanded state across HMR
+let preservedIsExpanded = true;
+
+export function EntityListPanel({
+  ecsContext,
+  onEntityClick,
+}: EntityListPanelProps) {
+  // Restore preserved state on mount
+  const [isExpanded, setIsExpanded] = useState(preservedIsExpanded);
   const [entities, setEntities] = useState<Entity[]>([]);
   const callbackIdRef = useRef<number | null>(null);
 
-  // Update entities every frame via game loop
+  // Update preserved state when it changes
+  useEffect(() => {
+    preservedIsExpanded = isExpanded;
+  }, [isExpanded]);
+
+  // Update entities every frame via game loop, but only when they actually change
   useEffect(() => {
     const updateEntities = () => {
       const allEntities = getAllEntities(ecsContext);
-      setEntities(allEntities);
+      // Only update state if entities actually changed to prevent unnecessary re-renders
+      setEntities((prevEntities) => {
+        if (
+          prevEntities.length !== allEntities.length ||
+          !prevEntities.every((entity, index) => entity === allEntities[index])
+        ) {
+          return allEntities;
+        }
+        return prevEntities;
+      });
     };
 
     // Initial update
@@ -74,12 +99,10 @@ export function EntityListPanel({ ecsContext, onEntityClick }: EntityListPanelPr
         className={`px-3 pt-2 pb-2 text-[0.8125rem] font-normal border-0 cursor-pointer bg-transparent text-[var(--vscode-button-foreground,rgba(255,255,255,0.9))] font-[var(--vscode-font-family,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif)] outline-none box-border inline-flex items-center justify-between min-h-[22px] leading-[1.4em] w-full select-none border-b border-[var(--vscode-panel-border,rgba(128,128,128,0.2))] hover:bg-[var(--vscode-button-hoverBackground,rgba(255,255,255,0.1))] active:bg-[var(--vscode-button-activeBackground,rgba(255,255,255,0.15))] focus:outline-none`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <span className="text-[0.8125rem] font-normal">
-          Show Entity List
-        </span>
+        <span className="text-[0.8125rem] font-normal">Show Entity List</span>
         <span
           className={`codicon text-[0.75rem] ${
-            isExpanded ? 'codicon-chevron-down' : 'codicon-chevron-right'
+            isExpanded ? "codicon-chevron-down" : "codicon-chevron-right"
           }`}
         />
       </button>
@@ -107,18 +130,3 @@ export function EntityListPanel({ ecsContext, onEntityClick }: EntityListPanelPr
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
