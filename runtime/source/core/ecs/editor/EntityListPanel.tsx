@@ -116,6 +116,9 @@ export function EntityListPanel({
           fontSize: "0.75rem",
           fontWeight: "normal",
           border: "none",
+          borderBottom: isExpanded
+            ? "1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))"
+            : "none",
           cursor: "pointer",
           backgroundColor: isHovered
             ? "rgba(128, 128, 128, 0.35)"
@@ -133,7 +136,7 @@ export function EntityListPanel({
           width: "100%",
           userSelect: "none",
           transition: "background-color 0.1s ease-out",
-          borderRadius: "2px 2px 0 0",
+          borderRadius: isExpanded ? "2px 2px 0 0" : "2px",
         }}
         onClick={() => setIsExpanded(!isExpanded)}
         onMouseEnter={() => setIsHovered(true)}
@@ -173,7 +176,7 @@ export function EntityListPanel({
           {entities.length === 0 ? (
             <div
               style={{
-                padding: "0.5rem 0.75rem",
+                padding: "0.5rem 0.5rem",
                 color:
                   "var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))",
                 fontSize: "0.75rem",
@@ -187,7 +190,7 @@ export function EntityListPanel({
               <div
                 key={entity}
                 style={{
-                  padding: "0.125rem 0.75rem",
+                  padding: "0.125rem 0.5rem",
                   width: "100%",
                   boxSizing: "border-box",
                   cursor: "pointer",
