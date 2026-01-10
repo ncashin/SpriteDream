@@ -112,7 +112,7 @@ export function EntityListPanel({
     >
       <button
         style={{
-          padding: "0.25rem 0.5rem",
+          padding: "0.25rem 0.25rem 0.25rem 0.5rem",
           fontSize: "0.75rem",
           fontWeight: "normal",
           border: "none",
@@ -159,7 +159,7 @@ export function EntityListPanel({
           }`}
           style={{
             fontSize: "0.75rem",
-            marginLeft: "0.5rem",
+            marginLeft: "0.25rem",
           }}
         />
       </button>
@@ -167,8 +167,8 @@ export function EntityListPanel({
         <div
           style={{
             overflow: "auto",
-            padding: "0.25rem 0",
-            backgroundColor: "transparent",
+            padding: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.1)",
             maxHeight: "400px",
             borderRadius: "0 0 2px 2px",
           }}
@@ -176,11 +176,16 @@ export function EntityListPanel({
           {entities.length === 0 ? (
             <div
               style={{
-                padding: "0.5rem 0.5rem",
+                padding: "0.25rem 0.5rem",
+                minHeight: "20px",
+                lineHeight: "1.4em",
                 color:
                   "var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))",
                 fontSize: "0.75rem",
                 textAlign: "center",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               No entities
@@ -190,7 +195,9 @@ export function EntityListPanel({
               <div
                 key={entity}
                 style={{
-                  padding: "0.125rem 0.5rem",
+                  padding: "0.25rem 0.5rem",
+                  minHeight: "20px",
+                  lineHeight: "1.4em",
                   width: "100%",
                   boxSizing: "border-box",
                   cursor: "pointer",
@@ -203,6 +210,8 @@ export function EntityListPanel({
                       ? "var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))"
                       : "transparent",
                   transition: "background-color 0.1s ease-out",
+                  display: "flex",
+                  alignItems: "center",
                 }}
                 onClick={() => onEntityClick(entity)}
                 onMouseEnter={() => setHoveredEntity(entity)}

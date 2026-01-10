@@ -175,18 +175,19 @@ export function EntityModal({
         flexDirection: "column",
         fontFamily:
           "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
-        minWidth: "400px",
-        maxWidth: "600px",
-        maxHeight: "500px",
+        minWidth: "300px",
+        maxWidth: "500px",
+        maxHeight: "400px",
         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
       }}
     >
       <div
         style={{
-          padding: "0.25rem 0.5rem",
+          padding: "0.25rem 0.25rem 0.25rem 0.5rem",
           fontSize: "0.75rem",
           fontWeight: "normal",
           border: "none",
+          borderBottom: "1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))",
           backgroundColor: "transparent",
           color: "var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))",
           fontFamily:
@@ -211,18 +212,19 @@ export function EntityModal({
             backgroundColor: "transparent",
             border: "none",
             cursor: "pointer",
-            padding: "0.25rem",
-            width: "20px",
-            height: "20px",
+            padding: "0.125rem",
+            width: "16px",
+            height: "16px",
             borderRadius: "2px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "var(--vscode-foreground, #cccccc)",
+            color: "var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))",
             transition: "background-color 0.1s ease-out",
             backgroundColor: isCloseHovered
               ? "var(--vscode-button-hoverBackground, rgba(255, 255, 255, 0.1))"
               : "transparent",
+            marginLeft: "0.25rem",
           }}
           onClick={onClose}
           onMouseEnter={() => setIsCloseHovered(true)}
@@ -236,7 +238,7 @@ export function EntityModal({
           flex: 1,
           overflow: "auto",
           padding: 0,
-          backgroundColor: "transparent",
+          backgroundColor: "rgba(0, 0, 0, 0.1)",
           borderRadius: "0 0 2px 2px",
         }}
       >
@@ -249,13 +251,13 @@ export function EntityModal({
           style={{
             width: "100%",
             height: "100%",
-            padding: "0.75rem",
+            padding: "0.5rem",
             backgroundColor: "transparent",
             color: "var(--vscode-foreground, #cccccc)",
             fontSize: "0.75rem",
             fontFamily:
               "var(--vscode-editor-font-family, 'Consolas', 'Courier New', monospace)",
-            lineHeight: "1.5",
+            lineHeight: "1.4",
             resize: "none",
             outline: "none",
             boxSizing: "border-box",
@@ -265,7 +267,7 @@ export function EntityModal({
             border: isValid
               ? "none"
               : "1px solid var(--vscode-inputValidation-errorBorder, #f48771)",
-            minHeight: "300px",
+            minHeight: "200px",
           }}
         />
       </div>
