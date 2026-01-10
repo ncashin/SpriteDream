@@ -4,8 +4,8 @@
       "position": {
         "player": {
           "type": "position",
-          "x": 475,
-          "y": 210
+          "x": 736,
+          "y": 162
         },
         "floor": {
           "type": "position",
