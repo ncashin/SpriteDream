@@ -231,7 +231,7 @@ export function main(initialContext: InitialGameContext) {
         const rect = gameContext.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        const delta = e.deltaY > 0 ? -0.03 : 0.03;
         zoomViewport(delta, x, y);
       };
       gameContext.canvas.addEventListener("wheel", wheelHandler, {
@@ -301,12 +301,23 @@ export function main(initialContext: InitialGameContext) {
           }
         }
       } else if (isDraggingViewport) {
-        // Drag viewport (accounting for scale)
-        const newViewportX =
-          viewportDragStartX - dragState.offsetX / viewport.scale;
-        const newViewportY =
-          viewportDragStartY - dragState.offsetY / viewport.scale;
-        setViewport(newViewportX, newViewportY);
+        // If viewport was reset while dragging (was at non-zero, now at 0,0,1), end the drag
+        if (
+          viewport.x === 0 &&
+          viewport.y === 0 &&
+          viewport.scale === 1 &&
+          (viewportDragStartX !== 0 || viewportDragStartY !== 0)
+        ) {
+          gameContext.input.endDrag();
+          isDraggingViewport = false;
+        } else {
+          // Normal drag update
+          const newViewportX =
+            viewportDragStartX - dragState.offsetX / viewport.scale;
+          const newViewportY =
+            viewportDragStartY - dragState.offsetY / viewport.scale;
+          setViewport(newViewportX, newViewportY);
+        }
       }
     }
 
