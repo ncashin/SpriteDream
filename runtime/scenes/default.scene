@@ -9,8 +9,8 @@
         },
         "floor": {
           "type": "position",
-          "x": 616,
-          "y": 830
+          "x": 768,
+          "y": 916
         },
         "platform1": {
           "type": "position",

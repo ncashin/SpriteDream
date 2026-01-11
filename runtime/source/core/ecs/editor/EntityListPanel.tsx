@@ -106,17 +106,17 @@ export function EntityListPanel({
 
   const handleCreateEntity = () => {
     if (!ecsContext) return;
-    
+
     // Find a unique name starting with "newEntity"
     const allEntities = getAllEntities(ecsContext);
     let entityName = "newEntity";
     let counter = 0;
-    
+
     while (allEntities.includes(entityName)) {
       counter++;
       entityName = `newEntity${counter}`;
     }
-    
+
     const newEntity = ecsContext.ecs.createEntity(entityName);
     // Add a default position component so the entity appears in the list
     ecsContext.ecs.addComponent(newEntity, {
@@ -158,22 +158,22 @@ export function EntityListPanel({
 
       // Get all components from the old entity
       const oldEntityData = ecsContext.ecs.getEntity(renamingEntity);
-      
+
       // Create new entity with the new name
       const newEntity = ecsContext.ecs.createEntity(newName);
-      
+
       // Copy all components to the new entity
       for (const component of Object.values(oldEntityData)) {
         ecsContext.ecs.addComponent(newEntity, component);
       }
-      
+
       // Delete the old entity
       ecsContext.ecs.destroyEntity(renamingEntity);
-      
+
       // Select the new entity
       onEntityClick(newEntity);
     }
-    
+
     setRenamingEntity(null);
     setRenameValue("");
   };
@@ -291,7 +291,8 @@ export function EntityListPanel({
                 "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
               backgroundColor: "transparent",
               border: "none",
-              borderBottom: "1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))",
+              borderBottom:
+                "1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))",
               transition: "background-color 0.1s ease-out",
               display: "flex",
               alignItems: "center",
@@ -306,7 +307,10 @@ export function EntityListPanel({
               e.currentTarget.style.backgroundColor = "transparent";
             }}
           >
-            <span className="codicon codicon-add" style={{ fontSize: "0.75rem" }} />
+            <span
+              className="codicon codicon-add"
+              style={{ fontSize: "0.75rem" }}
+            />
             <span>New Entity</span>
           </button>
 
@@ -422,7 +426,8 @@ export function EntityListPanel({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            color: "var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))",
+                            color:
+                              "var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))",
                             transition: "background-color 0.1s ease-out",
                           }}
                           onClick={(e) => handleStartRename(entity, e)}
@@ -431,11 +436,15 @@ export function EntityListPanel({
                               "var(--vscode-button-hoverBackground, rgba(255, 255, 255, 0.1))";
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                           }}
                           title="Rename entity"
                         >
-                          <span className="codicon codicon-edit" style={{ fontSize: "0.75rem" }} />
+                          <span
+                            className="codicon codicon-edit"
+                            style={{ fontSize: "0.75rem" }}
+                          />
                         </button>
                         <button
                           style={{
@@ -458,11 +467,15 @@ export function EntityListPanel({
                               "var(--vscode-button-hoverBackground, rgba(255, 255, 255, 0.1))";
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                           }}
                           title="Delete entity"
                         >
-                          <span className="codicon codicon-trash" style={{ fontSize: "0.75rem" }} />
+                          <span
+                            className="codicon codicon-trash"
+                            style={{ fontSize: "0.75rem" }}
+                          />
                         </button>
                       </div>
                     )}

@@ -59,4 +59,3 @@ export const VelocityComponentDefinition: VelocityComponent = defineComponent(
     description: "Entity velocity in 2D space",
   }
 );
-
