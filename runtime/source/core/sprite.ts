@@ -4,9 +4,10 @@ import {
   PositionComponentDefinition,
   type PositionComponent,
   defineComponent,
-} from "./ecs/defaultComponents";
+} from "./ecs/component";
 import { ecsPlugin } from "./scene/ecsAdapter";
 import { addDrawCallback } from "./gameloop";
+import { getViewport } from "./viewport/viewport";
 
 export type SpriteComponent = Component & {
   type: "sprite";
@@ -66,6 +67,16 @@ export function spritePlugin<
   addDrawCallback(() => {
     context2D.clearRect(0, 0, canvas.width, canvas.height);
 
+    const viewport = getViewport();
+
+    // Save the current context state
+    context2D.save();
+
+    // Apply viewport transform
+    // Canvas applies transforms in reverse order, so we scale first, then translate
+    context2D.scale(viewport.scale, viewport.scale);
+    context2D.translate(-viewport.x, -viewport.y);
+
     context.ecs.runQuery(
       [PositionComponentDefinition, SpriteComponentDefinition],
       (_entity: Entity, components: [PositionComponent, SpriteComponent]) => {
@@ -80,6 +91,9 @@ export function spritePlugin<
         );
       }
     );
+
+    // Restore the context state
+    context2D.restore();
   });
 
   return {

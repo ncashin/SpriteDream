@@ -10,6 +10,7 @@ import {
 } from "./core/sprite";
 import { inputPlugin } from "./core/input";
 import { ecsEditorPlugin } from "./core/ecs/editor/ECSEditorPlugin.tsx";
+import { viewportDebugPlugin } from "./core/viewport/viewportDebugPlugin";
 import { addStartCallback } from "./core/initialization";
 import { addUpdateCallback, addEditorCallback } from "./core/gameloop";
 import type { Component } from "./core/ecs/ecs";
@@ -17,8 +18,24 @@ import {
   PositionComponentDefinition,
   type PositionComponent,
   defineComponent,
-} from "./core/ecs/defaultComponents";
+} from "./core/ecs/component";
+import {
+  getViewport,
+  setViewport,
+  resetViewport,
+  zoomViewport,
+} from "./core/viewport/viewport";
 import initialScene from "../scenes/default.scene?raw";
+
+// Export viewport functions for programmatic access
+export {
+  getViewport,
+  setViewport,
+  updateViewport,
+  resetViewport,
+  setViewportScale,
+  zoomViewport,
+} from "./core/viewport/viewport";
 
 export type PlatformComponent = Component & {
   type: "platform";
@@ -88,7 +105,13 @@ export function setEditorDragCallback(callback: EditorDragCallback | null) {
 export function main(initialContext: InitialGameContext) {
   const gameContext = initializeGameContext({
     initialContext,
-    plugins: [ecsPlugin, spritePlugin, inputPlugin, ecsEditorPlugin],
+    plugins: [
+      ecsPlugin,
+      spritePlugin,
+      inputPlugin,
+      ecsEditorPlugin,
+      viewportDebugPlugin,
+    ],
     initialScene,
   });
 
@@ -96,6 +119,9 @@ export function main(initialContext: InitialGameContext) {
   let playerEntity: any | null = null;
 
   addStartCallback(() => {
+    // Reset viewport to 0, 0 when starting the game
+    resetViewport();
+
     playerEntity = gameContext.ecs.getEntity(playerEntityId);
 
     if (playerEntity.player && playerEntity.player.isGrounded === undefined) {
@@ -185,10 +211,38 @@ export function main(initialContext: InitialGameContext) {
   let draggedEntityId: string | null = null;
   let dragStartEntityX: number = 0;
   let dragStartEntityY: number = 0;
+  let isDraggingViewport: boolean = false;
+  let viewportDragStartX: number = 0;
+  let viewportDragStartY: number = 0;
+
+  // Handle mouse wheel for zooming
+  let wheelHandler: ((e: WheelEvent) => void) | null = null;
 
   addEditorCallback(() => {
     const mousePos = gameContext.input.getMousePosition();
     const isMouseDown = gameContext.input.isMouseButtonPressed("left");
+    const viewport = getViewport();
+
+    // Set up wheel handler if not already set
+    if (!wheelHandler) {
+      wheelHandler = (e: WheelEvent) => {
+        e.preventDefault();
+        // Get mouse position from the event (relative to canvas)
+        const rect = gameContext.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        zoomViewport(delta, x, y);
+      };
+      gameContext.canvas.addEventListener("wheel", wheelHandler, {
+        passive: false,
+      });
+    }
+
+    // Convert screen coordinates to world coordinates (accounting for scale)
+    // Screen to world: world = (screen / scale) + viewport
+    const worldMouseX = mousePos.x / viewport.scale + viewport.x;
+    const worldMouseY = mousePos.y / viewport.scale + viewport.y;
 
     if (isMouseDown && !gameContext.input.getDragState().isDragging) {
       let clickedEntity: string | null = null;
@@ -206,10 +260,10 @@ export function main(initialContext: InitialGameContext) {
           const bottom = position.y + sprite.height / 2;
 
           if (
-            mousePos.x >= left &&
-            mousePos.x <= right &&
-            mousePos.y >= top &&
-            mousePos.y <= bottom
+            worldMouseX >= left &&
+            worldMouseX <= right &&
+            worldMouseY >= top &&
+            worldMouseY <= bottom
           ) {
             clickedEntity = entity;
             draggedEntityId = entity;
@@ -219,28 +273,47 @@ export function main(initialContext: InitialGameContext) {
           }
         }
       );
+
+      // If no entity was clicked, start dragging the viewport
+      if (!clickedEntity) {
+        isDraggingViewport = true;
+        viewportDragStartX = viewport.x;
+        viewportDragStartY = viewport.y;
+        gameContext.input.startDrag(mousePos.x, mousePos.y);
+      }
     }
 
-    if (gameContext.input.getDragState().isDragging && draggedEntityId) {
+    if (gameContext.input.getDragState().isDragging) {
       gameContext.input.updateDrag(mousePos.x, mousePos.y);
       const dragState = gameContext.input.getDragState();
 
-      const entity = gameContext.ecs.getEntity(draggedEntityId);
-      if (entity && entity.position) {
-        const newX = dragStartEntityX + dragState.offsetX;
-        const newY = dragStartEntityY + dragState.offsetY;
-        entity.position.x = newX;
-        entity.position.y = newY;
+      if (draggedEntityId) {
+        // Drag entity (accounting for scale)
+        const entity = gameContext.ecs.getEntity(draggedEntityId);
+        if (entity && entity.position) {
+          const newX = dragStartEntityX + dragState.offsetX / viewport.scale;
+          const newY = dragStartEntityY + dragState.offsetY / viewport.scale;
+          entity.position.x = newX;
+          entity.position.y = newY;
 
-        if (editorDragCallback) {
-          editorDragCallback(draggedEntityId, newX, newY);
+          if (editorDragCallback) {
+            editorDragCallback(draggedEntityId, newX, newY);
+          }
         }
+      } else if (isDraggingViewport) {
+        // Drag viewport (accounting for scale)
+        const newViewportX =
+          viewportDragStartX - dragState.offsetX / viewport.scale;
+        const newViewportY =
+          viewportDragStartY - dragState.offsetY / viewport.scale;
+        setViewport(newViewportX, newViewportY);
       }
     }
 
     if (!isMouseDown && gameContext.input.getDragState().isDragging) {
       gameContext.input.endDrag();
       draggedEntityId = null;
+      isDraggingViewport = false;
     }
   });
 }

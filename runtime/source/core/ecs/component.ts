@@ -19,7 +19,7 @@ export function defineComponent<T extends Component>(
   const type = component.type;
   componentRegistry[type] = {
     type,
-    defaultComponent: JSON.parse(JSON.stringify(component)), // Deep clone
+    defaultComponent: JSON.parse(JSON.stringify(component)),
     displayName: options?.displayName || type,
     description: options?.description,
   };
@@ -59,3 +59,4 @@ export const VelocityComponentDefinition: VelocityComponent = defineComponent(
     description: "Entity velocity in 2D space",
   }
 );
+

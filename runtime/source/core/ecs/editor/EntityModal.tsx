@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import type { Component, Entity } from "../ecs";
 import { addDrawCallback, removeDrawCallback } from "../../gameloop";
-import { componentRegistry } from "../defaultComponents";
+import { componentRegistry } from "../component";
 import { SearchInput } from "./SearchInput";
 
 interface EntityModalProps {
@@ -53,7 +53,9 @@ export function EntityModal({
       const lineNumber = lines.length - 1;
 
       // Scroll to the match
-      const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 1.5 * parseFloat(getComputedStyle(textarea).fontSize);
+      const lineHeight =
+        parseFloat(getComputedStyle(textarea).lineHeight) ||
+        1.5 * parseFloat(getComputedStyle(textarea).fontSize);
       const scrollTop = lineNumber * lineHeight - textarea.clientHeight / 2;
       textarea.scrollTop = Math.max(0, scrollTop);
 
@@ -65,10 +67,10 @@ export function EntityModal({
   // Filter available components
   const availableComponents = useMemo(() => {
     if (!entity || !ecsContext) return [];
-    
+
     const currentComponents = ecsContext.ecs.getEntity(entity);
     const query = componentSearchQuery.toLowerCase();
-    
+
     return Object.entries(componentRegistry)
       .filter(([type, def]) => {
         const matchesQuery =
@@ -235,11 +237,13 @@ export function EntityModal({
 
   const handleAddComponent = (componentType: string) => {
     if (!entity || !ecsContext) return;
-    
+
     const componentDef = componentRegistry[componentType];
     if (!componentDef) return;
-    
-    const newComponent = JSON.parse(JSON.stringify(componentDef.defaultComponent)); // Deep clone
+
+    const newComponent = JSON.parse(
+      JSON.stringify(componentDef.defaultComponent)
+    ); // Deep clone
     ecsContext.ecs.addComponent(entity, newComponent);
     setShowAddComponent(false);
     setComponentSearchQuery("");
@@ -269,7 +273,8 @@ export function EntityModal({
           fontSize: "0.75rem",
           fontWeight: "normal",
           border: "none",
-          borderBottom: "1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))",
+          borderBottom:
+            "1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))",
           backgroundColor: "transparent",
           color: "var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))",
           fontFamily:
@@ -312,15 +317,19 @@ export function EntityModal({
           onMouseEnter={() => setIsCloseHovered(true)}
           onMouseLeave={() => setIsCloseHovered(false)}
         >
-          <span className="codicon codicon-close" style={{ fontSize: "0.75rem" }} />
+          <span
+            className="codicon codicon-close"
+            style={{ fontSize: "0.75rem" }}
+          />
         </button>
       </div>
-      
+
       {/* Toolbar with search and add component */}
       <div
         style={{
           padding: "0.25rem 0.25rem",
-          borderBottom: "1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))",
+          borderBottom:
+            "1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))",
           display: "flex",
           flexDirection: "row",
           gap: "0.5rem",
@@ -344,7 +353,10 @@ export function EntityModal({
             }}
           />
         </div>
-        <div style={{ position: "relative", flexShrink: 0 }} ref={addComponentDropdownRef}>
+        <div
+          style={{ position: "relative", flexShrink: 0 }}
+          ref={addComponentDropdownRef}
+        >
           <button
             onClick={() => setShowAddComponent(!showAddComponent)}
             style={{
@@ -359,7 +371,8 @@ export function EntityModal({
               border: "none",
               borderRadius: "2px",
               cursor: "pointer",
-              color: "var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))",
+              color:
+                "var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))",
               display: "inline-flex",
               flexDirection: "row",
               alignItems: "center",
@@ -390,7 +403,10 @@ export function EntityModal({
               e.currentTarget.style.outline = "none";
             }}
           >
-            <span className="codicon codicon-add" style={{ fontSize: "0.75rem" }} />
+            <span
+              className="codicon codicon-add"
+              style={{ fontSize: "0.75rem" }}
+            />
             <span>Add Component</span>
           </button>
           {showAddComponent && (
@@ -416,7 +432,8 @@ export function EntityModal({
               <div
                 style={{
                   padding: "0.25rem 0.5rem",
-                  borderBottom: "1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))",
+                  borderBottom:
+                    "1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))",
                 }}
               >
                 <SearchInput
@@ -493,12 +510,15 @@ export function EntityModal({
                         e.currentTarget.style.backgroundColor = "transparent";
                       }}
                     >
-                      <div style={{ fontWeight: "normal" }}>{def.displayName || type}</div>
+                      <div style={{ fontWeight: "normal" }}>
+                        {def.displayName || type}
+                      </div>
                       {def.description && (
                         <div
                           style={{
                             fontSize: "0.75rem",
-                            color: "var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))",
+                            color:
+                              "var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))",
                             marginTop: "0.125rem",
                           }}
                         >
@@ -560,7 +580,8 @@ export function EntityModal({
               bottom: "0.5rem",
               right: "0.5rem",
               padding: "0.25rem 0.5rem",
-              backgroundColor: "var(--vscode-inputValidation-errorBackground, rgba(244, 135, 113, 0.2))",
+              backgroundColor:
+                "var(--vscode-inputValidation-errorBackground, rgba(244, 135, 113, 0.2))",
               color: "var(--vscode-inputValidation-errorForeground, #f48771)",
               fontSize: "0.7rem",
               borderRadius: "2px",
