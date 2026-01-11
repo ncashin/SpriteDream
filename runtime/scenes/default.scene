@@ -4,23 +4,28 @@
       "position": {
         "player": {
           "type": "position",
-          "x": 736,
-          "y": 162
+          "x": 559,
+          "y": 276
         },
         "floor": {
           "type": "position",
-          "x": 500,
-          "y": 839
+          "x": 616,
+          "y": 830
         },
         "platform1": {
           "type": "position",
-          "x": 285,
-          "y": 488
+          "x": 341,
+          "y": 542
         },
         "platform2": {
           "type": "position",
-          "x": 800,
-          "y": 450
+          "x": 937,
+          "y": 537
+        },
+        "newEntity": {
+          "type": "position",
+          "x": 526,
+          "y": 352
         }
       },
       "sprite": {
@@ -47,10 +52,26 @@
           "width": 200,
           "height": 20,
           "color": "#888888"
+        },
+        "newEntity": {
+          "type": "sprite",
+          "width": 150,
+          "height": 32,
+          "color": "#ffffff"
         }
       },
       "velocity": {
         "player": {
+          "type": "velocity",
+          "x": 0,
+          "y": 0
+        },
+        "platform2": {
+          "type": "velocity",
+          "x": 0,
+          "y": 0
+        },
+        "newEntity": {
           "type": "velocity",
           "x": 0,
           "y": 0
@@ -63,6 +84,9 @@
           "gravity": 1800,
           "jumpStrength": 1000,
           "isGrounded": false
+        },
+        "platform2": {
+          "type": "player"
         }
       },
       "platform": {
@@ -74,8 +98,12 @@
         },
         "platform2": {
           "type": "platform"
+        },
+        "newEntity": {
+          "type": "platform"
         }
-      }
+      },
+      "undefined": {}
     }
   }
 }

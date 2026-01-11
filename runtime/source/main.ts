@@ -16,15 +16,22 @@ import type { Component } from "./core/ecs/ecs";
 import {
   PositionComponentDefinition,
   type PositionComponent,
+  defineComponent,
 } from "./core/ecs/defaultComponents";
 import initialScene from "../scenes/default.scene?raw";
 
 export type PlatformComponent = Component & {
   type: "platform";
 };
-export const PlatformComponentDefinition: PlatformComponent = {
-  type: "platform",
-} as const;
+export const PlatformComponentDefinition: PlatformComponent = defineComponent(
+  {
+    type: "platform",
+  },
+  {
+    displayName: "Platform",
+    description: "A platform entity",
+  }
+);
 
 export type PlayerComponent = Component & {
   type: "player";
@@ -33,13 +40,19 @@ export type PlayerComponent = Component & {
   jumpStrength: number;
   isGrounded: boolean;
 };
-export const PlayerComponentDefinition: PlayerComponent = {
-  type: "player",
-  speed: 0,
-  gravity: 0,
-  jumpStrength: 0,
-  isGrounded: false,
-} as const;
+export const PlayerComponentDefinition: PlayerComponent = defineComponent(
+  {
+    type: "player",
+    speed: 0,
+    gravity: 0,
+    jumpStrength: 0,
+    isGrounded: false,
+  },
+  {
+    displayName: "Player",
+    description: "Player-controlled entity",
+  }
+);
 
 function checkAABBCollision(
   pos1: PositionComponent,

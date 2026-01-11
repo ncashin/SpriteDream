@@ -3,6 +3,7 @@ import type { Component, Entity } from "./ecs/ecs";
 import {
   PositionComponentDefinition,
   type PositionComponent,
+  defineComponent,
 } from "./ecs/defaultComponents";
 import { ecsPlugin } from "./scene/ecsAdapter";
 import { addDrawCallback } from "./gameloop";
@@ -13,12 +14,18 @@ export type SpriteComponent = Component & {
   height: number;
   color: string;
 };
-export const SpriteComponentDefinition: SpriteComponent = {
-  type: "sprite",
-  width: 32,
-  height: 32,
-  color: "#ffffff",
-} as const;
+export const SpriteComponentDefinition: SpriteComponent = defineComponent(
+  {
+    type: "sprite",
+    width: 32,
+    height: 32,
+    color: "#ffffff",
+  },
+  {
+    displayName: "Sprite",
+    description: "Visual representation of an entity",
+  }
+);
 
 
 function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
