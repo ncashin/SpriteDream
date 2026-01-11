@@ -59,3 +59,36 @@ export const VelocityComponentDefinition: VelocityComponent = defineComponent(
     description: "Entity velocity in 2D space",
   }
 );
+
+export type ColliderComponent = Component & {
+  type: "collider";
+  colliderName: string;
+  resolverName: string;
+  collisionEnabled: boolean;
+  // Offset from entity position (in world space)
+  offsetX?: number;
+  offsetY?: number;
+  // Rectangle collider properties
+  width?: number;
+  height?: number;
+  angle?: number;
+  // Circle collider properties
+  radius?: number;
+};
+export const ColliderComponentDefinition: ColliderComponent = defineComponent(
+  {
+    type: "collider",
+    colliderName: "rectangle",
+    resolverName: "static",
+    collisionEnabled: true,
+    offsetX: 0,
+    offsetY: 0,
+    width: 32,
+    height: 32,
+    angle: 0,
+  },
+  {
+    displayName: "Collider",
+    description: "Collision detection and resolution component",
+  }
+);

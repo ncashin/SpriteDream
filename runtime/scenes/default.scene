@@ -28,7 +28,8 @@
           "type": "sprite",
           "width": 32,
           "height": 32,
-          "color": "#ff0000"
+          "color": "#ff0000",
+          "image": "/vite.svg"
         },
         "floor": {
           "type": "sprite",
@@ -91,6 +92,17 @@
           "x": 662,
           "y": 426,
           "zoom": 1
+        }
+      },
+      "collider": {
+        "player": {
+          "type": "collider",
+          "colliderName": "rectangle",
+          "resolverName": "static",
+          "collisionEnabled": true,
+          "width": 32,
+          "height": 32,
+          "angle": 0
         }
       }
     }

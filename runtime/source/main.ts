@@ -3,20 +3,16 @@ import {
   type InitialGameContext,
 } from "./core/gameContext";
 import { ecsPlugin } from "./core/scene/ecsAdapter";
-import {
-  spritePlugin,
-  SpriteComponentDefinition,
-  type SpriteComponent,
-} from "./core/sprite";
+import { spritePlugin, SpriteComponentDefinition } from "./core/sprite";
 import { inputPlugin } from "./core/input";
 import { ecsEditorPlugin } from "./core/ecs/editor/ECSEditorPlugin.tsx";
 import { viewportDebugPlugin } from "./core/viewport/viewportDebugPlugin";
+import { collisionPlugin } from "./core/collision/collisionPlugin";
 import { addStartCallback } from "./core/initialization";
 import { addUpdateCallback, addEditorCallback } from "./core/gameloop";
 import type { Component } from "./core/ecs/ecs";
 import {
   PositionComponentDefinition,
-  type PositionComponent,
   defineComponent,
 } from "./core/ecs/component";
 import {
@@ -71,25 +67,6 @@ export const PlayerComponentDefinition: PlayerComponent = defineComponent(
   }
 );
 
-function checkAABBCollision(
-  pos1: PositionComponent,
-  sprite1: SpriteComponent,
-  pos2: PositionComponent,
-  sprite2: SpriteComponent
-): boolean {
-  const left1 = pos1.x - sprite1.width / 2;
-  const right1 = pos1.x + sprite1.width / 2;
-  const top1 = pos1.y - sprite1.height / 2;
-  const bottom1 = pos1.y + sprite1.height / 2;
-
-  const left2 = pos2.x - sprite2.width / 2;
-  const right2 = pos2.x + sprite2.width / 2;
-  const top2 = pos2.y - sprite2.height / 2;
-  const bottom2 = pos2.y + sprite2.height / 2;
-
-  return left1 < right2 && right1 > left2 && top1 < bottom2 && bottom1 > top2;
-}
-
 export type EditorDragCallback = (
   entityId: string,
   newX: number,
@@ -108,6 +85,7 @@ export function main(initialContext: InitialGameContext) {
     plugins: [
       ecsPlugin,
       spritePlugin,
+      collisionPlugin,
       inputPlugin,
       ecsEditorPlugin,
       viewportDebugPlugin,
@@ -138,74 +116,43 @@ export function main(initialContext: InitialGameContext) {
       !playerEntity ||
       !playerEntity.position ||
       !playerEntity.velocity ||
-      !playerEntity.player ||
-      !playerEntity.sprite
+      !playerEntity.player
     )
       return;
 
     const speed = playerEntity.player.speed;
-    const moveDistance = speed * deltaTime;
     const gravity = playerEntity.player.gravity;
     const jumpStrength = playerEntity.player.jumpStrength;
 
+    // Check if grounded at the start of frame (based on previous frame's collision resolution)
+    // The platformer resolver sets velocity.y to 0 when on top of something
+    playerEntity.player.isGrounded = Math.abs(playerEntity.velocity.y) < 1;
+
+    // Handle horizontal movement via velocity
     if (gameContext.input.isKeyPressed("a")) {
-      playerEntity.position.x -= moveDistance;
-    }
-    if (gameContext.input.isKeyPressed("d")) {
-      playerEntity.position.x += moveDistance;
+      playerEntity.velocity.x = -speed;
+    } else if (gameContext.input.isKeyPressed("d")) {
+      playerEntity.velocity.x = speed;
+    } else {
+      // Apply friction when no input
+      playerEntity.velocity.x *= 0.8;
+      if (Math.abs(playerEntity.velocity.x) < 1) {
+        playerEntity.velocity.x = 0;
+      }
     }
 
+    // Handle jumping
     if (gameContext.input.isKeyPressed(" ") && playerEntity.player.isGrounded) {
       playerEntity.velocity.y = -jumpStrength;
+      playerEntity.player.isGrounded = false;
     }
 
+    // Apply gravity
     playerEntity.velocity.y += gravity * deltaTime;
+
+    // Update position based on velocity (collision system will correct this)
+    playerEntity.position.x += playerEntity.velocity.x * deltaTime;
     playerEntity.position.y += playerEntity.velocity.y * deltaTime;
-
-    playerEntity.player.isGrounded = false;
-    gameContext.ecs.runQuery(
-      [
-        PositionComponentDefinition,
-        SpriteComponentDefinition,
-        PlatformComponentDefinition,
-      ],
-      (
-        _entity: string,
-        components: [PositionComponent, SpriteComponent, PlatformComponent]
-      ) => {
-        const [platformPos, platformSprite] = components;
-
-        if (
-          checkAABBCollision(
-            playerEntity.position,
-            playerEntity.sprite,
-            platformPos,
-            platformSprite
-          )
-        ) {
-          const platformTopY = platformPos.y - platformSprite.height / 2;
-          const platformBottomY = platformPos.y + platformSprite.height / 2;
-          const playerTopY =
-            playerEntity.position.y - playerEntity.sprite.height / 2;
-          const playerBottomY =
-            playerEntity.position.y + playerEntity.sprite.height / 2;
-
-          if (playerEntity.velocity.y >= 0 && playerBottomY > platformTopY) {
-            playerEntity.position.y =
-              platformTopY - playerEntity.sprite.height / 2;
-            playerEntity.velocity.y = 0;
-            playerEntity.player.isGrounded = true;
-          } else if (
-            playerEntity.velocity.y < 0 &&
-            playerTopY < platformBottomY
-          ) {
-            playerEntity.position.y =
-              platformBottomY + playerEntity.sprite.height / 2;
-            playerEntity.velocity.y = 0;
-          }
-        }
-      }
-    );
   });
 
   let draggedEntityId: string | null = null;
