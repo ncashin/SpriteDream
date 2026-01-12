@@ -21,6 +21,11 @@
           "type": "position",
           "x": 200,
           "y": 100
+        },
+        "newEntity": {
+          "type": "position",
+          "x": 109,
+          "y": -195
         }
       },
       "sprite": {
@@ -48,6 +53,13 @@
           "width": 200,
           "height": 20,
           "color": "#888888"
+        },
+        "newEntity": {
+          "type": "sprite",
+          "width": 32,
+          "height": 32,
+          "color": "#ffffff",
+          "image": "/typescript.svg"
         }
       },
       "velocity": {
@@ -77,11 +89,15 @@
           "type": "player",
           "speed": 300,
           "gravity": 1800,
-          "jumpStrength": 300,
+          "jumpStrength": 500,
           "isGrounded": false
         },
         "platform2": {
-          "type": "player"
+          "type": "player",
+          "speed": 0,
+          "gravity": 0,
+          "jumpStrength": 0,
+          "isGrounded": false
         }
       },
       "platform": {
@@ -103,6 +119,8 @@
           "colliderName": "rectangle",
           "resolverName": "platformer",
           "collisionEnabled": true,
+          "offsetX": 0,
+          "offsetY": 0,
           "width": 32,
           "height": 32,
           "angle": 0
@@ -112,6 +130,8 @@
           "colliderName": "rectangle",
           "resolverName": "static",
           "collisionEnabled": true,
+          "offsetX": 0,
+          "offsetY": 0,
           "width": 1000,
           "height": 300,
           "angle": 0
@@ -121,6 +141,8 @@
           "colliderName": "rectangle",
           "resolverName": "static",
           "collisionEnabled": true,
+          "offsetX": 0,
+          "offsetY": 0,
           "width": 200,
           "height": 20,
           "angle": 0
@@ -130,12 +152,21 @@
           "colliderName": "rectangle",
           "resolverName": "static",
           "collisionEnabled": true,
+          "offsetX": 0,
+          "offsetY": 0,
           "width": 200,
           "height": 20,
           "angle": 0
         }
       },
-      "platformer": {}
+      "platformer": {},
+      "weapon": {
+        "newEntity": {
+          "type": "weapon",
+          "range": 50,
+          "playerId": "player"
+        }
+      }
     }
   }
 }

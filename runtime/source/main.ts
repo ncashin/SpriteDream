@@ -11,6 +11,8 @@ import { collisionPlugin } from "./core/collision/collisionPlugin";
 import { addStartCallback } from "./core/initialization";
 import { addEditorCallback } from "./core/gameloop";
 import { initializePlayer } from "./scripts/player";
+// Import to register WeaponComponentDefinition in componentRegistry for editor UI
+import { initializeWeapon, WeaponComponentDefinition } from "./scripts/weapon";
 import type { Component } from "./core/ecs/ecs";
 import {
   PositionComponentDefinition,
@@ -95,11 +97,48 @@ export function main(initialContext: InitialGameContext) {
   });
 
   initializePlayer(gameContext, "player");
+  initializeWeapon(gameContext);
 
   addStartCallback(() => {
     const component = document.createElement("div");
     component.textContent = "Game started!";
     gameContext.rootElement.appendChild(component);
+
+    // Create weapon entity if it doesn't exist or is missing components
+    const weaponEntityId = "weapon";
+    const weaponEntity = gameContext.ecs.getEntity(weaponEntityId);
+
+    // Get player position to place weapon next to player
+    const playerEntity = gameContext.ecs.getEntity("player");
+    const playerPosition = playerEntity?.position;
+
+    // Add position component if missing
+    if (!weaponEntity?.position) {
+      gameContext.ecs.addComponent(weaponEntityId, {
+        ...PositionComponentDefinition,
+        x: playerPosition?.x ?? 0,
+        y: playerPosition?.y ?? 0,
+      });
+    }
+
+    // Add sprite component so weapon is visible
+    if (!weaponEntity?.sprite) {
+      gameContext.ecs.addComponent(weaponEntityId, {
+        ...SpriteComponentDefinition,
+        width: 16,
+        height: 16,
+        color: "#ffff00",
+      });
+    }
+
+    // Add weapon component
+    if (!weaponEntity?.weapon) {
+      gameContext.ecs.addComponent(weaponEntityId, {
+        ...WeaponComponentDefinition,
+        playerId: "player",
+        range: 50,
+      });
+    }
   });
 
   let draggedEntityId: string | null = null;
