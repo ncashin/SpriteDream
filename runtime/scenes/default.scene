@@ -77,7 +77,7 @@
           "type": "player",
           "speed": 300,
           "gravity": 1800,
-          "jumpStrength": 1000,
+          "jumpStrength": 300,
           "isGrounded": false
         },
         "platform2": {

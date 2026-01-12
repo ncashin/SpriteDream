@@ -98,43 +98,6 @@ export const unregisterResolver = (name: string) => {
   delete resolvers[name];
 };
 
-export type CollisionCallback = (
-  ecs: ECSInstance,
-  entity: Entity,
-  other: Entity,
-  overlapAmount: number,
-  overlapNormal: Vector
-) => void;
-
-const collisionCallbacks: Map<Entity, CollisionCallback[]> = new Map();
-
-export const addCollisionCallback = (
-  entity: Entity,
-  callback: CollisionCallback
-) => {
-  if (!collisionCallbacks.has(entity)) {
-    collisionCallbacks.set(entity, []);
-  }
-  collisionCallbacks.get(entity)!.push(callback);
-};
-
-export const removeCollisionCallback = (
-  entity: Entity,
-  callback: CollisionCallback
-) => {
-  const callbacks = collisionCallbacks.get(entity);
-  if (callbacks) {
-    const index = callbacks.indexOf(callback);
-    if (index > -1) {
-      callbacks.splice(index, 1);
-    }
-  }
-};
-
-export const clearCollisionCallbacks = (entity: Entity) => {
-  collisionCallbacks.delete(entity);
-};
-
 export const colliders: { [name: string]: ColliderDefinition } = {};
 export const registerCollider = (collider: ColliderDefinition) => {
   colliders[collider.name] = collider;
@@ -230,26 +193,6 @@ export const handleCollisionPair = (
       minOverlap * -direction,
       smallestNormal
     );
-
-    const callbacksA = collisionCallbacks.get(entityA);
-    if (callbacksA) {
-      for (const callback of callbacksA) {
-        callback(ecs, entityA, entityB, minOverlap * direction, smallestNormal);
-      }
-    }
-
-    const callbacksB = collisionCallbacks.get(entityB);
-    if (callbacksB) {
-      for (const callback of callbacksB) {
-        callback(
-          ecs,
-          entityB,
-          entityA,
-          minOverlap * -direction,
-          smallestNormal
-        );
-      }
-    }
   }
 };
 
