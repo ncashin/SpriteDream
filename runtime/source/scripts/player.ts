@@ -3,13 +3,34 @@ import { create, sub, scale, dot, normalize } from "../core/vector";
 import { registerResolver } from "../core/sat";
 import { addStartCallback } from "../core/initialization";
 import { addUpdateCallback } from "../core/gameloop";
-import { getComponent } from "../core/ecs/ecs";
+import { getComponent, type Component } from "../core/ecs/ecs";
 import {
   PositionComponentDefinition,
   VelocityComponentDefinition,
   ColliderComponentDefinition,
+  defineComponent,
 } from "../core/ecs/component";
-import { PlayerComponentDefinition } from "../main";
+
+export type PlayerComponent = Component & {
+  type: "player";
+  speed: number;
+  gravity: number;
+  jumpStrength: number;
+  isGrounded: boolean;
+};
+export const PlayerComponentDefinition: PlayerComponent = defineComponent(
+  {
+    type: "player",
+    speed: 0,
+    gravity: 0,
+    jumpStrength: 0,
+    isGrounded: false,
+  },
+  {
+    displayName: "Player",
+    description: "Player-controlled entity",
+  }
+);
 
 export function initializePlayer(
   gameContext: {
@@ -56,8 +77,10 @@ export function initializePlayer(
       position.x += correction[0];
       position.y += correction[1];
 
-      velocity.y = 0;
-      player.isGrounded = true;
+      if (velocity.y > 0) {
+        velocity.y = 0;
+        player.isGrounded = true;
+      }
     },
   };
 
