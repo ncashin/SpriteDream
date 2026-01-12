@@ -5,7 +5,7 @@
         "player": {
           "type": "position",
           "x": 0,
-          "y": -50
+          "y": -100
         },
         "floor": {
           "type": "position",
@@ -57,6 +57,16 @@
           "y": 0
         },
         "platform2": {
+          "type": "velocity",
+          "x": 0,
+          "y": 0
+        },
+        "platform1": {
+          "type": "velocity",
+          "x": 0,
+          "y": 0
+        },
+        "floor": {
           "type": "velocity",
           "x": 0,
           "y": 0

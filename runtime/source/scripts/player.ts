@@ -1,8 +1,14 @@
-import type { ResolverDefinition, RectangleCollisionObject } from "../core/sat";
-import { create, add, sub, scale, dot, normalize } from "../core/vector";
-import { registerResolver } from "../core/sat";
+import type { ResolverDefinition } from "../core/sat";
+import { create, sub, scale, dot, normalize } from "../core/vector";
+import { registerResolver, addCollisionCallback } from "../core/sat";
 import { addStartCallback } from "../core/initialization";
 import { addUpdateCallback } from "../core/gameloop";
+import { getComponent } from "../core/ecs/ecs";
+import {
+  PositionComponentDefinition,
+  VelocityComponentDefinition,
+  ColliderComponentDefinition,
+} from "../core/ecs/component";
 
 export function initializePlayer(
   gameContext: {
@@ -24,64 +30,51 @@ export function initializePlayer(
 ) {
   let playerEntity: any | null = null;
 
-  // Create resolver that accesses the actual player entity's velocity
-  const PLATFORMER_RESOLVER: ResolverDefinition<RectangleCollisionObject> = {
+  const PLATFORMER_RESOLVER: ResolverDefinition = {
     name: "platformer",
-    resolveCollision: (objA, _objB, overlapAmount, overlapNormal) => {
+    resolveCollision: (ecs, entity, _other, overlapAmount, overlapNormal) => {
+      const position = getComponent(ecs, entity, PositionComponentDefinition);
+      const velocity = getComponent(ecs, entity, VelocityComponentDefinition);
+      const collider = getComponent(ecs, entity, ColliderComponentDefinition);
+
+      if (!position || !velocity || !collider) return;
+
       const n = normalize(overlapNormal);
-      objA.position = add(objA.position, scale(n, overlapAmount));
 
-      // Use the actual player entity's velocity instead of collision object's velocity
-      if (!playerEntity || !playerEntity.velocity) {
-        return;
-      }
+      const correction = scale(n, overlapAmount);
+      position.x += correction[0];
+      position.y += correction[1];
 
-      // Convert entity velocity to vector format for calculations
-      const entityVelocity = create(
-        playerEntity.velocity.x,
-        playerEntity.velocity.y
-      );
+      const entityVelocity = create(velocity.x, velocity.y);
 
       const vDotN = dot(entityVelocity, n);
 
-      // Only resolve collision if moving into the surface (vDotN < 0)
-      // This allows jumping (moving away from surface) to work
       if (vDotN < 0) {
         const newVelocity = sub(entityVelocity, scale(n, vDotN));
-        playerEntity.velocity.x = newVelocity[0];
-        playerEntity.velocity.y = newVelocity[1];
+        velocity.x = newVelocity[0];
+        velocity.y = newVelocity[1];
 
-        // If landing on top of something (normal pointing up), zero y velocity
-        // This prevents velocity accumulation and ensures proper grounding
         if (n[1] < -0.5) {
-          playerEntity.velocity.y = 0;
+          velocity.y = 0;
         }
 
-        // If colliding from above (normal pointing down), also zero y velocity
-        // This prevents the player from falling through when already on top
-        if (n[1] > 0.5 && playerEntity.velocity.y > 0) {
-          playerEntity.velocity.y = 0;
+        if (n[1] > 0.5 && velocity.y > 0) {
+          velocity.y = 0;
         }
       }
 
       if (Math.abs(n[1]) < 0.7) {
         const friction = 0.8;
-        playerEntity.velocity.x *= friction;
+        velocity.x *= friction;
       }
 
       const VELOCITY_EPSILON = 1;
-      if (Math.abs(playerEntity.velocity.x) < VELOCITY_EPSILON) {
-        playerEntity.velocity.x = 0;
+      if (Math.abs(velocity.x) < VELOCITY_EPSILON) {
+        velocity.x = 0;
       }
-      if (Math.abs(playerEntity.velocity.y) < VELOCITY_EPSILON) {
-        playerEntity.velocity.y = 0;
+      if (Math.abs(velocity.y) < VELOCITY_EPSILON) {
+        velocity.y = 0;
       }
-
-      // Sync back to collision object for position updates
-      if (!objA.velocity) {
-        objA.velocity = create(0, 0);
-      }
-      objA.velocity = create(playerEntity.velocity.x, playerEntity.velocity.y);
     },
   };
 
@@ -93,6 +86,19 @@ export function initializePlayer(
     if (playerEntity.player && playerEntity.player.isGrounded === undefined) {
       playerEntity.player.isGrounded = false;
     }
+
+    addCollisionCallback(
+      playerEntityId,
+      (_ecs, _entity, _other, _overlapAmount, overlapNormal) => {
+        const player = gameContext.ecs.getEntity(playerEntityId);
+        if (!player || !player.player) return;
+
+        const n = normalize(overlapNormal);
+        if (n[1] > 0.5) {
+          player.player.isGrounded = true;
+        }
+      }
+    );
   });
 
   addUpdateCallback((deltaTime: number) => {
@@ -108,36 +114,26 @@ export function initializePlayer(
     const gravity = playerEntity.player.gravity;
     const jumpStrength = playerEntity.player.jumpStrength;
 
-    // Check if grounded - velocity.y should be 0 or very small after collision resolution
-    // The collision system runs before this callback, so velocity.y should already be resolved
-    playerEntity.player.isGrounded = Math.abs(playerEntity.velocity.y) < 0.1;
+    playerEntity.player.isGrounded = false;
 
-    // Handle horizontal movement via velocity
     if (gameContext.input.isKeyPressed("a")) {
       playerEntity.velocity.x = -speed;
     } else if (gameContext.input.isKeyPressed("d")) {
       playerEntity.velocity.x = speed;
     } else {
-      // Apply friction when no input
       playerEntity.velocity.x *= 0.8;
       if (Math.abs(playerEntity.velocity.x) < 1) {
         playerEntity.velocity.x = 0;
       }
     }
 
-    // Handle jumping
     if (gameContext.input.isKeyPressed(" ") && playerEntity.player.isGrounded) {
       playerEntity.velocity.y = -jumpStrength;
       playerEntity.player.isGrounded = false;
     }
 
-    // Apply gravity only when not grounded
-    // When grounded, the resolver will keep y velocity at 0, so we don't want to add gravity
     if (!playerEntity.player.isGrounded) {
       playerEntity.velocity.y += gravity * deltaTime;
     }
-
-    // Don't update position here - let the collision system handle it
-    // The collision system will integrate velocity and resolve collisions
   });
 }
