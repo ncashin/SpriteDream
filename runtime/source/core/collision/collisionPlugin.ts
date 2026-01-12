@@ -14,7 +14,11 @@ import {
   VelocityComponentDefinition,
   type VelocityComponent,
 } from "../ecs/component";
-import { addUpdateCallback, addDrawCallback, isEditorEnabled } from "../gameloop";
+import {
+  addUpdateCallback,
+  addDrawCallback,
+  isEditorEnabled,
+} from "../gameloop";
 import {
   updateCollisionObjects,
   debugDrawColliders,
@@ -22,25 +26,20 @@ import {
   type RectangleCollisionObject,
   type CircleCollisionObject,
 } from "../sat";
-import { create, add, sub } from "../vector";
+import { create, add, sub, scale } from "../vector";
 import { getViewport } from "../viewport/viewport";
 
 type CollisionObjectWithEntity = CollisionObject & { entityId: Entity };
 
 export function collisionPlugin<
   T extends RequirePlugin<[typeof ecsPlugin, typeof spritePlugin]>
->(
-  context: T
-): ContextExtension<T, {}> {
+>(context: T): ContextExtension<T, {}> {
   // Convert ECS entities to collision objects
   const getCollisionObjects = (): CollisionObjectWithEntity[] => {
     const collisionObjects: CollisionObjectWithEntity[] = [];
 
     context.ecs.runQuery(
-      [
-        PositionComponentDefinition,
-        ColliderComponentDefinition,
-      ],
+      [PositionComponentDefinition, ColliderComponentDefinition],
       (entity, components) => {
         const [position, collider] = components as [
           PositionComponent,
@@ -73,15 +72,15 @@ export function collisionPlugin<
           const offset = create(offsetX, offsetY);
           const topLeft = sub(add(entityCenter, offset), halfSize);
 
-          const rectCollisionObject: RectangleCollisionObject & { entityId: Entity } = {
+          const rectCollisionObject: RectangleCollisionObject & {
+            entityId: Entity;
+          } = {
             ...baseCollisionObject,
             position: topLeft,
             width: width,
             height: height,
             angle: collider.angle || 0,
-            velocity: velocity
-              ? create(velocity.x, velocity.y)
-              : create(0, 0),
+            velocity: velocity ? create(velocity.x, velocity.y) : create(0, 0),
             angularVelocity: 0,
             entityId: entity,
           };
@@ -102,13 +101,13 @@ export function collisionPlugin<
           const offset = create(offsetX, offsetY);
           const circleCenter = add(entityCenter, offset);
 
-          const circleCollisionObject: CircleCollisionObject & { entityId: Entity } = {
+          const circleCollisionObject: CircleCollisionObject & {
+            entityId: Entity;
+          } = {
             ...baseCollisionObject,
             position: circleCenter,
             radius: collider.radius || 16,
-            velocity: velocity
-              ? create(velocity.x, velocity.y)
-              : create(0, 0),
+            velocity: velocity ? create(velocity.x, velocity.y) : create(0, 0),
             entityId: entity,
           };
 
@@ -131,10 +130,7 @@ export function collisionPlugin<
     }
 
     context.ecs.runQuery(
-      [
-        PositionComponentDefinition,
-        ColliderComponentDefinition,
-      ],
+      [PositionComponentDefinition, ColliderComponentDefinition],
       (entity, components) => {
         const [position, collider] = components as [
           PositionComponent,
@@ -205,11 +201,39 @@ export function collisionPlugin<
   };
 
   // Update collisions in the game loop
-  addUpdateCallback(() => {
+  addUpdateCallback((deltaTime: number) => {
     const collisionObjects = getCollisionObjects();
+
     // Remove entityId before passing to SAT system
-    const satCollisionObjects = collisionObjects.map(({ entityId, ...obj }) => obj);
+    const satCollisionObjects = collisionObjects.map(
+      ({ entityId, ...obj }) => obj
+    );
+
+    // First, integrate velocity into position for all collision objects
+    // Modify satCollisionObjects directly since those are used for collision detection
+    for (const obj of satCollisionObjects) {
+      if (obj.velocity && (obj.velocity[0] !== 0 || obj.velocity[1] !== 0)) {
+        obj.position = add(obj.position, scale(obj.velocity, deltaTime));
+      }
+    }
+
+    // Update collisionObjects positions to match satCollisionObjects for syncing
+    for (let i = 0; i < collisionObjects.length; i++) {
+      collisionObjects[i].position = satCollisionObjects[i].position;
+    }
+
+    // Run collision detection and resolution
     updateCollisionObjects(satCollisionObjects);
+
+    // After collision resolution, copy positions and velocities back to collisionObjects
+    // (resolvers modify satCollisionObjects directly)
+    for (let i = 0; i < collisionObjects.length; i++) {
+      collisionObjects[i].position = satCollisionObjects[i].position;
+      if (satCollisionObjects[i].velocity) {
+        collisionObjects[i].velocity = satCollisionObjects[i].velocity;
+      }
+    }
+
     syncCollisionObjectsToECS(collisionObjects);
   });
 
@@ -232,11 +256,18 @@ export function collisionPlugin<
     context2D.save();
 
     // Apply viewport transform
+    // Canvas applies transforms in reverse order:
+    // 1. translate(-viewport.x, -viewport.y) - move world so viewport center is at origin
+    // 2. scale(viewport.scale, viewport.scale) - scale
+    // 3. translate(canvas.width/2, canvas.height/2) - move origin to screen center
+    context2D.translate(canvas.width / 2, canvas.height / 2);
     context2D.scale(viewport.scale, viewport.scale);
     context2D.translate(-viewport.x, -viewport.y);
 
     // Draw colliders (remove entityId before passing to debug draw)
-    const satCollisionObjects = collisionObjects.map(({ entityId, ...obj }) => obj);
+    const satCollisionObjects = collisionObjects.map(
+      ({ entityId, ...obj }) => obj
+    );
     debugDrawColliders(satCollisionObjects, context2D);
 
     // Restore the context state
@@ -245,4 +276,3 @@ export function collisionPlugin<
 
   return context;
 }
-

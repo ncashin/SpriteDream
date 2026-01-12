@@ -9,7 +9,8 @@ import { ecsEditorPlugin } from "./core/ecs/editor/ECSEditorPlugin.tsx";
 import { viewportDebugPlugin } from "./core/viewport/viewportDebugPlugin";
 import { collisionPlugin } from "./core/collision/collisionPlugin";
 import { addStartCallback } from "./core/initialization";
-import { addUpdateCallback, addEditorCallback } from "./core/gameloop";
+import { addEditorCallback } from "./core/gameloop";
+import { initializePlayer } from "./scripts/player";
 import type { Component } from "./core/ecs/ecs";
 import {
   PositionComponentDefinition,
@@ -93,66 +94,12 @@ export function main(initialContext: InitialGameContext) {
     initialScene,
   });
 
-  const playerEntityId = "player";
-  let playerEntity: any | null = null;
+  initializePlayer(gameContext, "player");
 
   addStartCallback(() => {
-    // Reset viewport to 0, 0 when starting the game
-    resetViewport();
-
-    playerEntity = gameContext.ecs.getEntity(playerEntityId);
-
-    if (playerEntity.player && playerEntity.player.isGrounded === undefined) {
-      playerEntity.player.isGrounded = false;
-    }
-
     const component = document.createElement("div");
     component.textContent = "Game started!";
     gameContext.rootElement.appendChild(component);
-  });
-
-  addUpdateCallback((deltaTime: number) => {
-    if (
-      !playerEntity ||
-      !playerEntity.position ||
-      !playerEntity.velocity ||
-      !playerEntity.player
-    )
-      return;
-
-    const speed = playerEntity.player.speed;
-    const gravity = playerEntity.player.gravity;
-    const jumpStrength = playerEntity.player.jumpStrength;
-
-    // Check if grounded at the start of frame (based on previous frame's collision resolution)
-    // The platformer resolver sets velocity.y to 0 when on top of something
-    playerEntity.player.isGrounded = Math.abs(playerEntity.velocity.y) < 1;
-
-    // Handle horizontal movement via velocity
-    if (gameContext.input.isKeyPressed("a")) {
-      playerEntity.velocity.x = -speed;
-    } else if (gameContext.input.isKeyPressed("d")) {
-      playerEntity.velocity.x = speed;
-    } else {
-      // Apply friction when no input
-      playerEntity.velocity.x *= 0.8;
-      if (Math.abs(playerEntity.velocity.x) < 1) {
-        playerEntity.velocity.x = 0;
-      }
-    }
-
-    // Handle jumping
-    if (gameContext.input.isKeyPressed(" ") && playerEntity.player.isGrounded) {
-      playerEntity.velocity.y = -jumpStrength;
-      playerEntity.player.isGrounded = false;
-    }
-
-    // Apply gravity
-    playerEntity.velocity.y += gravity * deltaTime;
-
-    // Update position based on velocity (collision system will correct this)
-    playerEntity.position.x += playerEntity.velocity.x * deltaTime;
-    playerEntity.position.y += playerEntity.velocity.y * deltaTime;
   });
 
   let draggedEntityId: string | null = null;
@@ -184,12 +131,43 @@ export function main(initialContext: InitialGameContext) {
       gameContext.canvas.addEventListener("wheel", wheelHandler, {
         passive: false,
       });
+      // Set default cursor to grab for viewport dragging
+      gameContext.canvas.style.cursor = "grab";
     }
 
-    // Convert screen coordinates to world coordinates (accounting for scale)
-    // Screen to world: world = (screen / scale) + viewport
-    const worldMouseX = mousePos.x / viewport.scale + viewport.x;
-    const worldMouseY = mousePos.y / viewport.scale + viewport.y;
+    // Convert screen coordinates to world coordinates
+    // Screen to world: world = ((screen - center) / scale) + viewport
+    const centerX = gameContext.canvas.width / 2;
+    const centerY = gameContext.canvas.height / 2;
+    const worldMouseX = (mousePos.x - centerX) / viewport.scale + viewport.x;
+    const worldMouseY = (mousePos.y - centerY) / viewport.scale + viewport.y;
+
+    // Check if hovering over an entity (when not dragging)
+    let hoveringOverEntity = false;
+    if (!gameContext.input.getDragState().isDragging && !isMouseDown) {
+      gameContext.ecs.runQuery(
+        [PositionComponentDefinition, SpriteComponentDefinition],
+        (_entity, components) => {
+          if (hoveringOverEntity) return;
+
+          const [position, sprite] = components;
+
+          const left = position.x - sprite.width / 2;
+          const right = position.x + sprite.width / 2;
+          const top = position.y - sprite.height / 2;
+          const bottom = position.y + sprite.height / 2;
+
+          if (
+            worldMouseX >= left &&
+            worldMouseX <= right &&
+            worldMouseY >= top &&
+            worldMouseY <= bottom
+          ) {
+            hoveringOverEntity = true;
+          }
+        }
+      );
+    }
 
     if (isMouseDown && !gameContext.input.getDragState().isDragging) {
       let clickedEntity: string | null = null;
@@ -247,7 +225,11 @@ export function main(initialContext: InitialGameContext) {
             editorDragCallback(draggedEntityId, newX, newY);
           }
         }
+        // Reset cursor when dragging entity
+        gameContext.canvas.style.cursor = "move";
       } else if (isDraggingViewport) {
+        // Set cursor to grabbing when dragging viewport
+        gameContext.canvas.style.cursor = "grabbing";
         // If viewport was reset while dragging (was at non-zero, now at 0,0,1), end the drag
         if (
           viewport.x === 0 &&
@@ -258,13 +240,21 @@ export function main(initialContext: InitialGameContext) {
           gameContext.input.endDrag();
           isDraggingViewport = false;
         } else {
-          // Normal drag update
-          const newViewportX =
-            viewportDragStartX - dragState.offsetX / viewport.scale;
-          const newViewportY =
-            viewportDragStartY - dragState.offsetY / viewport.scale;
+          // Normal drag update - convert screen drag offset to world space
+          const worldDeltaX = dragState.offsetX / viewport.scale;
+          const worldDeltaY = dragState.offsetY / viewport.scale;
+          // Move viewport center opposite to drag direction
+          const newViewportX = viewportDragStartX - worldDeltaX;
+          const newViewportY = viewportDragStartY - worldDeltaY;
           setViewport(newViewportX, newViewportY);
         }
+      }
+    } else {
+      // Set cursor based on hover state when not dragging
+      if (hoveringOverEntity) {
+        gameContext.canvas.style.cursor = "move";
+      } else {
+        gameContext.canvas.style.cursor = "grab";
       }
     }
 
@@ -272,6 +262,8 @@ export function main(initialContext: InitialGameContext) {
       gameContext.input.endDrag();
       draggedEntityId = null;
       isDraggingViewport = false;
+      // Reset cursor when drag ends
+      gameContext.canvas.style.cursor = "grab";
     }
   });
 }

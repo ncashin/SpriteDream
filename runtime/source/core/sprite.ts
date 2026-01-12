@@ -14,6 +14,7 @@ export type SpriteComponent = Component & {
   width: number;
   height: number;
   color: string;
+  image?: string;
 };
 export const SpriteComponentDefinition: SpriteComponent = defineComponent(
   {
@@ -49,6 +50,25 @@ function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
   return canvas;
 }
 
+// Image cache to avoid reloading images
+const imageCache = new Map<string, HTMLImageElement>();
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  if (imageCache.has(src)) {
+    return Promise.resolve(imageCache.get(src)!);
+  }
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      imageCache.set(src, img);
+      resolve(img);
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
 export function spritePlugin<
   T extends RequirePlugin<[typeof ecsPlugin]>
 >(
@@ -73,22 +93,86 @@ export function spritePlugin<
     context2D.save();
 
     // Apply viewport transform
-    // Canvas applies transforms in reverse order, so we scale first, then translate
+    // Canvas applies transforms in reverse order:
+    // 1. translate(-viewport.x, -viewport.y) - move world so viewport center is at origin
+    // 2. scale(viewport.scale, viewport.scale) - scale
+    // 3. translate(canvas.width/2, canvas.height/2) - move origin to screen center
+    context2D.translate(canvas.width / 2, canvas.height / 2);
     context2D.scale(viewport.scale, viewport.scale);
     context2D.translate(-viewport.x, -viewport.y);
+
+    // Draw star marker at world origin (0, 0)
+    context2D.save();
+    context2D.strokeStyle = "#00ffff";
+    context2D.fillStyle = "#00ffff";
+    context2D.lineWidth = 1 / viewport.scale;
+    
+    const size = 8;
+    const outerRadius = size;
+    const innerRadius = size * 0.4;
+    const points = 5;
+    const angleStep = (Math.PI * 2) / (points * 2);
+    
+    context2D.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const angle = i * angleStep - Math.PI / 2;
+      const radius = i % 2 === 0 ? outerRadius : innerRadius;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      
+      if (i === 0) {
+        context2D.moveTo(x, y);
+      } else {
+        context2D.lineTo(x, y);
+      }
+    }
+    context2D.closePath();
+    context2D.fill();
+    context2D.stroke();
+    context2D.restore();
 
     context.ecs.runQuery(
       [PositionComponentDefinition, SpriteComponentDefinition],
       (_entity: Entity, components: [PositionComponent, SpriteComponent]) => {
         const [position, sprite] = components;
 
-        context2D.fillStyle = sprite.color;
-        context2D.fillRect(
-          position.x - sprite.width / 2,
-          position.y - sprite.height / 2,
-          sprite.width,
-          sprite.height
-        );
+        if (sprite.image) {
+          // Draw image if available and loaded
+          const img = imageCache.get(sprite.image);
+          if (img && img.complete) {
+            context2D.drawImage(
+              img,
+              position.x - sprite.width / 2,
+              position.y - sprite.height / 2,
+              sprite.width,
+              sprite.height
+            );
+          } else {
+            // Fallback to color if image not loaded yet
+            context2D.fillStyle = sprite.color;
+            context2D.fillRect(
+              position.x - sprite.width / 2,
+              position.y - sprite.height / 2,
+              sprite.width,
+              sprite.height
+            );
+            // Try to load the image if not already loading
+            if (img === undefined) {
+              loadImage(sprite.image).catch((error) => {
+                console.warn(`Failed to load image: ${sprite.image}`, error);
+              });
+            }
+          }
+        } else {
+          // Draw colored rectangle
+          context2D.fillStyle = sprite.color;
+          context2D.fillRect(
+            position.x - sprite.width / 2,
+            position.y - sprite.height / 2,
+            sprite.width,
+            sprite.height
+          );
+        }
       }
     );
 

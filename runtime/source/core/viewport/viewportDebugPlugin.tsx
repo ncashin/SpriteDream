@@ -2,6 +2,8 @@ import type { ContextExtension, InitialGameContext } from "../gameContext";
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ViewportDebugUI } from "./ViewportDebugUI";
+import { addStartCallback } from "../initialization";
+import { resetViewport } from "./viewport";
 
 let viewportDebugRoot: Root | null = null;
 let viewportDebugContainer: HTMLDivElement | null = null;
@@ -9,6 +11,9 @@ let viewportDebugContainer: HTMLDivElement | null = null;
 export function viewportDebugPlugin<T extends InitialGameContext>(
   context: T
 ): ContextExtension<T, {}> {
+  addStartCallback(() => {
+    resetViewport();
+  });
   if (
     !(
       typeof import.meta !== "undefined" &&

@@ -28,25 +28,33 @@ export const updateViewport = (deltaX: number, deltaY: number): void => {
 
 export const zoomViewport = (
   deltaScale: number,
-  centerX: number,
-  centerY: number
+  screenX: number,
+  screenY: number
 ): void => {
   const oldScale = viewport.scale;
   const newScale = Math.max(0.1, Math.min(10, oldScale + deltaScale));
-  
+
   if (newScale === oldScale) return;
-  
-  const worldX = centerX / oldScale + viewport.x;
-  const worldY = centerY / oldScale + viewport.y;
-  
+
+  const canvas = document.querySelector("canvas");
+  if (!canvas) return;
+
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  // Convert screen point to world coordinates
+  const worldX = (screenX - centerX) / oldScale + viewport.x;
+  const worldY = (screenY - centerY) / oldScale + viewport.y;
+
+  // Keep the same world point under the mouse after zoom
   viewport.scale = newScale;
-  viewport.x = worldX - centerX / newScale;
-  viewport.y = worldY - centerY / newScale;
+  viewport.x = worldX - (screenX - centerX) / newScale;
+  viewport.y = worldY - (screenY - centerY) / newScale;
 };
 
 export const resetViewport = (): void => {
+  // Center viewport at world origin (0, 0) - viewport position represents center
+  viewport.scale = 1;
   viewport.x = 0;
   viewport.y = 0;
-  viewport.scale = 1;
 };
-
