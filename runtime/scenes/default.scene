@@ -24,8 +24,8 @@
         },
         "newEntity": {
           "type": "position",
-          "x": 109,
-          "y": -195
+          "x": 50,
+          "y": -100
         }
       },
       "sprite": {
@@ -34,7 +34,7 @@
           "width": 32,
           "height": 32,
           "color": "#ff0000",
-          "image": "/vite.svg"
+          "image": "/typescript.svg"
         },
         "floor": {
           "type": "sprite",
@@ -56,10 +56,10 @@
         },
         "newEntity": {
           "type": "sprite",
-          "width": 32,
-          "height": 32,
+          "width": 16,
+          "height": 16,
           "color": "#ffffff",
-          "image": "/typescript.svg"
+          "image": "/"
         }
       },
       "velocity": {

@@ -6,6 +6,10 @@ import {
 } from "../core/ecs/component";
 import type { Component } from "../core/ecs/ecs";
 import { getViewport } from "../core/viewport/viewport";
+import type { RequirePlugin } from "../core/gameContext";
+import { ecsPlugin } from "../core/scene/ecsAdapter";
+import { inputPlugin } from "../core/input";
+import { spritePlugin } from "../core/sprite";
 
 export type WeaponComponent = Component & {
   type: "weapon";
@@ -25,13 +29,11 @@ export const WeaponComponentDefinition: WeaponComponent = defineComponent(
   }
 );
 
-export function initializeWeapon(gameContext: {
-  ecs: ReturnType<typeof import("../core/ecs/ecs").curryECSInstance>;
-  input: {
-    getMousePosition: () => { x: number; y: number };
-  };
-  canvas: HTMLCanvasElement;
-}) {
+export function initializeWeapon(
+  gameContext: RequirePlugin<
+    [typeof ecsPlugin, typeof inputPlugin, typeof spritePlugin]
+  >
+) {
   addUpdateCallback(() => {
     const mouseScreenPos = gameContext.input.getMousePosition();
 

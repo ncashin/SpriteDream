@@ -1,15 +1,13 @@
 import type { ResolverDefinition } from "../core/sat";
-import { create, sub, scale, dot, normalize } from "../core/vector";
+import { scale } from "../core/vector";
 import { registerResolver } from "../core/sat";
 import { addStartCallback } from "../core/initialization";
 import { addUpdateCallback } from "../core/gameloop";
-import { getComponent, type Component } from "../core/ecs/ecs";
-import {
-  PositionComponentDefinition,
-  VelocityComponentDefinition,
-  ColliderComponentDefinition,
-  defineComponent,
-} from "../core/ecs/component";
+import type { Component } from "../core/ecs/ecs";
+import { defineComponent } from "../core/ecs/component";
+import type { RequirePlugin } from "../core/gameContext";
+import { ecsPlugin } from "../core/scene/ecsAdapter";
+import { inputPlugin } from "../core/input";
 
 export type PlayerComponent = Component & {
   type: "player";
@@ -33,53 +31,39 @@ export const PlayerComponentDefinition: PlayerComponent = defineComponent(
 );
 
 export function initializePlayer(
-  gameContext: {
-    ecs: ReturnType<typeof import("../core/ecs/ecs").curryECSInstance>;
-    input: {
-      isKeyPressed: (key: string) => boolean;
-      isKeyDown: (key: string) => boolean;
-      isKeyUp: (key: string) => boolean;
-      getMousePosition: () => { x: number; y: number };
-      isMouseButtonPressed: (button: "left" | "middle" | "right") => boolean;
-      getState: () => any;
-      getDragState: () => any;
-      startDrag: (x: number, y: number) => void;
-      updateDrag: (x: number, y: number) => void;
-      endDrag: () => void;
-    };
-  },
+  gameContext: RequirePlugin<[typeof ecsPlugin, typeof inputPlugin]>,
   playerEntityId: string = "player"
 ) {
   let playerEntity: any | null = null;
 
   const PLATFORMER_RESOLVER: ResolverDefinition = {
     name: "platformer",
-    resolveCollision: (ecs, entity, other, overlapAmount, overlapNormal) => {
+    resolveCollision: (_ecs, entity, other, overlapAmount, overlapNormal) => {
       if (entity === other) return;
-      const isPlayer = playerEntity && entity === playerEntityId;
-      const position = isPlayer
-        ? playerEntity.position
-        : getComponent(ecs, entity, PositionComponentDefinition);
-      const velocity = isPlayer
-        ? playerEntity.velocity
-        : getComponent(ecs, entity, VelocityComponentDefinition);
-      const collider = isPlayer
-        ? playerEntity.collider
-        : getComponent(ecs, entity, ColliderComponentDefinition);
-      const player = isPlayer
-        ? playerEntity.player
-        : getComponent(ecs, entity, PlayerComponentDefinition);
 
-      if (!position || !velocity || !collider) return;
+      if (entity === playerEntityId && playerEntity) {
+        const position = playerEntity.position;
+        const velocity = playerEntity.velocity;
+        const collider = playerEntity.collider;
+        const player = playerEntity.player;
 
-      const correction = scale(overlapNormal, overlapAmount);
+        if (!position || !velocity || !collider) return;
 
-      position.x += correction[0];
-      position.y += correction[1];
+        const correction = scale(overlapNormal, overlapAmount);
 
-      if (velocity.y > 0) {
-        velocity.y = 0;
-        player.isGrounded = true;
+        position.x += correction[0];
+        position.y += correction[1];
+
+        const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
+        const isUpwardCorrection = correction[1] < 0;
+        const isLandingOnTop = isVerticalCollision && isUpwardCorrection;
+
+        if (velocity.y > 0 && isLandingOnTop) {
+          velocity.y = 0;
+          if (player) {
+            player.isGrounded = true;
+          }
+        }
       }
     },
   };
@@ -125,10 +109,6 @@ export function initializePlayer(
       player.isGrounded = false;
     }
 
-    if (!player.isGrounded) {
-      velocity.y += gravity * deltaTime;
-    } else {
-      velocity.y = 0;
-    }
+    velocity.y += gravity * deltaTime;
   });
 }

@@ -29,7 +29,6 @@ export const SpriteComponentDefinition: SpriteComponent = defineComponent(
   }
 );
 
-
 function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = window.innerWidth;
@@ -50,7 +49,6 @@ function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
   return canvas;
 }
 
-// Image cache to avoid reloading images
 const imageCache = new Map<string, HTMLImageElement>();
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -69,9 +67,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-export function spritePlugin<
-  T extends RequirePlugin<[typeof ecsPlugin]>
->(
+export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   context: T
 ): ContextExtension<
   T,
@@ -89,37 +85,30 @@ export function spritePlugin<
 
     const viewport = getViewport();
 
-    // Save the current context state
     context2D.save();
 
-    // Apply viewport transform
-    // Canvas applies transforms in reverse order:
-    // 1. translate(-viewport.x, -viewport.y) - move world so viewport center is at origin
-    // 2. scale(viewport.scale, viewport.scale) - scale
-    // 3. translate(canvas.width/2, canvas.height/2) - move origin to screen center
     context2D.translate(canvas.width / 2, canvas.height / 2);
     context2D.scale(viewport.scale, viewport.scale);
     context2D.translate(-viewport.x, -viewport.y);
 
-    // Draw star marker at world origin (0, 0)
     context2D.save();
     context2D.strokeStyle = "#00ffff";
     context2D.fillStyle = "#00ffff";
     context2D.lineWidth = 1 / viewport.scale;
-    
+
     const size = 8;
     const outerRadius = size;
     const innerRadius = size * 0.4;
     const points = 5;
     const angleStep = (Math.PI * 2) / (points * 2);
-    
+
     context2D.beginPath();
     for (let i = 0; i < points * 2; i++) {
       const angle = i * angleStep - Math.PI / 2;
       const radius = i % 2 === 0 ? outerRadius : innerRadius;
       const x = Math.cos(angle) * radius;
       const y = Math.sin(angle) * radius;
-      
+
       if (i === 0) {
         context2D.moveTo(x, y);
       } else {
@@ -137,7 +126,6 @@ export function spritePlugin<
         const [position, sprite] = components;
 
         if (sprite.image) {
-          // Draw image if available and loaded
           const img = imageCache.get(sprite.image);
           if (img && img.complete) {
             context2D.drawImage(
@@ -148,7 +136,6 @@ export function spritePlugin<
               sprite.height
             );
           } else {
-            // Fallback to color if image not loaded yet
             context2D.fillStyle = sprite.color;
             context2D.fillRect(
               position.x - sprite.width / 2,
@@ -156,7 +143,6 @@ export function spritePlugin<
               sprite.width,
               sprite.height
             );
-            // Try to load the image if not already loading
             if (img === undefined) {
               loadImage(sprite.image).catch((error) => {
                 console.warn(`Failed to load image: ${sprite.image}`, error);
@@ -164,7 +150,6 @@ export function spritePlugin<
             }
           }
         } else {
-          // Draw colored rectangle
           context2D.fillStyle = sprite.color;
           context2D.fillRect(
             position.x - sprite.width / 2,
@@ -176,7 +161,6 @@ export function spritePlugin<
       }
     );
 
-    // Restore the context state
     context2D.restore();
   });
 
