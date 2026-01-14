@@ -29,18 +29,13 @@ export function EntityModal({
   const [isCloseHovered, setIsCloseHovered] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showAddComponent, setShowAddComponent] = useState(false);
-  const [showRemoveComponent, setShowRemoveComponent] = useState(false);
   const [componentSearchQuery, setComponentSearchQuery] = useState<string>("");
-  const [removeComponentSearchQuery, setRemoveComponentSearchQuery] = useState<string>("");
   const [isAddButtonHovered, setIsAddButtonHovered] = useState(false);
   const [isAddButtonPressed, setIsAddButtonPressed] = useState(false);
-  const [isRemoveButtonHovered, setIsRemoveButtonHovered] = useState(false);
-  const [isRemoveButtonPressed, setIsRemoveButtonPressed] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callbackIdRef = useRef<number | null>(null);
   const addComponentDropdownRef = useRef<HTMLDivElement>(null);
-  const removeComponentDropdownRef = useRef<HTMLDivElement>(null);
 
   // Handle search - scroll to and highlight matches
   useEffect(() => {
