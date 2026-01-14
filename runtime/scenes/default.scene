@@ -4,8 +4,8 @@
       "position": {
         "player": {
           "type": "position",
-          "x": 0,
-          "y": -100
+          "x": -242,
+          "y": -55
         },
         "floor": {
           "type": "position",
@@ -24,8 +24,13 @@
         },
         "newEntity": {
           "type": "position",
-          "x": 50,
-          "y": -100
+          "x": -183.61016949152543,
+          "y": -57.389830508474574
+        },
+        "boss": {
+          "type": "position",
+          "x": 0,
+          "y": -200
         }
       },
       "sprite": {
@@ -34,7 +39,7 @@
           "width": 32,
           "height": 32,
           "color": "#ff0000",
-          "image": "/typescript.svg"
+          "image": "/vite.svg"
         },
         "floor": {
           "type": "sprite",
@@ -56,10 +61,17 @@
         },
         "newEntity": {
           "type": "sprite",
-          "width": 16,
-          "height": 16,
+          "width": 64,
+          "height": 64,
           "color": "#ffffff",
-          "image": "/"
+          "image": "/tome.png"
+        },
+        "boss": {
+          "type": "sprite",
+          "width": 64,
+          "height": 64,
+          "color": "#8b00ff",
+          "image": "/king.png"
         }
       },
       "velocity": {
@@ -82,12 +94,17 @@
           "type": "velocity",
           "x": 0,
           "y": 0
+        },
+        "boss": {
+          "type": "velocity",
+          "x": 0,
+          "y": 0
         }
       },
       "player": {
         "player": {
           "type": "player",
-          "speed": 300,
+          "speed": 250,
           "gravity": 1800,
           "jumpStrength": 500,
           "isGrounded": false
@@ -113,6 +130,36 @@
       },
       "undefined": {},
       "camera": {},
+      "platformer": {},
+      "weapon": {
+        "newEntity": {
+          "type": "weapon",
+          "range": 50,
+          "playerId": "player"
+        }
+      },
+      "boss": {
+        "boss": {
+          "type": "boss",
+          "floatSpeed": 0.3,
+          "floatAmplitude": 50,
+          "horizontalAmplitude": 100,
+          "startX": 0,
+          "startY": 0,
+          "time": 0,
+          "hitFlashTime": 0,
+          "shootCooldown": 0,
+          "patternTime": 0,
+          "currentPhase": 1
+        }
+      },
+      "health": {
+        "boss": {
+          "type": "health",
+          "currentHealth": 100,
+          "maxHealth": 100
+        }
+      },
       "collider": {
         "player": {
           "type": "collider",
@@ -157,16 +204,18 @@
           "width": 200,
           "height": 20,
           "angle": 0
+        },
+        "boss": {
+          "type": "collider",
+          "colliderName": "circle",
+          "resolverName": "projectileBoss",
+          "collisionEnabled": true,
+          "offsetX": 0,
+          "offsetY": 0,
+          "radius": 32
         }
       },
-      "platformer": {},
-      "weapon": {
-        "newEntity": {
-          "type": "weapon",
-          "range": 50,
-          "playerId": "player"
-        }
-      }
+      "damageNumber": {}
     }
   }
 }

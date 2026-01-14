@@ -209,8 +209,7 @@ export function EntityListPanel({
         flexDirection: "column",
         fontFamily:
           "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
-        minWidth: "200px",
-        maxWidth: "300px",
+        width: "250px",
       }}
     >
       <button
@@ -272,7 +271,7 @@ export function EntityListPanel({
             overflow: "auto",
             padding: 0,
             backgroundColor: "rgba(0, 0, 0, 0.1)",
-            maxHeight: "400px",
+            maxHeight: "9rem",
             borderRadius: "0 0 2px 2px",
           }}
         >

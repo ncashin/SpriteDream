@@ -13,6 +13,9 @@ import { addEditorCallback } from "./core/gameloop";
 import { initializePlayer } from "./scripts/player";
 import "./scripts/weapon";
 import { initializeWeapon } from "./scripts/weapon";
+import { initializeProjectile } from "./scripts/projectile";
+import { initializeBoss } from "./scripts/boss";
+import { initializeDamageNumber } from "./scripts/damageNumber";
 import type { Component } from "./core/ecs/ecs";
 import {
   PositionComponentDefinition,
@@ -75,6 +78,9 @@ export function main(initialContext: InitialGameContext) {
 
   initializePlayer(gameContext, "player");
   initializeWeapon(gameContext);
+  initializeProjectile(gameContext);
+  initializeBoss(gameContext);
+  initializeDamageNumber(gameContext);
 
   addStartCallback(() => {
     const component = document.createElement("div");

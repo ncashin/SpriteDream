@@ -29,13 +29,18 @@ export function EntityModal({
   const [isCloseHovered, setIsCloseHovered] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showAddComponent, setShowAddComponent] = useState(false);
+  const [showRemoveComponent, setShowRemoveComponent] = useState(false);
   const [componentSearchQuery, setComponentSearchQuery] = useState<string>("");
+  const [removeComponentSearchQuery, setRemoveComponentSearchQuery] = useState<string>("");
   const [isAddButtonHovered, setIsAddButtonHovered] = useState(false);
   const [isAddButtonPressed, setIsAddButtonPressed] = useState(false);
+  const [isRemoveButtonHovered, setIsRemoveButtonHovered] = useState(false);
+  const [isRemoveButtonPressed, setIsRemoveButtonPressed] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callbackIdRef = useRef<number | null>(null);
   const addComponentDropdownRef = useRef<HTMLDivElement>(null);
+  const removeComponentDropdownRef = useRef<HTMLDivElement>(null);
 
   // Handle search - scroll to and highlight matches
   useEffect(() => {
@@ -416,8 +421,8 @@ export function EntityModal({
                 top: "100%",
                 right: 0,
                 marginTop: "0.25rem",
-                backgroundColor: "rgba(128, 128, 128, 0.3)",
-                borderRadius: "2px",
+                backgroundColor: "rgb(60, 60, 60)",
+                borderRadius: "4px",
                 border: "none",
                 minWidth: "200px",
                 maxWidth: "300px",

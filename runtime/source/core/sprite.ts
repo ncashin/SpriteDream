@@ -8,6 +8,9 @@ import {
 import { ecsPlugin } from "./scene/ecsAdapter";
 import { addDrawCallback } from "./gameloop";
 import { getViewport } from "./viewport/viewport";
+import type { HitFlashComponent } from "../scripts/boss";
+import { DamageNumberComponentDefinition } from "../scripts/damageNumber";
+import type { DamageNumberComponent } from "../scripts/damageNumber";
 
 export type SpriteComponent = Component & {
   type: "sprite";
@@ -122,12 +125,36 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
 
     context.ecs.runQuery(
       [PositionComponentDefinition, SpriteComponentDefinition],
-      (_entity: Entity, components: [PositionComponent, SpriteComponent]) => {
+      (entity: Entity, components: [PositionComponent, SpriteComponent]) => {
         const [position, sprite] = components;
+        const entityComponents = context.ecs.getEntity(entity);
+        const hitFlash = entityComponents.hitFlash as
+          | HitFlashComponent
+          | undefined;
+        const player = entityComponents.player as
+          | { rotation?: number }
+          | undefined;
+
+        // Check if entity has hit flash
+        const isFlashing =
+          hitFlash && hitFlash.flashTime < hitFlash.maxFlashTime;
+        const flashIntensity = isFlashing
+          ? 1 - hitFlash!.flashTime / hitFlash!.maxFlashTime
+          : 0;
+
+        // Get rotation from player component if available
+        const rotation = player?.rotation || 0;
 
         if (sprite.image) {
           const img = imageCache.get(sprite.image);
           if (img && img.complete) {
+            context2D.save();
+            // Apply rotation if needed
+            if (rotation !== 0) {
+              context2D.translate(position.x, position.y);
+              context2D.rotate(rotation);
+              context2D.translate(-position.x, -position.y);
+            }
             context2D.drawImage(
               img,
               position.x - sprite.width / 2,
@@ -135,7 +162,28 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
               sprite.width,
               sprite.height
             );
+
+            // Apply white flash overlay only on image pixels
+            if (isFlashing) {
+              context2D.globalCompositeOperation = "source-atop";
+              context2D.globalAlpha = flashIntensity * 0.7;
+              context2D.fillStyle = "#ffffff";
+              context2D.fillRect(
+                position.x - sprite.width / 2,
+                position.y - sprite.height / 2,
+                sprite.width,
+                sprite.height
+              );
+            }
+            context2D.restore();
           } else {
+            context2D.save();
+            // Apply rotation if needed
+            if (rotation !== 0) {
+              context2D.translate(position.x, position.y);
+              context2D.rotate(rotation);
+              context2D.translate(-position.x, -position.y);
+            }
             context2D.fillStyle = sprite.color;
             context2D.fillRect(
               position.x - sprite.width / 2,
@@ -143,6 +191,7 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
               sprite.width,
               sprite.height
             );
+            context2D.restore();
             if (img === undefined) {
               loadImage(sprite.image).catch((error) => {
                 console.warn(`Failed to load image: ${sprite.image}`, error);
@@ -150,6 +199,13 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
             }
           }
         } else {
+          context2D.save();
+          // Apply rotation if needed
+          if (rotation !== 0) {
+            context2D.translate(position.x, position.y);
+            context2D.rotate(rotation);
+            context2D.translate(-position.x, -position.y);
+          }
           context2D.fillStyle = sprite.color;
           context2D.fillRect(
             position.x - sprite.width / 2,
@@ -157,7 +213,62 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
             sprite.width,
             sprite.height
           );
+
+          // Apply white flash overlay
+          if (isFlashing) {
+            context2D.save();
+            context2D.globalAlpha = flashIntensity * 0.7;
+            context2D.fillStyle = "#ffffff";
+            context2D.fillRect(
+              position.x - sprite.width / 2,
+              position.y - sprite.height / 2,
+              sprite.width,
+              sprite.height
+            );
+            context2D.restore();
+          }
+          context2D.restore();
         }
+      }
+    );
+
+    // Render damage numbers
+    context.ecs.runQuery(
+      [PositionComponentDefinition, DamageNumberComponentDefinition],
+      (
+        _entity: Entity,
+        components: [PositionComponent, DamageNumberComponent]
+      ) => {
+        const [position, damageNumber] = components;
+
+        const ageRatio = damageNumber.lifetime / damageNumber.maxLifetime;
+        // Smooth fade in at start, then fade out
+        const fadeInTime = 0.1; // Quick fade in
+        const alpha =
+          ageRatio < fadeInTime
+            ? ageRatio / fadeInTime // Fade in
+            : 1 - Math.pow((ageRatio - fadeInTime) / (1 - fadeInTime), 2); // Smooth fade out
+
+        context2D.save();
+        context2D.globalAlpha = alpha;
+
+        // White color
+        context2D.fillStyle = "#ffffff";
+        context2D.strokeStyle = "#000000";
+        context2D.lineWidth = 1 / viewport.scale;
+
+        const fontSize = 16 / viewport.scale;
+        context2D.font = `bold ${fontSize}px Arial`;
+        context2D.textAlign = "center";
+        context2D.textBaseline = "middle";
+
+        const text = `-${Math.round(damageNumber.damage)}`;
+
+        // Draw text with outline for better visibility
+        context2D.strokeText(text, position.x, position.y);
+        context2D.fillText(text, position.x, position.y);
+
+        context2D.restore();
       }
     );
 
