@@ -12,18 +12,20 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@tauri-apps/api": "^2.0",
     "@tauri-apps/plugin-fs": "^2.0",
     "@vscode/codicons": "^0.0.40",
+    "monaco-editor": "^0.55.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
+    "@tauri-apps/cli": "^2.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.2.0",
-    "@tauri-apps/cli": "^2.0",
     "tailwindcss": "^4.0.0",
     "terser": "^5.36.0",
     "typescript": "~5.9.3",

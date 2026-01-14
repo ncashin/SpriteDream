@@ -30,3 +30,6 @@ export function damageEntity(
   return health.currentHealth <= 0; // Returns true if entity is dead
 }
 
+
+
+

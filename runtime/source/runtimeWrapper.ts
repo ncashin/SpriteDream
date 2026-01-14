@@ -1,7 +1,7 @@
 import "./style.css";
 import "@vscode/codicons/dist/codicon.css";
 import { readFile } from "./core/fileUtilities";
-import { setSceneFile } from "./core/scene/scene";
+import { setSceneFile, updateSceneWithDiff } from "./core/scene/scene";
 import {
   initializeEditor,
   getEditorRoot,
@@ -41,7 +41,7 @@ if (!import.meta.env?.DEV) {
 }
 
 window.addEventListener("message", async (event: MessageEvent) => {
-  const { command, path, content } = event.data;
+  const { command, path, content, diff } = event.data;
   switch (command) {
     case "openScene":
       if (path) {
@@ -59,6 +59,15 @@ window.addEventListener("message", async (event: MessageEvent) => {
           initializeGame();
         } catch (error: any) {
           gameRoot.innerHTML = "Failed to load scene file";
+        }
+      }
+      break;
+    case "updateScene":
+      if (diff) {
+        try {
+          updateSceneWithDiff(diff);
+        } catch (error: any) {
+          console.error("Failed to update scene with diff:", error);
         }
       }
       break;

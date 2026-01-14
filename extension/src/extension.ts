@@ -207,6 +207,9 @@ class SceneDocument implements vscode.CustomDocument {
 class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> {
     private static readonly viewType = 'natstack.sceneEditor';
     private readonly webviews = new Map<string, vscode.WebviewPanel[]>();
+    private readonly fileWatchers = new Map<string, vscode.FileSystemWatcher>();
+    private readonly lastKnownSceneState = new Map<string, any>();
+    private readonly isUpdatingFromWebview = new Map<string, boolean>();
 
     constructor(private context: vscode.ExtensionContext) {}
 
@@ -230,6 +233,30 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
         _token: vscode.CancellationToken
     ): Promise<SceneDocument> {
         const document = await SceneDocument.create(uri, openContext.backupId);
+        const uriString = document.uri.toString();
+
+        // Store initial scene state
+        try {
+            const initialContent = document.documentData;
+            if (initialContent) {
+                this.lastKnownSceneState.set(uriString, JSON.parse(initialContent));
+            }
+        } catch (e) {
+            // Ignore parse errors
+        }
+
+        // Set up file system watcher for external changes
+        const watcher = vscode.workspace.createFileSystemWatcher(uri.fsPath);
+
+        watcher.onDidChange(async (changedUri) => {
+            // Only process if it's the same file and not updating from webview
+            if (changedUri.toString() === uriString && 
+                !this.isUpdatingFromWebview.get(uriString)) {
+                await this.handleExternalFileChange(document, changedUri);
+            }
+        });
+
+        this.fileWatchers.set(uriString, watcher);
 
         const listeners: vscode.Disposable[] = [];
 
@@ -241,6 +268,16 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
         }));
 
         listeners.push(document.onDidChangeContent(e => {
+            // Update last known state
+            try {
+                const content = e.content !== undefined ? e.content : document.documentData;
+                if (content) {
+                    this.lastKnownSceneState.set(uriString, JSON.parse(content));
+                }
+            } catch (e) {
+                // Ignore parse errors
+            }
+
             // Update all webviews when the document changes
             const webviewsForDocument = this.webviews.get(document.uri.toString()) || [];
             for (const webviewPanel of webviewsForDocument) {
@@ -253,6 +290,13 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
 
         document.onDidDispose(() => {
             listeners.forEach(l => l.dispose());
+            const watcher = this.fileWatchers.get(uriString);
+            if (watcher) {
+                watcher.dispose();
+                this.fileWatchers.delete(uriString);
+            }
+            this.lastKnownSceneState.delete(uriString);
+            this.isUpdatingFromWebview.delete(uriString);
         });
 
         return document;
@@ -298,9 +342,6 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
         const html = fs.readFileSync(htmlPath, 'utf8');
         webviewPanel.webview.html = html;
 
-        // Track if we're updating from webview to prevent feedback loop
-        let isUpdatingFromWebview = false;
-
         // Send initial document content
         this.updateWebview(document, webviewPanel);
 
@@ -327,11 +368,24 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
 
                         case 'writeFile': {
                             const uri = vscode.Uri.file(message.path);
+                            const uriString = uri.toString();
+                            const documentUriString = document.uri.toString();
+                            
                             // Prevent feedback loop if updating current document
-                            if (uri.toString() === document.uri.toString()) {
-                                isUpdatingFromWebview = true;
+                            if (uriString === documentUriString) {
+                                this.isUpdatingFromWebview.set(documentUriString, true);
                                 document.makeEdit({ content: message.content });
-                                setTimeout(() => { isUpdatingFromWebview = false; }, 100);
+                                // Update last known state
+                                try {
+                                    if (message.content) {
+                                        this.lastKnownSceneState.set(documentUriString, JSON.parse(message.content));
+                                    }
+                                } catch (e) {
+                                    // Ignore parse errors
+                                }
+                                setTimeout(() => { 
+                                    this.isUpdatingFromWebview.set(documentUriString, false);
+                                }, 100);
                             } else {
                                 const edit = new vscode.WorkspaceEdit();
                                 edit.replace(uri, new vscode.Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), message.content);
@@ -385,7 +439,8 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
                         error: error.message
                     });
                     if (message.type === 'writeFile') {
-                        isUpdatingFromWebview = false;
+                        const uriString = document.uri.toString();
+                        this.isUpdatingFromWebview.set(uriString, false);
                     }
                 }
             }
@@ -423,6 +478,91 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
 
     private postMessage(panel: vscode.WebviewPanel, command: string, body: any): void {
         panel.webview.postMessage({ command, ...body });
+    }
+
+    /**
+     * Handles external file changes (e.g., from AI writing to file)
+     * Computes diff and sends updateScene message to webview
+     */
+    private async handleExternalFileChange(
+        document: SceneDocument,
+        changedUri: vscode.Uri
+    ): Promise<void> {
+        const uriString = document.uri.toString();
+        
+        try {
+            // Read the new file content
+            const fileData = await vscode.workspace.fs.readFile(changedUri);
+            const newContent = Buffer.from(fileData).toString('utf8');
+            
+            if (!newContent.trim()) {
+                return;
+            }
+
+            const newSceneData = JSON.parse(newContent);
+            const lastKnownState = this.lastKnownSceneState.get(uriString);
+
+            // Compute diff
+            const diff = this.computeDiff(lastKnownState, newSceneData);
+
+            // Only send update if there are actual changes
+            if (Object.keys(diff).length > 0) {
+                // Update last known state
+                this.lastKnownSceneState.set(uriString, newSceneData);
+
+                // Send diff to all webviews for this document
+                const webviewsForDocument = this.webviews.get(uriString) || [];
+                for (const webviewPanel of webviewsForDocument) {
+                    this.postMessage(webviewPanel, 'updateScene', {
+                        diff: diff
+                    });
+                }
+            }
+        } catch (error: any) {
+            console.error('Failed to handle external file change:', error);
+            // If parsing fails, fall back to full reload
+            const webviewsForDocument = this.webviews.get(uriString) || [];
+            for (const webviewPanel of webviewsForDocument) {
+                this.updateWebview(document, webviewPanel);
+            }
+        }
+    }
+
+    /**
+     * Computes the diff between two JSON objects
+     */
+    private computeDiff(oldObj: any, newObj: any): any {
+        if (!oldObj) {
+            return JSON.parse(JSON.stringify(newObj));
+        }
+
+        const diff: any = {};
+
+        // Find added or changed properties
+        for (const key in newObj) {
+            const newValue = newObj[key];
+            const oldValue = oldObj[key];
+
+            if (!(key in oldObj)) {
+                // New property
+                diff[key] = JSON.parse(JSON.stringify(newValue));
+            } else if (this.isObject(newValue) && this.isObject(oldValue)) {
+                // Recursively diff nested objects
+                const nestedDiff = this.computeDiff(oldValue, newValue);
+                if (Object.keys(nestedDiff).length > 0) {
+                    diff[key] = nestedDiff;
+                }
+            } else if (JSON.stringify(newValue) !== JSON.stringify(oldValue)) {
+                // Changed value
+                diff[key] = JSON.parse(JSON.stringify(newValue));
+            }
+        }
+
+        return diff;
+    }
+
+    private isObject(value: any): value is Record<string, unknown> {
+        return typeof value === "object" && value !== null && !(value instanceof Date) && !Array.isArray(value);
     }
 }
 

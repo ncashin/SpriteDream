@@ -266,16 +266,8 @@ export function EntityListPanel({
         />
       </button>
       {isExpanded && (
-        <div
-          style={{
-            overflow: "auto",
-            padding: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.1)",
-            maxHeight: "9rem",
-            borderRadius: "0 0 2px 2px",
-          }}
-        >
-          {/* New Entity Button */}
+        <>
+          {/* New Entity Button - Fixed at top */}
           <button
             style={{
               padding: "0.25rem 0.5rem",
@@ -288,7 +280,7 @@ export function EntityListPanel({
               fontSize: "0.75rem",
               fontFamily:
                 "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
-              backgroundColor: "transparent",
+              backgroundColor: "rgba(0, 0, 0, 0.1)",
               border: "none",
               borderBottom:
                 "1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))",
@@ -303,7 +295,7 @@ export function EntityListPanel({
                 "var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.1)";
             }}
           >
             <span
@@ -313,177 +305,189 @@ export function EntityListPanel({
             <span>New Entity</span>
           </button>
 
-          {entities.length === 0 ? (
-            <div
-              style={{
-                padding: "0.25rem 0.5rem",
-                minHeight: "20px",
-                lineHeight: "1.4em",
-                color:
-                  "var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))",
-                fontSize: "0.75rem",
-                textAlign: "center",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              No entities
-            </div>
-          ) : (
-            entities.map((entity) => (
+          {/* Scrollable Entity List */}
+          <div
+            style={{
+              overflow: "auto",
+              padding: 0,
+              paddingBottom: "0.25rem",
+              backgroundColor: "rgba(0, 0, 0, 0.1)",
+              height: "120px", // Exactly 6 entities (6 * 20px)
+              borderRadius: "0 0 2px 2px",
+            }}
+          >
+            {entities.length === 0 ? (
               <div
-                key={entity}
                 style={{
                   padding: "0.25rem 0.5rem",
                   minHeight: "20px",
                   lineHeight: "1.4em",
-                  width: "100%",
-                  boxSizing: "border-box",
-                  cursor: "pointer",
-                  color: "var(--vscode-foreground, #cccccc)",
+                  color:
+                    "var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))",
                   fontSize: "0.75rem",
-                  fontFamily:
-                    "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
-                  backgroundColor:
-                    hoveredEntity === entity
-                      ? "var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))"
-                      : "transparent",
-                  transition: "background-color 0.1s ease-out",
+                  textAlign: "center",
                   display: "flex",
                   alignItems: "center",
-                  gap: "0.25rem",
+                  justifyContent: "center",
                 }}
-                onClick={() => onEntityClick(entity)}
-                onMouseEnter={() => setHoveredEntity(entity)}
-                onMouseLeave={() => setHoveredEntity(null)}
               >
-                {renamingEntity === entity ? (
-                  <form
-                    onSubmit={handleRenameSubmit}
-                    style={{ flex: 1, display: "flex", minWidth: 0 }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <input
-                      ref={renameInputRef}
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onKeyDown={handleRenameKeyDown}
-                      onBlur={handleRenameSubmit}
-                      style={{
-                        flex: 1,
-                        padding: 0,
-                        margin: 0,
-                        fontSize: "0.75rem",
-                        backgroundColor: "transparent",
-                        color: "var(--vscode-foreground, #cccccc)",
-                        border: "none",
-                        outline: "none",
-                        boxShadow: "none",
-                        fontFamily:
-                          "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        minWidth: 0,
-                        width: "100%",
-                        lineHeight: "1.4em",
-                      }}
-                    />
-                  </form>
-                ) : (
-                  <>
-                    <span
-                      style={{
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        flex: 1,
-                      }}
-                    >
-                      {entity}
-                    </span>
-                    {hoveredEntity === entity && (
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "0.125rem",
-                          alignItems: "center",
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          style={{
-                            backgroundColor: "transparent",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: "0.125rem 0.0625rem 0.125rem 0.125rem",
-                            width: "16px",
-                            height: "16px",
-                            borderRadius: "2px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color:
-                              "var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))",
-                            transition: "background-color 0.1s ease-out",
-                          }}
-                          onClick={(e) => handleStartRename(entity, e)}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor =
-                              "var(--vscode-button-hoverBackground, rgba(255, 255, 255, 0.1))";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor =
-                              "transparent";
-                          }}
-                          title="Rename entity"
-                        >
-                          <span
-                            className="codicon codicon-edit"
-                            style={{ fontSize: "0.75rem" }}
-                          />
-                        </button>
-                        <button
-                          style={{
-                            backgroundColor: "transparent",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: "0.125rem 0.0625rem 0.125rem 0.125rem",
-                            width: "16px",
-                            height: "16px",
-                            borderRadius: "2px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "var(--vscode-errorForeground, #f48771)",
-                            transition: "background-color 0.1s ease-out",
-                          }}
-                          onClick={(e) => handleDeleteEntity(entity, e)}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor =
-                              "var(--vscode-button-hoverBackground, rgba(255, 255, 255, 0.1))";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor =
-                              "transparent";
-                          }}
-                          title="Delete entity"
-                        >
-                          <span
-                            className="codicon codicon-trash"
-                            style={{ fontSize: "0.75rem" }}
-                          />
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
+                No entities
               </div>
-            ))
-          )}
-        </div>
+            ) : (
+              entities.map((entity) => (
+                <div
+                  key={entity}
+                  style={{
+                    padding: "0.25rem 0.5rem",
+                    minHeight: "20px",
+                    lineHeight: "1.4em",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    cursor: "pointer",
+                    color: "var(--vscode-foreground, #cccccc)",
+                    fontSize: "0.75rem",
+                    fontFamily:
+                      "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
+                    backgroundColor:
+                      hoveredEntity === entity
+                        ? "var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))"
+                        : "transparent",
+                    transition: "background-color 0.1s ease-out",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.25rem",
+                  }}
+                  onClick={() => onEntityClick(entity)}
+                  onMouseEnter={() => setHoveredEntity(entity)}
+                  onMouseLeave={() => setHoveredEntity(null)}
+                >
+                  {renamingEntity === entity ? (
+                    <form
+                      onSubmit={handleRenameSubmit}
+                      style={{ flex: 1, display: "flex", minWidth: 0 }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        ref={renameInputRef}
+                        type="text"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={handleRenameKeyDown}
+                        onBlur={handleRenameSubmit}
+                        style={{
+                          flex: 1,
+                          padding: 0,
+                          margin: 0,
+                          fontSize: "0.75rem",
+                          backgroundColor: "transparent",
+                          color: "var(--vscode-foreground, #cccccc)",
+                          border: "none",
+                          outline: "none",
+                          boxShadow: "none",
+                          fontFamily:
+                            "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          minWidth: 0,
+                          width: "100%",
+                          lineHeight: "1.4em",
+                        }}
+                      />
+                    </form>
+                  ) : (
+                    <>
+                      <span
+                        style={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          flex: 1,
+                        }}
+                      >
+                        {entity}
+                      </span>
+                      {hoveredEntity === entity && (
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "0.125rem",
+                            alignItems: "center",
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            style={{
+                              backgroundColor: "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: "0.125rem 0.0625rem 0.125rem 0.125rem",
+                              width: "16px",
+                              height: "16px",
+                              borderRadius: "2px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color:
+                                "var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))",
+                              transition: "background-color 0.1s ease-out",
+                            }}
+                            onClick={(e) => handleStartRename(entity, e)}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                "var(--vscode-button-hoverBackground, rgba(255, 255, 255, 0.1))";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                "transparent";
+                            }}
+                            title="Rename entity"
+                          >
+                            <span
+                              className="codicon codicon-edit"
+                              style={{ fontSize: "0.75rem" }}
+                            />
+                          </button>
+                          <button
+                            style={{
+                              backgroundColor: "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: "0.125rem 0.0625rem 0.125rem 0.125rem",
+                              width: "16px",
+                              height: "16px",
+                              borderRadius: "2px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "var(--vscode-errorForeground, #f48771)",
+                              transition: "background-color 0.1s ease-out",
+                            }}
+                            onClick={(e) => handleDeleteEntity(entity, e)}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                "var(--vscode-button-hoverBackground, rgba(255, 255, 255, 0.1))";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                "transparent";
+                            }}
+                            title="Delete entity"
+                          >
+                            <span
+                              className="codicon codicon-trash"
+                              style={{ fontSize: "0.75rem" }}
+                            />
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );

@@ -118,6 +118,68 @@ export function mergeWithCurrentScene(incoming: SceneData): SceneData {
   return mergeSceneData(currentScene, incoming);
 }
 
+/**
+ * Applies a diff to the current scene, updating only changed properties
+ * @param diff The diff to apply
+ * @param skipSave If true, skip triggering save (used when applying external changes)
+ */
+function applyDiffToScene(diff: SceneData, skipSave: boolean = false): void {
+  if (!currentScene) {
+    setScene(diff);
+    // Update snapshot if it exists
+    if (sceneSnapshot) {
+      sceneSnapshot = deepClone(diff);
+    }
+    return;
+  }
+
+  // Temporarily disable persistence to prevent save loop when applying external diffs
+  const wasPersistenceEnabled = persistenceEnabled;
+  if (skipSave) {
+    persistenceEnabled = false;
+  }
+
+  try {
+    // Apply diff recursively to current scene
+    function applyDiffRecursive(
+      target: SceneData,
+      diff: SceneData
+    ): void {
+      for (const key in diff) {
+        const diffValue = diff[key];
+        const targetValue = target[key];
+
+        if (isObject(diffValue) && isObject(targetValue)) {
+          // Recursively apply nested diffs
+          applyDiffRecursive(targetValue as SceneData, diffValue as SceneData);
+        } else {
+          // Apply the change directly
+          target[key] = deepClone(diffValue);
+        }
+      }
+    }
+
+    applyDiffRecursive(currentScene, diff);
+
+    // Also apply diff to snapshot if it exists to keep it in sync
+    if (sceneSnapshot) {
+      applyDiffRecursive(sceneSnapshot, diff);
+    }
+  } finally {
+    // Restore persistence state
+    persistenceEnabled = wasPersistenceEnabled;
+  }
+}
+
+/**
+ * Updates the scene with a diff, only changing properties that differ
+ * This is used when external changes (e.g., from AI) are applied to the scene file
+ */
+export function updateSceneWithDiff(diff: SceneData): void {
+  // Skip save when applying external diffs to prevent feedback loop
+  applyDiffToScene(diff, true);
+}
+
 function saveScene(filePath: string, sceneData: SceneData): void {
   if (!filePath || !persistenceEnabled) return;
 
@@ -153,6 +215,13 @@ export function getScene(): SceneData {
     currentScene = createPersistentProxy(DEFAULT_SCENE, onSave);
   }
   return currentScene;
+}
+
+/**
+ * Gets a deep clone of the current scene data (for comparison purposes)
+ */
+export function getSceneSnapshot(): SceneData | null {
+  return currentScene ? deepClone(currentScene) : null;
 }
 
 export function getSceneFilePath(): string | null {
