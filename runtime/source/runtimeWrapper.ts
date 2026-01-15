@@ -1,14 +1,17 @@
-import "../style.css";
+import "./style.css";
 import "@vscode/codicons/dist/codicon.css";
-import { readFile } from "./fileUtilities";
-import { setSceneFile, updateSceneWithDiff } from "./scene/scene";
-import { initializeEditor, getEditorRoot } from "./editor/editorInitializer";
+import { readFile } from "./core/fileUtilities";
+import { setSceneFile, updateSceneWithDiff } from "./core/scene/scene";
+import {
+  initializeEditor,
+  getEditorRoot,
+} from "./core/editor/editorInitializer";
 import {
   resetAllCallbacks,
   setEditorEnabled,
   setUpdateEnabled,
-} from "./gameloop";
-import type { InitialGameContext } from "./gameContext";
+} from "./core/gameloop";
+import type { InitialGameContext } from "./core/gameContext";
 
 export type MainFunction = (initialContext: InitialGameContext) => void;
 
@@ -98,5 +101,5 @@ export const defineMainFunction = (mainFunction: MainFunction) => {
 };
 
 // Initialize with the main function
-import { main } from "../main";
+import { main } from "./main";
 export const runtimeWrapper = defineMainFunction(main);
