@@ -27,6 +27,7 @@ import {
   zoomViewport,
 } from "./core/viewport/viewport";
 import initialScene from "../scenes/default.scene?raw";
+import { defineMainFunction } from "./core/runtimeWrapper.ts";
 
 export {
   getViewport,
@@ -237,3 +238,5 @@ export function main(initialContext: InitialGameContext) {
     }
   });
 }
+
+defineMainFunction(main);

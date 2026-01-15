@@ -11,7 +11,7 @@ import {
   saveSceneSnapshot,
   restoreSceneFromSnapshot,
 } from "../scene/scene";
-import { initializeGame } from "../../runtimeWrapper";
+import { initializeGame } from "../runtimeWrapper";
 
 export function Editor() {
   const [isSceneDataModalOpen, setIsSceneDataModalOpen] = useState(false);
