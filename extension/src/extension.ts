@@ -167,6 +167,26 @@ class SceneDocument implements vscode.CustomDocument {
         if (cancellation.isCancellationRequested) {
             return;
         }
+        
+        // Validate content before saving
+        if (!this._documentData || !this._documentData.trim()) {
+            throw new Error('Cannot save empty scene data');
+        }
+
+        // Validate JSON structure
+        try {
+            const parsed = JSON.parse(this._documentData);
+            // Prevent saving empty objects
+            if (typeof parsed === 'object' && parsed !== null && Object.keys(parsed).length === 0) {
+                throw new Error('Cannot save empty scene data');
+            }
+        } catch (e) {
+            if (e instanceof Error && e.message.includes('Cannot save')) {
+                throw e;
+            }
+            throw new Error('Invalid JSON content in scene file');
+        }
+
         const data = Buffer.from(this._documentData, 'utf8');
         await vscode.workspace.fs.writeFile(targetResource, data);
     }
@@ -349,6 +369,40 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
                             const uriString = uri.toString();
                             const documentUriString = document.uri.toString();
                             
+                            // Validate content before processing
+                            if (!message.content || !message.content.trim()) {
+                                webviewPanel.webview.postMessage({
+                                    type: 'writeFile',
+                                    requestId,
+                                    success: false,
+                                    error: 'Cannot save empty content'
+                                });
+                                break;
+                            }
+
+                            // Validate JSON structure
+                            try {
+                                const parsed = JSON.parse(message.content);
+                                // Prevent saving empty objects
+                                if (typeof parsed === 'object' && parsed !== null && Object.keys(parsed).length === 0) {
+                                    webviewPanel.webview.postMessage({
+                                        type: 'writeFile',
+                                        requestId,
+                                        success: false,
+                                        error: 'Cannot save empty scene data'
+                                    });
+                                    break;
+                                }
+                            } catch (e) {
+                                webviewPanel.webview.postMessage({
+                                    type: 'writeFile',
+                                    requestId,
+                                    success: false,
+                                    error: 'Invalid JSON content'
+                                });
+                                break;
+                            }
+                            
                             if (uriString === documentUriString) {
                                 this.isUpdatingFromWebview[documentUriString] = true;
                                 document.makeEdit({ content: message.content });
@@ -458,16 +512,65 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
     ): Promise<void> {
         const uriString = document.uri.toString();
         
-        try {
-            const fileData = await vscode.workspace.fs.readFile(changedUri);
-            const newContent = Buffer.from(fileData).toString('utf8');
-            
-            if (!newContent.trim()) {
+        // Skip if we're currently updating from webview to prevent feedback loops
+        if (this.isUpdatingFromWebview[uriString]) {
+            return;
+        }
+
+        // Add a small delay to ensure file write is complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Retry reading the file in case it's still being written
+        let newContent: string | null = null;
+        let attempts = 0;
+        const maxAttempts = 5;
+
+        while (attempts < maxAttempts && !newContent) {
+            try {
+                const fileData = await vscode.workspace.fs.readFile(changedUri);
+                const content = Buffer.from(fileData).toString('utf8');
+                
+                // Check if content is valid (not empty and looks like JSON)
+                if (content.trim() && (content.trim().startsWith('{') || content.trim().startsWith('['))) {
+                    // Try to parse to validate JSON
+                    JSON.parse(content);
+                    newContent = content;
+                } else if (content.trim()) {
+                    // Content exists but doesn't look like JSON, might be mid-write
+                    attempts++;
+                    if (attempts < maxAttempts) {
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        continue;
+                    }
+                } else {
+                    // Empty content, skip
+                    return;
+                }
+            } catch (error) {
+                // JSON parse error or read error - might be mid-write
+                attempts++;
+                if (attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    continue;
+                }
+                // If we've exhausted retries, log and return
+                console.warn('Failed to read file after retries:', error);
                 return;
             }
+        }
 
+        if (!newContent) {
+            return;
+        }
+
+        try {
             const newSceneData = JSON.parse(newContent);
             const lastKnownState = this.lastKnownSceneState[uriString];
+
+            // If the new content is just an empty object and we have existing state, ignore it
+            if (Object.keys(newSceneData).length === 0 && lastKnownState && Object.keys(lastKnownState).length > 0) {
+                return;
+            }
 
             const diff = this.computeDiff(lastKnownState, newSceneData);
 
@@ -483,10 +586,7 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
             }
         } catch (error: any) {
             console.error('Failed to handle external file change:', error);
-            const webviewsForDocument = this.webviews[uriString] || [];
-            for (const webviewPanel of webviewsForDocument) {
-                this.updateWebview(document, webviewPanel);
-            }
+            // Don't update webview on error - preserve current state
         }
     }
 

@@ -8,6 +8,9 @@ export default defineConfig({
   server: {
     port: 7777,
     strictPort: true,
+    watch: {
+      ignored: ['**/scenes/**'],
+    },
   },
   build: {
     minify: 'terser',
