@@ -7,9 +7,6 @@ import { exportToTauri } from './export';
 let viteProcess: any = null;
 let viteServerReady: Promise<void> | null = null;
 
-/**
- * Start the Vite server once and keep it running for the extension lifetime
- */
 async function startViteServer(context: vscode.ExtensionContext): Promise<void> {
     if (viteProcess) {
         return viteServerReady || Promise.resolve();
@@ -68,7 +65,6 @@ async function startViteServer(context: vscode.ExtensionContext): Promise<void> 
             }
         });
 
-        // Timeout after 30 seconds
         setTimeout(() => {
             if (!resolved) {
                 resolved = true;
@@ -80,9 +76,6 @@ async function startViteServer(context: vscode.ExtensionContext): Promise<void> 
     return viteServerReady;
 }
 
-/**
- * Define the document (the data model) used for scene files.
- */
 class SceneDocument implements vscode.CustomDocument {
     private readonly _uri: vscode.Uri;
     private _documentData: string;
@@ -108,7 +101,6 @@ class SceneDocument implements vscode.CustomDocument {
         uri: vscode.Uri,
         backupId: string | undefined,
     ): Promise<SceneDocument | PromiseLike<SceneDocument>> {
-        // If we have a backup, read that. Otherwise read the resource from the workspace
         const dataFile = typeof backupId === 'string' ? vscode.Uri.parse(backupId) : uri;
         const fileData = await SceneDocument.readFile(dataFile);
         return new SceneDocument(uri, fileData);
@@ -197,7 +189,6 @@ class SceneDocument implements vscode.CustomDocument {
                 try {
                     await vscode.workspace.fs.delete(destination);
                 } catch {
-                    // noop
                 }
             }
         };
@@ -206,10 +197,10 @@ class SceneDocument implements vscode.CustomDocument {
 
 class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> {
     private static readonly viewType = 'natstack.sceneEditor';
-    private readonly webviews = new Map<string, vscode.WebviewPanel[]>();
-    private readonly fileWatchers = new Map<string, vscode.FileSystemWatcher>();
-    private readonly lastKnownSceneState = new Map<string, any>();
-    private readonly isUpdatingFromWebview = new Map<string, boolean>();
+    private readonly webviews: Record<string, vscode.WebviewPanel[]> = {};
+    private readonly fileWatchers: Record<string, vscode.FileSystemWatcher> = {};
+    private readonly lastKnownSceneState: Record<string, any> = {};
+    private readonly isUpdatingFromWebview: Record<string, boolean> = {};
 
     constructor(private context: vscode.ExtensionContext) {}
 
@@ -235,28 +226,24 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
         const document = await SceneDocument.create(uri, openContext.backupId);
         const uriString = document.uri.toString();
 
-        // Store initial scene state
         try {
             const initialContent = document.documentData;
             if (initialContent) {
-                this.lastKnownSceneState.set(uriString, JSON.parse(initialContent));
+                this.lastKnownSceneState[uriString] = JSON.parse(initialContent);
             }
         } catch (e) {
-            // Ignore parse errors
         }
 
-        // Set up file system watcher for external changes
         const watcher = vscode.workspace.createFileSystemWatcher(uri.fsPath);
 
         watcher.onDidChange(async (changedUri) => {
-            // Only process if it's the same file and not updating from webview
             if (changedUri.toString() === uriString && 
-                !this.isUpdatingFromWebview.get(uriString)) {
+                !this.isUpdatingFromWebview[uriString]) {
                 await this.handleExternalFileChange(document, changedUri);
             }
         });
 
-        this.fileWatchers.set(uriString, watcher);
+        this.fileWatchers[uriString] = watcher;
 
         const listeners: vscode.Disposable[] = [];
 
@@ -268,18 +255,15 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
         }));
 
         listeners.push(document.onDidChangeContent(e => {
-            // Update last known state
             try {
                 const content = e.content !== undefined ? e.content : document.documentData;
                 if (content) {
-                    this.lastKnownSceneState.set(uriString, JSON.parse(content));
+                    this.lastKnownSceneState[uriString] = JSON.parse(content);
                 }
             } catch (e) {
-                // Ignore parse errors
             }
 
-            // Update all webviews when the document changes
-            const webviewsForDocument = this.webviews.get(document.uri.toString()) || [];
+            const webviewsForDocument = this.webviews[document.uri.toString()] || [];
             for (const webviewPanel of webviewsForDocument) {
                 this.postMessage(webviewPanel, 'openScene', {
                     path: document.uri.fsPath,
@@ -290,13 +274,13 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
 
         document.onDidDispose(() => {
             listeners.forEach(l => l.dispose());
-            const watcher = this.fileWatchers.get(uriString);
+            const watcher = this.fileWatchers[uriString];
             if (watcher) {
                 watcher.dispose();
-                this.fileWatchers.delete(uriString);
+                delete this.fileWatchers[uriString];
             }
-            this.lastKnownSceneState.delete(uriString);
-            this.isUpdatingFromWebview.delete(uriString);
+            delete this.lastKnownSceneState[uriString];
+            delete this.isUpdatingFromWebview[uriString];
         });
 
         return document;
@@ -307,32 +291,29 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
         webviewPanel: vscode.WebviewPanel,
         _token: vscode.CancellationToken
     ): Promise<void> {
-        // Vite server should already be running from activation, but ensure it's ready
         await startViteServer(this.context).catch(err => {
             console.error('Vite server not available:', err);
         });
 
-        // Add the webview to our internal set of active webviews
         const uriString = document.uri.toString();
-        if (!this.webviews.has(uriString)) {
-            this.webviews.set(uriString, []);
+        if (!this.webviews[uriString]) {
+            this.webviews[uriString] = [];
         }
-        this.webviews.get(uriString)!.push(webviewPanel);
+        this.webviews[uriString].push(webviewPanel);
 
         webviewPanel.onDidDispose(() => {
-            const webviewsForUri = this.webviews.get(uriString);
+            const webviewsForUri = this.webviews[uriString];
             if (webviewsForUri) {
                 const index = webviewsForUri.indexOf(webviewPanel);
                 if (index !== -1) {
                     webviewsForUri.splice(index, 1);
                 }
                 if (webviewsForUri.length === 0) {
-                    this.webviews.delete(uriString);
+                    delete this.webviews[uriString];
                 }
             }
         });
 
-        // Setup webview
         webviewPanel.webview.options = {
             enableScripts: true,
             localResourceRoots: []
@@ -342,12 +323,9 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
         const html = fs.readFileSync(htmlPath, 'utf8');
         webviewPanel.webview.html = html;
 
-        // Send initial document content
         this.updateWebview(document, webviewPanel);
 
-        // Handle messages from the webview
         webviewPanel.webview.onDidReceiveMessage(async (message) => {
-            // Handle file operation requests
             if (message.type && message.requestId) {
                 const requestId = message.requestId;
                 
@@ -371,20 +349,17 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
                             const uriString = uri.toString();
                             const documentUriString = document.uri.toString();
                             
-                            // Prevent feedback loop if updating current document
                             if (uriString === documentUriString) {
-                                this.isUpdatingFromWebview.set(documentUriString, true);
+                                this.isUpdatingFromWebview[documentUriString] = true;
                                 document.makeEdit({ content: message.content });
-                                // Update last known state
                                 try {
                                     if (message.content) {
-                                        this.lastKnownSceneState.set(documentUriString, JSON.parse(message.content));
+                                        this.lastKnownSceneState[documentUriString] = JSON.parse(message.content);
                                     }
                                 } catch (e) {
-                                    // Ignore parse errors
                                 }
                                 setTimeout(() => { 
-                                    this.isUpdatingFromWebview.set(documentUriString, false);
+                                    this.isUpdatingFromWebview[documentUriString] = false;
                                 }, 100);
                             } else {
                                 const edit = new vscode.WorkspaceEdit();
@@ -440,7 +415,7 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
                     });
                     if (message.type === 'writeFile') {
                         const uriString = document.uri.toString();
-                        this.isUpdatingFromWebview.set(uriString, false);
+                        this.isUpdatingFromWebview[uriString] = false;
                     }
                 }
             }
@@ -467,23 +442,16 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
     }
 
     private updateWebview(document: SceneDocument, webviewPanel: vscode.WebviewPanel) {
-        // Send the document content to the webview
-        setTimeout(() => {
-            this.postMessage(webviewPanel, 'openScene', {
-                path: document.uri.fsPath,
-                content: document.documentData
-            });
-        }, 500);
+        this.postMessage(webviewPanel, 'openScene', {
+            path: document.uri.fsPath,
+            content: document.documentData
+        });
     }
 
     private postMessage(panel: vscode.WebviewPanel, command: string, body: any): void {
         panel.webview.postMessage({ command, ...body });
     }
 
-    /**
-     * Handles external file changes (e.g., from AI writing to file)
-     * Computes diff and sends updateScene message to webview
-     */
     private async handleExternalFileChange(
         document: SceneDocument,
         changedUri: vscode.Uri
@@ -491,7 +459,6 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
         const uriString = document.uri.toString();
         
         try {
-            // Read the new file content
             const fileData = await vscode.workspace.fs.readFile(changedUri);
             const newContent = Buffer.from(fileData).toString('utf8');
             
@@ -500,18 +467,14 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
             }
 
             const newSceneData = JSON.parse(newContent);
-            const lastKnownState = this.lastKnownSceneState.get(uriString);
+            const lastKnownState = this.lastKnownSceneState[uriString];
 
-            // Compute diff
             const diff = this.computeDiff(lastKnownState, newSceneData);
 
-            // Only send update if there are actual changes
             if (Object.keys(diff).length > 0) {
-                // Update last known state
-                this.lastKnownSceneState.set(uriString, newSceneData);
+                this.lastKnownSceneState[uriString] = newSceneData;
 
-                // Send diff to all webviews for this document
-                const webviewsForDocument = this.webviews.get(uriString) || [];
+                const webviewsForDocument = this.webviews[uriString] || [];
                 for (const webviewPanel of webviewsForDocument) {
                     this.postMessage(webviewPanel, 'updateScene', {
                         diff: diff
@@ -520,17 +483,13 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
             }
         } catch (error: any) {
             console.error('Failed to handle external file change:', error);
-            // If parsing fails, fall back to full reload
-            const webviewsForDocument = this.webviews.get(uriString) || [];
+            const webviewsForDocument = this.webviews[uriString] || [];
             for (const webviewPanel of webviewsForDocument) {
                 this.updateWebview(document, webviewPanel);
             }
         }
     }
 
-    /**
-     * Computes the diff between two JSON objects
-     */
     private computeDiff(oldObj: any, newObj: any): any {
         if (!oldObj) {
             return JSON.parse(JSON.stringify(newObj));
@@ -538,22 +497,18 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
 
         const diff: any = {};
 
-        // Find added or changed properties
         for (const key in newObj) {
             const newValue = newObj[key];
             const oldValue = oldObj[key];
 
             if (!(key in oldObj)) {
-                // New property
                 diff[key] = JSON.parse(JSON.stringify(newValue));
             } else if (this.isObject(newValue) && this.isObject(oldValue)) {
-                // Recursively diff nested objects
                 const nestedDiff = this.computeDiff(oldValue, newValue);
                 if (Object.keys(nestedDiff).length > 0) {
                     diff[key] = nestedDiff;
                 }
             } else if (JSON.stringify(newValue) !== JSON.stringify(oldValue)) {
-                // Changed value
                 diff[key] = JSON.parse(JSON.stringify(newValue));
             }
         }
@@ -568,14 +523,12 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
 
 
 export function activate(context: vscode.ExtensionContext) {
-    // Start Vite server once when extension activates
     startViteServer(context).catch(err => {
         console.error('Failed to start Vite server during activation:', err);
     });
 
     context.subscriptions.push(SceneEditorProvider.register(context));
     
-    // Register export command
     const exportCommand = vscode.commands.registerCommand('natstack.exportToTauri', () => {
         exportToTauri(context);
     });

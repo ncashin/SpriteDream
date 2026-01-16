@@ -12,6 +12,14 @@ import type { InitialGameContext } from "./gameContext";
 
 export type MainFunction = (initialContext: InitialGameContext) => void;
 
+let initializeGameFunction: (() => void) | null = null;
+
+export const initializeGame = () => {
+  if (initializeGameFunction) {
+    initializeGameFunction();
+  }
+};
+
 export const defineMainFunction = (mainFunction: MainFunction) => {
   const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
   const editorRoot = document.querySelector<HTMLDivElement>("#editor")!;
@@ -77,10 +85,13 @@ export const defineMainFunction = (mainFunction: MainFunction) => {
         }
         break;
       default:
-        // Ignore unknown commands
         break;
     }
   });
+
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({ command: "runtimeReady" }, "*");
+  }
 
   if (import.meta.hot) {
     import.meta.hot.on("vite:afterUpdate", () => {
@@ -92,11 +103,9 @@ export const defineMainFunction = (mainFunction: MainFunction) => {
     });
   }
 
+  initializeGameFunction = initializeGame;
+
   return {
     initializeGame,
   };
 };
-
-// Initialize with the main function
-import { main } from "../main";
-export const runtimeWrapper = defineMainFunction(main);

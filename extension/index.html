@@ -3,105 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; frame-src http://localhost:7777 ws://localhost:7777; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src http://localhost:7777 ws://localhost:7777;">
     <title>NatStack Runtime</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { height: 100vh; overflow: hidden; }
-        iframe { width: 100%; height: 100vh; border: none; display: block; }
+        iframe { width: 100%; height: 100vh; border: none; }
     </style>
 </head>
 <body>
-    <iframe id="viteFrame" src="http://localhost:7777" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>
+    <iframe id="viteFrame" src="http://localhost:7777"></iframe>
     <script>
         const vscode = acquireVsCodeApi();
         const iframe = document.getElementById('viteFrame');
         const pendingFileRequests = new Map();
-        let isIframeReady = false;
-        const queuedMessages = [];
+        let pendingScene = null;
+        let isRuntimeReady = false;
 
-        function markIframeReady() {
-            isIframeReady = true;
-            queuedMessages.forEach(msg => {
-                iframe.contentWindow.postMessage(msg, '*');
-            });
-            queuedMessages.length = 0;
-        }
-
-        let readyTimeout;
-        let runtimeReadyHandler = null;
-        
-        function setupRuntimeReadyListener() {
-            if (runtimeReadyHandler) {
-                window.removeEventListener('message', runtimeReadyHandler);
-            }
-            
-            runtimeReadyHandler = (event) => {
-                if (event.source === iframe.contentWindow && event.data && event.data.command === 'runtimeReady') {
-                    window.removeEventListener('message', runtimeReadyHandler);
-                    runtimeReadyHandler = null;
-                    if (readyTimeout) {
-                        clearTimeout(readyTimeout);
-                        readyTimeout = null;
-                    }
-                    markIframeReady();
+        function sendSceneToRuntime(sceneMessage) {
+            if (isRuntimeReady && iframe.contentWindow) {
+                try {
+                    iframe.contentWindow.postMessage(sceneMessage, '*');
+                    pendingScene = null;
+                } catch (e) {
+                    pendingScene = sceneMessage;
                 }
-            };
-            window.addEventListener('message', runtimeReadyHandler);
-            
-            if (readyTimeout) clearTimeout(readyTimeout);
-            readyTimeout = setTimeout(() => {
-                if (runtimeReadyHandler) {
-                    window.removeEventListener('message', runtimeReadyHandler);
-                    runtimeReadyHandler = null;
-                }
-                if (!isIframeReady) {
-                    console.warn('Runtime ready message not received, proceeding anyway');
-                    markIframeReady();
-                }
-            }, 3000);
-        }
-        
-        iframe.addEventListener('load', () => {
-            if (iframe.contentWindow && !isIframeReady) {
-                iframe.contentWindow.postMessage({ command: 'ping' }, '*');
-            }
-        });
-        
-        setupRuntimeReadyListener();
-
-        // Helper function to send message to iframe (with queuing if needed)
-        function sendToIframe(message) {
-            if (isIframeReady && iframe.contentWindow) {
-                iframe.contentWindow.postMessage(message, '*');
             } else {
-                queuedMessages.push(message);
+                pendingScene = sceneMessage;
             }
         }
 
         window.addEventListener('message', event => {
             const message = event.data;
             const isFromIframe = event.source === iframe.contentWindow;
+            
             if (isFromIframe) {
-                if (message.command === 'runtimeReady' && !isIframeReady) {
-                    markIframeReady();
-                } else if (message.type && message.requestId && ['readFile', 'writeFile', 'listFiles', 'getWorkspaceRoot'].includes(message.type)) {
+                if (message.command === 'runtimeReady') {
+                    isRuntimeReady = true;
+                    if (pendingScene) {
+                        sendSceneToRuntime(pendingScene);
+                    }
+                } else if (message.type && message.requestId) {
                     pendingFileRequests.set(message.requestId, message.type);
                     vscode.postMessage(message);
                 }
             } else {
                 if (message.requestId && pendingFileRequests.has(message.requestId)) {
-                    sendToIframe(message);
+                    iframe.contentWindow.postMessage(message, '*');
                     pendingFileRequests.delete(message.requestId);
-                } else if (message.command === 'viteRestarted') {
-                    isIframeReady = false;
-                    queuedMessages.length = 0;
-                    if (readyTimeout) clearTimeout(readyTimeout);
-                    setupRuntimeReadyListener();
-                    iframe.src = iframe.src;
                 } else if (message.command === 'openScene') {
-                    sendToIframe({ command: 'openScene', path: message.path, content: message.content });
+                    const sceneMessage = { command: 'openScene', path: message.path, content: message.content };
+                    sendSceneToRuntime(sceneMessage);
                 } else if (message.command === 'updateScene') {
-                    sendToIframe({ command: 'updateScene', diff: message.diff });
+                    if (isRuntimeReady && iframe.contentWindow) {
+                        iframe.contentWindow.postMessage({ command: 'updateScene', diff: message.diff }, '*');
+                    }
                 }
             }
         });
