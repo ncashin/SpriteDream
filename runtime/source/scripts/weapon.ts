@@ -33,6 +33,8 @@ export const WeaponComponentDefinition: WeaponComponent = defineComponent(
   }
 );
 
+let projectileCounter = 0;
+
 export function initializeWeapon(
   gameContext: RequirePlugin<
     [typeof ecsPlugin, typeof inputPlugin, typeof spritePlugin]
@@ -107,7 +109,9 @@ export function initializeWeapon(
             // Apply recoil
             recoilState.recoilAmount = 15; // Recoil distance
 
-            const projectileEntity = gameContext.ecs.createEntity();
+            // Generate unique projectile name
+            projectileCounter++;
+            const projectileEntity = gameContext.ecs.createEntity(`projectile${projectileCounter}`);
             const projectileSpeed = 600;
 
             gameContext.ecs.addComponent(

@@ -32,17 +32,8 @@ function ECSEditorPluginUI() {
 
   const isValidEntity = (entity: Entity | null): boolean => {
     if (!entity || !ecsContext) return false;
-    const componentPools = ecsContext.ecs.ecsInstance.componentPools;
-    for (const componentPool of Object.values(componentPools)) {
-      if (
-        componentPool &&
-        typeof componentPool === "object" &&
-        entity in componentPool
-      ) {
-        return true;
-      }
-    }
-    return false;
+    const entities = ecsContext.ecs.ecsInstance.entities;
+    return entity in entities;
   };
 
   const validSelectedEntity = isValidEntity(selectedEntity)

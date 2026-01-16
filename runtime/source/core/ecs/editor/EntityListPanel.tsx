@@ -6,10 +6,10 @@ interface EntityListPanelProps {
   ecsContext: {
     ecs: {
       ecsInstance: {
-        componentPools: Record<string, Record<string, unknown>>;
+        entities: Record<string, Record<string, unknown>>;
       };
       getEntity: (entity: Entity) => Record<string, Component>;
-      createEntity: (name?: string) => Entity;
+      createEntity: (name: string) => Entity;
       destroyEntity: (entity: Entity) => void;
       addComponent: <ComponentType extends Component>(
         entity: Entity,
@@ -27,19 +27,8 @@ function getAllEntities(
     return [];
   }
 
-  const entitySet = new Set<Entity>();
-  const componentPools = ecsContext.ecs.ecsInstance.componentPools;
-
-  for (const componentPool of Object.values(componentPools)) {
-    if (componentPool && typeof componentPool === "object") {
-      for (const entity of Object.keys(
-        componentPool as Record<string, unknown>
-      )) {
-        entitySet.add(entity);
-      }
-    }
-  }
-  return Array.from(entitySet);
+  const entities = ecsContext.ecs.ecsInstance.entities;
+  return Object.keys(entities);
 }
 
 // Preserve expanded state across HMR

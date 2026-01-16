@@ -33,13 +33,16 @@ export const DamageNumberComponentDefinition: DamageNumberComponent =
     }
   );
 
+let damageNumberCounter = 0;
+
 export function createDamageNumber(
   gameContext: RequirePlugin<[typeof ecsPlugin, typeof spritePlugin]>,
   x: number,
   y: number,
   damage: number
 ) {
-  const entity = gameContext.ecs.createEntity();
+  damageNumberCounter++;
+  const entity = gameContext.ecs.createEntity(`damageNumber${damageNumberCounter}`);
 
   // Position
   gameContext.ecs.addComponent(entity, PositionComponentDefinition);

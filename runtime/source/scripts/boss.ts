@@ -70,6 +70,8 @@ export const HitFlashComponentDefinition: HitFlashComponent = defineComponent(
   }
 );
 
+let bossProjectileCounter = 0;
+
 export function initializeBoss(
   gameContext: RequirePlugin<[typeof ecsPlugin, typeof spritePlugin]>
 ) {
@@ -253,7 +255,8 @@ export function initializeBoss(
     velocityX: number,
     velocityY: number
   ) {
-    const projectileEntity = gameContext.ecs.createEntity();
+    bossProjectileCounter++;
+    const projectileEntity = gameContext.ecs.createEntity(`bossProjectile${bossProjectileCounter}`);
 
     gameContext.ecs.addComponent(projectileEntity, PositionComponentDefinition);
     const projectilePos = gameContext.ecs.getComponent(
