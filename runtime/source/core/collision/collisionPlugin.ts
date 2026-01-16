@@ -16,7 +16,6 @@ import { getViewport } from "../viewport/viewport";
 export function collisionPlugin<
   T extends RequirePlugin<[typeof ecsPlugin, typeof spritePlugin]>
 >(context: T): ContextExtension<T, {}> {
-  // Helper for editor callback (doesn't need velocity)
   const getCollisionEntities = (): Entity[] => {
     const entities: Entity[] = [];
     context.ecs.runQuery(
@@ -37,8 +36,6 @@ export function collisionPlugin<
   addUpdateCallback((deltaTime: number) => {
     const collisionEntities: Entity[] = [];
 
-    // Single query: apply velocity to position and collect collision entities
-    // This ensures position is updated once before collision detection
     context.ecs.runQuery(
       [
         PositionComponentDefinition,
@@ -47,16 +44,13 @@ export function collisionPlugin<
       ],
       (entity, [position, velocity, collider]) => {
         if (collider.collisionEnabled) {
-          // Apply velocity to position (only once per frame)
           position.x += velocity.x * deltaTime;
           position.y += velocity.y * deltaTime;
-          // Collect entity for collision checking
           collisionEntities.push(entity);
         }
       }
     );
 
-    // Check collisions and call resolver callbacks (e.g., platformer resolver from player.ts)
     if (collisionEntities.length > 0) {
       updateCollisions(context.ecs.ecsInstance, collisionEntities);
     }
