@@ -15,9 +15,10 @@ interface EntityListPanelProps {
         entity: Entity,
         component: ComponentType
       ) => void;
+      selectEntity: (entity: Entity | null) => void;
+      getSelectedEntity: () => Entity | null;
     };
   } | null;
-  onEntityClick: (entity: Entity) => void;
 }
 
 function getAllEntities(
@@ -36,7 +37,6 @@ let preservedIsExpanded = true;
 
 export function EntityListPanel({
   ecsContext,
-  onEntityClick,
 }: EntityListPanelProps) {
   // Restore preserved state on mount
   const [isExpanded, setIsExpanded] = useState(preservedIsExpanded);
@@ -45,8 +45,10 @@ export function EntityListPanel({
   const [hoveredEntity, setHoveredEntity] = useState<Entity | null>(null);
   const [renamingEntity, setRenamingEntity] = useState<Entity | null>(null);
   const [renameValue, setRenameValue] = useState<string>("");
+  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const callbackIdRef = useRef<number | null>(null);
+  const selectionCallbackIdRef = useRef<number | null>(null);
 
   // Update preserved state when it changes
   useEffect(() => {
@@ -93,6 +95,27 @@ export function EntityListPanel({
     };
   }, [ecsContext]);
 
+  useEffect(() => {
+    const updateSelection = () => {
+      const currentSelection = ecsContext?.ecs.getSelectedEntity() ?? null;
+      setSelectedEntity(currentSelection);
+    };
+
+    updateSelection();
+
+    const callbackId = addDrawCallback(() => {
+      updateSelection();
+    });
+    selectionCallbackIdRef.current = callbackId;
+
+    return () => {
+      if (selectionCallbackIdRef.current !== null) {
+        removeDrawCallback(selectionCallbackIdRef.current);
+        selectionCallbackIdRef.current = null;
+      }
+    };
+  }, [ecsContext]);
+
   const handleCreateEntity = () => {
     if (!ecsContext) return;
 
@@ -113,7 +136,7 @@ export function EntityListPanel({
       x: 0,
       y: 0,
     });
-    onEntityClick(newEntity);
+    ecsContext.ecs.selectEntity(newEntity);
   };
 
   const handleDeleteEntity = (entity: Entity, e: React.MouseEvent) => {
@@ -160,7 +183,7 @@ export function EntityListPanel({
       ecsContext.ecs.destroyEntity(renamingEntity);
 
       // Select the new entity
-      onEntityClick(newEntity);
+      ecsContext.ecs.selectEntity(newEntity);
     }
 
     setRenamingEntity(null);
@@ -338,7 +361,9 @@ export function EntityListPanel({
                     fontFamily:
                       "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
                     backgroundColor:
-                      hoveredEntity === entity
+                      selectedEntity === entity
+                        ? "var(--vscode-list-activeSelectionBackground, rgba(0, 122, 204, 0.3))"
+                        : hoveredEntity === entity
                         ? "var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))"
                         : "transparent",
                     transition: "background-color 0.1s ease-out",
@@ -346,7 +371,7 @@ export function EntityListPanel({
                     alignItems: "center",
                     gap: "0.25rem",
                   }}
-                  onClick={() => onEntityClick(entity)}
+                  onClick={() => ecsContext?.ecs.selectEntity(entity)}
                   onMouseEnter={() => setHoveredEntity(entity)}
                   onMouseLeave={() => setHoveredEntity(null)}
                 >

@@ -8,6 +8,14 @@ export type InitialGameContext = {
   editorRoot: Root | null;
 };
 
+export type ClickableEntityProvider = {
+  /**
+   * Check if a world position overlaps with any entities handled by this provider.
+   * Returns the entity ID if a hit is found, null otherwise.
+   */
+  checkClick: (worldX: number, worldY: number) => string | null;
+};
+
 export type ContextExtension<T extends InitialGameContext, Extension> = T &
   Extension;
 

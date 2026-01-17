@@ -1,4 +1,4 @@
-import type { ContextExtension, RequirePlugin } from "./gameContext";
+import type { ContextExtension, RequirePlugin, ClickableEntityProvider } from "./gameContext";
 import type { Component, Entity } from "./ecs/ecs";
 import {
   PositionComponentDefinition,
@@ -74,7 +74,11 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   context: T
 ): ContextExtension<
   T,
-  { canvas: HTMLCanvasElement; context2D: CanvasRenderingContext2D }
+  { 
+    canvas: HTMLCanvasElement; 
+    context2D: CanvasRenderingContext2D;
+    spriteClickProvider: ClickableEntityProvider;
+  }
 > {
   const canvas = initializeCanvas(context.rootElement);
   const context2D = canvas.getContext("2d");
@@ -82,6 +86,36 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   if (!context2D) {
     throw new Error("Failed to get 2D rendering context from canvas");
   }
+
+  const spriteClickProvider: ClickableEntityProvider = {
+    checkClick: (worldX: number, worldY: number): string | null => {
+      let clickedEntity: string | null = null;
+      
+      context.ecs.runQuery(
+        [PositionComponentDefinition, SpriteComponentDefinition],
+        (entity: Entity, components: [PositionComponent, SpriteComponent]) => {
+          if (clickedEntity) return;
+          const [position, sprite] = components;
+          if (position && sprite && typeof position.x === "number" && typeof sprite.width === "number") {
+            const left = position.x - sprite.width / 2;
+            const right = position.x + sprite.width / 2;
+            const top = position.y - sprite.height / 2;
+            const bottom = position.y + sprite.height / 2;
+            if (
+              worldX >= left &&
+              worldX <= right &&
+              worldY >= top &&
+              worldY <= bottom
+            ) {
+              clickedEntity = entity;
+            }
+          }
+        }
+      );
+      
+      return clickedEntity;
+    },
+  };
 
 
   addDrawCallback(() => {
@@ -280,5 +314,6 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     ...context,
     canvas,
     context2D,
+    spriteClickProvider,
   };
 }

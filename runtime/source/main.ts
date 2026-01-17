@@ -7,6 +7,7 @@ import { spritePlugin } from "./core/sprite";
 import { inputPlugin } from "./core/input";
 import { viewportPlugin } from "./core/viewport/viewportPlugin";
 import { collisionPlugin } from "./core/collision/collisionPlugin";
+import { ecsEditorPlugin } from "./core/ecs/editor/ECSEditorPlugin";
 import { addStartCallback } from "./core/initialization";
 import { initializePlayer } from "./scripts/player";
 import "./scripts/weapon";
@@ -18,6 +19,7 @@ import type { Component } from "./core/ecs/ecs";
 import { defineComponent } from "./core/ecs/component";
 import initialScene from "../scenes/default.scene?raw";
 import { defineMainFunction } from "./core/runtimeWrapper.ts";
+import { getScene } from "./core/scene/scene.ts";
 
 export {
   getViewport,
@@ -46,26 +48,17 @@ export function main(initialContext: InitialGameContext) {
   const gameContext = initializeGameContext({
     initialContext,
     plugins: [
+      inputPlugin,
+      viewportPlugin,
       ecsPlugin,
       spritePlugin,
       collisionPlugin,
-      inputPlugin,
-      viewportPlugin,
+      ecsEditorPlugin,
     ],
     initialScene,
   });
 
   initializePlayer(gameContext, "player");
-  initializeWeapon(gameContext);
-  initializeProjectile(gameContext);
-  initializeBoss(gameContext);
-  initializeDamageNumber(gameContext);
-
-  addStartCallback(() => {
-    const component = document.createElement("div");
-    component.textContent = "Game started!";
-    gameContext.rootElement.appendChild(component);
-  });
 }
 
 defineMainFunction(main);

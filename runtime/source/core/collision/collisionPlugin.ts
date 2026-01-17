@@ -1,4 +1,4 @@
-import type { ContextExtension, RequirePlugin } from "../gameContext";
+import type { ContextExtension, RequirePlugin, ClickableEntityProvider } from "../gameContext";
 import { ecsPlugin } from "../scene/ecsAdapter";
 import { spritePlugin } from "../sprite";
 import type { Entity } from "../ecs/ecs";
@@ -15,7 +15,7 @@ import { getViewport } from "../viewport/viewportPlugin";
 
 export function collisionPlugin<
   T extends RequirePlugin<[typeof ecsPlugin, typeof spritePlugin]>
->(context: T): ContextExtension<T, {}> {
+>(context: T): ContextExtension<T, { colliderClickProvider: ClickableEntityProvider }> {
   const getCollisionEntities = (): Entity[] => {
     const entities: Entity[] = [];
     context.ecs.runQuery(
@@ -74,5 +74,42 @@ export function collisionPlugin<
     context2D.restore();
   });
 
-  return context;
+  const colliderClickProvider: ClickableEntityProvider = {
+    checkClick: (worldX: number, worldY: number): string | null => {
+      let clickedEntity: string | null = null;
+      
+      context.ecs.runQuery(
+        [PositionComponentDefinition, ColliderComponentDefinition],
+        (entity: Entity, components: [PositionComponent, ColliderComponent]) => {
+          if (clickedEntity) return;
+          const [position, collider] = components;
+          if (position && collider && collider.collisionEnabled) {
+            const width = collider.width ?? 32;
+            const height = collider.height ?? 32;
+            const offsetX = collider.offsetX ?? 0;
+            const offsetY = collider.offsetY ?? 0;
+            const left = position.x + offsetX - width / 2;
+            const right = position.x + offsetX + width / 2;
+            const top = position.y + offsetY - height / 2;
+            const bottom = position.y + offsetY + height / 2;
+            if (
+              worldX >= left &&
+              worldX <= right &&
+              worldY >= top &&
+              worldY <= bottom
+            ) {
+              clickedEntity = entity;
+            }
+          }
+        }
+      );
+      
+      return clickedEntity;
+    },
+  };
+
+  return {
+    ...context,
+    colliderClickProvider,
+  };
 }

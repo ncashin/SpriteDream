@@ -72,10 +72,6 @@ export function initializePlayer(
 
   addStartCallback(() => {
     playerEntity = gameContext.ecs.getEntity(playerEntityId);
-
-    if (playerEntity.player && playerEntity.player.isGrounded === undefined) {
-      playerEntity.player.isGrounded = false;
-    }
   });
 
   addUpdateCallback((deltaTime: number) => {

@@ -9,7 +9,6 @@ import {
   type ComponentTypeString,
 } from "../ecs/ecs";
 import type { InitialGameContext, ContextExtension } from "../gameContext";
-import { initializeECSEditor } from "../ecs/editor/ECSEditorPlugin";
 
 type SceneECSData = {
   entities: Record<Entity, Record<ComponentTypeString, Component>>;
@@ -95,9 +94,6 @@ export function ecsPlugin<T extends InitialGameContext>(
     ...context,
     ecs,
   };
-
-  // Initialize editor plugin if in dev mode
-  initializeECSEditor(extendedContext);
 
   return extendedContext;
 }
