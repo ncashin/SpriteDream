@@ -121,6 +121,20 @@ export function registerDragHandler(
 
       // Handle mouse press - find handler
       if (isMouseJustPressed && !dragState.isDragging) {
+        // Check if click is on an editor UI element - if so, don't start drag
+        const editorRoot = document.querySelector("#editor");
+        if (editorRoot) {
+          const elementAtPoint = document.elementFromPoint(mousePos.x, mousePos.y);
+          if (elementAtPoint) {
+            // Check if the element is within the editor root and is interactive
+            // (editor root has pointer-events: none, but its children have pointer-events: auto)
+            if (editorRoot.contains(elementAtPoint) && elementAtPoint !== editorRoot) {
+              // Click is on editor UI, don't start drag
+              return;
+            }
+          }
+        }
+
         const worldPos = screenToWorld(
           mousePos.x,
           mousePos.y,

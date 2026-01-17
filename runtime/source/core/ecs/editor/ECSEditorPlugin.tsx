@@ -6,7 +6,7 @@ import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { EntityListPanel } from "./EntityListPanel";
 import { EntityModal } from "./EntityModal";
-import { addDrawCallback, removeDrawCallback } from "../../gameloop";
+import { addDrawCallback, removeDrawCallback, isEditorEnabled } from "../../gameloop";
 import { registerDragHandler } from "../../dragHandler";
 import type { Entity } from "../ecs";
 
@@ -121,6 +121,11 @@ export function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, t
       {
         priority: 10, // Higher priority than viewport (which defaults to 0)
         canHandle: (worldX, worldY) => {
+          // Only handle in editor mode
+          if (!isEditorEnabled()) {
+            return false;
+          }
+          
           let clickedEntity: string | null = null;
           
           // Check sprite provider first

@@ -144,8 +144,8 @@
       "boss": {
         "position": {
           "type": "position",
-          "x": 34,
-          "y": -202
+          "x": 58,
+          "y": -182
         },
         "sprite": {
           "type": "sprite",

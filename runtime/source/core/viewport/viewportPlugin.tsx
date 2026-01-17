@@ -2,6 +2,7 @@ import type { ContextExtension, RequirePlugin } from "../gameContext";
 import { inputPlugin } from "../input";
 import { addStartCallback } from "../initialization";
 import { registerDragHandler } from "../dragHandler";
+import { isEditorEnabled } from "../gameloop";
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 
@@ -124,7 +125,7 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
     resetViewport();
   });
 
-  // Register viewport pan handler (lower priority than entity drag)
+  // Register viewport pan handler (lower priority than entity drag, only in editor mode)
   let viewportDragStartX: number = 0;
   let viewportDragStartY: number = 0;
 
@@ -132,6 +133,10 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
     {
       priority: 0, // Lower priority - only handles if no entity was clicked
       canHandle: () => {
+        // Only handle in editor mode
+        if (!isEditorEnabled()) {
+          return false;
+        }
         // Always return true - this is the fallback handler for empty space
         // Higher priority handlers (like entity drag) will claim the drag first
         return true;
@@ -154,13 +159,31 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
     context
   );
 
-  // Set up wheel handler for zooming
-  let wheelHandler: ((e: WheelEvent) => void) | null = null;
-  if (!wheelHandler) {
-    wheelHandler = (e: WheelEvent) => {
-      e.preventDefault();
-      const canvas = document.querySelector("canvas");
+  // Set up wheel handler for zooming on game root (only in editor mode)
+  // Attach to gameRoot so it works even when scrolling over editor overlay
+  const gameRoot = document.querySelector("#gameRoot") as HTMLElement | null;
+  if (gameRoot) {
+    const wheelHandler = (e: WheelEvent) => {
+      // Only zoom in editor mode
+      if (!isEditorEnabled()) {
+        return;
+      }
+
+      // Check if scrolling over an editor UI element - if so, don't zoom
+      const editorRoot = document.querySelector("#editor");
+      if (editorRoot) {
+        const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
+        if (elementAtPoint && editorRoot.contains(elementAtPoint) && elementAtPoint !== editorRoot) {
+          // Scrolling over editor UI, don't zoom
+          return;
+        }
+      }
+      
+      const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
       if (!canvas) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
       
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -168,7 +191,8 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
       const delta = e.deltaY > 0 ? -0.03 : 0.03;
       zoomViewport(delta, x, y);
     };
-    window.addEventListener("wheel", wheelHandler, {
+    
+    gameRoot.addEventListener("wheel", wheelHandler, {
       passive: false,
     });
   }
