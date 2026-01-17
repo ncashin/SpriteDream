@@ -20,7 +20,7 @@ export function ecsPlugin<T extends InitialGameContext>(
   const scene = getScene();
 
   let ecsData: SceneECSData;
-  
+
   if (!scene.ecs) {
     scene.ecs = {
       entities: {},
@@ -52,12 +52,12 @@ export function ecsPlugin<T extends InitialGameContext>(
           configurable: true,
         });
       }
-      
+
       const componentType = component.type;
       if (ecsData.entities[entity] && ecsData.entities[entity][componentType]) {
         ecsData.entities[entity][componentType][property] = newValue;
       }
-      
+
       return true;
     },
   };

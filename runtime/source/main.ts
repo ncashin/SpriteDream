@@ -30,20 +30,6 @@ export {
   zoomViewport,
 } from "./core/viewport/viewportPlugin";
 
-export type PlatformComponent = Component & {
-  type: "platform";
-};
-export const PlatformComponentDefinition: PlatformComponent = defineComponent(
-  {
-    type: "platform",
-  },
-  {
-    displayName: "Platform",
-    description: "A platform entity",
-  }
-);
-
-
 export function main(initialContext: InitialGameContext) {
   const gameContext = initializeGameContext({
     initialContext,

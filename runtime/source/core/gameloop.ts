@@ -1,3 +1,5 @@
+import { resetDragHandlerInitialization } from "./dragHandler";
+
 export type CallbackId = number;
 
 const updateCallbacks: Record<CallbackId, (deltaTime: number) => void> = {};
@@ -93,6 +95,9 @@ export const resetAllCallbacks = (): void => {
 
   // Reset callback ID counter
   nextCallbackId = 1;
+
+  // Reset drag handler initialization so it can re-register callbacks
+  resetDragHandlerInitialization();
 };
 
 let lastTime = performance.now();

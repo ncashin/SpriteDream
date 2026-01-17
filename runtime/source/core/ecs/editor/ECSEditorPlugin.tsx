@@ -8,12 +8,67 @@ import { EntityListPanel } from "./EntityListPanel";
 import { EntityModal } from "./EntityModal";
 import { addDrawCallback, removeDrawCallback, isEditorEnabled } from "../../gameloop";
 import { registerDragHandler } from "../../dragHandler";
+import { getViewport } from "../../viewport/viewportPlugin";
 import type { Entity } from "../ecs";
+
+/**
+ * Finds all ClickableEntityProvider instances on the context object.
+ * This allows plugins to add click providers with arbitrary property names.
+ */
+function getClickProviders(context: any): ClickableEntityProvider[] {
+  const providers: ClickableEntityProvider[] = [];
+  for (const key in context) {
+    const value = context[key];
+    if (
+      value &&
+      typeof value === "object" &&
+      typeof value.checkClick === "function"
+    ) {
+      providers.push(value as ClickableEntityProvider);
+    }
+  }
+  return providers;
+}
+
+/**
+ * Checks all click providers on the context for a click at the given world position.
+ * Returns the first entity found, or null if none.
+ */
+function checkClickProviders(
+  context: any,
+  worldX: number,
+  worldY: number
+): string | null {
+  const providers = getClickProviders(context);
+  for (const provider of providers) {
+    const entity = provider.checkClick(worldX, worldY);
+    if (entity) {
+      return entity;
+    }
+  }
+  return null;
+}
 
 export let ecsContext: ReturnType<typeof ecsPlugin> | null = null;
 
 let ecsEditorRoot: Root | null = null;
 let ecsEditorContainer: HTMLDivElement | null = null;
+
+function screenToWorld(
+  screenX: number,
+  screenY: number,
+  viewportX: number,
+  viewportY: number,
+  viewportScale: number,
+  canvasWidth: number,
+  canvasHeight: number
+): { x: number; y: number } {
+  const centerX = canvasWidth / 2;
+  const centerY = canvasHeight / 2;
+  const worldX = (screenX - centerX) / viewportScale + viewportX;
+  const worldY = (screenY - centerY) / viewportScale + viewportY;
+  return { x: worldX, y: worldY };
+}
 
 function ECSEditorPluginUI() {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
@@ -115,6 +170,8 @@ export function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, t
     context.canvas
   ) {
     let entityDragStartPosition: { x: number; y: number } | null = null;
+    let draggedEntity: string | null = null;
+    let hasDragged = false;
 
     registerDragHandler(
       {
@@ -124,29 +181,15 @@ export function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, t
             return false;
           }
           
-          let clickedEntity: string | null = null;
-          
-          if ("spriteClickProvider" in context && context.spriteClickProvider) {
-            clickedEntity = (context.spriteClickProvider as ClickableEntityProvider).checkClick(worldX, worldY);
-          }
-          
-          if (!clickedEntity && "colliderClickProvider" in context && context.colliderClickProvider) {
-            clickedEntity = (context.colliderClickProvider as ClickableEntityProvider).checkClick(worldX, worldY);
-          }
-          
+          const clickedEntity = checkClickProviders(context, worldX, worldY);
           return clickedEntity !== null;
         },
         onDragStart: (worldX, worldY) => {
-          let clickedEntity: string | null = null;
-          if ("spriteClickProvider" in context && context.spriteClickProvider) {
-            clickedEntity = (context.spriteClickProvider as ClickableEntityProvider).checkClick(worldX, worldY);
-          }
-          if (!clickedEntity && "colliderClickProvider" in context && context.colliderClickProvider) {
-            clickedEntity = (context.colliderClickProvider as ClickableEntityProvider).checkClick(worldX, worldY);
-          }
+          hasDragged = true;
+          const clickedEntity = checkClickProviders(context, worldX, worldY);
           
           if (clickedEntity) {
-            context.ecs.selectEntity(clickedEntity);
+            draggedEntity = clickedEntity;
             const entityComponents = context.ecs.getEntity(clickedEntity);
             const position = entityComponents?.position;
             if (position && typeof position.x === "number" && typeof position.y === "number") {
@@ -155,25 +198,103 @@ export function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, t
           }
         },
         onDrag: (worldDeltaX, worldDeltaY) => {
-          if (entityDragStartPosition) {
-            const selectedEntity = context.ecs.getSelectedEntity();
-            if (selectedEntity) {
-              const entityComponents = context.ecs.getEntity(selectedEntity);
-              const position = entityComponents?.position;
-              if (position && typeof position.x === "number" && typeof position.y === "number") {
-                position.x = entityDragStartPosition.x + worldDeltaX;
-                position.y = entityDragStartPosition.y + worldDeltaY;
-              }
+          if (entityDragStartPosition && draggedEntity) {
+            const entityComponents = context.ecs.getEntity(draggedEntity);
+            const position = entityComponents?.position;
+            if (position && typeof position.x === "number" && typeof position.y === "number") {
+              position.x = entityDragStartPosition.x + worldDeltaX;
+              position.y = entityDragStartPosition.y + worldDeltaY;
             }
           }
         },
         onDragEnd: () => {
           entityDragStartPosition = null;
+          draggedEntity = null;
+          hasDragged = false;
         },
         cursor: "grabbing",
       },
       context
     );
+
+    // Track mouse down to detect clicks vs drags
+    let previousMouseDown = false;
+    const canvas = context.canvas as HTMLCanvasElement;
+    addDrawCallback(() => {
+      if (!isEditorEnabled() || !canvas) return;
+
+      const mousePos = context.input.getMousePosition();
+      const isMouseDown = context.input.isMouseButtonPressed("left");
+      const isMouseJustPressed = isMouseDown && !previousMouseDown;
+      const isMouseJustReleased = !isMouseDown && previousMouseDown;
+      const dragState = context.input.getDragState();
+      const viewportState = getViewport();
+
+      previousMouseDown = isMouseDown;
+
+        // Check for hover to show pointer cursor
+      if (!dragState.isDragging && !isMouseDown) {
+        const worldPos = screenToWorld(
+          mousePos.x,
+          mousePos.y,
+          viewportState.x,
+          viewportState.y,
+          viewportState.scale,
+          canvas.width,
+          canvas.height
+        );
+
+        const hoveredEntity = checkClickProviders(context, worldPos.x, worldPos.y);
+
+        if (hoveredEntity) {
+          canvas.style.cursor = "pointer";
+        } else {
+          canvas.style.cursor = "";
+        }
+      }
+
+      // Track mouse down to reset drag state
+      if (isMouseJustPressed && !dragState.isDragging) {
+        hasDragged = false;
+      }
+
+      // Handle click (mouse release without drag)
+      if (isMouseJustReleased && !hasDragged && !dragState.isDragging) {
+        const editorRoot = document.querySelector("#editor");
+        let shouldHandleClick = true;
+        if (editorRoot) {
+          const elementAtPoint = document.elementFromPoint(mousePos.x, mousePos.y);
+          if (elementAtPoint) {
+            if (editorRoot.contains(elementAtPoint) && elementAtPoint !== editorRoot) {
+              shouldHandleClick = false;
+            }
+          }
+        }
+
+        if (shouldHandleClick) {
+          const worldPos = screenToWorld(
+            mousePos.x,
+            mousePos.y,
+            viewportState.x,
+            viewportState.y,
+            viewportState.scale,
+            canvas.width,
+            canvas.height
+          );
+
+          const clickedEntity = checkClickProviders(context, worldPos.x, worldPos.y);
+
+          if (clickedEntity) {
+            context.ecs.selectEntity(clickedEntity);
+          } else {
+            // Clicked on empty space, deselect
+            context.ecs.clearSelection();
+          }
+        }
+
+        hasDragged = false;
+      }
+    });
   }
 }
 

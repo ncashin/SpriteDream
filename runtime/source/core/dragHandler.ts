@@ -65,6 +65,10 @@ export function getActiveHandler(): DragHandler | null {
   return activeHandler?.handler ?? null;
 }
 
+export function resetDragHandlerInitialization(): void {
+  isInitialized = false;
+}
+
 export function registerDragHandler(
   handler: DragHandler,
   context: DragHandlerContext
@@ -72,7 +76,7 @@ export function registerDragHandler(
   const handlerWithContext: HandlerWithContext = { handler, context };
   dragHandlers.push(handlerWithContext);
   dragHandlers.sort((a, b) => (b.handler.priority ?? 0) - (a.handler.priority ?? 0));
-  
+
   if (!isInitialized) {
     isInitialized = true;
     addEditorCallback(() => {
@@ -166,7 +170,7 @@ export function registerDragHandler(
       }
     });
   }
-  
+
   return () => {
     const index = dragHandlers.indexOf(handlerWithContext);
     if (index !== -1) {
