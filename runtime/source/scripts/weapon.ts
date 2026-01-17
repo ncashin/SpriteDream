@@ -8,7 +8,7 @@ import {
 } from "../core/ecs/component";
 import { SpriteComponentDefinition } from "../core/sprite";
 import type { Component } from "../core/ecs/ecs";
-import { getViewport } from "../core/viewport/viewport";
+import { getViewport } from "../core/viewport/viewportPlugin";
 import type { RequirePlugin } from "../core/gameContext";
 import { ecsPlugin } from "../core/scene/ecsAdapter";
 import { inputPlugin } from "../core/input";

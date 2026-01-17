@@ -187,24 +187,7 @@ function saveScene(filePath: string, sceneData: SceneData): void {
 
   saveTimeout = setTimeout(async () => {
     try {
-      // Clone the scene data to ensure we serialize the actual data, not the proxy
-      const clonedData = deepClone(sceneData);
-      
-      // Validate that we're not saving an empty object
-      if (!clonedData || (typeof clonedData === 'object' && Object.keys(clonedData).length === 0)) {
-        console.warn("Skipping save: scene data is empty");
-        return;
-      }
-
-      const jsonContent = JSON.stringify(clonedData, null, 2);
-      
-      // Additional validation: ensure the JSON string is not just "{}"
-      if (jsonContent.trim() === '{}') {
-        console.warn("Skipping save: scene data would result in empty object");
-        return;
-      }
-
-      await writeFile(filePath, jsonContent);
+      await writeFile(filePath, JSON.stringify(sceneData, null, 2));
     } catch (error) {
       console.error("Failed to save scene:", error);
     }

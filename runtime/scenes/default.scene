@@ -4,8 +4,8 @@
       "player": {
         "position": {
           "type": "position",
-          "x": -247.80722891566268,
-          "y": -112.38554216867465
+          "x": -206.63075832742737,
+          "y": -64.15024805102757
         },
         "sprite": {
           "type": "sprite",
@@ -141,30 +141,11 @@
           "angle": 0
         }
       },
-      "newEntity": {
-        "position": {
-          "type": "position",
-          "x": -119.61016949152543,
-          "y": -54.389830508474574
-        },
-        "sprite": {
-          "type": "sprite",
-          "width": 64,
-          "height": 64,
-          "color": "#ffffff",
-          "image": "/tome.png"
-        },
-        "weapon": {
-          "type": "weapon",
-          "range": 50,
-          "playerId": "player"
-        }
-      },
       "boss": {
         "position": {
           "type": "position",
-          "x": 0,
-          "y": -200
+          "x": 34,
+          "y": -202
         },
         "sprite": {
           "type": "sprite",
@@ -204,20 +185,6 @@
           "offsetX": 0,
           "offsetY": 0,
           "radius": 32
-        }
-      },
-      "newEntity1": {
-        "position": {
-          "type": "position",
-          "x": 0,
-          "y": 0
-        }
-      },
-      "newEntity2": {
-        "position": {
-          "type": "position",
-          "x": 0,
-          "y": 0
         }
       }
     }

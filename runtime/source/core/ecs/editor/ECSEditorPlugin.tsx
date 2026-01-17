@@ -71,9 +71,9 @@ function ECSEditorPluginUI() {
   );
 }
 
-export function ecsEditorPlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
+export function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin]>>(
   context: T
-): ContextExtension<T, {}> {
+): void {
   if (
     !(
       typeof import.meta !== "undefined" &&
@@ -81,7 +81,7 @@ export function ecsEditorPlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
       import.meta.env.DEV
     )
   ) {
-    return context;
+    return;
   }
 
   ecsContext = context;
@@ -105,6 +105,12 @@ export function ecsEditorPlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   if (ecsEditorRoot) {
     ecsEditorRoot.render(React.createElement(ECSEditorPluginUI));
   }
+}
 
+// Keep the old export for backwards compatibility if needed, but it's deprecated
+export function ecsEditorPlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
+  context: T
+): ContextExtension<T, {}> {
+  initializeECSEditor(context);
   return context;
 }

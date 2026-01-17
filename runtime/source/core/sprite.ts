@@ -7,7 +7,7 @@ import {
 } from "./ecs/component";
 import { ecsPlugin } from "./scene/ecsAdapter";
 import { addDrawCallback } from "./gameloop";
-import { getViewport } from "./viewport/viewport";
+import { getViewport } from "./viewport/viewportPlugin";
 import type { HitFlashComponent } from "../scripts/boss";
 import { DamageNumberComponentDefinition } from "../scripts/damageNumber";
 import type { DamageNumberComponent } from "../scripts/damageNumber";
@@ -82,6 +82,7 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   if (!context2D) {
     throw new Error("Failed to get 2D rendering context from canvas");
   }
+
 
   addDrawCallback(() => {
     context2D.clearRect(0, 0, canvas.width, canvas.height);

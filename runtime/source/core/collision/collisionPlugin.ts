@@ -11,7 +11,7 @@ import {
 } from "../ecs/component";
 import { addUpdateCallback, addEditorCallback } from "../gameloop";
 import { updateCollisions, debugDrawColliders } from "../sat";
-import { getViewport } from "../viewport/viewport";
+import { getViewport } from "../viewport/viewportPlugin";
 
 export function collisionPlugin<
   T extends RequirePlugin<[typeof ecsPlugin, typeof spritePlugin]>
@@ -32,6 +32,7 @@ export function collisionPlugin<
     );
     return entities;
   };
+
 
   addUpdateCallback((deltaTime: number) => {
     const collisionEntities: Entity[] = [];

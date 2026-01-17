@@ -7,6 +7,8 @@ export type ECSInstance = {
   composedPools: Record<ComponentTypeString, Record<Entity, Component[]>>;
   associatedComposedPoolKeys: Record<ComponentTypeString, string[]>;
 
+  selectedEntity: Entity | null;
+
   addComponentCallback?: (entity: Entity, component: Component) => void;
   removeComponentCallback?: (
     entity: Entity,
@@ -42,6 +44,7 @@ export const createECSInstance = (
   entities: {},
   composedPools: {},
   associatedComposedPoolKeys: {},
+  selectedEntity: null,
 
   ...ecsInstanceCreateInfo,
 });
@@ -53,6 +56,11 @@ export const createEntity = (_instance: ECSInstance, name: string): Entity => {
   return name;
 };
 export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
+  // Clear selection if this entity is selected
+  if (instance.selectedEntity === entity) {
+    instance.selectedEntity = null;
+  }
+
   // Remove from composed pools
   for (const composedPool of Object.values(instance.composedPools)) {
     if (composedPool[entity] !== undefined) {
@@ -280,6 +288,22 @@ export const runQuery = <const ComposedType extends Component[]>(
   }
 };
 
+export const selectEntity = (instance: ECSInstance, entity: Entity | null) => {
+  // Validate entity exists if not null
+  if (entity !== null && !instance.entities[entity]) {
+    return;
+  }
+  instance.selectedEntity = entity;
+};
+
+export const getSelectedEntity = (instance: ECSInstance): Entity | null => {
+  return instance.selectedEntity;
+};
+
+export const clearSelection = (instance: ECSInstance) => {
+  instance.selectedEntity = null;
+};
+
 export const curryECSInstance = (instance: ECSInstance) => ({
   ecsInstance: instance,
 
@@ -310,6 +334,10 @@ export const curryECSInstance = (instance: ECSInstance) => ({
     COMPONENT_TYPE_DEFS: ComposedType,
     lambda: (entity: Entity, components: ComposedType) => void,
   ) => runQuery(instance, COMPONENT_TYPE_DEFS, lambda),
+
+  selectEntity: (entity: Entity | null) => selectEntity(instance, entity),
+  getSelectedEntity: (): Entity | null => getSelectedEntity(instance),
+  clearSelection: () => clearSelection(instance),
 });
 
 export const provideECSInstanceFunctions = (
