@@ -106,7 +106,6 @@ export function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, t
     ecsEditorRoot.render(React.createElement(ECSEditorPluginUI));
   }
 
-  // Register entity drag handler
   if (
     "input" in context &&
     "ecs" in context &&
@@ -119,21 +118,18 @@ export function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, t
 
     registerDragHandler(
       {
-        priority: 10, // Higher priority than viewport (which defaults to 0)
+        priority: 10,
         canHandle: (worldX, worldY) => {
-          // Only handle in editor mode
           if (!isEditorEnabled()) {
             return false;
           }
           
           let clickedEntity: string | null = null;
           
-          // Check sprite provider first
           if ("spriteClickProvider" in context && context.spriteClickProvider) {
             clickedEntity = (context.spriteClickProvider as ClickableEntityProvider).checkClick(worldX, worldY);
           }
           
-          // Check collider provider if no sprite was found
           if (!clickedEntity && "colliderClickProvider" in context && context.colliderClickProvider) {
             clickedEntity = (context.colliderClickProvider as ClickableEntityProvider).checkClick(worldX, worldY);
           }
@@ -141,7 +137,6 @@ export function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, t
           return clickedEntity !== null;
         },
         onDragStart: (worldX, worldY) => {
-          // Find clicked entity
           let clickedEntity: string | null = null;
           if ("spriteClickProvider" in context && context.spriteClickProvider) {
             clickedEntity = (context.spriteClickProvider as ClickableEntityProvider).checkClick(worldX, worldY);

@@ -125,20 +125,16 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
     resetViewport();
   });
 
-  // Register viewport pan handler (lower priority than entity drag, only in editor mode)
   let viewportDragStartX: number = 0;
   let viewportDragStartY: number = 0;
 
   registerDragHandler(
     {
-      priority: 0, // Lower priority - only handles if no entity was clicked
+      priority: 0,
       canHandle: () => {
-        // Only handle in editor mode
         if (!isEditorEnabled()) {
           return false;
         }
-        // Always return true - this is the fallback handler for empty space
-        // Higher priority handlers (like entity drag) will claim the drag first
         return true;
       },
       onDragStart: () => {
@@ -152,29 +148,23 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
         setViewport(newViewportX, newViewportY);
       },
       onDragEnd: () => {
-        // No cleanup needed
       },
       cursor: "grabbing",
     },
     context
   );
 
-  // Set up wheel handler for zooming on game root (only in editor mode)
-  // Attach to gameRoot so it works even when scrolling over editor overlay
   const gameRoot = document.querySelector("#gameRoot") as HTMLElement | null;
   if (gameRoot) {
     const wheelHandler = (e: WheelEvent) => {
-      // Only zoom in editor mode
       if (!isEditorEnabled()) {
         return;
       }
 
-      // Check if scrolling over an editor UI element - if so, don't zoom
       const editorRoot = document.querySelector("#editor");
       if (editorRoot) {
         const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
         if (elementAtPoint && editorRoot.contains(elementAtPoint) && elementAtPoint !== editorRoot) {
-          // Scrolling over editor UI, don't zoom
           return;
         }
       }
