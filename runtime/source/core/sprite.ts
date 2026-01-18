@@ -288,10 +288,10 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
           const selectionWidth = sprite.width + padding * 2;
           const selectionHeight = sprite.height + padding * 2;
 
-          // Draw subtle dashed border
+          // Draw solid border
           context2D.strokeStyle = "#00bfff";
           context2D.lineWidth = 1.5 / viewport.scale;
-          context2D.setLineDash([4 / viewport.scale, 3 / viewport.scale]);
+          context2D.setLineDash([]);
           context2D.strokeRect(selectionX, selectionY, selectionWidth, selectionHeight);
 
           context2D.restore();
