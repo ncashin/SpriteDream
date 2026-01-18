@@ -18,6 +18,10 @@ let viewport: Viewport = {
   scale: 1,
 };
 
+// Store the world-space dimensions that should always be visible
+let targetWorldWidth: number | null = null;
+let targetWorldHeight: number | null = null;
+
 export const getViewport = (): Viewport => ({ ...viewport });
 
 export const setViewport = (x: number, y: number): void => {
@@ -56,12 +60,52 @@ export const zoomViewport = (
   viewport.scale = newScale;
   viewport.x = worldX - (screenX - centerX) / newScale;
   viewport.y = worldY - (screenY - centerY) / newScale;
+  
+  // Update target world dimensions when manually zooming
+  // This allows manual zoom to work while still maintaining auto-resize behavior
+  targetWorldWidth = canvas.width / newScale;
+  targetWorldHeight = canvas.height / newScale;
 };
 
 export const resetViewport = (): void => {
   viewport.scale = 1;
   viewport.x = 0;
   viewport.y = 0;
+  
+  // Initialize target world dimensions based on current canvas size
+  const canvas = document.querySelector("canvas");
+  if (canvas) {
+    targetWorldWidth = canvas.width / viewport.scale;
+    targetWorldHeight = canvas.height / viewport.scale;
+  }
+};
+
+/**
+ * Updates the viewport scale to maintain the same world-space area visible
+ * when the window/canvas size changes.
+ */
+const updateViewportForResize = (): void => {
+  const canvas = document.querySelector("canvas");
+  if (!canvas) {
+    return;
+  }
+
+  // Initialize target dimensions if not set yet
+  if (targetWorldWidth === null || targetWorldHeight === null) {
+    targetWorldWidth = canvas.width / viewport.scale;
+    targetWorldHeight = canvas.height / viewport.scale;
+    return;
+  }
+
+  // Calculate the scale needed to maintain the same world dimensions
+  const scaleX = canvas.width / targetWorldWidth;
+  const scaleY = canvas.height / targetWorldHeight;
+  
+  // Use the smaller scale to ensure everything fits (maintains aspect ratio)
+  const newScale = Math.min(scaleX, scaleY);
+  
+  // Update the viewport scale
+  viewport.scale = Math.max(0.1, Math.min(10, newScale));
 };
 
 function ViewportDebugUI() {
@@ -125,6 +169,16 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
     resetViewport();
   });
 
+  // Set up window resize handler to maintain the same world-space area visible
+  // Use requestAnimationFrame to ensure this runs after canvas resize
+  const resizeHandler = () => {
+    requestAnimationFrame(() => {
+      updateViewportForResize();
+    });
+  };
+  
+  window.addEventListener("resize", resizeHandler);
+
   let viewportDragStartX: number = 0;
   let viewportDragStartY: number = 0;
 
@@ -178,7 +232,7 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      const delta = e.deltaY > 0 ? -0.03 : 0.03;
+      const delta = e.deltaY > 0 ? -0.01 : 0.01;
       zoomViewport(delta, x, y);
     };
     

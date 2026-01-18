@@ -6,8 +6,6 @@ import {
   PositionComponentDefinition,
   VelocityComponentDefinition,
   ColliderComponentDefinition,
-  type PositionComponent,
-  type VelocityComponent,
   type ColliderComponent,
 } from "./ecs/component";
 
@@ -336,7 +334,7 @@ export const STATIC_RESOLVER: ResolverDefinition = {
     _other,
     _overlapAmount,
     _overlapNormal
-  ) => {},
+  ) => { },
 };
 
 export const CIRCLE_COLLIDER: ColliderDefinition = {
@@ -427,9 +425,6 @@ export const BOUNCY_RESOLVER: ResolverDefinition = {
     const collider = getComponent(ecs, entity, ColliderComponentDefinition);
 
     if (!position || !velocity || !collider) return;
-
-    const offsetX = collider.offsetX ?? 0;
-    const offsetY = collider.offsetY ?? 0;
 
     const n = normalize(overlapNormal);
     const correction = scale(n, overlapAmount);

@@ -362,7 +362,7 @@ export function EntityListPanel({
                       "var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
                     backgroundColor:
                       selectedEntity === entity
-                        ? "var(--vscode-list-activeSelectionBackground, rgba(0, 122, 204, 0.3))"
+                        ? "var(--vscode-list-activeSelectionBackground, #04395e)"
                         : hoveredEntity === entity
                         ? "var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))"
                         : "transparent",

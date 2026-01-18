@@ -1,4 +1,4 @@
-import { defineComponent, type PositionComponent } from "../core/ecs/component";
+import { defineComponent } from "../core/ecs/component";
 import type { Component } from "../core/ecs/ecs";
 
 export type HealthComponent = Component & {
@@ -29,6 +29,7 @@ export function damageEntity(
   health.currentHealth = Math.max(0, health.currentHealth - amount);
   return health.currentHealth <= 0; // Returns true if entity is dead
 }
+
 
 
 

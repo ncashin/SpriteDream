@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { exportToTauri } from './export';
+import { uploadGame } from './upload';
 
 let viteProcess: any = null;
 let viteServerReady: Promise<void> | null = null;
@@ -633,6 +634,11 @@ export function activate(context: vscode.ExtensionContext) {
         exportToTauri(context);
     });
     context.subscriptions.push(exportCommand);
+
+    const uploadCommand = vscode.commands.registerCommand('natstack.uploadGame', () => {
+        uploadGame(context);
+    });
+    context.subscriptions.push(uploadCommand);
 }
 
 export function deactivate() {

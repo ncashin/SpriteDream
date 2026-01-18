@@ -254,7 +254,7 @@ export function EntityModal({
   return (
     <div
       style={{
-        backgroundColor: "rgba(128, 128, 128, 0.3)",
+        backgroundColor: "rgb(60, 60, 60)",
         borderRadius: "2px",
         border: "none",
         display: "flex",
@@ -296,7 +296,6 @@ export function EntityModal({
         </span>
         <button
           style={{
-            backgroundColor: "transparent",
             border: "none",
             cursor: "pointer",
             padding: "0.125rem",

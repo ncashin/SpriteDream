@@ -2,11 +2,9 @@ import { addUpdateCallback } from "../core/gameloop";
 import {
   PositionComponentDefinition,
   VelocityComponentDefinition,
-  ColliderComponentDefinition,
   defineComponent,
   type PositionComponent,
   type VelocityComponent,
-  type ColliderComponent,
 } from "../core/ecs/component";
 import type { Component } from "../core/ecs/ecs";
 import type { RequirePlugin } from "../core/gameContext";
@@ -46,7 +44,7 @@ export function initializeProjectile(
         ProjectileComponentDefinition,
       ],
       (entity, components) => {
-        const [position, velocity, projectile] = components as [
+        const [, , projectile] = components as [
           PositionComponent,
           VelocityComponent,
           ProjectileComponent

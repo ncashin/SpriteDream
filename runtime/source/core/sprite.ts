@@ -6,7 +6,7 @@ import {
   defineComponent,
 } from "./ecs/component";
 import { ecsPlugin } from "./scene/ecsAdapter";
-import { addDrawCallback } from "./gameloop";
+import { addDrawCallback, isEditorEnabled } from "./gameloop";
 import { getViewport } from "./viewport/viewportPlugin";
 import type { HitFlashComponent } from "../scripts/boss";
 import { DamageNumberComponentDefinition } from "../scripts/damageNumber";
@@ -54,19 +54,35 @@ function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
 
 const imageCache = new Map<string, HTMLImageElement>();
 
+/**
+ * Normalizes asset paths to work correctly with Vite and the bundle API.
+ * Converts absolute paths (starting with /) to relative paths so they
+ * resolve correctly with the base tag in the bundle context.
+ */
+function normalizeAssetPath(src: string): string {
+  // If it's an absolute path (starts with / but not //), make it relative
+  // This allows the base tag to resolve it correctly in the bundle
+  if (src.startsWith('/') && !src.startsWith('//')) {
+    return src.slice(1);
+  }
+  return src;
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
-  if (imageCache.has(src)) {
-    return Promise.resolve(imageCache.get(src)!);
+  const normalizedSrc = normalizeAssetPath(src);
+
+  if (imageCache.has(normalizedSrc)) {
+    return Promise.resolve(imageCache.get(normalizedSrc)!);
   }
 
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      imageCache.set(src, img);
+      imageCache.set(normalizedSrc, img);
       resolve(img);
     };
     img.onerror = reject;
-    img.src = src;
+    img.src = normalizedSrc;
   });
 }
 
@@ -74,8 +90,8 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   context: T
 ): ContextExtension<
   T,
-  { 
-    canvas: HTMLCanvasElement; 
+  {
+    canvas: HTMLCanvasElement;
     context2D: CanvasRenderingContext2D;
     spriteClickProvider: ClickableEntityProvider;
   }
@@ -90,7 +106,7 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   const spriteClickProvider: ClickableEntityProvider = {
     checkClick: (worldX: number, worldY: number): string | null => {
       let clickedEntity: string | null = null;
-      
+
       context.ecs.runQuery(
         [PositionComponentDefinition, SpriteComponentDefinition],
         (entity: Entity, components: [PositionComponent, SpriteComponent]) => {
@@ -112,7 +128,7 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
           }
         }
       );
-      
+
       return clickedEntity;
     },
   };
@@ -129,34 +145,23 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     context2D.scale(viewport.scale, viewport.scale);
     context2D.translate(-viewport.x, -viewport.y);
 
-    context2D.save();
-    context2D.strokeStyle = "#00ffff";
-    context2D.fillStyle = "#00ffff";
-    context2D.lineWidth = 1 / viewport.scale;
+    // Only draw origin in editor mode
+    if (isEditorEnabled()) {
+      context2D.save();
+      context2D.strokeStyle = "#00ffff";
+      context2D.fillStyle = "#00ffff";
+      context2D.lineWidth = 1 / viewport.scale;
 
-    const size = 8;
-    const outerRadius = size;
-    const innerRadius = size * 0.4;
-    const points = 5;
-    const angleStep = (Math.PI * 2) / (points * 2);
+      const radius = 4;
 
-    context2D.beginPath();
-    for (let i = 0; i < points * 2; i++) {
-      const angle = i * angleStep - Math.PI / 2;
-      const radius = i % 2 === 0 ? outerRadius : innerRadius;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-
-      if (i === 0) {
-        context2D.moveTo(x, y);
-      } else {
-        context2D.lineTo(x, y);
-      }
+      context2D.beginPath();
+      context2D.arc(0, 0, radius, 0, Math.PI * 2);
+      context2D.fill();
+      context2D.restore();
     }
-    context2D.closePath();
-    context2D.fill();
-    context2D.stroke();
-    context2D.restore();
+
+    const selectedEntity = context.ecs.getSelectedEntity();
+    const inEditorMode = isEditorEnabled();
 
     context.ecs.runQuery(
       [PositionComponentDefinition, SpriteComponentDefinition],
@@ -181,7 +186,8 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
         const rotation = player?.rotation || 0;
 
         if (sprite.image) {
-          const img = imageCache.get(sprite.image);
+          const normalizedImagePath = normalizeAssetPath(sprite.image);
+          const img = imageCache.get(normalizedImagePath);
           if (img && img.complete) {
             context2D.save();
             // Apply rotation if needed
@@ -262,6 +268,32 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
             );
             context2D.restore();
           }
+          context2D.restore();
+        }
+
+        // Draw selection indicator
+        if (inEditorMode && selectedEntity === entity) {
+          context2D.save();
+
+          // Apply rotation if needed for selection box
+          if (rotation !== 0) {
+            context2D.translate(position.x, position.y);
+            context2D.rotate(rotation);
+            context2D.translate(-position.x, -position.y);
+          }
+
+          const padding = 3;
+          const selectionX = position.x - sprite.width / 2 - padding;
+          const selectionY = position.y - sprite.height / 2 - padding;
+          const selectionWidth = sprite.width + padding * 2;
+          const selectionHeight = sprite.height + padding * 2;
+
+          // Draw subtle dashed border
+          context2D.strokeStyle = "#00bfff";
+          context2D.lineWidth = 1.5 / viewport.scale;
+          context2D.setLineDash([4 / viewport.scale, 3 / viewport.scale]);
+          context2D.strokeRect(selectionX, selectionY, selectionWidth, selectionHeight);
+
           context2D.restore();
         }
       }

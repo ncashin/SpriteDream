@@ -140,52 +140,6 @@
           "height": 20,
           "angle": 0
         }
-      },
-      "boss": {
-        "position": {
-          "type": "position",
-          "x": 427.3582089552241,
-          "y": -210.2985074626866
-        },
-        "sprite": {
-          "type": "sprite",
-          "width": 64,
-          "height": 64,
-          "color": "#8b00ff",
-          "image": "/king.png"
-        },
-        "velocity": {
-          "type": "velocity",
-          "x": 0,
-          "y": 0
-        },
-        "boss": {
-          "type": "boss",
-          "floatSpeed": 0.3,
-          "floatAmplitude": 50,
-          "horizontalAmplitude": 100,
-          "startX": 0,
-          "startY": 0,
-          "time": 0,
-          "hitFlashTime": 0,
-          "shootCooldown": 0,
-          "patternTime": 0,
-          "currentPhase": 1
-        },
-        "health": {
-          "type": "health",
-          "currentHealth": 100,
-          "maxHealth": 100
-        },
-        "collider": {
-          "type": "collider",
-          "colliderName": "circle",
-          "resolverName": "projectileBoss",
-          "collisionEnabled": true,
-          "offsetX": 0,
-          "offsetY": 0,
-          "radius": 32
-        }
       }
     }
   }

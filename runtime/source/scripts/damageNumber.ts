@@ -90,7 +90,7 @@ export function initializeDamageNumber(
         DamageNumberComponentDefinition,
       ],
       (entity, components) => {
-        const [position, velocity, damageNumber] = components as [
+        const [, velocity, damageNumber] = components as [
           PositionComponent,
           VelocityComponent,
           DamageNumberComponent
