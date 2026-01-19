@@ -95,53 +95,60 @@ export default function Home() {
 
       <section className="relative h-full flex pt-10 pb-9 w-full pl-10 pr-10 overflow-hidden">
         <div className="flex flex-row gap-8 items-start px-1 w-full min-w-0 h-full">
-          <div className="flex flex-col justify-between h-[calc(100vh-10rem)] min-w-0 pt-8 flex-shrink-0 w-[280px]">
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-white">GameIDE</h1>
-                <p className="text-sm font-medium text-white/60 mt-1">The Engine that works where you do</p>
+          <div className="sidebar flex flex-col justify-between h-[calc(100vh-10rem)] min-w-0 flex-shrink-0">
+            <div className="space-y-8">
+              {/* Logo and Title */}
+              <div className="flex flex-row items-start gap-3">
+                <img src="/logo.svg" alt="GameIDE Logo" className="w-8 h-8 flex-shrink-0" />
+                <div className="flex flex-col items-start min-w-0">
+                  <h1 className="text-xl font-bold tracking-tight text-white leading-tight">GameIDE</h1>
+                  <p className="text-sm font-medium text-white/60 mt-1 leading-relaxed">The Engine that works where you do</p>
+                </div>
               </div>
 
-              <div>
-                <h3 className="text-sm font-bold text-white mb-2">AI Native</h3>
-                <div className="space-y-3 pl-0">
-                  <div>
-                    <span className="text-sm font-bold text-white/90">Created with agents in mind</span>
-                    <p className="text-sm font-medium text-white/60 mt-0.5">Provides first class tooling and prompting</p>
+              {/* AI Native Section */}
+              <div className="sidebar-section space-y-3">
+                <h3 className="text-xs font-bold text-white/90 uppercase tracking-wider mb-3">AI Native</h3>
+                <div className="space-y-4">
+                  <div className="sidebar-item space-y-1">
+                    <span className="text-sm font-semibold text-white block leading-tight">Created with agents in mind</span>
+                    <p className="text-xs font-normal text-white/50 leading-relaxed">Provides first class tooling and prompting</p>
                   </div>
-                  <div>
-                    <span className="text-sm font-bold text-white/90">Designed to leverage existing training data</span>
-                    <p className="text-sm font-medium text-white/60 mt-0.5">Built with TypeScript, JSON and familiar patterns</p>
+                  <div className="sidebar-item space-y-1">
+                    <span className="text-sm font-semibold text-white block leading-tight">Designed to leverage existing training data</span>
+                    <p className="text-xs font-normal text-white/50 leading-relaxed">Built with common formats and familiar patterns</p>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-sm font-bold text-white mb-2">Easy Distribution</h3>
-                <div className="space-y-3 pl-0">
-                  <div>
-                    <span className="text-sm font-bold text-white/90">Upload from the Editor</span>
-                    <p className="text-sm font-medium text-white/60 mt-0.5">Share your work in seconds</p>
+              {/* Easy Distribution Section */}
+              <div className="sidebar-section space-y-3">
+                <h3 className="text-xs font-bold text-white/90 uppercase tracking-wider mb-3">Easy Distribution</h3>
+                <div className="space-y-4">
+                  <div className="sidebar-item space-y-1">
+                    <span className="text-sm font-semibold text-white block leading-tight">Upload from the Editor</span>
+                    <p className="text-xs font-normal text-white/50 leading-relaxed">Share your work in seconds</p>
                   </div>
-                  <div>
-                    <span className="text-sm font-bold text-white/90">Portable Game Files</span>
-                    <p className="text-sm font-medium text-white/60 mt-0.5">Export standalone binaries that run anywhere</p>
+                  <div className="sidebar-item space-y-1">
+                    <span className="text-sm font-semibold text-white block leading-tight">Portable Game Files</span>
+                    <p className="text-xs font-normal text-white/50 leading-relaxed">Export standalone binaries that run anywhere</p>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-sm font-bold text-white mb-3">Built to work with the tools you love</h3>
-                <ul className="flex flex-col gap-2.5 list-none pl-0">
+              {/* Tools Section */}
+              <div className="sidebar-section space-y-3">
+                <h3 className="text-xs font-bold text-white/90 uppercase tracking-wider mb-3">Made to work with the tools you love</h3>
+                <ul className="flex flex-col gap-2 list-none">
                   <li>
                     <a
                       href="https://cursor.sh"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 group cursor-pointer"
+                      className="flex items-center gap-2.5 group cursor-pointer py-1.5 -mx-1.5 px-1.5 rounded-lg transition-colors hover:bg-white/5"
                     >
-                      <img src="/cursor.png" alt="Cursor" className="w-5 h-5 rounded-sm brightness-110 transition-transform group-hover:scale-110" />
-                      <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Cursor</span>
+                      <img src="/cursor.png" alt="Cursor" className="w-5 h-5 rounded-sm brightness-110 transition-transform group-hover:scale-110 flex-shrink-0" />
+                      <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">Cursor</span>
                     </a>
                   </li>
                   <li>
@@ -149,10 +156,10 @@ export default function Home() {
                       href="https://claude.ai"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 group cursor-pointer"
+                      className="flex items-center gap-2.5 group cursor-pointer py-1.5 -mx-1.5 px-1.5 rounded-lg transition-colors hover:bg-white/5"
                     >
-                      <img src="/claude.png" alt="Claude" className="w-5 h-5 rounded-sm brightness-110 transition-transform group-hover:scale-110" />
-                      <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Claude</span>
+                      <img src="/claude.png" alt="Claude" className="w-5 h-5 rounded-sm brightness-110 transition-transform group-hover:scale-110 flex-shrink-0" />
+                      <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">Claude</span>
                     </a>
                   </li>
                   <li>
@@ -160,35 +167,36 @@ export default function Home() {
                       href="https://opencode.ai"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 group cursor-pointer"
+                      className="flex items-center gap-2.5 group cursor-pointer py-1.5 -mx-1.5 px-1.5 rounded-lg transition-colors hover:bg-white/5"
                     >
-                      <img src="/opencode.svg" alt="OpenCode" className="w-5 h-5 brightness-110 transition-transform group-hover:scale-110" />
-                      <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">OpenCode</span>
+                      <img src="/opencode.svg" alt="OpenCode" className="w-5 h-5 brightness-110 transition-transform group-hover:scale-110 flex-shrink-0" />
+                      <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">OpenCode</span>
                     </a>
                   </li>
                 </ul>
               </div>
             </div>
 
-            <div className="flex gap-3 pt-6">
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-2.5 pt-6 sidebar-divider">
               <a
                 href="https://marketplace.visualstudio.com/items?itemName=gameide.gameide"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border border-white/10 text-white/90 hover:bg-white/5 transition"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium rounded-lg border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 hover:border-white/20 transition-all"
                 aria-label="Download Extension"
               >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M23.15 2.587L18.21.21a1.494 1.494 0 0 0-1.705.29l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74L3.899 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448v10.896z" />
                 </svg>
                 Download Extension
               </a>
               <Link
                 to="/explore"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border border-white/10 text-white/90 hover:bg-white/5 transition"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium rounded-lg border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 hover:border-white/20 transition-all"
                 aria-label="Play Games"
               >
-                <Play className="w-3.5 h-3.5" weight="fill" />
+                <Play className="w-3.5 h-3.5 flex-shrink-0" weight="fill" />
                 Play Games
               </Link>
             </div>
