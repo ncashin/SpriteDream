@@ -33,7 +33,7 @@ function CodeBlock() {
   ];
 
   return (
-    <div className="relative pt-8 min-w-0 flex-1">
+    <div className="relative pt-8 min-w-0 flex-1 h-full">
       {/* Tabs jutting out above */}
       <div className="absolute top-0 left-4 flex z-20">
         {tabs.map((tab) => (
@@ -57,7 +57,7 @@ function CodeBlock() {
       </div>
 
       {/* Main content area with glow contained within rounded window */}
-      <div className="relative rounded-xl overflow-hidden border border-white/[0.06] bg-[var(--color-bg-base)] shadow-2xl shadow-[var(--color-accent)]/10 h-[calc(100vh-12rem)] w-full min-w-0 flex-1 flex flex-col">
+      <div className="relative rounded-xl overflow-hidden border border-white/[0.06] bg-[var(--color-bg-base)] shadow-2xl shadow-[var(--color-accent)]/10 h-full w-full min-w-0 flex-1 flex flex-col">
         {/* Glow effects contained within the rounded window */}
         <div className="absolute -top-8 -right-8 w-32 h-32 bg-[var(--color-accent)]/15 rounded-full blur-[60px] pointer-events-none" />
         <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-[var(--color-ember)]/12 rounded-full blur-[80px] pointer-events-none" />
@@ -93,7 +93,7 @@ export default function Home() {
     <div className="h-screen bg-[var(--color-bg-void)] grid-bg overflow-hidden">
       <div className="spotlight fixed inset-0 pointer-events-none" />
 
-      <section className="relative h-full flex pt-20 w-full pl-10 pr-10 overflow-hidden">
+      <section className="relative h-full flex pt-10 pb-9 w-full pl-10 pr-10 overflow-hidden">
         <div className="flex flex-row gap-8 items-start px-1 w-full min-w-0 h-full">
           <div className="flex flex-col justify-between h-[calc(100vh-10rem)] min-w-0 pt-8 flex-shrink-0 w-[280px]">
             <div className="space-y-6">
@@ -104,10 +104,10 @@ export default function Home() {
 
               <div>
                 <h3 className="text-sm font-bold text-white mb-2">AI Native</h3>
-                <div className="space-y-3">
+                <div className="space-y-3 pl-0">
                   <div>
                     <span className="text-sm font-bold text-white/90">Created with agents in mind</span>
-                    <p className="text-sm font-medium text-white/60 mt-0.5">Provides tooling and instructions for </p>
+                    <p className="text-sm font-medium text-white/60 mt-0.5">Provides first class tooling and prompting</p>
                   </div>
                   <div>
                     <span className="text-sm font-bold text-white/90">Designed to leverage existing training data</span>
@@ -118,7 +118,7 @@ export default function Home() {
 
               <div>
                 <h3 className="text-sm font-bold text-white mb-2">Easy Distribution</h3>
-                <div className="space-y-3">
+                <div className="space-y-3 pl-0">
                   <div>
                     <span className="text-sm font-bold text-white/90">Upload from the Editor</span>
                     <p className="text-sm font-medium text-white/60 mt-0.5">Share your work in seconds</p>
@@ -132,24 +132,45 @@ export default function Home() {
 
               <div>
                 <h3 className="text-sm font-bold text-white mb-3">Built to work with the tools you love</h3>
-                <ul className="flex flex-col gap-2.5 list-none">
-                  <li className="flex items-center gap-3 group">
-                    <img src="/cursor.png" alt="Cursor" className="w-5 h-5 rounded-sm brightness-110 transition-transform group-hover:scale-110" />
-                    <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Cursor</span>
+                <ul className="flex flex-col gap-2.5 list-none pl-0">
+                  <li>
+                    <a
+                      href="https://cursor.sh"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 group cursor-pointer"
+                    >
+                      <img src="/cursor.png" alt="Cursor" className="w-5 h-5 rounded-sm brightness-110 transition-transform group-hover:scale-110" />
+                      <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Cursor</span>
+                    </a>
                   </li>
-                  <li className="flex items-center gap-3 group">
-                    <img src="/claude.png" alt="Claude" className="w-5 h-5 rounded-sm brightness-110 transition-transform group-hover:scale-110" />
-                    <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Claude</span>
+                  <li>
+                    <a
+                      href="https://claude.ai"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 group cursor-pointer"
+                    >
+                      <img src="/claude.png" alt="Claude" className="w-5 h-5 rounded-sm brightness-110 transition-transform group-hover:scale-110" />
+                      <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Claude</span>
+                    </a>
                   </li>
-                  <li className="flex items-center gap-3 group">
-                    <img src="/opencode.svg" alt="OpenCode" className="w-5 h-5 brightness-110 transition-transform group-hover:scale-110" />
-                    <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">OpenCode</span>
+                  <li>
+                    <a
+                      href="https://opencode.ai"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 group cursor-pointer"
+                    >
+                      <img src="/opencode.svg" alt="OpenCode" className="w-5 h-5 brightness-110 transition-transform group-hover:scale-110" />
+                      <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">OpenCode</span>
+                    </a>
                   </li>
                 </ul>
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-6">
               <a
                 href="https://marketplace.visualstudio.com/items?itemName=gameide.gameide"
                 target="_blank"
@@ -173,7 +194,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="min-w-0 overflow-hidden flex-1">
+          <div className="min-w-0 overflow-hidden flex-1 pt-8 h-full">
             <CodeBlock />
           </div>
         </div>
