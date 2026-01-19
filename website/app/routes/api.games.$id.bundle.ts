@@ -112,26 +112,21 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     }
   }
   
-  // If still not found, try looking for common asset files in dist/ directory
+  // If still not found, try looking for files in dist/ directory
   // This handles cases where absolute paths like /vite.svg are requested
+  // or when files are referenced from the HTML (like ./assets/index.js)
   if (!fileData) {
-    // Check if it's a common asset file (png, svg, jpg, etc.)
-    const assetExtensions = ['.png', '.svg', '.jpg', '.jpeg', '.gif', '.webp', '.ico'];
-    const isAssetFile = assetExtensions.some(ext => actualPath.endsWith(ext));
-    
-    if (isAssetFile) {
-      // Try to find it in dist/ directory
-      fileData = files.get(`dist/${actualPath}`);
-      if (fileData) {
-        resolvedPath = `dist/${actualPath}`;
-      } else {
-        // Try without the leading path component (e.g., "vite.svg" instead of "dist/vite.svg")
-        const filename = actualPath.split('/').pop();
-        if (filename) {
-          fileData = files.get(`dist/${filename}`);
-          if (fileData) {
-            resolvedPath = `dist/${filename}`;
-          }
+    // Try to find it in dist/ directory
+    fileData = files.get(`dist/${actualPath}`);
+    if (fileData) {
+      resolvedPath = `dist/${actualPath}`;
+    } else {
+      // Try without the leading path component (e.g., "vite.svg" instead of "dist/vite.svg")
+      const filename = actualPath.split('/').pop();
+      if (filename) {
+        fileData = files.get(`dist/${filename}`);
+        if (fileData) {
+          resolvedPath = `dist/${filename}`;
         }
       }
     }
@@ -150,13 +145,18 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       const htmlContent = fileData.toString('utf-8');
       let modifiedHtml = htmlContent;
       
-      // Base path should point to dist/ directory where assets are located
+      // Base path should point to dist/ directory where the HTML and assets are located
+      // Since index.html is at dist/index.html and assets are at dist/assets/,
+      // the base should be at dist/ so relative paths like ./assets/ resolve correctly
       const basePath = `/api/games/${gameId}/bundle/dist/`;
       
       // Always replace existing base tag or add new one
-      if (htmlContent.includes('<base')) {
-        // Replace existing base tag
-        modifiedHtml = modifiedHtml.replace(/<base[^>]*>/, `<base href="${basePath}">`);
+      // Use a more robust regex to match base tags
+      const baseTagRegex = /<base\s+[^>]*href\s*=\s*["'][^"']*["'][^>]*>|<base\s+[^>]*>/gi;
+      if (htmlContent.match(baseTagRegex)) {
+        // Replace existing base tag(s) - reset regex lastIndex
+        baseTagRegex.lastIndex = 0;
+        modifiedHtml = modifiedHtml.replace(baseTagRegex, `<base href="${basePath}">`);
       } else {
         // Add new base tag
         const baseTag = `<base href="${basePath}">`;

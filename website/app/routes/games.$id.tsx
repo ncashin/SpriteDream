@@ -46,7 +46,7 @@ export default function GameDetails() {
   const { game } = useLoaderData<typeof loader>();
 
   return (
-    <div className="fixed inset-0">
+    <div className="fixed inset-0 top-10">
       {/* Fullscreen game iframe */}
       <iframe
         src={`/api/games/${game.id}/bundle`}
@@ -54,7 +54,7 @@ export default function GameDetails() {
         title={game.name}
         allow="fullscreen"
         allowFullScreen
-        style={{ width: '100%', height: '100%', display: 'block' }}
+        style={{ display: 'block' }}
       />
 
       {/* Info overlay - upper left */}
