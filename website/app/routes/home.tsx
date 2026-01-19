@@ -1,13 +1,30 @@
 import type { Route } from "./+types/home";
-import { Link } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { useState } from "react";
 import { Play, PlayIcon } from "@phosphor-icons/react";
+import { db, games } from "../db";
+import { asc } from "drizzle-orm";
 
 export function meta({ }: Route.MetaArgs) {
   return [
     { title: "GameIDE" },
     { name: "description", content: "Build games without leaving VSCode" },
   ];
+}
+
+export async function loader({ }: Route.LoaderArgs) {
+  // Get the first uploaded game (ordered by createdAt ascending)
+  const [firstGame] = await db
+    .select({
+      id: games.id,
+    })
+    .from(games)
+    .orderBy(asc(games.createdAt))
+    .limit(1);
+
+  return {
+    gameId: firstGame?.id || null,
+  };
 }
 
 type TabId = "main.ts" | "main.scene";
@@ -22,8 +39,6 @@ interface CodeLine {
   num: number;
   content: React.ReactNode | string;
 }
-
-const DEMO_GAME_ID = 1;
 
 const CODE_LINES: CodeLine[] = [
   { num: 1, content: <><span className="text-[#c586c0]">import</span> {"{"} <span className="text-[#4ec9b0]">Entity</span>, <span className="text-[#4ec9b0]">Component</span> {"}"} <span className="text-[#c586c0]">from</span> <span className="text-[#ce9178]">"gameide"</span></> },
@@ -54,7 +69,7 @@ function TabIcon({ icon }: { icon: Tab["icon"] }) {
   return <i className="codicon codicon-file text-[var(--color-accent)]" />;
 }
 
-function CodeBlock() {
+function CodeBlock({ gameId }: { gameId: string | null }) {
   const [activeTab, setActiveTab] = useState<TabId>("main.scene");
 
   return (
@@ -89,14 +104,18 @@ function CodeBlock() {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : gameId ? (
             <iframe
-              src={`/api/games/${DEMO_GAME_ID}/bundle`}
+              src={`/api/games/${gameId}/bundle`}
               className="w-full h-full border-0"
               title="Demo Game"
               allow="fullscreen"
               allowFullScreen
             />
+          ) : (
+            <div className="pt-5 pl-1 font-mono text-sm leading-relaxed h-full flex items-center justify-center text-white/40">
+              No games uploaded yet
+            </div>
           )}
         </div>
       </div>
@@ -167,6 +186,8 @@ const TOOLS = [
 ] as const;
 
 export default function Home() {
+  const { gameId } = useLoaderData<typeof loader>();
+
   return (
     <div className="h-screen bg-[var(--color-bg-void)] grid-bg overflow-hidden">
       <div className="spotlight fixed inset-0 pointer-events-none" />
@@ -247,7 +268,7 @@ export default function Home() {
           </div>
 
           <div className="min-w-0 overflow-hidden flex-1 pt-8 h-full">
-            <CodeBlock />
+            <CodeBlock gameId={gameId} />
           </div>
         </div>
       </section>
