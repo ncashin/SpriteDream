@@ -209,7 +209,7 @@ export async function uploadGame(context: vscode.ExtensionContext) {
             progress.report({ increment: 40, message: "Creating game bundle..." });
 
             // Create temporary directory for bundle
-            const tempBundleDir = path.join(os.tmpdir(), `natstack-bundle-${Date.now()}`);
+            const tempBundleDir = path.join(os.tmpdir(), `gameide-bundle-${Date.now()}`);
             const distPath = path.join(tempBundleDir, 'dist');
             const scenesPath = path.join(tempBundleDir, 'scenes');
 
@@ -235,7 +235,7 @@ export async function uploadGame(context: vscode.ExtensionContext) {
             progress.report({ increment: 60, message: "Creating ZIP archive..." });
 
             // Create ZIP file
-            const zipPath = path.join(os.tmpdir(), `natstack-game-${Date.now()}.zip`);
+            const zipPath = path.join(os.tmpdir(), `gameide-game-${Date.now()}.zip`);
             
             try {
                 await createZipArchive(tempBundleDir, zipPath);

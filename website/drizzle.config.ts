@@ -5,7 +5,7 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "sqlite",
   dbCredentials: {
-    url: "./data/natstack.db",
+    url: "./data/gameide.db",
   },
 });
 

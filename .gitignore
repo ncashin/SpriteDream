@@ -3,3 +3,5 @@ extension/out/
 extension/.vscode-test/
 *.log
 .DS_Store
+
+*.db

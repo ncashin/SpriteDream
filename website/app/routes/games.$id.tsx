@@ -5,8 +5,8 @@ import { eq } from "drizzle-orm";
 
 export function meta({ data }: Route.MetaArgs) {
   return [
-    { title: data?.game ? `${data.game.name} | Natstack` : "Game Not Found" },
-    { name: "description", content: data?.game?.description || "Play this game on Natstack" },
+    { title: data?.game ? `${data.game.name} | GameIDE` : "Game Not Found" },
+    { name: "description", content: data?.game?.description || "Play this game on GameIDE" },
   ];
 }
 
@@ -46,7 +46,7 @@ export default function GameDetails() {
   const { game } = useLoaderData<typeof loader>();
 
   return (
-    <div className="fixed inset-0 pt-10">
+    <div className="fixed inset-0">
       {/* Fullscreen game iframe */}
       <iframe
         src={`/api/games/${game.id}/bundle`}
@@ -54,6 +54,7 @@ export default function GameDetails() {
         title={game.name}
         allow="fullscreen"
         allowFullScreen
+        style={{ width: '100%', height: '100%', display: 'block' }}
       />
 
       {/* Info overlay - upper left */}
@@ -62,9 +63,7 @@ export default function GameDetails() {
           to="/explore"
           className="pointer-events-auto inline-flex items-center gap-1.5 text-white/60 hover:text-white transition-colors text-sm group mb-3"
         >
-          <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <i className="codicon codicon-arrow-left w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
           Back
         </Link>
         

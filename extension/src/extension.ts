@@ -217,7 +217,7 @@ class SceneDocument implements vscode.CustomDocument {
 }
 
 class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> {
-    private static readonly viewType = 'natstack.sceneEditor';
+    private static readonly viewType = 'gameide.sceneEditor';
     private readonly webviews: Record<string, vscode.WebviewPanel[]> = {};
     private readonly fileWatchers: Record<string, vscode.FileSystemWatcher> = {};
     private readonly lastKnownSceneState: Record<string, any> = {};
@@ -630,12 +630,12 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(SceneEditorProvider.register(context));
     
-    const exportCommand = vscode.commands.registerCommand('natstack.exportToTauri', () => {
+    const exportCommand = vscode.commands.registerCommand('gameide.exportToTauri', () => {
         exportToTauri(context);
     });
     context.subscriptions.push(exportCommand);
 
-    const uploadCommand = vscode.commands.registerCommand('natstack.uploadGame', () => {
+    const uploadCommand = vscode.commands.registerCommand('gameide.uploadGame', () => {
         uploadGame(context);
     });
     context.subscriptions.push(uploadCommand);

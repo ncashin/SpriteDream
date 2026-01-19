@@ -13,10 +13,10 @@ try {
   const __dirname = dirname(__filename);
   // Go up two levels from app/db to reach website root
   const websiteRoot = resolve(__dirname, "../..");
-  dbPath = join(websiteRoot, "data", "natstack.db");
+  dbPath = join(websiteRoot, "data", "gameide.db");
 } catch {
   // Method 2: Fallback to process.cwd() (works in most cases)
-  dbPath = join(process.cwd(), "data", "natstack.db");
+  dbPath = join(process.cwd(), "data", "gameide.db");
 }
 
 // Ensure data directory exists

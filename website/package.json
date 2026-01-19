@@ -13,8 +13,10 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@react-router/node": "7.12.0",
     "@react-router/serve": "7.12.0",
+    "@vscode/codicons": "^0.0.44",
     "adm-zip": "^0.5.16",
     "better-sqlite3": "^11.7.0",
     "drizzle-orm": "^0.38.3",

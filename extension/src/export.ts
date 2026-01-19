@@ -56,7 +56,7 @@ export async function exportToTauri(context: vscode.ExtensionContext) {
         const exportDir = path.resolve(exportPath);
         
         // Create temporary build directory (will be cleaned up after build)
-        const tempBuildDir = path.join(os.tmpdir(), `natstack-tauri-build-${Date.now()}`);
+        const tempBuildDir = path.join(os.tmpdir(), `gameide-tauri-build-${Date.now()}`);
         
         // Show progress
         await vscode.window.withProgress({
@@ -167,10 +167,10 @@ export async function exportToTauri(context: vscode.ExtensionContext) {
 
             // Generate Cargo.toml
             const cargoTomlContent = `[package]
-name = "natstack-runtime"
+name = "gameide-runtime"
 version = "0.1.0"
-description = "NatStack Runtime"
-authors = ["NatStack"]
+description = "GameIDE Runtime"
+authors = ["GameIDE"]
 license = ""
 repository = ""
 edition = "2021"
@@ -216,9 +216,9 @@ fn main() {
             // Generate tauri.conf.json
             const tauriConfContent = {
                 "$schema": "https://schema.tauri.app/config/2",
-                "productName": "NatStack",
+                "productName": "GameIDE",
                 "version": "0.1.0",
-                "identifier": "com.natstack",
+                "identifier": "com.gameide",
                 "build": {
                     "frontendDist": "../dist",
                     "devUrl": "http://localhost:7777"
@@ -227,7 +227,7 @@ fn main() {
                     "withGlobalTauri": false,
                     "windows": [
                         {
-                            "title": "NatStack",
+                            "title": "GameIDE",
                             "width": 1200,
                             "height": 800,
                             "resizable": true,
@@ -315,10 +315,10 @@ fn main() {
             // This will reference src-tauri from the runtime directory
             const tauriPackagePath = path.join(tempBuildDir, 'package.json');
             const tauriPackageJson = {
-                name: 'natstack-tauri-app',
+                name: 'gameide-tauri-app',
                 version: '1.0.0',
-                description: 'NatStack Tauri Runtime',
-                author: 'NatStack',
+                description: 'GameIDE Tauri Runtime',
+                author: 'GameIDE',
                 type: 'module',
                 scripts: {
                     tauri: 'tauri',
@@ -458,8 +458,8 @@ fn main() {
                 } else {
                     // Copy binary executable
                     const binaryName = target.includes('windows') 
-                        ? 'natstack-runtime.exe'
-                        : 'natstack-runtime';
+                        ? 'gameide-runtime.exe'
+                        : 'gameide-runtime';
                     
                     const binaryPath = path.join(releasePath, binaryName);
                     if (fs.existsSync(binaryPath)) {

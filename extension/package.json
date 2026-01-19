@@ -1,7 +1,7 @@
 {
-  "name": "natstack",
-  "displayName": "NatStack",
-  "description": "A VS Code extension for NatStack",
+  "name": "gameide",
+  "displayName": "GameIDE",
+  "description": "A VS Code extension for GameIDE",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.74.0"
@@ -23,9 +23,16 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "iconThemes": [
+      {
+        "id": "gameide-icons",
+        "label": "GameIDE Icons",
+        "path": "./gameide-icons.json"
+      }
+    ],
     "customEditors": [
       {
-        "viewType": "natstack.sceneEditor",
+        "viewType": "gameide.sceneEditor",
         "displayName": "Scene Editor",
         "selector": [
           {
@@ -37,11 +44,11 @@
     ],
     "commands": [
       {
-        "command": "natstack.exportToTauri",
+        "command": "gameide.exportToTauri",
         "title": "Export to Tauri Runtime"
       },
       {
-        "command": "natstack.uploadGame",
+        "command": "gameide.uploadGame",
         "title": "Upload Game to Website"
       }
     ]

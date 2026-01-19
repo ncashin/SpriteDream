@@ -5,8 +5,8 @@ import { desc } from "drizzle-orm";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Explore Games | Natstack" },
-    { name: "description", content: "Discover and play games built with Natstack" },
+    { title: "Explore Games | GameIDE" },
+    { name: "description", content: "Discover and play games built with GameIDE" },
   ];
 }
 
@@ -41,26 +41,14 @@ export default function Explore() {
         {games.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
             <div className="w-20 h-20 rounded-2xl bg-[var(--color-bg-elevated)] border border-white/[0.06] flex items-center justify-center mb-6">
-              <svg
-                className="w-10 h-10 text-white/10"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1}
-                  d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
-                />
-              </svg>
+              <i className="codicon codicon-game w-10 h-10 text-white/10" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">No games yet</h2>
             <p className="text-white/40 text-center max-w-md mb-8">
-              Be the first to publish a game! Install the Natstack VS Code extension to get started.
+              Be the first to publish a game! Install the GameIDE VS Code extension to get started.
             </p>
             <a
-              href="https://marketplace.visualstudio.com/items?itemName=natstack.natstack"
+              href="https://marketplace.visualstudio.com/items?itemName=gameide.gameide"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-5 py-3 bg-[var(--color-accent)] hover:bg-[var(--color-accent-dim)] text-black font-semibold rounded-xl transition-colors"
@@ -89,19 +77,7 @@ export default function Explore() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--color-accent)]/5 to-[var(--color-ember)]/5">
-                      <svg
-                        className="w-14 h-14 text-white/[0.06]"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={0.5}
-                          d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
-                        />
-                      </svg>
+                      <i className="codicon codicon-game w-14 h-14 text-white/[0.06]" />
                     </div>
                   )}
                 </div>

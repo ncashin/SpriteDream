@@ -16,10 +16,10 @@
   --color-accent-dim: #00a8cc;
   --color-accent-glow: #00d4ff33;
   
-  /* Warm ember secondary */
-  --color-ember: #ff6b35;
-  --color-ember-dim: #cc5529;
-  --color-ember-glow: #ff6b3533;
+  /* Hot pink secondary */
+  --color-ember: #e91e8c;
+  --color-ember-dim: #c4187a;
+  --color-ember-glow: #e91e8c33;
   
   /* Success/online indicator */
   --color-online: #00ff88;
@@ -180,8 +180,8 @@ body {
 /* Grid background */
 .grid-bg {
   background-image: 
-    linear-gradient(rgba(0, 212, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
   background-size: 80px 80px;
 }
 
@@ -189,7 +189,7 @@ body {
 .spotlight {
   background: radial-gradient(
     ellipse 80% 50% at 50% -20%,
-    var(--color-accent-glow),
+    rgba(0, 212, 255, 0.12),
     transparent
   );
 }
@@ -282,3 +282,22 @@ body {
   background: var(--color-accent);
   border-radius: 0 2px 2px 0;
 }
+
+/* Codicons styling */
+.codicon {
+  display: inline-block;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-decoration: none;
+  text-rendering: auto;
+  text-align: center;
+  text-transform: none;
+  letter-spacing: normal;
+  word-spacing: normal;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+
+

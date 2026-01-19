@@ -14,6 +14,8 @@ export type MainFunction = (initialContext: InitialGameContext) => void;
 
 const isDev = import.meta.env?.DEV === true;
 const isInIframe = window.parent !== window;
+// Check if editor mode is enabled via window flag (set by website)
+const isEditorModeEnabled = typeof window !== 'undefined' && (window as any).__EDITOR_MODE_ENABLED__ === true;
 
 let initializeGameFunction: (() => void) | null = null;
 
@@ -88,7 +90,7 @@ export const defineMainFunction = (mainFunction: MainFunction) => {
   const initializeGame = () => {
     resetAllCallbacks();
 
-    if (isDev) {
+    if (isDev || isEditorModeEnabled) {
       initializeEditor();
       if (!hasSceneBeenLoaded) {
         setEditorEnabled(true);
@@ -109,7 +111,7 @@ export const defineMainFunction = (mainFunction: MainFunction) => {
     });
   };
 
-  if (!isDev) {
+  if (!isDev && !isEditorModeEnabled) {
     initializeGame();
   } else {
     initializeEditor();

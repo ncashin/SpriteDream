@@ -145,40 +145,57 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   // Determine content type
   const mimeType = getMimeType(resolvedPath);
 
-  // If serving HTML, inject base tag to ensure relative paths resolve correctly
-  if (mimeType === 'text/html') {
-    const htmlContent = fileData.toString('utf-8');
-    let modifiedHtml = htmlContent;
-    
-    // Base path should point to dist/ directory where assets are located
-    const basePath = `/api/games/${gameId}/bundle/dist/`;
-    
-    // Always replace existing base tag or add new one
-    if (htmlContent.includes('<base')) {
-      // Replace existing base tag
-      modifiedHtml = modifiedHtml.replace(/<base[^>]*>/, `<base href="${basePath}">`);
-    } else {
-      // Add new base tag
-      const baseTag = `<base href="${basePath}">`;
-      // Try to insert after <head> tag
-      if (htmlContent.includes('<head>')) {
-        modifiedHtml = htmlContent.replace('<head>', `<head>\n  ${baseTag}`);
-      } else if (htmlContent.includes('<head ')) {
-        // Handle <head with attributes>
-        modifiedHtml = htmlContent.replace(/<head\s+[^>]*>/, (match) => `${match}\n  ${baseTag}`);
+    // If serving HTML, inject base tag to ensure relative paths resolve correctly
+    if (mimeType === 'text/html') {
+      const htmlContent = fileData.toString('utf-8');
+      let modifiedHtml = htmlContent;
+      
+      // Base path should point to dist/ directory where assets are located
+      const basePath = `/api/games/${gameId}/bundle/dist/`;
+      
+      // Always replace existing base tag or add new one
+      if (htmlContent.includes('<base')) {
+        // Replace existing base tag
+        modifiedHtml = modifiedHtml.replace(/<base[^>]*>/, `<base href="${basePath}">`);
       } else {
-        // Fallback: insert at the beginning
-        modifiedHtml = `${baseTag}\n${htmlContent}`;
+        // Add new base tag
+        const baseTag = `<base href="${basePath}">`;
+        // Try to insert after <head> tag
+        if (htmlContent.includes('<head>')) {
+          modifiedHtml = htmlContent.replace('<head>', `<head>\n  ${baseTag}`);
+        } else if (htmlContent.includes('<head ')) {
+          // Handle <head with attributes>
+          modifiedHtml = htmlContent.replace(/<head\s+[^>]*>/, (match) => `${match}\n  ${baseTag}`);
+        } else {
+          // Fallback: insert at the beginning
+          modifiedHtml = `${baseTag}\n${htmlContent}`;
+        }
       }
+      
+      // Inject script to enable editor mode
+      const editorModeScript = `
+  <script>
+    // Enable editor mode for website
+    window.__EDITOR_MODE_ENABLED__ = true;
+  </script>`;
+      
+      // Insert script before closing </head> tag or before </body> if no </head>
+      if (modifiedHtml.includes('</head>')) {
+        modifiedHtml = modifiedHtml.replace('</head>', `${editorModeScript}\n</head>`);
+      } else if (modifiedHtml.includes('</body>')) {
+        modifiedHtml = modifiedHtml.replace('</body>', `${editorModeScript}\n</body>`);
+      } else {
+        // Fallback: append at the end
+        modifiedHtml = `${modifiedHtml}${editorModeScript}`;
+      }
+      
+      return new Response(modifiedHtml, {
+        headers: {
+          "Content-Type": mimeType,
+          "Cache-Control": "public, max-age=3600",
+        },
+      });
     }
-    
-    return new Response(modifiedHtml, {
-      headers: {
-        "Content-Type": mimeType,
-        "Cache-Control": "public, max-age=3600",
-      },
-    });
-  }
   
 
   return new Response(new Uint8Array(fileData), {
