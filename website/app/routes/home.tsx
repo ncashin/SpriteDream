@@ -10,63 +10,79 @@ export function meta({ }: Route.MetaArgs) {
   ];
 }
 
+type TabId = "main.ts" | "main.scene";
+
+interface Tab {
+  id: TabId;
+  label: string;
+  icon: "ts" | "json";
+}
+
+interface CodeLine {
+  num: number;
+  content: React.ReactNode | string;
+}
+
+const DEMO_GAME_ID = 1;
+
+const CODE_LINES: CodeLine[] = [
+  { num: 1, content: <><span className="text-[#c586c0]">import</span> {"{"} <span className="text-[#4ec9b0]">Entity</span>, <span className="text-[#4ec9b0]">Component</span> {"}"} <span className="text-[#c586c0]">from</span> <span className="text-[#ce9178]">"gameide"</span></> },
+  { num: 2, content: "" },
+  { num: 3, content: <><span className="text-[#c586c0]">export class</span> <span className="text-[#4ec9b0]">Player</span> <span className="text-[#c586c0]">extends</span> <span className="text-[#4ec9b0]">Component</span> {"{"}</> },
+  { num: 4, content: <>&nbsp;&nbsp;<span className="text-[#9cdcfe]">speed</span> = <span className="text-[#b5cea8]">200</span></> },
+  { num: 5, content: "" },
+  { num: 6, content: <>&nbsp;&nbsp;<span className="text-[#dcdcaa]">update</span>(<span className="text-[#9cdcfe]">dt</span>: <span className="text-[#4ec9b0]">number</span>) {"{"}</> },
+  { num: 7, content: <>&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-[#c586c0]">if</span> (<span className="text-[#9cdcfe]">Input</span>.<span className="text-[#dcdcaa]">isKeyDown</span>(<span className="text-[#ce9178]">"ArrowRight"</span>)) {"{"}</> },
+  { num: 8, content: <>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-[#c586c0]">this</span>.<span className="text-[#9cdcfe]">entity</span>.<span className="text-[#9cdcfe]">x</span> += <span className="text-[#c586c0]">this</span>.<span className="text-[#9cdcfe]">speed</span> * <span className="text-[#9cdcfe]">dt</span></> },
+  { num: 9, content: <>&nbsp;&nbsp;&nbsp;&nbsp;{"}"}</> },
+  { num: 10, content: <>&nbsp;&nbsp;{"}"}</> },
+  { num: 11, content: "}" },
+];
+
+const TABS: Tab[] = [
+  { id: "main.scene", label: "main.scene", icon: "json" },
+  { id: "main.ts", label: "main.ts", icon: "ts" },
+];
+
+function TabIcon({ icon }: { icon: Tab["icon"] }) {
+  if (icon === "ts") {
+    return <img src="/ts-logo-128.png" alt="TypeScript" className="w-4 h-4 brightness-110" />;
+  }
+  if (icon === "json") {
+    return <img src="/json.png" alt="JSON" className="w-4 h-4 rounded-sm brightness-110" />;
+  }
+  return <i className="codicon codicon-file text-[var(--color-accent)]" />;
+}
+
 function CodeBlock() {
-  const [activeTab, setActiveTab] = useState<"main.ts" | "main.scene">("main.scene");
-
-  const playerLines = [
-    { num: 1, content: <><span className="text-[#c586c0]">import</span> {"{"} <span className="text-[#4ec9b0]">Entity</span>, <span className="text-[#4ec9b0]">Component</span> {"}"} <span className="text-[#c586c0]">from</span> <span className="text-[#ce9178]">"gameide"</span></> },
-    { num: 2, content: "" },
-    { num: 3, content: <><span className="text-[#c586c0]">export class</span> <span className="text-[#4ec9b0]">Player</span> <span className="text-[#c586c0]">extends</span> <span className="text-[#4ec9b0]">Component</span> {"{"}</> },
-    { num: 4, content: <>&nbsp;&nbsp;<span className="text-[#9cdcfe]">speed</span> = <span className="text-[#b5cea8]">200</span></> },
-    { num: 5, content: "" },
-    { num: 6, content: <>&nbsp;&nbsp;<span className="text-[#dcdcaa]">update</span>(<span className="text-[#9cdcfe]">dt</span>: <span className="text-[#4ec9b0]">number</span>) {"{"}</> },
-    { num: 7, content: <>&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-[#c586c0]">if</span> (<span className="text-[#9cdcfe]">Input</span>.<span className="text-[#dcdcaa]">isKeyDown</span>(<span className="text-[#ce9178]">"ArrowRight"</span>)) {"{"}</> },
-    { num: 8, content: <>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-[#c586c0]">this</span>.<span className="text-[#9cdcfe]">entity</span>.<span className="text-[#9cdcfe]">x</span> += <span className="text-[#c586c0]">this</span>.<span className="text-[#9cdcfe]">speed</span> * <span className="text-[#9cdcfe]">dt</span></> },
-    { num: 9, content: <>&nbsp;&nbsp;&nbsp;&nbsp;{"}"}</> },
-    { num: 10, content: <>&nbsp;&nbsp;{"}"}</> },
-    { num: 11, content: "}" },
-  ];
-
-  const tabs = [
-    { id: "main.scene" as const, label: "main.scene", icon: "json" },
-    { id: "main.ts" as const, label: "main.ts", icon: "ts" },
-  ];
+  const [activeTab, setActiveTab] = useState<TabId>("main.scene");
 
   return (
     <div className="relative pt-8 min-w-0 flex-1 h-full">
-      {/* Tabs jutting out above */}
       <div className="absolute top-0 left-4 flex z-20">
-        {tabs.map((tab) => (
+        {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 pl-2.5 pr-4 py-2 text-xs font-mono transition-all rounded-t-lg ${activeTab === tab.id
-              ? "bg-[var(--color-bg-base)] text-white/80 border border-white/[0.06] border-b-0 relative z-10"
-              : "bg-[var(--color-bg-elevated)] text-white/40 hover:text-white/60 border border-white/[0.04] border-b-0"
+                ? "bg-[var(--color-bg-base)] text-white/80 border border-white/[0.06] border-b-0 relative z-10"
+                : "bg-[var(--color-bg-elevated)] text-white/40 hover:text-white/60 border border-white/[0.04] border-b-0"
               }`}
           >
-            {tab.icon === "ts" ? (
-              <img src="/ts-logo-128.png" alt="TypeScript" className="w-4 h-4 brightness-110" />
-            ) : tab.icon === "json" ? (
-              <img src="/json.png" alt="JSON" className="w-4 h-4 rounded-sm brightness-110" />) : (
-              <i className="codicon codicon-file text-[var(--color-accent)]" />
-            )}
+            <TabIcon icon={tab.icon} />
             <span className="mt-0.5">{tab.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Main content area with glow contained within rounded window */}
       <div className="relative rounded-xl overflow-hidden border border-white/[0.06] bg-[var(--color-bg-base)] shadow-2xl shadow-[var(--color-accent)]/10 h-full w-full min-w-0 flex-1 flex flex-col">
-        {/* Glow effects contained within the rounded window */}
         <div className="absolute -top-8 -right-8 w-32 h-32 bg-[var(--color-accent)]/15 rounded-full blur-[60px] pointer-events-none" />
         <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-[var(--color-ember)]/12 rounded-full blur-[80px] pointer-events-none" />
 
-        {/* Content */}
         <div className="relative z-10 h-full overflow-y-auto">
           {activeTab === "main.ts" ? (
             <div className="pt-5 pl-1 font-mono text-sm leading-relaxed h-full">
-              {playerLines.map((line, i) => (
+              {CODE_LINES.map((line, i) => (
                 <div key={i} className="flex items-center gap-4 hover:bg-white/[0.03] -mx-2 px-2 rounded min-w-0">
                   <span className="text-white/25 w-6 text-right text-xs select-none flex-shrink-0">{line.num}</span>
                   <span className="text-[#d4d4d4] min-w-0 overflow-hidden">{line.content || <>&nbsp;</>}</span>
@@ -75,7 +91,7 @@ function CodeBlock() {
             </div>
           ) : (
             <iframe
-              src="/api/games/1/bundle"
+              src={`/api/games/${DEMO_GAME_ID}/bundle`}
               className="w-full h-full border-0"
               title="Demo Game"
               allow="fullscreen"
@@ -88,96 +104,120 @@ function CodeBlock() {
   );
 }
 
+interface SidebarSectionProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+function SidebarSection({ title, children }: SidebarSectionProps) {
+  return (
+    <div className="sidebar-section space-y-3">
+      <h3 className="text-xs font-bold text-white/90 uppercase tracking-wider mb-3">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+interface FeatureItemProps {
+  title: string;
+  description: string;
+}
+
+function FeatureItem({ title, description }: FeatureItemProps) {
+  return (
+    <div className="sidebar-item space-y-1">
+      <span className="text-sm font-semibold text-white block leading-tight">{title}</span>
+      <p className="text-xs font-normal text-white/50 leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
+interface ToolLinkProps {
+  href: string;
+  icon: string;
+  alt: string;
+  label: string;
+}
+
+function ToolLink({ href, icon, alt, label }: ToolLinkProps) {
+  const isSvg = icon.endsWith('.svg');
+  return (
+    <li>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2.5 group cursor-pointer py-1.5 -mx-1.5 px-1.5 rounded-lg transition-colors hover:bg-white/5"
+      >
+        <img
+          src={icon}
+          alt={alt}
+          className={`w-5 h-5 ${isSvg ? '' : 'rounded-sm'} brightness-110 transition-transform group-hover:scale-110 flex-shrink-0`}
+        />
+        <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">{label}</span>
+      </a>
+    </li>
+  );
+}
+
+const TOOLS = [
+  { href: "https://cursor.sh", icon: "/cursor.png", alt: "Cursor", label: "Cursor" },
+  { href: "https://claude.ai", icon: "/claude.png", alt: "Claude", label: "Claude" },
+  { href: "https://opencode.ai", icon: "/opencode.svg", alt: "OpenCode", label: "OpenCode" },
+] as const;
+
 export default function Home() {
   return (
     <div className="h-screen bg-[var(--color-bg-void)] grid-bg overflow-hidden">
       <div className="spotlight fixed inset-0 pointer-events-none" />
 
-      <section className="relative h-full flex pt-10 pb-9 w-full pl-10 pr-10 overflow-hidden">
-        <div className="flex flex-row gap-8 items-start px-1 w-full min-w-0 h-full">
-          <div className="sidebar flex flex-col justify-between h-[calc(100vh-10rem)] min-w-0 flex-shrink-0">
-            <div className="space-y-8">
-              {/* Logo and Title */}
-              <div className="flex flex-row items-start gap-3">
-                <img src="/logo.svg" alt="GameIDE Logo" className="w-8 h-8 flex-shrink-0" />
-                <div className="flex flex-col items-start min-w-0">
+      <section className="h-full flex p-6 overflow-hidden px-10">
+        <div className="flex gap-8 items-start w-full h-full">
+          <div className="sidebar flex flex-col justify-between h-full pb-4">
+            <div className="space-y-7 pt-16">
+              <div className="flex flex-row h-min gap-3">
+                <img src="/logo.svg" alt="GameIDE Logo" className="w-full flex h-min min-h-0 flex-shrink-0" />
+                <div className="flex flex-col items-start w-full h-min">
                   <h1 className="text-xl font-bold tracking-tight text-white leading-tight">GameIDE</h1>
                   <p className="text-sm font-medium text-white/60 mt-1 leading-relaxed">The Engine that works where you do</p>
                 </div>
               </div>
 
-              {/* AI Native Section */}
-              <div className="sidebar-section space-y-3">
-                <h3 className="text-xs font-bold text-white/90 uppercase tracking-wider mb-3">AI Native</h3>
+              <SidebarSection title="AI Native">
                 <div className="space-y-4">
-                  <div className="sidebar-item space-y-1">
-                    <span className="text-sm font-semibold text-white block leading-tight">Created with agents in mind</span>
-                    <p className="text-xs font-normal text-white/50 leading-relaxed">Provides first class tooling and prompting</p>
-                  </div>
-                  <div className="sidebar-item space-y-1">
-                    <span className="text-sm font-semibold text-white block leading-tight">Designed to leverage existing training data</span>
-                    <p className="text-xs font-normal text-white/50 leading-relaxed">Built with common formats and familiar patterns</p>
-                  </div>
+                  <FeatureItem
+                    title="Created with agents in mind"
+                    description="Provides first class tooling and prompting"
+                  />
+                  <FeatureItem
+                    title="Designed to leverage existing training data"
+                    description="Built with common formats and familiar patterns"
+                  />
                 </div>
-              </div>
+              </SidebarSection>
 
-              {/* Easy Distribution Section */}
-              <div className="sidebar-section space-y-3">
-                <h3 className="text-xs font-bold text-white/90 uppercase tracking-wider mb-3">Easy Distribution</h3>
+              <SidebarSection title="Easy Distribution">
                 <div className="space-y-4">
-                  <div className="sidebar-item space-y-1">
-                    <span className="text-sm font-semibold text-white block leading-tight">Upload from the Editor</span>
-                    <p className="text-xs font-normal text-white/50 leading-relaxed">Share your work in seconds</p>
-                  </div>
-                  <div className="sidebar-item space-y-1">
-                    <span className="text-sm font-semibold text-white block leading-tight">Portable Game Files</span>
-                    <p className="text-xs font-normal text-white/50 leading-relaxed">Export standalone binaries that run anywhere</p>
-                  </div>
+                  <FeatureItem
+                    title="Upload from the Editor"
+                    description="Share your work in seconds"
+                  />
+                  <FeatureItem
+                    title="Portable Game Files"
+                    description="Export standalone binaries that run anywhere"
+                  />
                 </div>
-              </div>
+              </SidebarSection>
 
-              {/* Tools Section */}
-              <div className="sidebar-section space-y-3">
-                <h3 className="text-xs font-bold text-white/90 uppercase tracking-wider mb-3">Made to work with the tools you love</h3>
+              <SidebarSection title="Made to work with the tools you love">
                 <ul className="flex flex-col gap-2 list-none">
-                  <li>
-                    <a
-                      href="https://cursor.sh"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2.5 group cursor-pointer py-1.5 -mx-1.5 px-1.5 rounded-lg transition-colors hover:bg-white/5"
-                    >
-                      <img src="/cursor.png" alt="Cursor" className="w-5 h-5 rounded-sm brightness-110 transition-transform group-hover:scale-110 flex-shrink-0" />
-                      <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">Cursor</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="https://claude.ai"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2.5 group cursor-pointer py-1.5 -mx-1.5 px-1.5 rounded-lg transition-colors hover:bg-white/5"
-                    >
-                      <img src="/claude.png" alt="Claude" className="w-5 h-5 rounded-sm brightness-110 transition-transform group-hover:scale-110 flex-shrink-0" />
-                      <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">Claude</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="https://opencode.ai"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2.5 group cursor-pointer py-1.5 -mx-1.5 px-1.5 rounded-lg transition-colors hover:bg-white/5"
-                    >
-                      <img src="/opencode.svg" alt="OpenCode" className="w-5 h-5 brightness-110 transition-transform group-hover:scale-110 flex-shrink-0" />
-                      <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">OpenCode</span>
-                    </a>
-                  </li>
+                  {TOOLS.map((tool) => (
+                    <ToolLink key={tool.href} {...tool} />
+                  ))}
                 </ul>
-              </div>
+              </SidebarSection>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex flex-col gap-2.5 pt-6 sidebar-divider">
               <a
                 href="https://marketplace.visualstudio.com/items?itemName=gameide.gameide"
