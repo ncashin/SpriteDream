@@ -10,7 +10,7 @@ import { collisionPlugin } from "./core/collision/collisionPlugin";
 import { ecsEditorPlugin } from "./core/ecs/editor/ECSEditorPlugin";
 import { initializePlayer } from "./scripts/main";
 import "./scripts/weapon";
-import initialScene from "../scenes/main.scene?raw";
+import initialScene from "../scenes/default.scene?raw";
 import { defineMainFunction } from "./core/runtimeWrapper.ts";
 
 export {
