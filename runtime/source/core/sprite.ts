@@ -34,18 +34,30 @@ export const SpriteComponentDefinition: SpriteComponent = defineComponent(
 
 function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+
+  const resizeCanvas = () => {
+    const displayWidth = window.innerWidth;
+    const displayHeight = window.innerHeight;
+
+    // Set the actual canvas size in memory (scaled by device pixel ratio)
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+
+    // Set the display size (CSS pixels)
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+  };
+
+  resizeCanvas();
+
   canvas.style.display = "block";
   canvas.style.margin = "0";
   canvas.style.padding = "0";
   canvas.style.pointerEvents = "auto";
   canvas.style.touchAction = "none";
 
-  window.addEventListener("resize", () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  });
+  window.addEventListener("resize", resizeCanvas);
 
   parent.appendChild(canvas);
 
@@ -97,11 +109,21 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   }
 > {
   const canvas = initializeCanvas(context.rootElement);
-  const context2D = canvas.getContext("2d");
+  const context2D = canvas.getContext("2d", {
+    alpha: true,
+    desynchronized: false,
+  });
 
   if (!context2D) {
     throw new Error("Failed to get 2D rendering context from canvas");
   }
+
+  // Enable high-quality image smoothing for crisp rendering
+  context2D.imageSmoothingEnabled = true;
+  context2D.imageSmoothingQuality = "high";
+
+  // Scale the context to account for device pixel ratio
+  const dpr = window.devicePixelRatio || 1;
 
   const spriteClickProvider: ClickableEntityProvider = {
     checkClick: (worldX: number, worldY: number): string | null => {
@@ -135,13 +157,20 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
 
 
   addDrawCallback(() => {
+    // Clear the entire canvas
     context2D.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Reset transform and apply device pixel ratio scaling
+    context2D.setTransform(dpr, 0, 0, dpr, 0, 0);
+
     const viewport = getViewport();
+    const displayWidth = window.innerWidth;
+    const displayHeight = window.innerHeight;
 
     context2D.save();
 
-    context2D.translate(canvas.width / 2, canvas.height / 2);
+    // Transform to world coordinates (using display dimensions, not canvas dimensions)
+    context2D.translate(displayWidth / 2, displayHeight / 2);
     context2D.scale(viewport.scale, viewport.scale);
     context2D.translate(-viewport.x, -viewport.y);
 
@@ -185,54 +214,57 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
         // Get rotation from player component if available
         const rotation = player?.rotation || 0;
 
+        // Calculate sprite bounds
+        const spriteX = position.x - sprite.width / 2;
+        const spriteY = position.y - sprite.height / 2;
+
+        context2D.save();
+
+        // Apply rotation if needed
+        if (rotation !== 0) {
+          context2D.translate(position.x, position.y);
+          context2D.rotate(rotation);
+          context2D.translate(-position.x, -position.y);
+        }
+
         if (sprite.image) {
           const normalizedImagePath = normalizeAssetPath(sprite.image);
           const img = imageCache.get(normalizedImagePath);
+
           if (img && img.complete) {
-            context2D.save();
-            // Apply rotation if needed
-            if (rotation !== 0) {
-              context2D.translate(position.x, position.y);
-              context2D.rotate(rotation);
-              context2D.translate(-position.x, -position.y);
-            }
+            // Draw the image
             context2D.drawImage(
               img,
-              position.x - sprite.width / 2,
-              position.y - sprite.height / 2,
+              spriteX,
+              spriteY,
               sprite.width,
               sprite.height
             );
 
             // Apply white flash overlay only on image pixels
             if (isFlashing) {
+              context2D.save();
               context2D.globalCompositeOperation = "source-atop";
               context2D.globalAlpha = flashIntensity * 0.7;
               context2D.fillStyle = "#ffffff";
-              context2D.fillRect(
-                position.x - sprite.width / 2,
-                position.y - sprite.height / 2,
-                sprite.width,
-                sprite.height
-              );
+              context2D.fillRect(spriteX, spriteY, sprite.width, sprite.height);
+              context2D.restore();
             }
-            context2D.restore();
           } else {
-            context2D.save();
-            // Apply rotation if needed
-            if (rotation !== 0) {
-              context2D.translate(position.x, position.y);
-              context2D.rotate(rotation);
-              context2D.translate(-position.x, -position.y);
-            }
+            // Draw placeholder while image loads
             context2D.fillStyle = sprite.color;
-            context2D.fillRect(
-              position.x - sprite.width / 2,
-              position.y - sprite.height / 2,
-              sprite.width,
-              sprite.height
-            );
-            context2D.restore();
+            context2D.fillRect(spriteX, spriteY, sprite.width, sprite.height);
+
+            // Apply white flash overlay
+            if (isFlashing) {
+              context2D.save();
+              context2D.globalAlpha = flashIntensity * 0.7;
+              context2D.fillStyle = "#ffffff";
+              context2D.fillRect(spriteX, spriteY, sprite.width, sprite.height);
+              context2D.restore();
+            }
+
+            // Load image if not already loading
             if (img === undefined) {
               loadImage(sprite.image).catch((error) => {
                 console.warn(`Failed to load image: ${sprite.image}`, error);
@@ -240,36 +272,21 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
             }
           }
         } else {
-          context2D.save();
-          // Apply rotation if needed
-          if (rotation !== 0) {
-            context2D.translate(position.x, position.y);
-            context2D.rotate(rotation);
-            context2D.translate(-position.x, -position.y);
-          }
+          // Draw colored rectangle
           context2D.fillStyle = sprite.color;
-          context2D.fillRect(
-            position.x - sprite.width / 2,
-            position.y - sprite.height / 2,
-            sprite.width,
-            sprite.height
-          );
+          context2D.fillRect(spriteX, spriteY, sprite.width, sprite.height);
 
           // Apply white flash overlay
           if (isFlashing) {
             context2D.save();
             context2D.globalAlpha = flashIntensity * 0.7;
             context2D.fillStyle = "#ffffff";
-            context2D.fillRect(
-              position.x - sprite.width / 2,
-              position.y - sprite.height / 2,
-              sprite.width,
-              sprite.height
-            );
+            context2D.fillRect(spriteX, spriteY, sprite.width, sprite.height);
             context2D.restore();
           }
-          context2D.restore();
         }
+
+        context2D.restore();
 
         // Draw selection indicator
         if (inEditorMode && selectedEntity === entity) {
@@ -288,7 +305,7 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
           const selectionWidth = sprite.width + padding * 2;
           const selectionHeight = sprite.height + padding * 2;
 
-          // Draw solid border
+          // Draw solid border with crisp lines
           context2D.strokeStyle = "#00bfff";
           context2D.lineWidth = 1.5 / viewport.scale;
           context2D.setLineDash([]);

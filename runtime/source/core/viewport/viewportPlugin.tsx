@@ -38,6 +38,19 @@ export const updateViewport = (deltaX: number, deltaY: number): void => {
   viewport.y += deltaY;
 };
 
+/**
+ * Gets the display dimensions of the canvas (CSS pixels, not device pixels)
+ */
+function getCanvasDisplaySize(): { width: number; height: number } {
+  const canvas = document.querySelector("canvas");
+  if (canvas) {
+    // Use the CSS dimensions, which are the display size
+    const rect = canvas.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  }
+  return { width: window.innerWidth, height: window.innerHeight };
+}
+
 export const zoomViewport = (
   deltaScale: number,
   screenX: number,
@@ -48,11 +61,9 @@ export const zoomViewport = (
 
   if (newScale === oldScale) return;
 
-  const canvas = document.querySelector("canvas");
-  if (!canvas) return;
-
-  const centerX = canvas.width / 2;
-  const centerY = canvas.height / 2;
+  const { width, height } = getCanvasDisplaySize();
+  const centerX = width / 2;
+  const centerY = height / 2;
 
   const worldX = (screenX - centerX) / oldScale + viewport.x;
   const worldY = (screenY - centerY) / oldScale + viewport.y;
@@ -60,24 +71,22 @@ export const zoomViewport = (
   viewport.scale = newScale;
   viewport.x = worldX - (screenX - centerX) / newScale;
   viewport.y = worldY - (screenY - centerY) / newScale;
-  
+
   // Update target world dimensions when manually zooming
   // This allows manual zoom to work while still maintaining auto-resize behavior
-  targetWorldWidth = canvas.width / newScale;
-  targetWorldHeight = canvas.height / newScale;
+  targetWorldWidth = width / newScale;
+  targetWorldHeight = height / newScale;
 };
 
 export const resetViewport = (): void => {
   viewport.scale = 1;
   viewport.x = 0;
   viewport.y = 0;
-  
-  // Initialize target world dimensions based on current canvas size
-  const canvas = document.querySelector("canvas");
-  if (canvas) {
-    targetWorldWidth = canvas.width / viewport.scale;
-    targetWorldHeight = canvas.height / viewport.scale;
-  }
+
+  // Initialize target world dimensions based on current canvas display size
+  const { width, height } = getCanvasDisplaySize();
+  targetWorldWidth = width / viewport.scale;
+  targetWorldHeight = height / viewport.scale;
 };
 
 /**
@@ -85,25 +94,22 @@ export const resetViewport = (): void => {
  * when the window/canvas size changes.
  */
 const updateViewportForResize = (): void => {
-  const canvas = document.querySelector("canvas");
-  if (!canvas) {
-    return;
-  }
+  const { width, height } = getCanvasDisplaySize();
 
   // Initialize target dimensions if not set yet
   if (targetWorldWidth === null || targetWorldHeight === null) {
-    targetWorldWidth = canvas.width / viewport.scale;
-    targetWorldHeight = canvas.height / viewport.scale;
+    targetWorldWidth = width / viewport.scale;
+    targetWorldHeight = height / viewport.scale;
     return;
   }
 
   // Calculate the scale needed to maintain the same world dimensions
-  const scaleX = canvas.width / targetWorldWidth;
-  const scaleY = canvas.height / targetWorldHeight;
-  
+  const scaleX = width / targetWorldWidth;
+  const scaleY = height / targetWorldHeight;
+
   // Use the smaller scale to ensure everything fits (maintains aspect ratio)
   const newScale = Math.min(scaleX, scaleY);
-  
+
   // Update the viewport scale
   viewport.scale = Math.max(0.1, Math.min(10, newScale));
 };
@@ -169,14 +175,12 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
     resetViewport();
   });
 
-  // Set up window resize handler to maintain the same world-space area visible
-  // Use requestAnimationFrame to ensure this runs after canvas resize
   const resizeHandler = () => {
     requestAnimationFrame(() => {
       updateViewportForResize();
     });
   };
-  
+
   window.addEventListener("resize", resizeHandler);
 
   let viewportDragStartX: number = 0;
@@ -222,20 +226,20 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
           return;
         }
       }
-      
+
       const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
       if (!canvas) return;
-      
+
       e.preventDefault();
       e.stopPropagation();
-      
+
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       const delta = e.deltaY > 0 ? -0.01 : 0.01;
       zoomViewport(delta, x, y);
     };
-    
+
     gameRoot.addEventListener("wheel", wheelHandler, {
       passive: false,
     });
