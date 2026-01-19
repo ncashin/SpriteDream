@@ -1,0 +1,11 @@
+node_modules
+dist
+out
+build
+*.min.js
+*.min.css
+package-lock.json
+.DS_Store
+*.db
+*.db-journal
+

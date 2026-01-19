@@ -1,7 +1,7 @@
 import type { Route } from "./+types/home";
 import { Link } from "react-router";
 import { useState } from "react";
-import { Play } from "@phosphor-icons/react";
+import { Play, PlayIcon } from "@phosphor-icons/react";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -174,10 +174,14 @@ export default function Home() {
       <section className="h-full flex p-6 overflow-hidden px-10">
         <div className="flex gap-8 items-start w-full h-full">
           <div className="sidebar flex flex-col justify-between h-full pb-4">
-            <div className="space-y-7 pt-16">
-              <div className="flex flex-row h-min gap-3">
-                <img src="/logo.svg" alt="GameIDE Logo" className="w-full flex h-min min-h-0 flex-shrink-0" />
-                <div className="flex flex-col items-start w-full h-min">
+            <div className="space-y-7 pt-16 max-w-full">
+              <div className="flex flex-row h-min gap-3 w-full min-w-0 items-center">
+                <img
+                  src="/logo.svg"
+                  alt="GameIDE Logo"
+                  className="flex-shrink-0 h-[3rem] pt-0.5 max-h-full max-w-full object-contain"
+                />
+                <div className="flex flex-col items-start w-full min-w-0">
                   <h1 className="text-xl font-bold tracking-tight text-white leading-tight">GameIDE</h1>
                   <p className="text-sm font-medium text-white/60 mt-1 leading-relaxed">The Engine that works where you do</p>
                 </div>
@@ -236,7 +240,7 @@ export default function Home() {
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium rounded-lg border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 hover:border-white/20 transition-all"
                 aria-label="Play Games"
               >
-                <Play className="w-3.5 h-3.5 flex-shrink-0" weight="fill" />
+                <PlayIcon className="w-3.5 h-3.5 flex-shrink-0" weight="fill" />
                 Play Games
               </Link>
             </div>
