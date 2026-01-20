@@ -34,7 +34,7 @@ export function initializePlayer(
   gameContext: RequirePlugin<[typeof ecsPlugin, typeof inputPlugin]>,
   playerEntityId: string = "player"
 ) {
-  let playerEntity: any | null = null;
+  const playerEntity = gameContext.ecs.getEntity(playerEntityId);;
 
   const PLATFORMER_RESOLVER: ResolverDefinition = {
     name: "platformer",
@@ -42,26 +42,21 @@ export function initializePlayer(
       if (entity === other) return;
 
       if (entity === playerEntityId && playerEntity) {
-        const position = playerEntity.position;
-        const velocity = playerEntity.velocity;
-        const collider = playerEntity.collider;
-        const player = playerEntity.player;
-
-        if (!position || !velocity || !collider) return;
+        if (!playerEntity.position || !playerEntity.velocity || !playerEntity.collider) return;
 
         const correction = scale(overlapNormal, overlapAmount);
 
-        position.x += correction[0];
-        position.y += correction[1];
+        playerEntity.position.x += correction[0];
+        playerEntity.position.y += correction[1];
 
         const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
         const isUpwardCorrection = correction[1] < 0;
         const isLandingOnTop = isVerticalCollision && isUpwardCorrection;
 
-        if (velocity.y > 0 && isLandingOnTop) {
-          velocity.y = 0;
-          if (player) {
-            player.isGrounded = true;
+        if (playerEntity.velocity.y > 0 && isLandingOnTop) {
+          playerEntity.velocity.y = 0;
+          if (playerEntity.player) {
+            playerEntity.player.isGrounded = true;
           }
         }
       }
