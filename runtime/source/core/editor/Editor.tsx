@@ -1,14 +1,11 @@
 import { EntityListPanel } from "./panels/EntityListPanel";
 import { EntityModalContainer } from "./panels/EntityModalContainer";
-import { EntityStateSynchronizer } from "./EditorContext";
 import { RunStopButton } from "./RunStopButton";
 import { SceneDataButton } from "./SceneDataButton";
 
 export function Editor() {
   return (
     <>
-      <EntityStateSynchronizer />
-
       {/* Left Panel - Entity List & Selected Entity */}
       <div
         style={{

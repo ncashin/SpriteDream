@@ -17,12 +17,9 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const [entityData, setEntityData] = useState("");
   const [isValid, setIsValid] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
-  const [isCloseHovered, setIsCloseHovered] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [componentSearchQuery, setComponentSearchQuery] = useState("");
-  const [isAddButtonHovered, setIsAddButtonHovered] = useState(false);
-  const [isAddButtonPressed, setIsAddButtonPressed] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addComponentDropdownRef = useRef<HTMLDivElement>(null);
@@ -189,134 +186,41 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   if (!isOpen || !entity) return null;
 
   return (
-    <div
-      style={{
-        backgroundColor: "rgb(60, 60, 60)",
-        borderRadius: "2px",
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "var(--vscode-font-family, system-ui, -apple-system, sans-serif)",
-        minWidth: "300px",
-        maxWidth: "500px",
-        maxHeight: "500px",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
-      }}
-    >
+    <div className="flex flex-col bg-[rgb(60,60,60)] rounded-sm font-[var(--vscode-font-family,system-ui,-apple-system,sans-serif)] min-w-[300px] max-w-[500px] max-h-[500px] shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
       {/* Header */}
-      <div
-        style={{
-          padding: "0.25rem 0.25rem 0.25rem 0.5rem",
-          fontSize: "0.75rem",
-          borderBottom: "1px solid rgba(128, 128, 128, 0.2)",
-          color: "rgba(255, 255, 255, 0.9)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          minHeight: "20px",
-          userSelect: "none",
-          borderRadius: "2px 2px 0 0",
-        }}
-      >
+      <div className="flex items-center justify-between min-h-5 px-1 pl-2 py-1 text-xs border-b border-gray-500/20 text-white/90 select-none rounded-t-sm">
         <span>{entity}</span>
         <button
-          style={{
-            border: "none",
-            cursor: "pointer",
-            padding: "0.125rem",
-            width: "16px",
-            height: "16px",
-            borderRadius: "2px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "rgba(255, 255, 255, 0.9)",
-            transition: "background-color 0.1s",
-            backgroundColor: isCloseHovered ? "rgba(255, 255, 255, 0.1)" : "transparent",
-            marginLeft: "0.25rem",
-          }}
+          className="flex items-center justify-center w-4 h-4 p-0.5 rounded-sm border-none cursor-pointer text-white/90 transition-colors duration-100 ml-1 bg-transparent hover:bg-white/10"
           onClick={onClose}
-          onMouseEnter={() => setIsCloseHovered(true)}
-          onMouseLeave={() => setIsCloseHovered(false)}
         >
-          <span className="codicon codicon-close" style={{ fontSize: "0.75rem" }} />
+          <span className="codicon codicon-close text-xs" />
         </button>
       </div>
 
       {/* Toolbar */}
-      <div
-        style={{
-          padding: "0.25rem",
-          borderBottom: "1px solid rgba(128, 128, 128, 0.2)",
-          display: "flex",
-          gap: "0.5rem",
-          alignItems: "center",
-          backgroundColor: "rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex gap-2 items-center p-1 border-b border-gray-500/20 bg-black/10">
+        <div className="flex-1 min-w-0">
           <SearchInput
             placeholder="Search JSON..."
             value={searchQuery}
             onChange={setSearchQuery}
           />
         </div>
-        <div style={{ position: "relative", flexShrink: 0 }} ref={addComponentDropdownRef}>
+        <div className="relative flex-shrink-0" ref={addComponentDropdownRef}>
           <button
             onClick={() => setShowAddComponent(!showAddComponent)}
-            style={{
-              padding: "0.125rem 0.75rem",
-              fontSize: "0.75rem",
-              backgroundColor: isAddButtonPressed
-                ? "rgba(128, 128, 128, 0.4)"
-                : isAddButtonHovered || showAddComponent
-                  ? "rgba(128, 128, 128, 0.35)"
-                  : "rgba(128, 128, 128, 0.3)",
-              border: "none",
-              borderRadius: "2px",
-              cursor: "pointer",
-              color: "rgba(255, 255, 255, 0.9)",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.25rem",
-              transition: "background-color 0.1s",
-              minHeight: "20px",
-            }}
-            onMouseEnter={() => setIsAddButtonHovered(true)}
-            onMouseLeave={() => {
-              setIsAddButtonHovered(false);
-              setIsAddButtonPressed(false);
-            }}
-            onMouseDown={() => setIsAddButtonPressed(true)}
-            onMouseUp={() => setIsAddButtonPressed(false)}
+            className={`flex items-center gap-1 px-3 py-0.5 text-xs border-none rounded-sm cursor-pointer text-white/90 transition-colors duration-100 min-h-5 ${showAddComponent ? "bg-gray-500/35" : "bg-gray-500/30"
+              } hover:bg-gray-500/35 active:bg-gray-500/40`}
           >
-            <span className="codicon codicon-add" style={{ fontSize: "0.75rem" }} />
+            <span className="codicon codicon-add text-xs" />
             <span>Add Component</span>
           </button>
 
           {/* Dropdown */}
           {showAddComponent && (
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                right: 0,
-                marginTop: "0.25rem",
-                backgroundColor: "rgb(60, 60, 60)",
-                borderRadius: "4px",
-                minWidth: "200px",
-                maxWidth: "300px",
-                maxHeight: "300px",
-                display: "flex",
-                flexDirection: "column",
-                zIndex: 10001,
-              }}
-            >
-              <div
-                style={{
-                  padding: "0.25rem 0.5rem",
-                  borderBottom: "1px solid rgba(128, 128, 128, 0.2)",
-                }}
-              >
+            <div className="absolute top-full right-0 mt-1 bg-[rgb(60,60,60)] rounded min-w-[200px] max-w-[300px] max-h-[300px] flex flex-col z-[10001]">
+              <div className="p-1 px-2 border-b border-gray-500/20">
                 <SearchInput
                   placeholder="Search Components..."
                   value={componentSearchQuery}
@@ -324,27 +228,9 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
                   autoFocus
                 />
               </div>
-              <div
-                style={{
-                  overflow: "auto",
-                  maxHeight: "250px",
-                  backgroundColor: "rgba(0, 0, 0, 0.1)",
-                  borderRadius: "0 0 2px 2px",
-                }}
-              >
+              <div className="overflow-auto max-h-[250px] bg-black/10 rounded-b-sm">
                 {availableComponents.length === 0 ? (
-                  <div
-                    style={{
-                      padding: "0.25rem 0.5rem",
-                      minHeight: "20px",
-                      color: "rgba(255, 255, 255, 0.6)",
-                      fontSize: "0.75rem",
-                      textAlign: "center",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
+                  <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
                     {componentSearchQuery ? "No components found" : "No available components"}
                   </div>
                 ) : (
@@ -352,37 +238,11 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
                     <button
                       key={type}
                       onClick={() => handleAddComponent(type)}
-                      style={{
-                        width: "100%",
-                        padding: "0.25rem 0.5rem",
-                        textAlign: "left",
-                        backgroundColor: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "#cccccc",
-                        fontSize: "0.75rem",
-                        transition: "background-color 0.1s",
-                        minHeight: "20px",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "flex-start",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                      }}
+                      className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
                     >
                       <div>{def.displayName || type}</div>
                       {def.description && (
-                        <div
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "rgba(255, 255, 255, 0.6)",
-                            marginTop: "0.125rem",
-                          }}
-                        >
+                        <div className="text-xs text-white/60 mt-0.5">
                           {def.description}
                         </div>
                       )}
@@ -396,54 +256,19 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       </div>
 
       {/* JSON Editor */}
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto",
-          backgroundColor: "rgba(0, 0, 0, 0.1)",
-          borderRadius: "0 0 2px 2px",
-          position: "relative",
-        }}
-      >
+      <div className="flex-1 overflow-auto bg-black/10 rounded-b-sm relative">
         <textarea
           ref={textareaRef}
           value={entityData}
           onChange={handleTextareaChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          style={{
-            width: "100%",
-            height: "100%",
-            padding: "0.75rem",
-            backgroundColor: "transparent",
-            color: "#cccccc",
-            fontSize: "0.8rem",
-            fontFamily: "'Consolas', 'Courier New', monospace",
-            lineHeight: "1.5",
-            resize: "none",
-            outline: "none",
-            boxSizing: "border-box",
-            whiteSpace: "pre",
-            overflowWrap: "normal",
-            overflowX: "auto",
-            border: isValid ? "none" : "1px solid #f48771",
-            minHeight: "250px",
-            tabSize: 2,
-          }}
+          className={`w-full h-full p-3 bg-transparent text-[#cccccc] text-sm font-mono leading-normal resize-none outline-none box-border whitespace-pre overflow-wrap-normal overflow-x-auto min-h-[250px] ${isValid ? "border-none" : "border border-[#f48771]"
+            }`}
+          style={{ tabSize: 2 }}
         />
         {!isValid && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: "0.5rem",
-              right: "0.5rem",
-              padding: "0.25rem 0.5rem",
-              backgroundColor: "rgba(244, 135, 113, 0.2)",
-              color: "#f48771",
-              fontSize: "0.7rem",
-              borderRadius: "2px",
-            }}
-          >
+          <div className="absolute bottom-2 right-2 px-2 py-1 bg-[rgba(244,135,113,0.2)] text-[#f48771] text-xs rounded-sm">
             Invalid JSON
           </div>
         )}

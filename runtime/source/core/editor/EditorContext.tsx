@@ -1,8 +1,5 @@
-import { atom, useAtomValue, useSetAtom, getDefaultStore } from "jotai";
-import { useEffect, useRef } from "react";
+import { atom, useAtomValue, getDefaultStore } from "jotai";
 import type { Entity, EntityComponents } from "../ecs/ecs";
-import { addDrawCallback, removeDrawCallback } from "../gameloop";
-import { useScene } from "./useScene";
 
 // ============================================================================
 // Types
@@ -87,64 +84,3 @@ export function useIsEntityValid(entity: Entity | null) {
     return entity !== null && entities.includes(entity);
 }
 
-// ============================================================================
-// Components
-// ============================================================================
-
-/** Component to sync entity state from the game context */
-export function EntityStateSynchronizer() {
-    const gameContext = useAtomValue(gameContextAtom);
-    const setEntityState = useSetAtom(entityStateAtom);
-    const prevStateRef = useRef<{ entities: Entity[]; selectedEntity: Entity | null }>({
-        entities: [],
-        selectedEntity: null,
-    });
-
-    // Sync scene state (for non-entity scene data)
-    useScene();
-
-    // Sync entity state from game context
-    useEffect(() => {
-        const ecs = gameContext?.ecs as any;
-        if (!ecs) return;
-
-        const syncEntityState = () => {
-            const currentEntities = Object.keys(ecs.ecsInstance.entities);
-            const currentEntityComponents = ecs.ecsInstance.entities;
-            const currentSelectedEntity = ecs.getSelectedEntity() ?? null;
-
-            // Check if anything changed to avoid unnecessary updates
-            const prev = prevStateRef.current;
-            const entitiesChanged =
-                prev.entities.length !== currentEntities.length ||
-                !prev.entities.every((e, i) => e === currentEntities[i]);
-            const selectionChanged = prev.selectedEntity !== currentSelectedEntity;
-
-            if (entitiesChanged || selectionChanged) {
-                prevStateRef.current = {
-                    entities: currentEntities,
-                    selectedEntity: currentSelectedEntity,
-                };
-
-                setEntityState((current) => ({
-                    entities: currentEntities,
-                    selectedEntity: currentSelectedEntity,
-                    entityComponents: currentEntityComponents,
-                    version: current.version + 1,
-                }));
-            }
-        };
-
-        // Initial sync
-        syncEntityState();
-
-        // Subscribe to draw callbacks for continuous sync
-        const callbackId = addDrawCallback(syncEntityState);
-
-        return () => {
-            removeDrawCallback(callbackId);
-        };
-    }, [gameContext, setEntityState]);
-
-    return null;
-}

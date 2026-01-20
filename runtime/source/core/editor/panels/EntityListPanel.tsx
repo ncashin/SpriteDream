@@ -8,7 +8,6 @@ export function EntityListPanel() {
   const ecs = gameContext?.ecs as any;
   const [isExpanded, setIsExpanded] = useState(true);
   const [entities, setEntities] = useState<Entity[]>([]);
-  const [isHovered, setIsHovered] = useState(false);
   const [hoveredEntity, setHoveredEntity] = useState<Entity | null>(null);
   const [renamingEntity, setRenamingEntity] = useState<Entity | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -128,44 +127,25 @@ export function EntityListPanel() {
   };
 
   return (
-    <div
-      style={{
-        backgroundColor: "rgba(128, 128, 128, 0.3)",
-        borderRadius: "2px",
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "var(--vscode-font-family, system-ui, -apple-system, sans-serif)",
-        width: "250px",
-      }}
-    >
+    <div className="flex flex-col w-[250px] bg-gray-500/30 rounded-sm font-[var(--vscode-font-family,system-ui,-apple-system,sans-serif)]">
       {/* Header */}
       <button
-        style={{
-          padding: "0.25rem 0.25rem 0.25rem 0.5rem",
-          fontSize: "0.75rem",
-          border: "none",
-          borderBottom: isExpanded ? "1px solid rgba(128, 128, 128, 0.2)" : "none",
-          cursor: "pointer",
-          backgroundColor: isHovered ? "rgba(128, 128, 128, 0.35)" : "transparent",
-          color: "rgba(255, 255, 255, 0.9)",
-          outline: "none",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          minHeight: "20px",
-          width: "100%",
-          userSelect: "none",
-          transition: "background-color 0.1s",
-          borderRadius: isExpanded ? "2px 2px 0 0" : "2px",
-        }}
+        className={`
+          flex items-center justify-between w-full min-h-5 px-1 pl-2 py-1
+          text-xs text-white/90 cursor-pointer outline-none select-none
+          transition-colors duration-100
+          ${isExpanded
+            ? "rounded-t-sm border-b border-gray-500/20"
+            : "rounded-sm"
+          }
+          hover:bg-gray-500/35
+        `}
         onClick={() => setIsExpanded(!isExpanded)}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         <span>Entities ({entities.length})</span>
         <span
-          className={`codicon ${isExpanded ? "codicon-chevron-down" : "codicon-chevron-right"}`}
-          style={{ fontSize: "0.75rem", marginLeft: "0.25rem" }}
+          className={`codicon text-xs ml-1 ${isExpanded ? "codicon-chevron-down" : "codicon-chevron-right"
+            }`}
         />
       </button>
 
@@ -173,80 +153,40 @@ export function EntityListPanel() {
         <>
           {/* New Entity Button */}
           <button
-            style={{
-              padding: "0.25rem 0.5rem",
-              minHeight: "20px",
-              width: "100%",
-              cursor: "pointer",
-              color: "#cccccc",
-              fontSize: "0.75rem",
-              backgroundColor: "rgba(0, 0, 0, 0.1)",
-              border: "none",
-              borderBottom: "1px solid rgba(128, 128, 128, 0.2)",
-              transition: "background-color 0.1s",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.25rem",
-            }}
+            className="
+              flex items-center gap-1 w-full min-h-5 px-2 py-1
+              text-xs text-[#cccccc] cursor-pointer
+              bg-black/10 border-none border-b border-gray-500/20
+              transition-colors duration-100
+              hover:bg-white/10
+            "
             onClick={handleCreateEntity}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.1)";
-            }}
           >
-            <span className="codicon codicon-add" style={{ fontSize: "0.75rem" }} />
+            <span className="codicon codicon-add text-xs" />
             <span>New Entity</span>
           </button>
 
           {/* Entity List */}
-          <div
-            style={{
-              overflow: "auto",
-              padding: 0,
-              paddingBottom: "0.25rem",
-              backgroundColor: "rgba(0, 0, 0, 0.1)",
-              height: "120px",
-              borderRadius: "0 0 2px 2px",
-            }}
-          >
+          <div className="overflow-auto p-0 pb-1 bg-black/10 h-[120px] rounded-b-sm">
             {entities.length === 0 ? (
-              <div
-                style={{
-                  padding: "0.25rem 0.5rem",
-                  minHeight: "20px",
-                  color: "rgba(255, 255, 255, 0.6)",
-                  fontSize: "0.75rem",
-                  textAlign: "center",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
+              <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60">
                 No entities
               </div>
             ) : (
               entities.map((entity) => (
                 <div
                   key={entity}
-                  style={{
-                    padding: "0.25rem 0.5rem",
-                    minHeight: "20px",
-                    cursor: "pointer",
-                    color: "#cccccc",
-                    fontSize: "0.75rem",
-                    backgroundColor:
-                      selectedEntity === entity
-                        ? "#04395e"
-                        : hoveredEntity === entity
-                          ? "rgba(255, 255, 255, 0.1)"
-                          : "transparent",
-                    transition: "background-color 0.1s",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.25rem",
-                  }}
+                  className={`
+                    flex items-center gap-1 min-h-5 px-2 py-1
+                    text-xs text-[#cccccc] cursor-pointer
+                    transition-colors duration-100
+                    ${selectedEntity === entity
+                      ? "bg-[#04395e]"
+                      : hoveredEntity === entity
+                        ? "bg-white/10"
+                        : "bg-transparent"
+                    }
+                  `}
                   onClick={() => ecs.selectEntity(entity)}
                   onMouseEnter={() => setHoveredEntity(entity)}
                   onMouseLeave={() => setHoveredEntity(null)}
@@ -254,7 +194,7 @@ export function EntityListPanel() {
                   {renamingEntity === entity ? (
                     <form
                       onSubmit={handleRenameSubmit}
-                      style={{ flex: 1, display: "flex", minWidth: 0 }}
+                      className="flex flex-1 min-w-0"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <input
@@ -264,90 +204,46 @@ export function EntityListPanel() {
                         onChange={(e) => setRenameValue(e.target.value)}
                         onKeyDown={handleRenameKeyDown}
                         onBlur={handleRenameSubmit}
-                        style={{
-                          flex: 1,
-                          padding: 0,
-                          fontSize: "0.75rem",
-                          backgroundColor: "transparent",
-                          color: "#cccccc",
-                          border: "none",
-                          outline: "none",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          minWidth: 0,
-                          width: "100%",
-                        }}
+                        className="
+                          flex-1 p-0 text-xs bg-transparent text-[#cccccc]
+                          border-none outline-none overflow-hidden
+                          text-ellipsis whitespace-nowrap min-w-0 w-full
+                        "
                       />
                     </form>
                   ) : (
                     <>
-                      <span
-                        style={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          flex: 1,
-                        }}
-                      >
+                      <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                         {entity}
                       </span>
                       {hoveredEntity === entity && (
                         <div
-                          style={{ display: "flex", gap: "0.125rem", alignItems: "center" }}
+                          className="flex gap-0.5 items-center"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
-                            style={{
-                              backgroundColor: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                              padding: "0.125rem",
-                              width: "16px",
-                              height: "16px",
-                              borderRadius: "2px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "rgba(255, 255, 255, 0.9)",
-                              transition: "background-color 0.1s",
-                            }}
+                            className="
+                              bg-transparent border-none cursor-pointer p-0.5
+                              w-4 h-4 rounded-sm flex items-center justify-center
+                              text-white/90 transition-colors duration-100
+                              hover:bg-white/10
+                            "
                             onClick={(e) => handleStartRename(entity, e)}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = "transparent";
-                            }}
                             title="Rename entity"
                           >
-                            <span className="codicon codicon-edit" style={{ fontSize: "0.75rem" }} />
+                            <span className="codicon codicon-edit text-xs" />
                           </button>
                           <button
-                            style={{
-                              backgroundColor: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                              padding: "0.125rem",
-                              width: "16px",
-                              height: "16px",
-                              borderRadius: "2px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "#f48771",
-                              transition: "background-color 0.1s",
-                            }}
+                            className="
+                              bg-transparent border-none cursor-pointer p-0.5
+                              w-4 h-4 rounded-sm flex items-center justify-center
+                              text-[#f48771] transition-colors duration-100
+                              hover:bg-white/10
+                            "
                             onClick={(e) => handleDeleteEntity(entity, e)}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = "transparent";
-                            }}
                             title="Delete entity"
                           >
-                            <span className="codicon codicon-trash" style={{ fontSize: "0.75rem" }} />
+                            <span className="codicon codicon-trash text-xs" />
                           </button>
                         </div>
                       )}
