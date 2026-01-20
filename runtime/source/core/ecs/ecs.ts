@@ -2,6 +2,10 @@ export type Entity = string;
 export type ComponentTypeString = string;
 export type Component = { type: ComponentTypeString } & Record<string, unknown>;
 export type EntityComponents = Record<ComponentTypeString, Component>;
+
+export type ClickableEntityProvider = {
+  checkClick: (worldX: number, worldY: number) => string | null;
+};
 export type ECSInstance = {
   entities: Record<Entity, EntityComponents>;
   composedPools: Record<ComponentTypeString, Record<Entity, Component[]>>;
@@ -56,7 +60,6 @@ export const createEntity = (_instance: ECSInstance, name: string): Entity => {
   return name;
 };
 export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
-  // Clear selection if this entity is selected
   if (instance.selectedEntity === entity) {
     instance.selectedEntity = null;
   }
@@ -170,7 +173,7 @@ export const addComponent = <ComponentType extends Component>(
   COMPONENT_TYPE_DEF: ComponentType,
 ) => {
   createComponentReference(instance, entity, COMPONENT_TYPE_DEF);
-  
+
   // Update composed pools
   for (const keyToUpdate of lookupAssociatedComposedPoolKeys(
     instance,
@@ -192,7 +195,7 @@ export const addComponent = <ComponentType extends Component>(
       instance.composedPools[keyToUpdate][entity] = composedComponents;
     }
   }
-  
+
   if (instance.addComponentCallback) {
     const component = lookupComponent(instance, entity, COMPONENT_TYPE_DEF);
     if (component) {
@@ -214,11 +217,11 @@ export const removeComponent = <ComponentType extends Component>(
       delete instance.composedPools[keyToUpdate][entity];
     }
   }
-  
+
   if (instance.removeComponentCallback) {
     instance.removeComponentCallback(entity, COMPONENT_TYPE_DEF);
   }
-  
+
   // Remove component from entity
   const entityComponents = instance.entities[entity];
   if (entityComponents) {
@@ -252,7 +255,7 @@ export const queryComponents = <const ComposedType extends Component[]>(
   // Iterate through all entities
   for (const [entityID, entityComponents] of Object.entries(instance.entities)) {
     const composedComponents: Component[] = [];
-    
+
     // Check if entity has all required components
     for (const componentType of componentTypes) {
       const component = entityComponents[componentType];
@@ -264,7 +267,7 @@ export const queryComponents = <const ComposedType extends Component[]>(
       poolComponents[entityID] = composedComponents;
     }
   }
-  
+
   instance.composedPools[combination] = poolComponents;
   return instance.composedPools[combination] as Record<string, ComposedType>;
 };
@@ -289,7 +292,6 @@ export const runQuery = <const ComposedType extends Component[]>(
 };
 
 export const selectEntity = (instance: ECSInstance, entity: Entity | null) => {
-  // Validate entity exists if not null
   if (entity !== null && !instance.entities[entity]) {
     return;
   }

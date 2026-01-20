@@ -1,5 +1,5 @@
-import type { ContextExtension, RequirePlugin, ClickableEntityProvider } from "./gameContext";
-import type { Component, Entity } from "./ecs/ecs";
+import type { ContextExtension, RequirePlugin } from "./gameContext";
+import type { Component, Entity, ClickableEntityProvider } from "./ecs/ecs";
 import {
   PositionComponentDefinition,
   type PositionComponent,

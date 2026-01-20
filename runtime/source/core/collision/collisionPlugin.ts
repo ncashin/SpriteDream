@@ -1,7 +1,7 @@
-import type { ContextExtension, RequirePlugin, ClickableEntityProvider } from "../gameContext";
+import type { ContextExtension, RequirePlugin } from "../gameContext";
 import { ecsPlugin } from "../scene/ecsAdapter";
 import { spritePlugin } from "../sprite";
-import type { Entity } from "../ecs/ecs";
+import type { Entity, ClickableEntityProvider } from "../ecs/ecs";
 import {
   PositionComponentDefinition,
   ColliderComponentDefinition,
@@ -77,7 +77,7 @@ export function collisionPlugin<
   const colliderClickProvider: ClickableEntityProvider = {
     checkClick: (worldX: number, worldY: number): string | null => {
       let clickedEntity: string | null = null;
-      
+
       context.ecs.runQuery(
         [PositionComponentDefinition, ColliderComponentDefinition],
         (entity: Entity, components: [PositionComponent, ColliderComponent]) => {
@@ -103,7 +103,7 @@ export function collisionPlugin<
           }
         }
       );
-      
+
       return clickedEntity;
     },
   };

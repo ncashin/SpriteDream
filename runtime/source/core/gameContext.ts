@@ -8,14 +8,6 @@ export type InitialGameContext = {
   editorRoot: Root | null;
 };
 
-export type ClickableEntityProvider = {
-  /**
-   * Check if a world position overlaps with any entities handled by this provider.
-   * Returns the entity ID if a hit is found, null otherwise.
-   */
-  checkClick: (worldX: number, worldY: number) => string | null;
-};
-
 export type ContextExtension<T extends InitialGameContext, Extension> = T &
   Extension;
 
@@ -26,10 +18,10 @@ type AccumulatePluginResults<
   Acc = InitialGameContext
 > = T extends readonly [infer First, ...infer Rest]
   ? First extends Plugin<any, infer R>
-    ? Rest extends readonly Plugin<any, any>[]
-      ? AccumulatePluginResults<Rest, Acc & R>
-      : Acc & R
-    : Acc
+  ? Rest extends readonly Plugin<any, any>[]
+  ? AccumulatePluginResults<Rest, Acc & R>
+  : Acc & R
+  : Acc
   : Acc;
 
 export type RequirePlugin<T extends readonly Plugin<any, any>[]> =

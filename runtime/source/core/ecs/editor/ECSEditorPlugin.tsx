@@ -1,4 +1,4 @@
-import type { ContextExtension, RequirePlugin, ClickableEntityProvider } from "../../gameContext";
+import type { ContextExtension, RequirePlugin } from "../../gameContext";
 import { ecsPlugin } from "../../scene/ecsAdapter";
 import { inputPlugin } from "../../input";
 import { useState, useEffect } from "react";
@@ -9,7 +9,7 @@ import { EntityModal } from "./EntityModal";
 import { addDrawCallback, removeDrawCallback, isEditorUpdateEnabled } from "../../gameloop";
 import { registerDragHandler } from "../../dragHandler";
 import { getViewport } from "../../viewport/viewportPlugin";
-import type { Entity } from "../ecs";
+import type { Entity, ClickableEntityProvider } from "../ecs";
 
 /**
  * Finds all ClickableEntityProvider instances on the context object.
