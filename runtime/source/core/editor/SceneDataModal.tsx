@@ -76,7 +76,7 @@ export function SceneDataModal({ isOpen, onClose }: SceneDataModalProps) {
           }}
           onClick={onClose}
         >
-          <span className="codicon codicon-close text-xl" />
+          <span className="codicon codicon-close" />
         </button>
       </div>
       <textarea

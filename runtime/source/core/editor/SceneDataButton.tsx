@@ -8,6 +8,7 @@ export function SceneDataButton() {
     return (
         <>
             <EditorButton onClick={() => setIsOpen(true)}>
+                <span className="codicon codicon-file-code" />
                 Scene Data
             </EditorButton>
             <SceneDataModal

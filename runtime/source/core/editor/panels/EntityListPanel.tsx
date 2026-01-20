@@ -167,20 +167,7 @@ export function EntityListPanel() {
             "
             onClick={handleCreateEntity}
           >
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="flex-shrink-0"
-            >
-              <line x1="6" y1="2" x2="6" y2="10" />
-              <line x1="2" y1="6" x2="10" y2="6" />
-            </svg>
+            <span className="codicon codicon-add" />
             <span>New Entity</span>
           </button>
 

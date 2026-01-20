@@ -199,7 +199,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
           className="flex items-center justify-center w-4 h-4 p-0.5 rounded-sm border-none cursor-pointer text-white/90 transition-colors duration-100 ml-1 bg-transparent hover:bg-white/10"
           onClick={onClose}
         >
-          <span className="codicon codicon-close text-xs" />
+          <span className="codicon codicon-close" />
         </button>
       </div>
 
@@ -218,7 +218,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
             className={`flex items-center gap-1 px-3 py-0.5 text-xs border-none rounded-sm cursor-pointer text-white/90 transition-colors duration-100 min-h-5 ${showAddComponent ? "bg-gray-500/35" : "bg-gray-500/30"
               } hover:bg-gray-500/35 active:bg-gray-500/40`}
           >
-            <span className="codicon codicon-add text-xs" />
+            <span className="codicon codicon-add" />
             <span>Add Component</span>
           </button>
 

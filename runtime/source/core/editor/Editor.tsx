@@ -5,18 +5,15 @@ import { SceneDataButton } from "./SceneDataButton";
 
 export function Editor() {
   return (
-    <>
-      {/* Left Panel - Entity List & Selected Entity */}
-      <div className="absolute top-2 left-2 z-[10000] flex flex-col gap-2 items-start">
+    <div className="flex flex-row w-full h-full justify-between p-2">
+      <div className="flex flex-col gap-2 items-start">
         <EntityListPanel />
         <EntityModalContainer />
       </div>
-
-      {/* Right Panel - Toolbar */}
-      <div className="absolute top-2 right-2 z-[10000] flex gap-2 items-center">
+      <div className="flex gap-2 items-start ml-auto">
         <SceneDataButton />
         <RunStopButton />
       </div>
-    </>
+    </div>
   );
 }
