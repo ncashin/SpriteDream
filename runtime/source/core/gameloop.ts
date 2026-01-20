@@ -24,7 +24,7 @@ export const setEditorEnabled = (enabled: boolean) => {
 
 export const isUpdateEnabled = () => updateEnabled;
 export const isDrawEnabled = () => drawEnabled;
-export const isEditorEnabled = () => editorEnabled;
+export const isEditorUpdateEnabled = () => editorEnabled;
 
 export const addUpdateCallback = (
   callback: (deltaTime: number) => void
@@ -56,7 +56,7 @@ export const removeDrawCallback = (id: CallbackId): boolean => {
   return false;
 };
 
-export const addEditorCallback = (callback: () => void): CallbackId => {
+export const addEditorUpdateCallback = (callback: () => void): CallbackId => {
   if (
     typeof import.meta !== "undefined" &&
     import.meta.env &&

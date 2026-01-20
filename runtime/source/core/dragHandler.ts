@@ -1,6 +1,6 @@
 import type { RequirePlugin } from "./gameContext";
 import { inputPlugin } from "./input";
-import { addEditorCallback } from "./gameloop";
+import { addEditorUpdateCallback } from "./gameloop";
 import { getViewport } from "./viewport/viewportPlugin";
 
 export type DragHandlerContext = RequirePlugin<[typeof inputPlugin]>;
@@ -79,7 +79,7 @@ export function registerDragHandler(
 
   if (!isInitialized) {
     isInitialized = true;
-    addEditorCallback(() => {
+    addEditorUpdateCallback(() => {
       const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
       if (!canvas || dragHandlers.length === 0) return;
 

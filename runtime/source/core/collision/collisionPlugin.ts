@@ -9,7 +9,7 @@ import {
   type PositionComponent,
   type ColliderComponent,
 } from "../ecs/component";
-import { addUpdateCallback, addEditorCallback } from "../gameloop";
+import { addUpdateCallback, addEditorUpdateCallback } from "../gameloop";
 import { updateCollisions, debugDrawColliders } from "../sat";
 import { getViewport } from "../viewport/viewportPlugin";
 
@@ -57,7 +57,7 @@ export function collisionPlugin<
     }
   });
 
-  addEditorCallback(() => {
+  addEditorUpdateCallback(() => {
     if (!context.canvas || !context.context2D) return;
 
     const entities = getCollisionEntities();

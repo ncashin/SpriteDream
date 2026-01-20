@@ -6,7 +6,7 @@ import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { EntityListPanel } from "./EntityListPanel";
 import { EntityModal } from "./EntityModal";
-import { addDrawCallback, removeDrawCallback, isEditorEnabled } from "../../gameloop";
+import { addDrawCallback, removeDrawCallback, isEditorUpdateEnabled } from "../../gameloop";
 import { registerDragHandler } from "../../dragHandler";
 import { getViewport } from "../../viewport/viewportPlugin";
 import type { Entity } from "../ecs";
@@ -177,7 +177,7 @@ export function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, t
       {
         priority: 10,
         canHandle: (worldX, worldY) => {
-          if (!isEditorEnabled()) {
+          if (!isEditorUpdateEnabled()) {
             return false;
           }
           
@@ -221,7 +221,7 @@ export function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, t
     let previousMouseDown = false;
     const canvas = context.canvas as HTMLCanvasElement;
     addDrawCallback(() => {
-      if (!isEditorEnabled() || !canvas) return;
+      if (!isEditorUpdateEnabled() || !canvas) return;
 
       const mousePos = context.input.getMousePosition();
       const isMouseDown = context.input.isMouseButtonPressed("left");

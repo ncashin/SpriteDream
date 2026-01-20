@@ -2,7 +2,7 @@ import type { ContextExtension, RequirePlugin } from "../gameContext";
 import { inputPlugin } from "../input";
 import { addStartCallback } from "../initialization";
 import { registerDragHandler } from "../dragHandler";
-import { isEditorEnabled } from "../gameloop";
+import { isEditorUpdateEnabled } from "../gameloop";
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 
@@ -190,7 +190,7 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
     {
       priority: 0,
       canHandle: () => {
-        if (!isEditorEnabled()) {
+        if (!isEditorUpdateEnabled()) {
           return false;
         }
         return true;
@@ -215,7 +215,7 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
   const gameRoot = document.querySelector("#gameRoot") as HTMLElement | null;
   if (gameRoot) {
     const wheelHandler = (e: WheelEvent) => {
-      if (!isEditorEnabled()) {
+      if (!isEditorUpdateEnabled()) {
         return;
       }
 
