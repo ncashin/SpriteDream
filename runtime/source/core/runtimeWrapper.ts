@@ -14,16 +14,16 @@ export type MainFunction = (initialContext: InitialGameContext) => void;
 
 const isDev = import.meta.env?.DEV === true;
 const isInIframe = window.parent !== window;
-// Check if editor mode is enabled via window flag (set by website)
-const isEditorModeEnabled = typeof window !== 'undefined' && (window as any).__EDITOR_MODE_ENABLED__ === true;
+const isEditorModeEnabled =
+  typeof window !== "undefined" &&
+  (window as any).__EDITOR_MODE_ENABLED__ === true;
 
-let initializeGameFunction: (() => void) | null = null;
+let mainFunction: MainFunction | null = null;
+let isInitialized = false;
+let hasSceneBeenLoaded = false;
 
-export const initializeGame = () => {
-  if (initializeGameFunction) {
-    initializeGameFunction();
-  }
-};
+const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
+const editorRoot = document.querySelector<HTMLDivElement>("#editor")!;
 
 const notifyParent = (command: string, data?: Record<string, unknown>) => {
   if (isInIframe) {
@@ -31,11 +31,33 @@ const notifyParent = (command: string, data?: Record<string, unknown>) => {
   }
 };
 
-const handleMessage = async (
-  event: MessageEvent,
-  gameRoot: HTMLDivElement,
-  initializeGame: () => void
-) => {
+export function runGame() {
+  if (!mainFunction) return;
+
+  resetAllCallbacks();
+
+  if (isDev || isEditorModeEnabled) {
+    initializeEditor();
+    if (!hasSceneBeenLoaded) {
+      setEditorEnabled(true);
+      setUpdateEnabled(false);
+      hasSceneBeenLoaded = true;
+    }
+  } else if (!isInitialized) {
+    setEditorEnabled(false);
+    setUpdateEnabled(true);
+    isInitialized = true;
+  }
+
+  gameRoot.innerHTML = "";
+  mainFunction({
+    rootElement: gameRoot,
+    editorRootElement: editorRoot,
+    editorRoot: getEditorRoot(),
+  });
+}
+
+const handleMessage = async (event: MessageEvent) => {
   const { command, path, content, diff } = event.data;
 
   switch (command) {
@@ -52,7 +74,7 @@ const handleMessage = async (
         }
 
         await setSceneFile(path, fileContent);
-        initializeGame();
+        runGame();
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
@@ -74,68 +96,27 @@ const handleMessage = async (
     case "ping":
       notifyParent("runtimeReady");
       break;
-
-    default:
-      break;
   }
 };
 
-export const defineMainFunction = (mainFunction: MainFunction) => {
-  const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
-  const editorRoot = document.querySelector<HTMLDivElement>("#editor")!;
+export function defineMainFunction(fn: MainFunction) {
+  mainFunction = fn;
+}
 
-  let isFirstInitialization = true;
-  let hasSceneBeenLoaded = false;
+// One-time setup
+window.addEventListener("message", handleMessage);
+notifyParent("runtimeReady");
 
-  const initializeGame = () => {
-    resetAllCallbacks();
-
-    if (isDev || isEditorModeEnabled) {
-      initializeEditor();
-      if (!hasSceneBeenLoaded) {
-        setEditorEnabled(true);
-        setUpdateEnabled(false);
-        hasSceneBeenLoaded = true;
-      }
-    } else if (isFirstInitialization) {
-      setEditorEnabled(false);
-      setUpdateEnabled(true);
-      isFirstInitialization = false;
-    }
-
-    gameRoot.innerHTML = "";
-    mainFunction({
-      rootElement: gameRoot,
-      editorRootElement: editorRoot,
-      editorRoot: getEditorRoot(),
-    });
-  };
-
-  if (!isDev && !isEditorModeEnabled) {
-    initializeGame();
-  } else {
-    initializeEditor();
-  }
-
-  window.addEventListener("message", (event: MessageEvent) => {
-    handleMessage(event, gameRoot, initializeGame);
+if (import.meta.hot) {
+  import.meta.hot.on("vite:afterUpdate", () => {
+    runGame();
   });
 
-  notifyParent("runtimeReady");
+  import.meta.hot.on("vite:error", (error) => {
+    console.error("HMR Error:", error);
+  });
+}
 
-  if (import.meta.hot) {
-    import.meta.hot.on("vite:afterUpdate", () => {
-      initializeGame();
-    });
-
-    import.meta.hot.on("vite:error", (error) => {
-      console.error("HMR Error:", error);
-    });
-  }
-
-  initializeGameFunction = initializeGame;
-
-  return {
-    initializeGame,
-  };
-};
+if (isDev || isEditorModeEnabled) {
+  initializeEditor();
+}

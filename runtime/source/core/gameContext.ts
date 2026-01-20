@@ -1,6 +1,7 @@
 import { setScene } from "./scene/scene";
 import type { Root } from "react-dom/client";
 import { isDevelopment } from "./utils";
+import { defineMainFunction, runGame } from "./runtimeWrapper";
 
 export type InitialGameContext = {
   rootElement: HTMLElement;
@@ -29,15 +30,17 @@ export type RequirePlugin<T extends readonly Plugin<any, any>[]> =
     ecs: ReturnType<typeof import("./ecs/ecs").curryECSInstance>;
   };
 
-export const initializeGameContext = <T extends readonly Plugin<any, any>[]>({
-  initialContext,
-  plugins,
-  initialScene,
-}: {
-  initialContext: InitialGameContext;
+export type GameConfig<T extends readonly Plugin<any, any>[]> = {
   plugins: [...T];
   initialScene: string;
-}): AccumulatePluginResults<T> => {
+  onInit?: (context: AccumulatePluginResults<T>) => void;
+};
+
+function createGameContext<T extends readonly Plugin<any, any>[]>(
+  initialContext: InitialGameContext,
+  plugins: [...T],
+  initialScene: string
+): AccumulatePluginResults<T> {
   if (!isDevelopment) {
     void setScene(initialScene);
   }
@@ -46,4 +49,17 @@ export const initializeGameContext = <T extends readonly Plugin<any, any>[]>({
     (context, plugin) => plugin(context),
     initialContext
   ) as AccumulatePluginResults<T>;
-};
+}
+
+export function initializeGame<T extends readonly Plugin<any, any>[]>({
+  plugins,
+  initialScene,
+  onInit,
+}: GameConfig<T>): void {
+  defineMainFunction((initialContext: InitialGameContext) => {
+    const gameContext = createGameContext(initialContext, plugins, initialScene);
+    onInit?.(gameContext);
+  });
+
+  runGame();
+}
