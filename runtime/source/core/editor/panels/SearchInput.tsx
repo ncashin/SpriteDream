@@ -14,25 +14,9 @@ export function SearchInput({
   autoFocus,
 }: SearchInputProps) {
   return (
-    <div
-      style={{
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        minWidth: 0,
-        width: "100%",
-      }}
-    >
+    <div className="relative flex items-center min-w-0 w-full">
       <span
-        className="codicon codicon-search"
-        style={{
-          fontSize: "0.75rem",
-          color: "rgba(255, 255, 255, 0.6)",
-          position: "absolute",
-          left: "0.5rem",
-          pointerEvents: "none",
-          zIndex: 1,
-        }}
+        className="codicon codicon-search absolute left-2 pointer-events-none z-[1] text-xs text-white/60"
       />
       <input
         type="text"
@@ -41,27 +25,9 @@ export function SearchInput({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
         autoFocus={autoFocus}
+        className="flex-1 w-full py-0.5 pr-3 pl-6 text-xs bg-gray-500/30 text-white/90 border-none rounded-sm outline-none min-w-0 min-h-5 box-border focus:outline focus:outline-1 focus:outline-[#007acc] focus:-outline-offset-1"
         style={{
-          flex: 1,
-          width: "100%",
-          padding: "0.125rem 0.75rem 0.125rem 1.5rem",
-          fontSize: "0.75rem",
-          backgroundColor: "rgba(128, 128, 128, 0.3)",
-          color: "rgba(255, 255, 255, 0.9)",
-          border: "none",
-          borderRadius: "2px",
-          outline: "none",
-          fontFamily: "var(--vscode-font-family, system-ui, -apple-system, sans-serif)",
-          minWidth: 0,
-          minHeight: "20px",
-          boxSizing: "border-box",
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.outline = "1px solid #007acc";
-          e.currentTarget.style.outlineOffset = "-1px";
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.outline = "none";
+          fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
         }}
       />
     </div>

@@ -70,8 +70,10 @@ export function SceneDataModal({ isOpen, onClose }: SceneDataModalProps) {
           Scene Data
         </div>
         <button
-          className="bg-transparent border-none cursor-pointer px-2 py-1 rounded-sm duration-100 ease-out hover:bg-[var(--vscode-button-hoverBackground,rgba(255,255,255,0.1))] flex items-center justify-center"
-          style={{ color: 'var(--vscode-foreground, #cccccc)' }}
+          className="bg-transparent border-none cursor-pointer px-2 py-1 rounded-sm duration-100 ease-out flex items-center justify-center hover:bg-[var(--vscode-button-hoverBackground,rgba(255,255,255,0.1))]"
+          style={{
+            color: 'var(--vscode-foreground, #cccccc)',
+          }}
           onClick={onClose}
         >
           <span className="codicon codicon-close text-xl" />

@@ -127,7 +127,12 @@ export function EntityListPanel() {
   };
 
   return (
-    <div className="flex flex-col w-[250px] bg-gray-500/30 rounded-sm font-[var(--vscode-font-family,system-ui,-apple-system,sans-serif)]">
+    <div
+      className="flex flex-col w-[250px] bg-gray-500/30 rounded-sm"
+      style={{
+        fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
+      }}
+    >
       {/* Header */}
       <button
         className={`

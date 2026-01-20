@@ -132,29 +132,13 @@ function ViewportDebugUI() {
   }, []);
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        zIndex: 10000,
-        padding: "0.5rem",
-        fontSize: "0.75rem",
-        color: "rgba(255, 255, 255, 0.6)",
-        fontFamily: "system-ui, sans-serif",
-        userSelect: "none",
-        lineHeight: 1.5,
-      }}
-    >
+    <div className="absolute bottom-0 left-0 z-[10000] p-2 text-xs text-white/60 font-sans select-none leading-normal">
       <div
         onClick={() => {
           resetViewport();
           setViewportState(getViewport());
         }}
-        style={{
-          cursor: "pointer",
-          marginBottom: "0.25rem",
-        }}
+        className="cursor-pointer mb-1"
       >
         Reset Viewport
       </div>

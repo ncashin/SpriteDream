@@ -7,34 +7,13 @@ export function Editor() {
   return (
     <>
       {/* Left Panel - Entity List & Selected Entity */}
-      <div
-        style={{
-          position: "absolute",
-          top: "0.5rem",
-          left: "0.5rem",
-          zIndex: 10000,
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.5rem",
-          alignItems: "flex-start",
-        }}
-      >
+      <div className="absolute top-2 left-2 z-[10000] flex flex-col gap-2 items-start">
         <EntityListPanel />
         <EntityModalContainer />
       </div>
 
       {/* Right Panel - Toolbar */}
-      <div
-        style={{
-          position: "absolute",
-          top: "0.5rem",
-          right: "0.5rem",
-          zIndex: 10000,
-          display: "flex",
-          gap: "0.5rem",
-          alignItems: "center",
-        }}
-      >
+      <div className="absolute top-2 right-2 z-[10000] flex gap-2 items-center">
         <SceneDataButton />
         <RunStopButton />
       </div>

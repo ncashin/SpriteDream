@@ -186,7 +186,12 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   if (!isOpen || !entity) return null;
 
   return (
-    <div className="flex flex-col bg-[rgb(60,60,60)] rounded-sm font-[var(--vscode-font-family,system-ui,-apple-system,sans-serif)] min-w-[300px] max-w-[500px] max-h-[500px] shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+    <div
+      className="flex flex-col bg-[rgb(60,60,60)] rounded-sm min-w-[300px] max-w-[500px] max-h-[500px] shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+      style={{
+        fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
+      }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between min-h-5 px-1 pl-2 py-1 text-xs border-b border-gray-500/20 text-white/90 select-none rounded-t-sm">
         <span>{entity}</span>
