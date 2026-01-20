@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "name": "Game Bundle Manifest",
+  "description": "Defines the structure and contents of the game bundle for upload",
+  "bundle": {
+    "dist": {
+      "source": "dist",
+      "required": true,
+      "description": "Built runtime distribution files"
+    },
+    "scenes": {
+      "source": "scenes",
+      "required": true,
+      "description": "Game scene files"
+    }
+  },
+  "metadata": {
+    "name": "",
+    "description": "",
+    "author": "",
+    "thumbnail": ""
+  }
+}
+

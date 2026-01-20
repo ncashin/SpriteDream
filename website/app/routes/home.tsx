@@ -1,6 +1,6 @@
 import type { Route } from "./+types/home";
 import { Link, useLoaderData } from "react-router";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Play, PlayIcon } from "@phosphor-icons/react";
 import { db, games } from "../db";
 import { asc } from "drizzle-orm";
@@ -13,7 +13,6 @@ export function meta({ }: Route.MetaArgs) {
 }
 
 export async function loader({ }: Route.LoaderArgs) {
-  // Get the first uploaded game (ordered by createdAt ascending)
   const [firstGame] = await db
     .select({
       id: games.id,
@@ -69,12 +68,32 @@ function TabIcon({ icon }: { icon: Tab["icon"] }) {
   return <i className="codicon codicon-file text-[var(--color-accent)]" />;
 }
 
-function CodeBlock({ gameId }: { gameId: string | null }) {
+function CodeBlock({ gameId, containerRef }: { gameId: string | null; containerRef: React.RefObject<HTMLDivElement | null> }) {
   const [activeTab, setActiveTab] = useState<TabId>("main.scene");
+  const [width, setWidth] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setWidth(containerRef.current.offsetWidth);
+      }
+    };
+    
+    updateWidth();
+    const resizeObserver = new ResizeObserver(updateWidth);
+    resizeObserver.observe(containerRef.current);
+    
+    return () => resizeObserver.disconnect();
+  }, [containerRef]);
 
   return (
-    <div className="relative pt-8 min-w-0 flex-1 h-full">
-      <div className="absolute top-0 left-4 flex z-20">
+    <div 
+      className="fixed top-14 right-10 min-w-0 flex flex-col h-[calc(100vh-6rem)]"
+      style={{ width: width ? `${width}px` : undefined }}
+    >
+      <div className="flex z-20 pl-4">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -90,17 +109,17 @@ function CodeBlock({ gameId }: { gameId: string | null }) {
         ))}
       </div>
 
-      <div className="relative rounded-xl overflow-hidden border border-white/[0.06] bg-[var(--color-bg-base)] shadow-2xl shadow-[var(--color-accent)]/10 h-full w-full min-w-0 flex-1 flex flex-col">
+      <div className="relative rounded-xl overflow-hidden border border-white/[0.06] bg-[var(--color-bg-base)] shadow-2xl shadow-[var(--color-accent)]/10 flex-1 min-w-0 flex flex-col">
         <div className="absolute -top-8 -right-8 w-32 h-32 bg-[var(--color-accent)]/15 rounded-full blur-[60px] pointer-events-none" />
         <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-[var(--color-ember)]/12 rounded-full blur-[80px] pointer-events-none" />
 
-        <div className="relative z-10 h-full overflow-y-auto">
+        <div className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden">
           {activeTab === "main.ts" ? (
-            <div className="pt-5 pl-1 font-mono text-sm leading-relaxed h-full">
+            <div className="pt-5 pl-1 font-mono text-sm leading-relaxed h-full overflow-x-auto">
               {CODE_LINES.map((line, i) => (
                 <div key={i} className="flex items-center gap-4 hover:bg-white/[0.03] -mx-2 px-2 rounded min-w-0">
                   <span className="text-white/25 w-6 text-right text-xs select-none flex-shrink-0">{line.num}</span>
-                  <span className="text-[#d4d4d4] min-w-0 overflow-hidden">{line.content || <>&nbsp;</>}</span>
+                  <span className="text-[#d4d4d4] min-w-0 whitespace-nowrap">{line.content || <>&nbsp;</>}</span>
                 </div>
               ))}
             </div>
@@ -131,7 +150,7 @@ interface SidebarSectionProps {
 function SidebarSection({ title, children }: SidebarSectionProps) {
   return (
     <div className="sidebar-section space-y-3">
-      <h3 className="text-xs font-bold text-white/90 uppercase tracking-wider mb-3">{title}</h3>
+      <h3 className="text-sm font-bold text-white/90 uppercase tracking-wider mb-3">{title}</h3>
       {children}
     </div>
   );
@@ -145,8 +164,8 @@ interface FeatureItemProps {
 function FeatureItem({ title, description }: FeatureItemProps) {
   return (
     <div className="sidebar-item space-y-1">
-      <span className="text-sm font-semibold text-white block leading-tight">{title}</span>
-      <p className="text-xs font-normal text-white/50 leading-relaxed">{description}</p>
+      <span className="text-base font-semibold text-white block leading-tight">{title}</span>
+      <p className="text-sm font-normal text-white/50 leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -171,9 +190,9 @@ function ToolLink({ href, icon, alt, label }: ToolLinkProps) {
         <img
           src={icon}
           alt={alt}
-          className={`w-5 h-5 ${isSvg ? '' : 'rounded-sm'} brightness-110 transition-transform group-hover:scale-110 flex-shrink-0`}
+          className={`w-5 h-5 ${isSvg ? '' : 'rounded-sm'} brightness-110 flex-shrink-0`}
         />
-        <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">{label}</span>
+        <span className="text-base font-medium text-white group-hover:text-white transition-colors">{label}</span>
       </a>
     </li>
   );
@@ -187,24 +206,25 @@ const TOOLS = [
 
 export default function Home() {
   const { gameId } = useLoaderData<typeof loader>();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="h-screen bg-[var(--color-bg-void)] grid-bg overflow-hidden">
+    <div className="h-screen bg-[var(--color-bg-void)] grid-bg overflow-y-auto">
       <div className="spotlight fixed inset-0 pointer-events-none" />
 
-      <section className="h-full flex p-6 overflow-hidden px-10">
-        <div className="flex gap-8 items-start w-full h-full">
-          <div className="sidebar flex flex-col justify-between h-full pb-4">
+      <section className="flex p-6 px-10">
+        <div className="flex gap-8 items-start w-full">
+          <div className="sidebar flex flex-col justify-between pb-4">
             <div className="space-y-7 pt-16 max-w-full">
               <div className="flex flex-row h-min gap-3 w-full min-w-0 items-center">
                 <img
                   src="/logo.svg"
                   alt="GameIDE Logo"
-                  className="flex-shrink-0 h-[3rem] pt-0.5 max-h-full max-w-full object-contain"
+                  className="flex-shrink-0 h-[4rem] pt-0.5 max-h-full max-w-full object-contain"
                 />
                 <div className="flex flex-col items-start w-full min-w-0">
-                  <h1 className="text-xl font-bold tracking-tight text-white leading-tight">GameIDE</h1>
-                  <p className="text-sm font-medium text-white/60 mt-1 leading-relaxed">The Engine that works where you do</p>
+                  <h1 className="text-3xl font-bold tracking-tight text-white leading-tight">GameIDE</h1>
+                  <p className="text-base font-medium text-white/60 mt-1 leading-relaxed">The Engine that works where you do</p>
                 </div>
               </div>
 
@@ -235,7 +255,7 @@ export default function Home() {
               </SidebarSection>
 
               <SidebarSection title="Made to work with the tools you love">
-                <ul className="flex flex-col gap-2 list-none">
+                <ul className="flex flex-col list-none">
                   {TOOLS.map((tool) => (
                     <ToolLink key={tool.href} {...tool} />
                   ))}
@@ -248,7 +268,7 @@ export default function Home() {
                 href="https://marketplace.visualstudio.com/items?itemName=gameide.gameide"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium rounded-lg border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 hover:border-white/20 transition-all"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 hover:border-white/20 transition-all"
                 aria-label="Download Extension"
               >
                 <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
@@ -258,7 +278,7 @@ export default function Home() {
               </a>
               <Link
                 to="/explore"
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium rounded-lg border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 hover:border-white/20 transition-all"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 hover:border-white/20 transition-all"
                 aria-label="Play Games"
               >
                 <PlayIcon className="w-3.5 h-3.5 flex-shrink-0" weight="fill" />
@@ -267,8 +287,9 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="min-w-0 overflow-hidden flex-1 pt-8 h-full">
-            <CodeBlock gameId={gameId} />
+          <div ref={containerRef} className="min-w-0 flex-1 pt-8 hidden lg:block">
+            <div className="w-full h-[calc(100vh-8rem)]" aria-hidden="true" />
+            <CodeBlock gameId={gameId} containerRef={containerRef} />
           </div>
         </div>
       </section>
