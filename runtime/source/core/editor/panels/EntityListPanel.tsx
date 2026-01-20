@@ -161,13 +161,26 @@ export function EntityListPanel() {
             className="
               flex items-center gap-1 w-full min-h-5 px-2 py-1
               text-xs text-[#cccccc] cursor-pointer
-              bg-black/10 border-none border-b border-gray-500/20
+              bg-black/10 border-b border-gray-500/20
               transition-colors duration-100
               hover:bg-white/10
             "
             onClick={handleCreateEntity}
           >
-            <span className="codicon codicon-add text-xs" />
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="flex-shrink-0"
+            >
+              <line x1="6" y1="2" x2="6" y2="10" />
+              <line x1="2" y1="6" x2="10" y2="6" />
+            </svg>
             <span>New Entity</span>
           </button>
 
@@ -228,27 +241,27 @@ export function EntityListPanel() {
                         >
                           <button
                             className="
-                              bg-transparent border-none cursor-pointer p-0.5
-                              w-4 h-4 rounded-sm flex items-center justify-center
+                              bg-transparent border-none cursor-pointer p-1
+                              w-4 h-4 rounded-md flex items-center justify-center
                               text-white/90 transition-colors duration-100
                               hover:bg-white/10
                             "
                             onClick={(e) => handleStartRename(entity, e)}
                             title="Rename entity"
                           >
-                            <span className="codicon codicon-edit text-xs" />
+                            <span className="codicon codicon-edit text-[10px]" />
                           </button>
                           <button
                             className="
-                              bg-transparent border-none cursor-pointer p-0.5
-                              w-4 h-4 rounded-sm flex items-center justify-center
+                              bg-transparent border-none cursor-pointer p-1
+                              w-4 h-4 rounded-md flex items-center justify-center
                               text-[#f48771] transition-colors duration-100
                               hover:bg-white/10
                             "
                             onClick={(e) => handleDeleteEntity(entity, e)}
                             title="Delete entity"
                           >
-                            <span className="codicon codicon-trash text-xs" />
+                            <span className="codicon codicon-trash text-[10px]" />
                           </button>
                         </div>
                       )}
