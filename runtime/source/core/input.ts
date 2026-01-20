@@ -90,13 +90,10 @@ export function inputPlugin<T extends InitialGameContext>(
     if (e.button === 2) mouse.buttons.right = false;
   });
 
-  // Prevent context menu on right click
   window.addEventListener("contextmenu", (e) => {
     e.preventDefault();
   });
 
-  // Update previous keys at the end of each frame (after all update callbacks)
-  // This ensures isKeyDown / isKeyUp work correctly by comparing to the previous frame
   addDrawCallback(() => {
     Object.assign(previousKeys, keys);
   });
