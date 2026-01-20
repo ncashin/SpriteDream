@@ -1,6 +1,6 @@
 import type { Route } from "./+types/home";
 import { Link, useLoaderData } from "react-router";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Play, PlayIcon } from "@phosphor-icons/react";
 import { db, games } from "../db";
 import { asc } from "drizzle-orm";
@@ -68,30 +68,25 @@ function TabIcon({ icon }: { icon: Tab["icon"] }) {
   return <i className="codicon codicon-file text-[var(--color-accent)]" />;
 }
 
-function CodeBlock({ gameId, containerRef }: { gameId: string | null; containerRef: React.RefObject<HTMLDivElement | null> }) {
+function CodeBlock({ gameId }: { gameId: string | null }) {
   const [activeTab, setActiveTab] = useState<TabId>("main.scene");
-  const [width, setWidth] = useState<number | undefined>(undefined);
+  const [highlightedLines, setHighlightedLines] = useState<Set<number>>(new Set());
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setWidth(containerRef.current.offsetWidth);
+  const toggleLineHighlight = (lineNum: number) => {
+    setHighlightedLines(prev => {
+      const next = new Set(prev);
+      if (next.has(lineNum)) {
+        next.delete(lineNum);
+      } else {
+        next.add(lineNum);
       }
-    };
-    
-    updateWidth();
-    const resizeObserver = new ResizeObserver(updateWidth);
-    resizeObserver.observe(containerRef.current);
-    
-    return () => resizeObserver.disconnect();
-  }, [containerRef]);
+      return next;
+    });
+  };
 
   return (
     <div 
-      className="fixed top-14 right-4 md:right-10 min-w-0 flex flex-col h-[calc(100vh-6rem)] max-w-[calc(100vw-2rem)] md:max-w-none"
-      style={{ width: width ? `${width}px` : undefined }}
+      className="fixed top-14 right-2 md:right-4 w-[calc(100vw-1rem)] md:w-[calc(100vw-var(--sidebar-width)-5rem)] flex flex-col h-[calc(100vh-6rem)] max-w-[calc(100vw-1rem)] md:max-w-none"
     >
       <div className="flex z-20 pl-4">
         {TABS.map((tab) => (
@@ -116,21 +111,60 @@ function CodeBlock({ gameId, containerRef }: { gameId: string | null; containerR
         <div className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden">
           {activeTab === "main.ts" ? (
             <div className="pt-5 pl-1 font-mono text-sm leading-relaxed h-full overflow-x-hidden">
-              {CODE_LINES.map((line, i) => (
-                <div key={i} className="flex items-center gap-4 hover:bg-white/[0.03] -mx-2 px-2 rounded min-w-0">
-                  <span className="text-white/25 w-6 text-right text-xs select-none flex-shrink-0">{line.num}</span>
-                  <span className="text-[#d4d4d4] min-w-0 whitespace-nowrap">{line.content || <>&nbsp;</>}</span>
-                </div>
-              ))}
+              {CODE_LINES.map((line, i) => {
+                const isHighlighted = highlightedLines.has(line.num);
+                return (
+                  <div 
+                    key={i} 
+                    onClick={() => toggleLineHighlight(line.num)}
+                    className={`flex items-center gap-4 hover:bg-white/[0.03] -mx-2 px-2 rounded min-w-0 cursor-pointer transition-colors ${
+                      isHighlighted ? "bg-[var(--color-accent)]/20 border-l-2 border-[var(--color-accent)]" : ""
+                    }`}
+                  >
+                    <span className="text-white/25 w-6 text-right text-xs select-none flex-shrink-0">{line.num}</span>
+                    <span className="text-[#d4d4d4] min-w-0 whitespace-nowrap">{line.content || <>&nbsp;</>}</span>
+                  </div>
+                );
+              })}
             </div>
           ) : gameId ? (
-            <iframe
-              src={`/api/games/${gameId}/bundle`}
-              className="w-full h-full border-0"
-              title="Demo Game"
-              allow="fullscreen"
-              allowFullScreen
-            />
+            <div className="relative w-full h-full">
+              <iframe
+                src={`/api/games/${gameId}/bundle`}
+                className="w-full h-full border-0"
+                title="Demo Game"
+                allow="fullscreen"
+                allowFullScreen
+              />
+              {highlightedLines.size > 0 && (
+                <div className="absolute inset-0 pointer-events-none z-10">
+                  {Array.from(highlightedLines).map((lineNum) => {
+                    const lineIndex = CODE_LINES.findIndex(l => l.num === lineNum);
+                    if (lineIndex === -1) return null;
+                    
+                    // Calculate position based on line number (approximate)
+                    const lineHeight = 24; // Approximate line height in pixels
+                    const topOffset = 20; // Padding top
+                    const yPosition = topOffset + (lineIndex * lineHeight);
+                    
+                    return (
+                      <div
+                        key={lineNum}
+                        className="absolute left-0 right-0 border-l-4 border-[var(--color-accent)] bg-[var(--color-accent)]/10"
+                        style={{
+                          top: `${yPosition}px`,
+                          height: `${lineHeight}px`,
+                        }}
+                      >
+                        <div className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-mono text-[var(--color-accent)] bg-[var(--color-bg-base)] px-1.5 py-0.5 rounded border border-[var(--color-accent)]/30">
+                          Line {lineNum}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="pt-5 pl-1 font-mono text-sm leading-relaxed h-full flex items-center justify-center text-white/40">
               No games uploaded yet
@@ -206,15 +240,14 @@ const TOOLS = [
 
 export default function Home() {
   const { gameId } = useLoaderData<typeof loader>();
-  const containerRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="h-screen bg-[var(--color-bg-void)] grid-bg overflow-y-auto">
       <div className="spotlight fixed inset-0 pointer-events-none" />
 
-      <section className="flex pb-12 pt-12  px-10">
-        <div className="flex gap-8 items-start w-full">
-          <div className="sidebar flex flex-col justify-between pb-4">
+      <section className="flex pb-12 pt-12 px-10 h-[calc(100vh-3.5rem)]">
+        <div className="flex gap-8 items-start w-full h-full">
+          <div className="sidebar flex flex-col justify-between pb-14">
             <div className="space-y-7 max-w-full">
               <div className="flex flex-row h-min gap-3.5 w-full min-w-0 items-center">
                 <img
@@ -287,9 +320,8 @@ export default function Home() {
             </div>
           </div>
 
-          <div ref={containerRef} className="min-w-0 flex-1 pt-8 hidden md:block">
-            <div className="w-full h-[calc(100vh-8rem)]" aria-hidden="true" />
-            <CodeBlock gameId={gameId} containerRef={containerRef} />
+          <div className="min-w-0 flex-1 pt-8 hidden md:block relative h-full">
+            <CodeBlock gameId={gameId} />
           </div>
         </div>
       </section>
