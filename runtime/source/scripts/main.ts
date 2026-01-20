@@ -26,7 +26,7 @@ export const PlayerComponentDefinition: PlayerComponent = defineComponent(
   },
   {
     displayName: "Player",
-    description: "Player-controlled entity",
+    description: "Player controlled entity",
   }
 );
 

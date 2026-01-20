@@ -268,8 +268,8 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
               backgroundColor: isAddButtonPressed
                 ? "rgba(128, 128, 128, 0.4)"
                 : isAddButtonHovered || showAddComponent
-                ? "rgba(128, 128, 128, 0.35)"
-                : "rgba(128, 128, 128, 0.3)",
+                  ? "rgba(128, 128, 128, 0.35)"
+                  : "rgba(128, 128, 128, 0.3)",
               border: "none",
               borderRadius: "2px",
               cursor: "pointer",

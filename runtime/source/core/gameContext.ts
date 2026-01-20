@@ -14,7 +14,7 @@ export type ContextExtension<T extends InitialGameContext, Extension> = T &
 
 export type Plugin<Context = any, Result = any> = (context: Context) => Result;
 
-type AccumulatePluginResults<
+export type AccumulatePluginResults<
   T extends readonly Plugin<any, any>[],
   Acc = InitialGameContext
 > = T extends readonly [infer First, ...infer Rest]
@@ -31,34 +31,34 @@ export type RequirePlugin<T extends readonly Plugin<any, any>[]> =
   };
 
 export type GameConfig<T extends readonly Plugin<any, any>[]> = {
-  plugins: [...T];
+  plugins: T;
   initialScene: string;
-  onInit?: (context: AccumulatePluginResults<T>) => void;
+  main?: (context: AccumulatePluginResults<T>) => void;
 };
 
 function createGameContext<T extends readonly Plugin<any, any>[]>(
   initialContext: InitialGameContext,
-  plugins: [...T],
+  plugins: T,
   initialScene: string
 ): AccumulatePluginResults<T> {
   if (!isDevelopment) {
     void setScene(initialScene);
   }
 
-  return plugins.reduce(
+  return (plugins as unknown as Plugin<any, any>[]).reduce(
     (context, plugin) => plugin(context),
-    initialContext
-  ) as AccumulatePluginResults<T>;
+    initialContext as AccumulatePluginResults<T>
+  );
 }
 
 export function initializeGame<T extends readonly Plugin<any, any>[]>({
   plugins,
   initialScene,
-  onInit,
+  main,
 }: GameConfig<T>): void {
   defineMainFunction((initialContext: InitialGameContext) => {
     const gameContext = createGameContext(initialContext, plugins, initialScene);
-    onInit?.(gameContext);
+    main?.(gameContext);
   });
 
   runGame();

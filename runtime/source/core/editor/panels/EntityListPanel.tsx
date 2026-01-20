@@ -239,8 +239,8 @@ export function EntityListPanel() {
                       selectedEntity === entity
                         ? "#04395e"
                         : hoveredEntity === entity
-                        ? "rgba(255, 255, 255, 0.1)"
-                        : "transparent",
+                          ? "rgba(255, 255, 255, 0.1)"
+                          : "transparent",
                     transition: "background-color 0.1s",
                     display: "flex",
                     alignItems: "center",
