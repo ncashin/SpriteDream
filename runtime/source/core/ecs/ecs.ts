@@ -326,7 +326,7 @@ export const curryECSInstance = (instance: ECSInstance) => ({
     COMPONENT_TYPE_DEF: ComponentType,
   ): ComponentType | undefined =>
     getComponent(instance, entity, COMPONENT_TYPE_DEF),
-  getEntity: (entity: Entity): Record<string, Component> =>
+  getEntity: (entity: Entity): any =>
     getEntity(instance, entity),
   queryComponents: <const ComposedType extends Component[]>(
     COMPONENT_TYPE_DEFS: ComposedType,

@@ -1,17 +1,13 @@
 import { EntityListPanel } from "./panels/EntityListPanel";
 import { EntityModalContainer } from "./panels/EntityModalContainer";
-import { ECSContextInitializer, type ECSContextType } from "./EditorContext";
+import { EntityStateSynchronizer } from "./EditorContext";
 import { RunStopButton } from "./RunStopButton";
 import { SceneDataButton } from "./SceneDataButton";
 
-interface EditorProps {
-  ecsContext: ECSContextType | null;
-}
-
-export function Editor({ ecsContext }: EditorProps) {
+export function Editor() {
   return (
     <>
-      <ECSContextInitializer ecsContext={ecsContext} />
+      <EntityStateSynchronizer />
 
       {/* Left Panel - Entity List & Selected Entity */}
       <div
@@ -26,12 +22,8 @@ export function Editor({ ecsContext }: EditorProps) {
           alignItems: "flex-start",
         }}
       >
-        {ecsContext && (
-          <>
-            <EntityListPanel />
-            <EntityModalContainer />
-          </>
-        )}
+        <EntityListPanel />
+        <EntityModalContainer />
       </div>
 
       {/* Right Panel - Toolbar */}

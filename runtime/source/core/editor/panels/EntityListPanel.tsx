@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import type { Entity } from "../../ecs/ecs";
-import { useEditorContext } from "../EditorContext";
+import { useGameContext } from "../EditorContext";
 import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 
 export function EntityListPanel() {
-  const ecsContext = useEditorContext();
+  const gameContext = useGameContext();
+  const ecs = gameContext?.ecs as any;
   const [isExpanded, setIsExpanded] = useState(true);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [isHovered, setIsHovered] = useState(false);
@@ -16,10 +17,10 @@ export function EntityListPanel() {
 
   // Sync entities from ECS
   useEffect(() => {
-    if (!ecsContext) return;
+    if (!ecs) return;
 
     const updateEntities = () => {
-      const allEntities = Object.keys(ecsContext.ecs.ecsInstance.entities);
+      const allEntities = Object.keys(ecs.ecsInstance.entities);
       setEntities((prev) => {
         if (
           prev.length !== allEntities.length ||
@@ -37,14 +38,14 @@ export function EntityListPanel() {
     return () => {
       removeDrawCallback(callbackId);
     };
-  }, [ecsContext]);
+  }, [ecs]);
 
   // Sync selected entity
   useEffect(() => {
-    if (!ecsContext) return;
+    if (!ecs) return;
 
     const updateSelection = () => {
-      setSelectedEntity(ecsContext.ecs.getSelectedEntity() ?? null);
+      setSelectedEntity(ecs.getSelectedEntity() ?? null);
     };
 
     updateSelection();
@@ -53,7 +54,7 @@ export function EntityListPanel() {
     return () => {
       removeDrawCallback(callbackId);
     };
-  }, [ecsContext]);
+  }, [ecs]);
 
   // Focus rename input
   useEffect(() => {
@@ -63,10 +64,10 @@ export function EntityListPanel() {
     }
   }, [renamingEntity]);
 
-  if (!ecsContext) return null;
+  if (!ecs) return null;
 
   const handleCreateEntity = () => {
-    const allEntities = Object.keys(ecsContext.ecs.ecsInstance.entities);
+    const allEntities = Object.keys(ecs.ecsInstance.entities);
     let entityName = "newEntity";
     let counter = 0;
 
@@ -75,14 +76,14 @@ export function EntityListPanel() {
       entityName = `newEntity${counter}`;
     }
 
-    const newEntity = ecsContext.ecs.createEntity(entityName);
-    ecsContext.ecs.addComponent(newEntity, { type: "position", x: 0, y: 0 });
-    ecsContext.ecs.selectEntity(newEntity);
+    const newEntity = ecs.createEntity(entityName);
+    ecs.addComponent(newEntity, { type: "position", x: 0, y: 0 });
+    ecs.selectEntity(newEntity);
   };
 
   const handleDeleteEntity = (entity: Entity, e: React.MouseEvent) => {
     e.stopPropagation();
-    ecsContext.ecs.destroyEntity(entity);
+    ecs.destroyEntity(entity);
     setHoveredEntity(null);
   };
 
@@ -99,17 +100,17 @@ export function EntityListPanel() {
 
     const newName = renameValue.trim();
     if (newName && newName !== renamingEntity) {
-      const allEntities = Object.keys(ecsContext.ecs.ecsInstance.entities);
+      const allEntities = Object.keys(ecs.ecsInstance.entities);
       if (!allEntities.includes(newName)) {
-        const oldEntityData = ecsContext.ecs.getEntity(renamingEntity);
-        const newEntity = ecsContext.ecs.createEntity(newName);
+        const oldEntityData = ecs.getEntity(renamingEntity);
+        const newEntity = ecs.createEntity(newName);
 
         for (const component of Object.values(oldEntityData)) {
-          ecsContext.ecs.addComponent(newEntity, component);
+          ecs.addComponent(newEntity, component);
         }
 
-        ecsContext.ecs.destroyEntity(renamingEntity);
-        ecsContext.ecs.selectEntity(newEntity);
+        ecs.destroyEntity(renamingEntity);
+        ecs.selectEntity(newEntity);
       }
     }
 
@@ -246,7 +247,7 @@ export function EntityListPanel() {
                     alignItems: "center",
                     gap: "0.25rem",
                   }}
-                  onClick={() => ecsContext.ecs.selectEntity(entity)}
+                  onClick={() => ecs.selectEntity(entity)}
                   onMouseEnter={() => setHoveredEntity(entity)}
                   onMouseLeave={() => setHoveredEntity(null)}
                 >

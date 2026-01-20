@@ -1,6 +1,6 @@
-import { atom, useAtomValue, useSetAtom, useAtom } from "jotai";
+import { atom, useAtomValue, useSetAtom, getDefaultStore } from "jotai";
 import { useEffect, useRef } from "react";
-import type { Entity, Component, EntityComponents } from "../ecs/ecs";
+import type { Entity, EntityComponents } from "../ecs/ecs";
 import { addDrawCallback, removeDrawCallback } from "../gameloop";
 import { useScene } from "./useScene";
 
@@ -8,24 +8,8 @@ import { useScene } from "./useScene";
 // Types
 // ============================================================================
 
-export interface ECSContextType {
-    ecs: {
-        ecsInstance: {
-            entities: Record<Entity, EntityComponents>;
-        };
-        getEntity: (entity: Entity) => Record<string, Component>;
-        createEntity: (name: string) => Entity;
-        destroyEntity: (entity: Entity) => void;
-        addComponent: <ComponentType extends Component>(
-            entity: Entity,
-            component: ComponentType
-        ) => void;
-        removeComponent: (entity: Entity, component: Component) => void;
-        selectEntity: (entity: Entity | null) => void;
-        getSelectedEntity: () => Entity | null;
-        clearSelection: () => void;
-    };
-}
+/** The full game context - dynamically built from plugins */
+export type GameContextType = Record<string, unknown>;
 
 export interface EntityState {
     /** All entity IDs */
@@ -42,8 +26,13 @@ export interface EntityState {
 // Atoms
 // ============================================================================
 
-/** Atom holding the ECS context */
-export const ecsContextAtom = atom<ECSContextType | null>(null);
+/** Atom holding the full game context */
+export const gameContextAtom = atom<GameContextType | null>(null);
+
+/** Setter for external code to update the game context */
+export function setGameContext(context: GameContextType | null) {
+    getDefaultStore().set(gameContextAtom, context);
+}
 
 /** Atom holding entity state */
 export const entityStateAtom = atom<EntityState>({
@@ -66,9 +55,9 @@ export const entityComponentsAtom = atom((get) => get(entityStateAtom).entityCom
 // Hooks
 // ============================================================================
 
-/** Hook to read the ECS context */
-export function useEditorContext() {
-    return useAtomValue(ecsContextAtom);
+/** Hook to read the full game context */
+export function useGameContext() {
+    return useAtomValue(gameContextAtom);
 }
 
 /** Hook for reading entities list only (optimized - won't re-render on selection change) */
@@ -102,31 +91,27 @@ export function useIsEntityValid(entity: Entity | null) {
 // Components
 // ============================================================================
 
-/** Component to initialize ECS context and sync entity state */
-export function ECSContextInitializer({ ecsContext }: { ecsContext: ECSContextType | null }) {
-    const setEcsContext = useSetAtom(ecsContextAtom);
-    const [entityState, setEntityState] = useAtom(entityStateAtom);
+/** Component to sync entity state from the game context */
+export function EntityStateSynchronizer() {
+    const gameContext = useAtomValue(gameContextAtom);
+    const setEntityState = useSetAtom(entityStateAtom);
     const prevStateRef = useRef<{ entities: Entity[]; selectedEntity: Entity | null }>({
         entities: [],
         selectedEntity: null,
     });
 
-    // Set context
-    useEffect(() => {
-        setEcsContext(ecsContext);
-    }, [ecsContext, setEcsContext]);
-
     // Sync scene state (for non-entity scene data)
     useScene();
 
-    // Sync entity state from ECS context
+    // Sync entity state from game context
     useEffect(() => {
-        if (!ecsContext) return;
+        const ecs = gameContext?.ecs as any;
+        if (!ecs) return;
 
         const syncEntityState = () => {
-            const currentEntities = Object.keys(ecsContext.ecs.ecsInstance.entities);
-            const currentEntityComponents = ecsContext.ecs.ecsInstance.entities;
-            const currentSelectedEntity = ecsContext.ecs.getSelectedEntity() ?? null;
+            const currentEntities = Object.keys(ecs.ecsInstance.entities);
+            const currentEntityComponents = ecs.ecsInstance.entities;
+            const currentSelectedEntity = ecs.getSelectedEntity() ?? null;
 
             // Check if anything changed to avoid unnecessary updates
             const prev = prevStateRef.current;
@@ -159,7 +144,7 @@ export function ECSContextInitializer({ ecsContext }: { ecsContext: ECSContextTy
         return () => {
             removeDrawCallback(callbackId);
         };
-    }, [ecsContext, setEntityState]);
+    }, [gameContext, setEntityState]);
 
     return null;
 }

@@ -5,7 +5,7 @@ import { addDrawCallback, isEditorUpdateEnabled } from "../../gameloop";
 import { registerDragHandler } from "../../dragHandler";
 import { getViewport } from "../../viewport/viewportPlugin";
 import type { ClickableEntityProvider } from "../ecs";
-import { setEditorECSContext } from "../../editor/editorInitializer";
+import { setEditorGameContext } from "../../editor/editorInitializer";
 
 function getClickProviders(context: any): ClickableEntityProvider[] {
   const providers: ClickableEntityProvider[] = [];
@@ -50,8 +50,8 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
     return;
   }
 
-  // Register the ECS context with the editor
-  setEditorECSContext(context);
+  // Register the game context with the editor
+  setEditorGameContext(context);
 
   if (!("input" in context && "ecs" in context && "canvas" in context)) {
     return;

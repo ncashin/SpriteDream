@@ -30,19 +30,28 @@ export const PlayerComponentDefinition: PlayerComponent = defineComponent(
   }
 );
 
+
 export function initializePlayer(
   gameContext: RequirePlugin<[typeof ecsPlugin, typeof inputPlugin]>,
   playerEntityId: string = "player"
 ) {
-  const playerEntity = gameContext.ecs.getEntity(playerEntityId);;
+  registerResolver(
+    {
+      name: "player",
+      resolveCollision: (_ecs, entity, other, overlapAmount, overlapNormal) => {
+        if (entity === other) {
+          return;
+        }
 
-  const PLATFORMER_RESOLVER: ResolverDefinition = {
-    name: "platformer",
-    resolveCollision: (_ecs, entity, other, overlapAmount, overlapNormal) => {
-      if (entity === other) return;
+        const playerEntity = gameContext.ecs.getEntity(entity);
+        if (
+          !playerEntity ||
+          !playerEntity.position ||
+          !playerEntity.velocity ||
+          !playerEntity.collider
+        )
+          return;
 
-      if (entity === playerEntityId && playerEntity) {
-        if (!playerEntity.position || !playerEntity.velocity || !playerEntity.collider) return;
 
         const correction = scale(overlapNormal, overlapAmount);
 
@@ -53,53 +62,42 @@ export function initializePlayer(
         const isUpwardCorrection = correction[1] < 0;
         const isLandingOnTop = isVerticalCollision && isUpwardCorrection;
 
-        if (playerEntity.velocity.y > 0 && isLandingOnTop) {
-          playerEntity.velocity.y = 0;
-          if (playerEntity.player) {
-            playerEntity.player.isGrounded = true;
-          }
-        }
-      }
-    },
-  };
+        if (playerEntity.velocity.y <= 0 || !isLandingOnTop)
+          return;
 
-  registerResolver(PLATFORMER_RESOLVER);
-
-  addStartCallback(() => {
-    playerEntity = gameContext.ecs.getEntity(playerEntityId);
-  });
+        playerEntity.velocity.y = 0;
+        playerEntity.player.isGrounded = true;
+      },
+    });
 
   addUpdateCallback((deltaTime: number) => {
-    if (
-      !playerEntity ||
-      !playerEntity.position ||
-      !playerEntity.velocity ||
-      !playerEntity.player
-    )
-      return;
+    const playerEntity = gameContext.ecs.getEntity(playerEntityId);
+    if (!playerEntity || !playerEntity.player || !playerEntity.velocity) return;
 
-    const player = playerEntity.player;
-    const velocity = playerEntity.velocity;
-    const speed = player.speed;
-    const gravity = player.gravity;
-    const jumpStrength = player.jumpStrength;
+    const { input } = gameContext;
+    const { speed, jumpStrength, gravity } = playerEntity.player;
 
-    if (gameContext.input.isKeyPressed("a")) {
-      velocity.x = -speed;
-    } else if (gameContext.input.isKeyPressed("d")) {
-      velocity.x = speed;
+    if (input.isKeyPressed("a")) {
+      playerEntity.velocity.x = -speed;
+    } else if (input.isKeyPressed("d")) {
+      playerEntity.velocity.x = speed;
     } else {
-      velocity.x *= 0.8;
-      if (Math.abs(velocity.x) < 1) {
-        velocity.x = 0;
+      playerEntity.velocity.x *= 0.8;
+      if (Math.abs(playerEntity.velocity.x) < 1) {
+        playerEntity.velocity.x = 0;
       }
     }
 
-    if (gameContext.input.isKeyPressed(" ") && player.isGrounded) {
-      velocity.y = -jumpStrength;
-      player.isGrounded = false;
-    }
 
-    velocity.y += gravity * deltaTime;
+
+    // Gravity
+    playerEntity.velocity.y += gravity * deltaTime;
+
+    // Jumping
+    if (input.isKeyPressed(" ") && playerEntity.player.isGrounded) return;
+
+    playerEntity.velocity.y = -jumpStrength;
+    playerEntity.player.isGrounded = false;
+
   });
 }

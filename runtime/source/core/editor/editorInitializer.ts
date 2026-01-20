@@ -1,14 +1,13 @@
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Editor } from "./Editor";
-import type { ECSContextType } from "./EditorContext";
+import { setGameContext, type GameContextType } from "./EditorContext";
 
 let editorRoot: Root | null = null;
 let editorContainer: HTMLDivElement | null = null;
-let currentECSContext: ECSContextType | null = null;
 
-export function setEditorECSContext(context: ECSContextType | null) {
-  currentECSContext = context;
+export function setEditorGameContext(context: GameContextType | null) {
+  setGameContext(context);
   renderEditor();
 }
 
@@ -38,7 +37,7 @@ export function initializeEditor() {
 
 function renderEditor() {
   if (editorRoot) {
-    editorRoot.render(React.createElement(Editor, { ecsContext: currentECSContext }));
+    editorRoot.render(React.createElement(Editor));
   }
 }
 

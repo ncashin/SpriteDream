@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import type { Component, Entity } from "../../ecs/ecs";
-import { useEditorContext } from "../EditorContext";
+import { useGameContext } from "../EditorContext";
 import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 import { componentRegistry } from "../../ecs/component";
 import { SearchInput } from "./SearchInput";
@@ -12,7 +12,8 @@ interface EntityModalProps {
 }
 
 export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
-  const ecsContext = useEditorContext();
+  const gameContext = useGameContext();
+  const ecs = gameContext?.ecs as any;
   const [entityData, setEntityData] = useState("");
   const [isValid, setIsValid] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
@@ -49,9 +50,9 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
 
   // Filter available components
   const availableComponents = useMemo(() => {
-    if (!entity || !ecsContext) return [];
+    if (!entity || !ecs) return [];
 
-    const currentComponents = ecsContext.ecs.getEntity(entity);
+    const currentComponents = ecs.getEntity(entity);
     const query = componentSearchQuery.toLowerCase();
 
     return Object.entries(componentRegistry)
@@ -64,16 +65,16 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         return matchesQuery && notAlreadyAdded;
       })
       .map(([type, def]) => ({ type, def }));
-  }, [entity, ecsContext, componentSearchQuery]);
+  }, [entity, ecs, componentSearchQuery]);
 
   // Sync entity data from ECS
   useEffect(() => {
-    if (!isOpen || !entity || !ecsContext) return;
+    if (!isOpen || !entity || !ecs) return;
 
     const updateEntityData = () => {
       if (isFocused) return;
       try {
-        const data = ecsContext.ecs.getEntity(entity);
+        const data = ecs.getEntity(entity);
         setEntityData(JSON.stringify(data, null, 2));
         setIsValid(true);
       } catch (error) {
@@ -114,7 +115,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       document.removeEventListener("keydown", handleEscape);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen, entity, ecsContext, isFocused, onClose, showAddComponent]);
+  }, [isOpen, entity, ecs, isFocused, onClose, showAddComponent]);
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -125,7 +126,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     }
 
     updateTimeoutRef.current = setTimeout(() => {
-      if (!entity || !ecsContext) return;
+      if (!entity || !ecs) return;
 
       try {
         const parsedData = JSON.parse(value) as Record<string, Component>;
@@ -146,18 +147,18 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         }
 
         if (valid) {
-          const currentData = ecsContext.ecs.getEntity(entity);
+          const currentData = ecs.getEntity(entity);
 
           // Remove deleted components
           for (const componentType of Object.keys(currentData)) {
             if (!parsedData[componentType]) {
-              ecsContext.ecs.removeComponent(entity, currentData[componentType]);
+              ecs.removeComponent(entity, currentData[componentType]);
             }
           }
 
           // Add/update components
           for (const [componentType, component] of Object.entries(parsedData)) {
-            ecsContext.ecs.addComponent(entity, {
+            ecs.addComponent(entity, {
               ...component,
               type: component.type || componentType,
             } as Component);
@@ -174,13 +175,13 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   };
 
   const handleAddComponent = (componentType: string) => {
-    if (!entity || !ecsContext) return;
+    if (!entity || !ecs) return;
 
     const componentDef = componentRegistry[componentType];
     if (!componentDef) return;
 
     const newComponent = JSON.parse(JSON.stringify(componentDef.defaultComponent));
-    ecsContext.ecs.addComponent(entity, newComponent);
+    ecs.addComponent(entity, newComponent);
     setShowAddComponent(false);
     setComponentSearchQuery("");
   };
