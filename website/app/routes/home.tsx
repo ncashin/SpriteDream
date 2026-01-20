@@ -90,7 +90,7 @@ function CodeBlock({ gameId, containerRef }: { gameId: string | null; containerR
 
   return (
     <div 
-      className="fixed top-14 right-10 min-w-0 flex flex-col h-[calc(100vh-6rem)]"
+      className="fixed top-14 right-4 md:right-10 min-w-0 flex flex-col h-[calc(100vh-6rem)] max-w-[calc(100vw-2rem)] md:max-w-none"
       style={{ width: width ? `${width}px` : undefined }}
     >
       <div className="flex z-20 pl-4">
@@ -115,7 +115,7 @@ function CodeBlock({ gameId, containerRef }: { gameId: string | null; containerR
 
         <div className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden">
           {activeTab === "main.ts" ? (
-            <div className="pt-5 pl-1 font-mono text-sm leading-relaxed h-full overflow-x-auto">
+            <div className="pt-5 pl-1 font-mono text-sm leading-relaxed h-full overflow-x-hidden">
               {CODE_LINES.map((line, i) => (
                 <div key={i} className="flex items-center gap-4 hover:bg-white/[0.03] -mx-2 px-2 rounded min-w-0">
                   <span className="text-white/25 w-6 text-right text-xs select-none flex-shrink-0">{line.num}</span>
@@ -212,11 +212,11 @@ export default function Home() {
     <div className="h-screen bg-[var(--color-bg-void)] grid-bg overflow-y-auto">
       <div className="spotlight fixed inset-0 pointer-events-none" />
 
-      <section className="flex p-6 px-10">
+      <section className="flex pb-12 pt-12  px-10">
         <div className="flex gap-8 items-start w-full">
           <div className="sidebar flex flex-col justify-between pb-4">
-            <div className="space-y-7 pt-16 max-w-full">
-              <div className="flex flex-row h-min gap-3 w-full min-w-0 items-center">
+            <div className="space-y-7 max-w-full">
+              <div className="flex flex-row h-min gap-3.5 w-full min-w-0 items-center">
                 <img
                   src="/logo.svg"
                   alt="GameIDE Logo"
@@ -287,7 +287,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div ref={containerRef} className="min-w-0 flex-1 pt-8 hidden lg:block">
+          <div ref={containerRef} className="min-w-0 flex-1 pt-8 hidden md:block">
             <div className="w-full h-[calc(100vh-8rem)]" aria-hidden="true" />
             <CodeBlock gameId={gameId} containerRef={containerRef} />
           </div>
