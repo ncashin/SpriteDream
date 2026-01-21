@@ -140,6 +140,10 @@
           "width": 200,
           "height": 20,
           "angle": 0
+        },
+        "onCollision": {
+          "type": "onCollision",
+          "callbackName": ""
         }
       }
     }

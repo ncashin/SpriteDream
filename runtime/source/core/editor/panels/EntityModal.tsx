@@ -254,7 +254,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-stretch border-b border-gray-500/20 bg-black/10">
+      <div className="flex items-stretch border-b border-gray-500/20 bg-black/10 min-h-[32px]">
         <div className="relative flex-1">
           <button
             ref={addComponentButtonRef}
@@ -266,8 +266,8 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
                 setTimeout(() => addComponentSearchInputRef.current?.focus(), 0);
               }
             }}
-            className={`flex items-center justify-center gap-1 w-full h-full px-3 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 ${showAddComponent ? "bg-gray-500/35" : "bg-transparent"
-              } hover:bg-gray-500/35 active:bg-gray-500/40`}
+            className={`flex items-center justify-center gap-1 w-full h-full px-3 py-2 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 whitespace-nowrap ${showAddComponent ? "bg-transparent" : "bg-gray-500/35"
+              } hover:bg-gray-600/50 active:bg-gray-700/70`}
           >
             <span className="codicon codicon-add text-[10px]" />
             <span>Add Component</span>
@@ -285,8 +285,8 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
                 setTimeout(() => removeComponentSearchInputRef.current?.focus(), 0);
               }
             }}
-            className={`flex items-center justify-center gap-1 w-full h-full px-3 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 ${showRemoveComponent ? "bg-gray-500/35" : "bg-transparent"
-              } hover:bg-gray-500/35 active:bg-gray-500/40`}
+            className={`flex items-center justify-center gap-1 w-full h-full px-3 py-2 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 whitespace-nowrap ${showRemoveComponent ? "bg-transparent" : "bg-gray-500/35"
+              } hover:bg-gray-600/50 active:bg-gray-700/70`}
           >
             <span className="codicon codicon-remove text-[10px]" />
             <span>Remove Component</span>
@@ -303,7 +303,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
             className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full"
           >
             {/* Search Bar */}
-            <div className="flex items-center border-b border-gray-500/20 bg-black/10">
+            <div className="flex items-center border-b border-gray-500/20 bg-black/10 flex-shrink-0">
               <div className="relative flex items-center min-w-0 w-full px-2 py-1">
                 <span className="codicon codicon-search absolute left-3 pointer-events-none z-[1] text-white/60" />
                 <input
@@ -351,7 +351,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
             className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full"
           >
             {/* Search Bar */}
-            <div className="flex items-center border-b border-gray-500/20 bg-black/10">
+            <div className="flex items-center border-b border-gray-500/20 bg-black/10 flex-shrink-0">
               <div className="relative flex items-center min-w-0 w-full px-2 py-1">
                 <span className="codicon codicon-search absolute left-3 pointer-events-none z-[1] text-white/60" />
                 <input
