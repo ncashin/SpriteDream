@@ -255,7 +255,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
 
       {/* Toolbar */}
       <div className="flex items-stretch border-b border-gray-500/20 bg-black/10 min-h-5">
-        <div className="relative flex-1">
+        <div className="relative flex-shrink-0">
           <button
             ref={addComponentButtonRef}
             onClick={() => {
@@ -266,7 +266,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
                 setTimeout(() => addComponentSearchInputRef.current?.focus(), 0);
               }
             }}
-            className={`flex items-center justify-center gap-1 w-full h-full px-2 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 whitespace-nowrap ${showAddComponent ? "bg-transparent" : "bg-gray-500/35"
+            className={`flex items-center justify-center gap-1 w-auto h-full px-2 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 whitespace-nowrap ${showAddComponent ? "bg-transparent" : "bg-gray-500/35"
               } hover:bg-gray-600/50 active:bg-gray-700/70`}
           >
             <span className="codicon codicon-add text-[10px]" />
@@ -274,7 +274,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
           </button>
         </div>
         <div className="w-px bg-gray-500/20 self-stretch" />
-        <div className="relative flex-1">
+        <div className="relative flex-shrink-0">
           <button
             ref={removeComponentButtonRef}
             onClick={() => {
@@ -285,13 +285,14 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
                 setTimeout(() => removeComponentSearchInputRef.current?.focus(), 0);
               }
             }}
-            className={`flex items-center justify-center gap-1 w-full h-full px-2 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 whitespace-nowrap ${showRemoveComponent ? "bg-transparent" : "bg-gray-500/35"
+            className={`flex items-center justify-center gap-1 w-auto h-full px-2 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 whitespace-nowrap ${showRemoveComponent ? "bg-transparent" : "bg-gray-500/35"
               } hover:bg-gray-600/50 active:bg-gray-700/70`}
           >
             <span className="codicon codicon-remove text-[10px]" />
             <span>Remove Component</span>
           </button>
         </div>
+        <div className="flex-1" />
       </div>
 
       {/* JSON Editor */}
@@ -300,7 +301,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         {showAddComponent && (
           <div
             ref={addComponentDropdownRef}
-            className="absolute top-0 left-0 right-0 bottom-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+            className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full"
           >
             {/* Search Bar */}
             <div className="flex items-center border-b border-gray-500/20 bg-black/10 flex-shrink-0">
@@ -320,7 +321,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
               </div>
             </div>
             {/* Component List */}
-            <div className="flex-1 overflow-auto min-h-0">
+            <div className="overflow-auto max-h-[calc(100%-40px)]">
               {availableComponents.length === 0 ? (
                 <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
                   {addComponentSearchQuery ? "No components found" : "No available components"}
@@ -348,7 +349,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         {showRemoveComponent && (
           <div
             ref={removeComponentDropdownRef}
-            className="absolute top-0 left-0 right-0 bottom-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+            className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full"
           >
             {/* Search Bar */}
             <div className="flex items-center border-b border-gray-500/20 bg-black/10 flex-shrink-0">
@@ -368,7 +369,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
               </div>
             </div>
             {/* Component List */}
-            <div className="flex-1 overflow-auto min-h-0">
+            <div className="overflow-auto max-h-[calc(100%-40px)]">
               {currentComponents.length === 0 ? (
                 <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
                   {removeComponentSearchQuery ? "No components found" : "No components to remove"}
