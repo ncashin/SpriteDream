@@ -5,12 +5,11 @@ import { inputPlugin } from "./core/input";
 import { viewportPlugin } from "./core/viewport/viewportPlugin";
 import { collisionPlugin } from "./core/collision/collisionPlugin";
 import { ecsEditorPlugin } from "./core/ecs/editor/ECSEditorPlugin";
-import { scale } from "./core/vector";
-import { registerResolver } from "./core/sat";
 import { addUpdateCallback } from "./core/gameloop";
 import type { Component } from "./core/ecs/ecs";
-import { defineComponent } from "./core/ecs/component";
-import "./scripts/weapon";
+import { defineComponent, VelocityComponentDefinition } from "./core/ecs/component";
+import { getComponent } from "./core/ecs/ecs";
+import { registerCollisionCallback } from "./core/collision/collisionCallbacks";
 import initialScene from "../scenes/default.scene?raw";
 
 export {
@@ -62,32 +61,25 @@ initializeGame({
 });
 
 function main({ ecs, input }: GameContext) {
-  registerResolver(
-    {
-      name: "player",
-      resolveCollision: (_ecs, entity, other, overlapAmount, overlapNormal) => {
-        if (entity === other) {
-          return;
-        }
+  registerCollisionCallback({
+    name: "player",
+    callback: (_ecs, entity, _other, _overlapAmount, overlapNormal) => {
+      const entityData = ecs.getEntity(entity);
+      if (!entityData.player) return;
 
-        const playerEntity = ecs.getEntity(entity);
+      const velocity = getComponent(_ecs, entity, VelocityComponentDefinition);
+      if (!velocity) return;
 
-        const correction = scale(overlapNormal, overlapAmount);
+      const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
+      const isNormalPointingDown = overlapNormal[1] > 0;
+      const isLandingOnTop = isVerticalCollision && isNormalPointingDown;
 
-        playerEntity.position.x += correction[0];
-        playerEntity.position.y += correction[1];
-
-        const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
-        const isUpwardCorrection = correction[1] < 0;
-        const isLandingOnTop = isVerticalCollision && isUpwardCorrection;
-
-        if (playerEntity.velocity.y <= 0 || !isLandingOnTop)
-          return;
-
-        playerEntity.velocity.y = 0;
-        playerEntity.player.isGrounded = true;
-      },
-    });
+      if (velocity.y > 0 && isLandingOnTop) {
+        velocity.y = 0;
+        entityData.player.isGrounded = true;
+      }
+    },
+  });
 
   addUpdateCallback((deltaTime: number) => {
     const playerEntity = ecs.getEntity("player");
@@ -106,14 +98,12 @@ function main({ ecs, input }: GameContext) {
       }
     }
 
-    // Gravity
     playerEntity.velocity.y += gravity * deltaTime;
 
-    // Jumping
-    if (input.isKeyPressed(" ") && playerEntity.player.isGrounded) return;
-
-    playerEntity.velocity.y = -jumpStrength;
-    playerEntity.player.isGrounded = false;
+    if (input.isKeyPressed(" ") && playerEntity.player.isGrounded) {
+      playerEntity.velocity.y = -jumpStrength;
+      playerEntity.player.isGrounded = false;
+    }
 
   });
 }

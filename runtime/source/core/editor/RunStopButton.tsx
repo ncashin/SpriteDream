@@ -38,17 +38,7 @@ export function RunStopButton() {
 
     return (
         <EditorButton ref={runButtonRef} onClick={handleRunStop}>
-            {isRunning ? (
-                <>
-                    <span className="codicon codicon-debug-stop" />
-                    Stop
-                </>
-            ) : (
-                <>
-                    <span className="codicon codicon-debug-start" />
-                    Run
-                </>
-            )}
+            {isRunning ? "Stop" : "Run"}
         </EditorButton>
     );
 }

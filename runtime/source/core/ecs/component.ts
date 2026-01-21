@@ -63,8 +63,9 @@ export const VelocityComponentDefinition: VelocityComponent = defineComponent(
 export type ColliderComponent = Component & {
   type: "collider";
   colliderName: string;
-  resolverName: string;
+  bodyType: "static" | "kinematic";
   collisionEnabled: boolean;
+  callbackName?: string;
   // Offset from entity position (in world space)
   offsetX?: number;
   offsetY?: number;
@@ -79,7 +80,7 @@ export const ColliderComponentDefinition: ColliderComponent = defineComponent(
   {
     type: "collider",
     colliderName: "rectangle",
-    resolverName: "static",
+    bodyType: "static",
     collisionEnabled: true,
     offsetX: 0,
     offsetY: 0,
@@ -90,5 +91,20 @@ export const ColliderComponentDefinition: ColliderComponent = defineComponent(
   {
     displayName: "Collider",
     description: "Collision detection and resolution component",
+  }
+);
+
+export type OnCollisionComponent = Component & {
+  type: "onCollision";
+  callbackName: string;
+};
+export const OnCollisionComponentDefinition: OnCollisionComponent = defineComponent(
+  {
+    type: "onCollision",
+    callbackName: "",
+  },
+  {
+    displayName: "On Collision",
+    description: "Callback triggered when entity collides with another entity",
   }
 );

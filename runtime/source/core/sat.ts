@@ -8,6 +8,9 @@ import {
   ColliderComponentDefinition,
   type ColliderComponent,
 } from "./ecs/component";
+import {
+  getCollisionCallback,
+} from "./collision/collisionCallbacks";
 
 export const getEntityPosition = (
   ecs: ECSInstance,
@@ -77,23 +80,22 @@ export type ColliderDefinition = {
   ) => void;
 };
 
-export type ResolverDefinition = {
-  name: string;
-  resolveCollision: (
-    ecs: ECSInstance,
-    entity: Entity,
-    other: Entity,
-    overlapAmount: number,
-    overlapNormal: Vector
-  ) => void;
+export type CollisionResolver = (
+  ecs: ECSInstance,
+  entity: Entity,
+  other: Entity,
+  overlapAmount: number,
+  overlapNormal: Vector
+) => void;
+
+let customResolver: CollisionResolver | null = null;
+
+export const setCollisionResolver = (resolver: CollisionResolver) => {
+  customResolver = resolver;
 };
 
-export const resolvers: { [name: string]: ResolverDefinition } = {};
-export const registerResolver = (resolver: ResolverDefinition) => {
-  resolvers[resolver.name] = resolver;
-};
-export const unregisterResolver = (name: string) => {
-  delete resolvers[name];
+export const getCollisionResolver = (): CollisionResolver | null => {
+  return customResolver;
 };
 
 export const colliders: { [name: string]: ColliderDefinition } = {};
@@ -109,6 +111,9 @@ export const handleCollisionPair = (
   entityA: Entity,
   entityB: Entity
 ) => {
+  // Prevent entities from colliding with themselves
+  if (entityA === entityB) return;
+
   const colliderA = getEntityCollider(ecs, entityA);
   const colliderB = getEntityCollider(ecs, entityB);
 
@@ -116,24 +121,17 @@ export const handleCollisionPair = (
   if (!colliderA.collisionEnabled || !colliderB.collisionEnabled) return;
 
   const colliderDefA = colliders[colliderA.colliderName];
-  const resolverA = resolvers[colliderA.resolverName];
-
-  if (!colliderDefA || !resolverA) {
-    console.warn(
-      `Missing collider or resolver for entity A: ${colliderA.colliderName}, ${colliderA.resolverName}`
-    );
-    return;
-  }
-
   const colliderDefB = colliders[colliderB.colliderName];
-  const resolverB = resolvers[colliderB.resolverName];
 
-  if (!colliderDefB || !resolverB) {
+  if (!colliderDefA || !colliderDefB) {
     console.warn(
-      `Missing collider or resolver for entity B: ${colliderB.colliderName}, ${colliderB.resolverName}`
+      `Missing collider for entity: ${colliderA.colliderName} or ${colliderB.colliderName}`
     );
     return;
   }
+
+  // Use custom resolver if set, otherwise use default
+  const resolver = customResolver || defaultCollisionResolver;
 
   const normals = [
     ...colliderDefA.getNormals(ecs, entityA, entityB),
@@ -177,21 +175,81 @@ export const handleCollisionPair = (
   }
 
   if (smallestNormal && minOverlap > 0 && minOverlap < Infinity) {
-    resolverA.resolveCollision(
+    resolver(
       ecs,
       entityA,
       entityB,
       minOverlap * direction,
       smallestNormal
     );
-    resolverB.resolveCollision(
-      ecs,
-      entityB,
-      entityA,
-      minOverlap * -direction,
-      smallestNormal
-    );
+
+    // Trigger collision callbacks
+    if (colliderA.callbackName) {
+      const callbackDef = getCollisionCallback(colliderA.callbackName);
+      if (callbackDef) {
+        callbackDef.callback(
+          ecs,
+          entityA,
+          entityB,
+          minOverlap * direction,
+          smallestNormal
+        );
+      }
+    }
+
+    if (colliderB.callbackName) {
+      const callbackDef = getCollisionCallback(colliderB.callbackName);
+      if (callbackDef) {
+        callbackDef.callback(
+          ecs,
+          entityB,
+          entityA,
+          minOverlap * -direction,
+          smallestNormal
+        );
+      }
+    }
   }
+};
+
+const defaultCollisionResolver: CollisionResolver = (
+  ecs,
+  entityA,
+  entityB,
+  overlapAmount,
+  overlapNormal
+) => {
+  if (entityA === entityB) {
+    return;
+  }
+
+  const colliderA = getEntityCollider(ecs, entityA);
+  const colliderB = getEntityCollider(ecs, entityB);
+
+  if (!colliderA || !colliderB) return;
+
+  const positionA = getComponent(ecs, entityA, PositionComponentDefinition);
+  const positionB = getComponent(ecs, entityB, PositionComponentDefinition);
+
+  if (!positionA || !positionB) return;
+
+  const n = normalize(overlapNormal);
+  const correction = scale(n, overlapAmount);
+
+  // Default behavior based on body types
+  if (colliderA.bodyType === "kinematic" && colliderB.bodyType === "static") {
+    positionA.x += correction[0];
+    positionA.y += correction[1];
+  } else if (colliderA.bodyType === "static" && colliderB.bodyType === "kinematic") {
+    positionB.x -= correction[0];
+    positionB.y -= correction[1];
+  } else if (colliderA.bodyType === "kinematic" && colliderB.bodyType === "kinematic") {
+    positionA.x += correction[0] / 2;
+    positionA.y += correction[1] / 2;
+    positionB.x -= correction[0] / 2;
+    positionB.y -= correction[1] / 2;
+  }
+  // If both static, do nothing
 };
 
 export const updateCollisions = (ecs: ECSInstance, entities: Entity[]) => {
@@ -326,17 +384,6 @@ export const RECTANGLE_COLLIDER: ColliderDefinition = {
   },
 };
 
-export const STATIC_RESOLVER: ResolverDefinition = {
-  name: "static",
-  resolveCollision: (
-    _ecs,
-    _entity,
-    _other,
-    _overlapAmount,
-    _overlapNormal
-  ) => { },
-};
-
 export const CIRCLE_COLLIDER: ColliderDefinition = {
   name: "circle",
   getNormals: (ecs, entity, other) => {
@@ -417,45 +464,5 @@ export const CIRCLE_COLLIDER: ColliderDefinition = {
   },
 };
 
-export const BOUNCY_RESOLVER: ResolverDefinition = {
-  name: "bouncy",
-  resolveCollision: (ecs, entity, _other, overlapAmount, overlapNormal) => {
-    const position = getComponent(ecs, entity, PositionComponentDefinition);
-    const velocity = getComponent(ecs, entity, VelocityComponentDefinition);
-    const collider = getComponent(ecs, entity, ColliderComponentDefinition);
-
-    if (!position || !velocity || !collider) return;
-
-    const n = normalize(overlapNormal);
-    const correction = scale(n, overlapAmount);
-    position.x += correction[0];
-    position.y += correction[1];
-
-    const vel = create(velocity.x, velocity.y);
-    const vDotN = dot(vel, n);
-    const COLLISION_DAMPING = 0.7;
-
-    const newVel = sub(vel, scale(n, (1 + COLLISION_DAMPING) * vDotN));
-
-    const tangent = create(-n[1], n[0]);
-    const vDotT = dot(newVel, tangent);
-    const FRICTION = 0.2;
-    const finalVel = sub(newVel, scale(tangent, vDotT * FRICTION));
-
-    const VELOCITY_EPSILON_X = 10;
-    const VELOCITY_EPSILON_Y = 40;
-    let vx = finalVel[0];
-    let vy = finalVel[1];
-    if (Math.abs(vx) < VELOCITY_EPSILON_X) vx = 0;
-    if (Math.abs(vy) < VELOCITY_EPSILON_Y) vy = 0;
-
-    velocity.x = vx;
-    velocity.y = vy;
-  },
-};
-
 registerCollider(RECTANGLE_COLLIDER);
-registerResolver(STATIC_RESOLVER);
-
 registerCollider(CIRCLE_COLLIDER);
-registerResolver(BOUNCY_RESOLVER);

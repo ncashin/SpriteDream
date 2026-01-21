@@ -29,8 +29,9 @@
         "collider": {
           "type": "collider",
           "colliderName": "rectangle",
-          "resolverName": "platformer",
+          "bodyType": "kinematic",
           "collisionEnabled": true,
+          "callbackName": "player",
           "offsetX": 0,
           "offsetY": 0,
           "width": 32,
@@ -61,7 +62,7 @@
         "collider": {
           "type": "collider",
           "colliderName": "rectangle",
-          "resolverName": "static",
+          "bodyType": "static",
           "collisionEnabled": true,
           "offsetX": 0,
           "offsetY": 0,

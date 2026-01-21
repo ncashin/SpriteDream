@@ -128,7 +128,7 @@ export function EntityListPanel() {
 
   return (
     <div
-      className="flex flex-col w-[250px] bg-gray-500/30 rounded-sm"
+      className="flex flex-col w-[250px] bg-[rgb(60,60,60)] rounded-sm"
       style={{
         fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
       }}
@@ -137,13 +137,13 @@ export function EntityListPanel() {
       <button
         className={`
           flex items-center justify-between w-full min-h-5 px-1 pl-2 py-1
-          text-xs text-white/90 cursor-pointer outline-none select-none
+          text-xs cursor-pointer outline-none select-none
           transition-colors duration-100
           ${isExpanded
             ? "rounded-t-sm border-b border-gray-500/20"
             : "rounded-sm"
           }
-          hover:bg-gray-500/35
+          text-white/90 bg-transparent hover:bg-white/10
         `}
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -163,7 +163,7 @@ export function EntityListPanel() {
               text-xs text-[#cccccc] cursor-pointer
               bg-black/10 border-b border-gray-500/20
               transition-colors duration-100
-              hover:bg-white/10
+              hover:bg-gray-500/35 active:bg-gray-500/40
             "
             onClick={handleCreateEntity}
           >
