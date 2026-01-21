@@ -57,7 +57,6 @@ h1 {
 #editor .editor-container button,
 #editor .editor-container input,
 #editor .editor-container select,
-#editor .editor-container textarea,
 #editor .editor-container form,
 #editor .editor-container [role="dialog"],
 #editor .editor-container [role="button"],
@@ -94,4 +93,168 @@ h1 {
   a:hover {
     color: #747bff;
   }
+}
+
+/* JSON Tree View Styles */
+.json-tree-view {
+  font-family: var(--vscode-font-family, "Consolas", "Courier New", monospace);
+}
+
+.json-tree-view table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.json-tree-view tr {
+  line-height: 1.2;
+}
+
+.json-tree-view td {
+  padding: 1px 2px;
+  vertical-align: top;
+}
+
+.json-tree-view td:nth-child(1) {
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+}
+
+.json-tree-view td:nth-child(3) {
+  width: 200px;
+  min-width: 200px;
+}
+
+.json-tree-view tr.json-tree-row td[colspan="3"] {
+  padding: 4px 2px;
+  min-height: 20px;
+}
+
+.json-tree-row {
+  transition: background-color 0.1s ease;
+}
+
+.json-tree-row:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.json-tree-view input[type="text"],
+.json-tree-view input[type="number"] {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  width: auto !important;
+  min-width: 50px;
+}
+
+.json-tree-highlighted {
+  background-color: rgba(255, 255, 0, 0.1) !important;
+}
+
+.json-tree-toggle {
+  transition: background-color 0.1s ease;
+}
+
+.json-tree-toolbar-btn {
+  transition: background-color 0.1s ease;
+}
+
+.json-tree-toolbar-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* JSON Editor Styles */
+.json-editor-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.json-editor-wrapper.json-editor-invalid {
+  border-left: 3px solid #f48771;
+}
+
+.json-editor-content {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+  margin: 0;
+  border: none;
+  outline: none;
+  background-color: transparent;
+}
+
+.json-editor-content .ProseMirror {
+  outline: none !important;
+  border: none !important;
+  padding: 16px;
+  margin: 0;
+  background-color: transparent;
+  min-height: 100%;
+  font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace);
+  font-size: var(--vscode-editor-font-size, 14px);
+  line-height: var(--vscode-editor-line-height, 1.5);
+  color: var(--vscode-editor-foreground, #cccccc);
+}
+
+.json-editor-content .ProseMirror:focus {
+  outline: none !important;
+  border: none !important;
+}
+
+.json-editor-code-block {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace) !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  color: inherit !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+}
+
+.json-editor-code-block pre {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  color: inherit !important;
+}
+
+.json-editor-code-block code {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  color: inherit !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+}
+
+/* Search match highlighting */
+.json-search-match {
+  background-color: rgba(255, 255, 0, 0.3) !important;
+  border-radius: 2px;
+}
+
+.json-search-match-active {
+  background-color: rgba(255, 255, 0, 0.5) !important;
+  outline: 1px solid rgba(255, 255, 0, 0.8);
 }

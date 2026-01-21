@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { getScene } from '../scene/scene';
+import { JSONEditor } from './panels/JSONEditor';
+import { JSONTreeView } from './panels/JSONTreeView';
 
 interface SceneDataModalProps {
   isOpen: boolean;
@@ -51,6 +53,15 @@ export function SceneDataModal({ isOpen, onClose }: SceneDataModalProps) {
 
   if (!isOpen) return null;
 
+  const isValidJSON = (() => {
+    try {
+      JSON.parse(sceneData);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
   return (
     <div
       className="fixed top-0 left-0 w-screen h-screen z-[20000] flex flex-col"
@@ -79,17 +90,30 @@ export function SceneDataModal({ isOpen, onClose }: SceneDataModalProps) {
           <span className="codicon codicon-close" />
         </button>
       </div>
-      <textarea
-        className="flex-1 w-full p-4 m-0 border-none outline-none text-sm leading-normal resize-none overflow-auto"
-        style={{
-          backgroundColor: 'var(--vscode-editor-background, #1e1e1e)',
-          color: 'var(--vscode-editor-foreground, #d4d4d4)',
-          fontFamily: 'var(--vscode-editor-font-family, "Consolas", "Courier New", monospace)',
-        }}
-        value={sceneData}
-        readOnly
-        spellCheck={false}
-      />
+      <div className="flex flex-1" style={{ overflow: 'hidden' }}>
+        {/* Left side - JSON Editor */}
+        <div className="flex-1 flex flex-col" style={{ borderRight: '1px solid rgba(128, 128, 128, 0.2)' }}>
+          <div className="flex-1 overflow-hidden">
+            <JSONEditor
+              value={sceneData}
+              onChange={() => { }} // Read-only for now
+              isValid={isValidJSON}
+              placeholder="Scene JSON data..."
+              className="h-full"
+            />
+          </div>
+        </div>
+        {/* Right side - JSON Tree View */}
+        <div className="flex-1 flex flex-col">
+          {isValidJSON ? (
+            <JSONTreeView json={sceneData} />
+          ) : (
+            <div className="flex-1 flex items-center justify-center" style={{ color: '#f48771', fontSize: '13px' }}>
+              Invalid JSON - cannot display tree view
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

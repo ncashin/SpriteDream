@@ -3,6 +3,7 @@ import type { Component, Entity } from "../../ecs/ecs";
 import { useGameContext } from "../EditorContext";
 import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 import { componentRegistry } from "../../ecs/component";
+import { JSONTreeView } from "./JSONTreeView";
 
 interface EntityModalProps {
   isOpen: boolean;
@@ -14,78 +15,51 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const gameContext = useGameContext();
   const ecs = gameContext?.ecs as any;
   const [entityData, setEntityData] = useState("");
-  const [isValid, setIsValid] = useState(true);
-  const [isFocused, setIsFocused] = useState(false);
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [showRemoveComponent, setShowRemoveComponent] = useState(false);
-  const [addComponentSearchQuery, setAddComponentSearchQuery] = useState("");
-  const [removeComponentSearchQuery, setRemoveComponentSearchQuery] = useState("");
   const addComponentDropdownRef = useRef<HTMLDivElement>(null);
   const addComponentButtonRef = useRef<HTMLButtonElement>(null);
   const removeComponentDropdownRef = useRef<HTMLDivElement>(null);
   const removeComponentButtonRef = useRef<HTMLButtonElement>(null);
-  const addComponentSearchInputRef = useRef<HTMLInputElement>(null);
-  const removeComponentSearchInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Filter available components
   const availableComponents = useMemo(() => {
     if (!entity || !ecs) return [];
 
     const currentComponents = ecs.getEntity(entity);
-    const query = addComponentSearchQuery.toLowerCase();
 
     return Object.entries(componentRegistry)
-      .filter(([type, def]) => {
+      .filter(([type]) => {
         const notAlreadyAdded = !currentComponents[type];
-        const matchesQuery =
-          !query ||
-          type.toLowerCase().includes(query) ||
-          def.displayName?.toLowerCase().includes(query) ||
-          def.description?.toLowerCase().includes(query);
-        return notAlreadyAdded && matchesQuery;
+        return notAlreadyAdded;
       })
       .map(([type, def]) => ({ type, def }));
-  }, [entity, ecs, addComponentSearchQuery]);
+  }, [entity, ecs]);
 
   // Get current components on entity
   const currentComponents = useMemo(() => {
     if (!entity || !ecs) return [];
 
     const components = ecs.getEntity(entity);
-    const query = removeComponentSearchQuery.toLowerCase();
 
     return Object.entries(components)
-      .filter(([type]) => {
-        const def = componentRegistry[type];
-        const matchesQuery =
-          !query ||
-          type.toLowerCase().includes(query) ||
-          def?.displayName?.toLowerCase().includes(query) ||
-          def?.description?.toLowerCase().includes(query);
-        return matchesQuery;
-      })
       .map(([type, component]) => ({
         type,
         component: component as Component,
         def: componentRegistry[type],
       }));
-  }, [entity, ecs, entityData, removeComponentSearchQuery]);
+  }, [entity, ecs, entityData]);
 
   // Sync entity data from ECS
   useEffect(() => {
     if (!isOpen || !entity || !ecs) return;
 
     const updateEntityData = () => {
-      if (isFocused) return;
       try {
         const data = ecs.getEntity(entity);
         setEntityData(JSON.stringify(data, null, 2));
-        setIsValid(true);
       } catch (error) {
         setEntityData(`Error: ${error}`);
-        setIsValid(false);
       }
     };
 
@@ -132,64 +106,8 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       document.removeEventListener("keydown", handleEscape);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen, entity, ecs, isFocused, onClose, showAddComponent, showRemoveComponent]);
+  }, [isOpen, entity, ecs, onClose, showAddComponent, showRemoveComponent]);
 
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setEntityData(value);
-
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-
-    updateTimeoutRef.current = setTimeout(() => {
-      if (!entity || !ecs) return;
-
-      try {
-        const parsedData = JSON.parse(value) as Record<string, Component>;
-        if (typeof parsedData !== "object" || parsedData === null || Array.isArray(parsedData)) {
-          setIsValid(false);
-          return;
-        }
-
-        let valid = true;
-        for (const [componentType, component] of Object.entries(parsedData)) {
-          if (typeof component !== "object" || component === null || Array.isArray(component)) {
-            valid = false;
-            break;
-          }
-          if (!component.type) {
-            (component as Component).type = componentType;
-          }
-        }
-
-        if (valid) {
-          const currentData = ecs.getEntity(entity);
-
-          // Remove deleted components
-          for (const componentType of Object.keys(currentData)) {
-            if (!parsedData[componentType]) {
-              ecs.removeComponent(entity, currentData[componentType]);
-            }
-          }
-
-          // Add/update components
-          for (const [componentType, component] of Object.entries(parsedData)) {
-            ecs.addComponent(entity, {
-              ...component,
-              type: component.type || componentType,
-            } as Component);
-          }
-
-          setIsValid(true);
-        } else {
-          setIsValid(false);
-        }
-      } catch {
-        setIsValid(false);
-      }
-    }, 500);
-  };
 
   const handleAddComponent = (componentType: string) => {
     if (!entity || !ecs) return;
@@ -204,14 +122,11 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     try {
       const data = ecs.getEntity(entity);
       setEntityData(JSON.stringify(data, null, 2));
-      setIsValid(true);
     } catch (error) {
       setEntityData(`Error: ${error}`);
-      setIsValid(false);
     }
 
     setShowAddComponent(false);
-    setAddComponentSearchQuery("");
   };
 
   const handleRemoveComponent = (component: Component) => {
@@ -223,21 +138,79 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     try {
       const data = ecs.getEntity(entity);
       setEntityData(JSON.stringify(data, null, 2));
-      setIsValid(true);
     } catch (error) {
       setEntityData(`Error: ${error}`);
-      setIsValid(false);
     }
 
     setShowRemoveComponent(false);
-    setRemoveComponentSearchQuery("");
+  };
+
+  const isValidJSON = useMemo(() => {
+    try {
+      JSON.parse(entityData);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [entityData]);
+
+  const handleTreeViewChange = (updatedJson: string) => {
+    if (!entity || !ecs) return;
+
+    try {
+      const parsedData = JSON.parse(updatedJson) as Record<string, Component>;
+      if (typeof parsedData !== "object" || parsedData === null || Array.isArray(parsedData)) {
+        return;
+      }
+
+      const currentData = ecs.getEntity(entity);
+
+      // Remove deleted components
+      for (const componentType of Object.keys(currentData)) {
+        if (!parsedData[componentType]) {
+          ecs.removeComponent(entity, currentData[componentType]);
+        }
+      }
+
+      // Update components - preserve existing structure
+      for (const [componentType, updatedComponent] of Object.entries(parsedData)) {
+        const existingComponent = currentData[componentType];
+
+        if (existingComponent) {
+          // Update existing component by merging properties
+          // This preserves the component structure and only updates changed properties
+          Object.assign(existingComponent, updatedComponent);
+          // Ensure type is set
+          if (!existingComponent.type) {
+            existingComponent.type = componentType;
+          }
+        } else {
+          // Add new component
+          ecs.addComponent(entity, {
+            ...updatedComponent,
+            type: updatedComponent.type || componentType,
+          } as Component);
+        }
+      }
+
+      // Update local state to reflect the actual current state
+      try {
+        const data = ecs.getEntity(entity);
+        setEntityData(JSON.stringify(data, null, 2));
+      } catch (error) {
+        // If we can't get updated data, use the provided JSON
+        setEntityData(updatedJson);
+      }
+    } catch (error) {
+      console.error('Error updating entity from tree view:', error);
+    }
   };
 
   if (!isOpen || !entity) return null;
 
   return (
     <div
-      className="flex flex-col bg-[rgb(60,60,60)] rounded-sm min-w-[300px] max-w-[500px] max-h-[500px] shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+      className="flex flex-col bg-[rgb(60,60,60)] rounded-sm min-w-[400px] max-w-[600px] max-h-[600px] shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
       style={{
         fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
       }}
@@ -261,10 +234,6 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
             onClick={() => {
               setShowAddComponent(!showAddComponent);
               setShowRemoveComponent(false);
-              if (!showAddComponent) {
-                setAddComponentSearchQuery("");
-                setTimeout(() => addComponentSearchInputRef.current?.focus(), 0);
-              }
             }}
             className={`flex items-center justify-center gap-1 w-auto h-full px-2 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 whitespace-nowrap ${showAddComponent ? "bg-transparent" : "bg-gray-500/35"
               } hover:bg-gray-600/50 active:bg-gray-700/70`}
@@ -280,10 +249,6 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
             onClick={() => {
               setShowRemoveComponent(!showRemoveComponent);
               setShowAddComponent(false);
-              if (!showRemoveComponent) {
-                setRemoveComponentSearchQuery("");
-                setTimeout(() => removeComponentSearchInputRef.current?.focus(), 0);
-              }
             }}
             className={`flex items-center justify-center gap-1 w-auto h-full px-2 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 whitespace-nowrap ${showRemoveComponent ? "bg-transparent" : "bg-gray-500/35"
               } hover:bg-gray-600/50 active:bg-gray-700/70`}
@@ -295,117 +260,69 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         <div className="flex-1" />
       </div>
 
-      {/* JSON Editor */}
-      <div className={`flex-1 bg-black/10 rounded-b-sm relative ${showAddComponent || showRemoveComponent ? "overflow-hidden" : "overflow-auto"}`}>
-        {/* Add Component List - Overlays textarea when open */}
+      {/* JSON Tree View */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        {/* Add Component List - Overlays tree view when open */}
         {showAddComponent && (
           <div
             ref={addComponentDropdownRef}
-            className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full"
+            className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full overflow-auto"
           >
-            {/* Search Bar */}
-            <div className="flex items-center border-b border-gray-500/20 bg-black/10 flex-shrink-0">
-              <div className="relative flex items-center min-w-0 w-full px-2 py-1">
-                <span className="codicon codicon-search absolute left-3 pointer-events-none z-[1] text-white/60" />
-                <input
-                  ref={addComponentSearchInputRef}
-                  type="text"
-                  placeholder="Search components..."
-                  value={addComponentSearchQuery}
-                  onChange={(e) => setAddComponentSearchQuery(e.target.value)}
-                  className="flex-1 w-full py-0.5 pr-3 pl-7 text-xs bg-transparent text-white/90 border-none outline-none min-w-0 min-h-5 box-border focus:outline-none"
-                  style={{
-                    fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
-                  }}
-                />
+            {availableComponents.length === 0 ? (
+              <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
+                No available components
               </div>
-            </div>
-            {/* Component List */}
-            <div className="overflow-auto max-h-[calc(100%-40px)]">
-              {availableComponents.length === 0 ? (
-                <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
-                  {addComponentSearchQuery ? "No components found" : "No available components"}
-                </div>
-              ) : (
-                availableComponents.map(({ type, def }) => (
-                  <button
-                    key={type}
-                    onClick={() => handleAddComponent(type)}
-                    className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
-                  >
-                    <div>{def.displayName || type}</div>
-                    {def.description && (
-                      <div className="text-xs text-white/60 mt-0.5">
-                        {def.description}
-                      </div>
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
+            ) : (
+              availableComponents.map(({ type, def }) => (
+                <button
+                  key={type}
+                  onClick={() => handleAddComponent(type)}
+                  className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
+                >
+                  <div>{def.displayName || type}</div>
+                  {def.description && (
+                    <div className="text-xs text-white/60 mt-0.5">
+                      {def.description}
+                    </div>
+                  )}
+                </button>
+              ))
+            )}
           </div>
         )}
-        {/* Remove Component List - Overlays textarea when open */}
+        {/* Remove Component List - Overlays tree view when open */}
         {showRemoveComponent && (
           <div
             ref={removeComponentDropdownRef}
-            className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full"
+            className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full overflow-auto"
           >
-            {/* Search Bar */}
-            <div className="flex items-center border-b border-gray-500/20 bg-black/10 flex-shrink-0">
-              <div className="relative flex items-center min-w-0 w-full px-2 py-1">
-                <span className="codicon codicon-search absolute left-3 pointer-events-none z-[1] text-white/60" />
-                <input
-                  ref={removeComponentSearchInputRef}
-                  type="text"
-                  placeholder="Search components..."
-                  value={removeComponentSearchQuery}
-                  onChange={(e) => setRemoveComponentSearchQuery(e.target.value)}
-                  className="flex-1 w-full py-0.5 pr-3 pl-7 text-xs bg-transparent text-white/90 border-none outline-none min-w-0 min-h-5 box-border focus:outline-none"
-                  style={{
-                    fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
-                  }}
-                />
+            {currentComponents.length === 0 ? (
+              <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
+                No components to remove
               </div>
-            </div>
-            {/* Component List */}
-            <div className="overflow-auto max-h-[calc(100%-40px)]">
-              {currentComponents.length === 0 ? (
-                <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
-                  {removeComponentSearchQuery ? "No components found" : "No components to remove"}
-                </div>
-              ) : (
-                currentComponents.map(({ type, component, def }) => (
-                  <button
-                    key={type}
-                    onClick={() => handleRemoveComponent(component)}
-                    className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
-                  >
-                    <div>{def?.displayName || type}</div>
-                    {def?.description && (
-                      <div className="text-xs text-white/60 mt-0.5">
-                        {def.description}
-                      </div>
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
+            ) : (
+              currentComponents.map(({ type, component, def }) => (
+                <button
+                  key={type}
+                  onClick={() => handleRemoveComponent(component)}
+                  className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
+                >
+                  <div>{def?.displayName || type}</div>
+                  {def?.description && (
+                    <div className="text-xs text-white/60 mt-0.5">
+                      {def.description}
+                    </div>
+                  )}
+                </button>
+              ))
+            )}
           </div>
         )}
-        <textarea
-          ref={textareaRef}
-          value={entityData}
-          onChange={handleTextareaChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          className={`w-full h-full p-3 bg-transparent text-[#cccccc] text-xs font-mono leading-normal resize-none outline-none box-border whitespace-pre overflow-wrap-normal overflow-x-auto min-h-[250px] ${isValid ? "border-none" : "border border-[#f48771]"
-            }`}
-          style={{ tabSize: 2 }}
-        />
-        {!isValid && (
-          <div className="absolute bottom-2 right-2 px-2 py-1 bg-[rgba(244,135,113,0.2)] text-[#f48771] text-xs rounded-sm">
-            Invalid JSON
+        {isValidJSON && entityData ? (
+          <JSONTreeView json={entityData} onChange={handleTreeViewChange} />
+        ) : (
+          <div className="flex-1 flex items-center justify-center" style={{ color: '#f48771', fontSize: '13px' }}>
+            {entityData ? 'Invalid JSON - cannot display tree view' : 'Loading...'}
           </div>
         )}
       </div>
