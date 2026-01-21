@@ -44,7 +44,30 @@ h1 {
   z-index: 1000;
 }
 
-#editor > * {
+#editor .editor-container {
+  pointer-events: none;
+}
+
+/* Editor layout container should not block events */
+#editor .editor-container .editor-layout {
+  pointer-events: none;
+}
+
+/* Make all interactive elements interactable */
+#editor .editor-container button,
+#editor .editor-container input,
+#editor .editor-container select,
+#editor .editor-container textarea,
+#editor .editor-container form,
+#editor .editor-container [role="dialog"],
+#editor .editor-container [role="button"],
+#editor .editor-container [tabindex] {
+  pointer-events: auto;
+  touch-action: auto;
+}
+
+/* Make panels and their containers interactable */
+#editor .editor-container .editor-layout > div {
   pointer-events: auto;
   touch-action: auto;
 }

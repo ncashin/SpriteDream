@@ -28,6 +28,7 @@ export function initializeEditor() {
     }
     editor.innerHTML = "";
     editorContainer = document.createElement("div");
+    editorContainer.className = "editor-container";
     editor.appendChild(editorContainer);
     editorRoot = createRoot(editorContainer);
   }

@@ -5,7 +5,10 @@ import { SceneDataButton } from "./SceneDataButton";
 
 export function Editor() {
   return (
-    <div className="flex flex-row w-full h-full justify-between p-2">
+    <div
+      className="flex flex-row w-full h-full justify-between p-2 editor-layout"
+      aria-label="Editor Layout"
+    >
       <div className="flex flex-col gap-2 items-start">
         <EntityListPanel />
         <EntityModalContainer />
