@@ -18,10 +18,14 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [showRemoveComponent, setShowRemoveComponent] = useState(false);
+  const [addComponentSearchQuery, setAddComponentSearchQuery] = useState("");
+  const [removeComponentSearchQuery, setRemoveComponentSearchQuery] = useState("");
   const addComponentDropdownRef = useRef<HTMLDivElement>(null);
   const addComponentButtonRef = useRef<HTMLButtonElement>(null);
   const removeComponentDropdownRef = useRef<HTMLDivElement>(null);
   const removeComponentButtonRef = useRef<HTMLButtonElement>(null);
+  const addComponentSearchInputRef = useRef<HTMLInputElement>(null);
+  const removeComponentSearchInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -30,26 +34,44 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     if (!entity || !ecs) return [];
 
     const currentComponents = ecs.getEntity(entity);
+    const query = addComponentSearchQuery.toLowerCase();
 
     return Object.entries(componentRegistry)
-      .filter(([type]) => {
+      .filter(([type, def]) => {
         const notAlreadyAdded = !currentComponents[type];
-        return notAlreadyAdded;
+        const matchesQuery =
+          !query ||
+          type.toLowerCase().includes(query) ||
+          def.displayName?.toLowerCase().includes(query) ||
+          def.description?.toLowerCase().includes(query);
+        return notAlreadyAdded && matchesQuery;
       })
       .map(([type, def]) => ({ type, def }));
-  }, [entity, ecs]);
+  }, [entity, ecs, addComponentSearchQuery]);
 
   // Get current components on entity
   const currentComponents = useMemo(() => {
     if (!entity || !ecs) return [];
 
     const components = ecs.getEntity(entity);
-    return Object.entries(components).map(([type, component]) => ({
-      type,
-      component: component as Component,
-      def: componentRegistry[type],
-    }));
-  }, [entity, ecs, entityData]);
+    const query = removeComponentSearchQuery.toLowerCase();
+
+    return Object.entries(components)
+      .filter(([type]) => {
+        const def = componentRegistry[type];
+        const matchesQuery =
+          !query ||
+          type.toLowerCase().includes(query) ||
+          def?.displayName?.toLowerCase().includes(query) ||
+          def?.description?.toLowerCase().includes(query);
+        return matchesQuery;
+      })
+      .map(([type, component]) => ({
+        type,
+        component: component as Component,
+        def: componentRegistry[type],
+      }));
+  }, [entity, ecs, entityData, removeComponentSearchQuery]);
 
   // Sync entity data from ECS
   useEffect(() => {
@@ -189,6 +211,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     }
 
     setShowAddComponent(false);
+    setAddComponentSearchQuery("");
   };
 
   const handleRemoveComponent = (component: Component) => {
@@ -207,6 +230,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     }
 
     setShowRemoveComponent(false);
+    setRemoveComponentSearchQuery("");
   };
 
   if (!isOpen || !entity) return null;
@@ -230,33 +254,41 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center border-b border-gray-500/20 bg-black/10">
-        <div className="relative flex-shrink-0">
+      <div className="flex items-stretch border-b border-gray-500/20 bg-black/10">
+        <div className="relative flex-1">
           <button
             ref={addComponentButtonRef}
             onClick={() => {
               setShowAddComponent(!showAddComponent);
               setShowRemoveComponent(false);
+              if (!showAddComponent) {
+                setAddComponentSearchQuery("");
+                setTimeout(() => addComponentSearchInputRef.current?.focus(), 0);
+              }
             }}
-            className={`flex items-center gap-1 px-3 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 min-h-5 ${showAddComponent ? "bg-gray-500/35" : "bg-transparent"
+            className={`flex items-center justify-center gap-1 w-full h-full px-3 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 ${showAddComponent ? "bg-gray-500/35" : "bg-transparent"
               } hover:bg-gray-500/35 active:bg-gray-500/40`}
           >
-            <span className="codicon codicon-add" />
+            <span className="codicon codicon-add text-[10px]" />
             <span>Add Component</span>
           </button>
         </div>
-        <div className="h-4 w-px bg-gray-500/20" />
-        <div className="relative flex-shrink-0">
+        <div className="w-px bg-gray-500/20 self-stretch" />
+        <div className="relative flex-1">
           <button
             ref={removeComponentButtonRef}
             onClick={() => {
               setShowRemoveComponent(!showRemoveComponent);
               setShowAddComponent(false);
+              if (!showRemoveComponent) {
+                setRemoveComponentSearchQuery("");
+                setTimeout(() => removeComponentSearchInputRef.current?.focus(), 0);
+              }
             }}
-            className={`flex items-center gap-1 px-3 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 min-h-5 ${showRemoveComponent ? "bg-gray-500/35" : "bg-transparent"
+            className={`flex items-center justify-center gap-1 w-full h-full px-3 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 ${showRemoveComponent ? "bg-gray-500/35" : "bg-transparent"
               } hover:bg-gray-500/35 active:bg-gray-500/40`}
           >
-            <span className="codicon codicon-remove" />
+            <span className="codicon codicon-remove text-[10px]" />
             <span>Remove Component</span>
           </button>
         </div>
@@ -268,56 +300,96 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         {showAddComponent && (
           <div
             ref={addComponentDropdownRef}
-            className="absolute top-0 left-0 right-0 max-h-[250px] overflow-auto bg-[rgb(60,60,60)] border-b border-gray-500/20 z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+            className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full"
           >
-            {availableComponents.length === 0 ? (
-              <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
-                No available components
+            {/* Search Bar */}
+            <div className="flex items-center border-b border-gray-500/20 bg-black/10">
+              <div className="relative flex items-center min-w-0 w-full px-2 py-1">
+                <span className="codicon codicon-search absolute left-3 pointer-events-none z-[1] text-white/60" />
+                <input
+                  ref={addComponentSearchInputRef}
+                  type="text"
+                  placeholder="Search components..."
+                  value={addComponentSearchQuery}
+                  onChange={(e) => setAddComponentSearchQuery(e.target.value)}
+                  className="flex-1 w-full py-0.5 pr-3 pl-7 text-xs bg-transparent text-white/90 border-none outline-none min-w-0 min-h-5 box-border focus:outline-none"
+                  style={{
+                    fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
+                  }}
+                />
               </div>
-            ) : (
-              availableComponents.map(({ type, def }) => (
-                <button
-                  key={type}
-                  onClick={() => handleAddComponent(type)}
-                  className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
-                >
-                  <div>{def.displayName || type}</div>
-                  {def.description && (
-                    <div className="text-xs text-white/60 mt-0.5">
-                      {def.description}
-                    </div>
-                  )}
-                </button>
-              ))
-            )}
+            </div>
+            {/* Component List */}
+            <div className="overflow-auto max-h-[300px]">
+              {availableComponents.length === 0 ? (
+                <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
+                  {addComponentSearchQuery ? "No components found" : "No available components"}
+                </div>
+              ) : (
+                availableComponents.map(({ type, def }) => (
+                  <button
+                    key={type}
+                    onClick={() => handleAddComponent(type)}
+                    className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
+                  >
+                    <div>{def.displayName || type}</div>
+                    {def.description && (
+                      <div className="text-xs text-white/60 mt-0.5">
+                        {def.description}
+                      </div>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         )}
         {/* Remove Component List - Overlays textarea when open */}
         {showRemoveComponent && (
           <div
             ref={removeComponentDropdownRef}
-            className="absolute top-0 left-0 right-0 max-h-[250px] overflow-auto bg-[rgb(60,60,60)] border-b border-gray-500/20 z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+            className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full"
           >
-            {currentComponents.length === 0 ? (
-              <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
-                No components to remove
+            {/* Search Bar */}
+            <div className="flex items-center border-b border-gray-500/20 bg-black/10">
+              <div className="relative flex items-center min-w-0 w-full px-2 py-1">
+                <span className="codicon codicon-search absolute left-3 pointer-events-none z-[1] text-white/60" />
+                <input
+                  ref={removeComponentSearchInputRef}
+                  type="text"
+                  placeholder="Search components..."
+                  value={removeComponentSearchQuery}
+                  onChange={(e) => setRemoveComponentSearchQuery(e.target.value)}
+                  className="flex-1 w-full py-0.5 pr-3 pl-7 text-xs bg-transparent text-white/90 border-none outline-none min-w-0 min-h-5 box-border focus:outline-none"
+                  style={{
+                    fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
+                  }}
+                />
               </div>
-            ) : (
-              currentComponents.map(({ type, component, def }) => (
-                <button
-                  key={type}
-                  onClick={() => handleRemoveComponent(component)}
-                  className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
-                >
-                  <div>{def?.displayName || type}</div>
-                  {def?.description && (
-                    <div className="text-xs text-white/60 mt-0.5">
-                      {def.description}
-                    </div>
-                  )}
-                </button>
-              ))
-            )}
+            </div>
+            {/* Component List */}
+            <div className="overflow-auto max-h-[300px]">
+              {currentComponents.length === 0 ? (
+                <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
+                  {removeComponentSearchQuery ? "No components found" : "No components to remove"}
+                </div>
+              ) : (
+                currentComponents.map(({ type, component, def }) => (
+                  <button
+                    key={type}
+                    onClick={() => handleRemoveComponent(component)}
+                    className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
+                  >
+                    <div>{def?.displayName || type}</div>
+                    {def?.description && (
+                      <div className="text-xs text-white/60 mt-0.5">
+                        {def.description}
+                      </div>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         )}
         <textarea
