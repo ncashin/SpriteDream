@@ -153,6 +153,7 @@ export function JSONEditor({
                 HTMLAttributes: {
                     class: "json-editor-code-block",
                     spellcheck: "false",
+                    style: "font-family: var(--vscode-editor-font-family, 'Consolas', 'Courier New', monospace); font-size: var(--vscode-editor-font-size, 14px); line-height: var(--vscode-editor-line-height, 1.5); color: var(--vscode-editor-foreground, #cccccc);",
                 },
             }),
             Placeholder.configure({
@@ -165,6 +166,7 @@ export function JSONEditor({
             attributes: {
                 class: `json-editor-content ${className}`,
                 spellcheck: "false",
+                style: "font-family: var(--vscode-editor-font-family, 'Consolas', 'Courier New', monospace); font-size: var(--vscode-editor-font-size, 14px); line-height: var(--vscode-editor-line-height, 1.5); color: var(--vscode-editor-foreground, #cccccc);",
             },
             transformPastedText(text) {
                 // Preserve plain text when pasting

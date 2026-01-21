@@ -112,6 +112,7 @@ interface TreeNodeComponentProps {
   onNodeClick?: (path: string, value: JSONValue) => void;
   onValueChange?: (path: string, newValue: JSONValue) => void;
   rootData: any;
+  isInGridContainer?: boolean;
 }
 
 function TreeNodeComponent({
@@ -120,7 +121,8 @@ function TreeNodeComponent({
   onToggleExpand,
   onNodeClick,
   onValueChange,
-  rootData
+  rootData,
+  isInGridContainer = false
 }: TreeNodeComponentProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -175,6 +177,7 @@ function TreeNodeComponent({
       }
     } else if (e.key === 'Escape') {
       setIsEditing(false);
+      setEditValue(String(node.value));
     }
   };
 
@@ -184,12 +187,15 @@ function TreeNodeComponent({
       try {
         if (node.type === 'string') {
           parsedValue = editValue;
+          handleValueChange(parsedValue);
         } else if (node.type === 'number') {
           parsedValue = parseFloat(editValue);
           if (!isNaN(parsedValue as number)) {
             handleValueChange(parsedValue);
           } else {
+            // Invalid number, revert to original value
             setIsEditing(false);
+            setEditValue(String(node.value));
           }
         } else if (node.type === 'boolean') {
           parsedValue = editValue.toLowerCase() === 'true';
@@ -199,7 +205,9 @@ function TreeNodeComponent({
           handleValueChange(parsedValue);
         }
       } catch {
+        // On error, always exit editing mode
         setIsEditing(false);
+        setEditValue(String(node.value));
       }
     }
   };
@@ -207,11 +215,15 @@ function TreeNodeComponent({
   if (isObjectOrArray) {
     return (
       <>
-        <tr
+        <div
           className="json-tree-row"
           style={{
+            display: 'flex',
             backgroundColor: 'transparent',
             cursor: hasChildren ? 'pointer' : 'default',
+            paddingLeft: `${indent}px`,
+            padding: '4px 2px',
+            minHeight: '20px',
           }}
           onClick={handleRowClick}
           onMouseEnter={(e) => {
@@ -221,36 +233,39 @@ function TreeNodeComponent({
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
-          <td colSpan={3} style={{ paddingLeft: `${indent}px`, padding: '4px 2px', width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', minHeight: '20px' }}>
-              {hasChildren && (
-                <span style={{
-                  transform: isExpanded ? 'rotate(90deg)' : 'none',
-                  transition: 'transform 0.1s',
-                  display: 'inline-block',
-                  fontSize: '10px',
-                  color: '#cccccc',
-                  width: '12px',
-                  textAlign: 'center',
-                }}>
-                  ▶
-                </span>
-              )}
-              <span style={{ color: '#cccccc', fontSize: '13px' }}>
-                {node.key !== 'root' && (
-                  <span style={{ fontWeight: 500 }}>{node.key}</span>
-                )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', width: '100%' }}>
+            {hasChildren && (
+              <span style={{
+                transform: isExpanded ? 'rotate(90deg)' : 'none',
+                transition: 'transform 0.1s',
+                display: 'inline-block',
+                fontSize: '10px',
+                color: '#cccccc',
+                width: '12px',
+                textAlign: 'center',
+                flexShrink: 0,
+              }}>
+                ▶
               </span>
-              {!isObjectOrArray && (
-                <span style={{ color: typeColor, fontSize: '13px' }}>
-                  {formatValue(node.value, node.type)}
-                </span>
+            )}
+            <span style={{ color: '#cccccc', fontSize: 'inherit' }}>
+              {node.key !== 'root' && (
+                <span style={{ fontWeight: 500 }}>{node.key}</span>
               )}
-            </div>
-          </td>
-        </tr>
+            </span>
+            {!isObjectOrArray && (
+              <span style={{ color: typeColor, fontSize: 'inherit' }}>
+                {formatValue(node.value, node.type)}
+              </span>
+            )}
+          </div>
+        </div>
         {hasChildren && isExpanded && node.children && (
-          <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '16px auto 1fr',
+            width: '100%',
+          }}>
             {node.children.map((child) => (
               <TreeNodeComponent
                 key={child.path}
@@ -260,9 +275,10 @@ function TreeNodeComponent({
                 onNodeClick={onNodeClick}
                 onValueChange={onValueChange}
                 rootData={rootData}
+                isInGridContainer={true}
               />
             ))}
-          </>
+          </div>
         )}
       </>
     );
@@ -277,98 +293,292 @@ function TreeNodeComponent({
     }
   }, [isEditing]);
 
+
+  const rowId = `row-${node.path}`;
+
   return (
     <>
-      <tr
-        className="json-tree-row"
-        style={{
-          backgroundColor: 'transparent',
-          cursor: isEditable ? 'pointer' : 'default',
-        }}
-        onClick={handleRowClick}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'transparent';
-        }}
-      >
-        <td style={{ width: '16px', minWidth: '16px', maxWidth: '16px', paddingLeft: `${indent}px`, padding: '1px 2px' }}>
-          {hasChildren && (
-            <span style={{
-              transform: isExpanded ? 'rotate(90deg)' : 'none',
-              transition: 'transform 0.1s',
-              display: 'inline-block',
-              fontSize: '10px',
-              color: '#cccccc',
-              width: '12px',
-              textAlign: 'center',
-            }}>
-              ▶
+      {isInGridContainer ? (
+        <>
+          <div
+            data-row-id={rowId}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              paddingLeft: `${indent}px`,
+              padding: '1px 2px',
+              backgroundColor: 'transparent',
+              cursor: isEditable ? 'pointer' : 'default',
+            }}
+            onClick={handleRowClick}
+            onMouseEnter={(e) => {
+              const rowId = e.currentTarget.getAttribute('data-row-id');
+              if (rowId) {
+                const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
+                cells.forEach((cell: any) => {
+                  cell.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                });
+              }
+            }}
+            onMouseLeave={(e) => {
+              const rowId = e.currentTarget.getAttribute('data-row-id');
+              if (rowId) {
+                const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
+                cells.forEach((cell: any) => {
+                  cell.style.backgroundColor = 'transparent';
+                });
+              }
+            }}
+          >
+            {hasChildren && (
+              <span style={{
+                transform: isExpanded ? 'rotate(90deg)' : 'none',
+                transition: 'transform 0.1s',
+                display: 'inline-block',
+                fontSize: '10px',
+                color: '#cccccc',
+                width: '12px',
+                textAlign: 'center',
+              }}>
+                ▶
+              </span>
+            )}
+          </div>
+          <div
+            data-row-id={rowId}
+            style={{
+              padding: '1px 2px',
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: 'transparent',
+              cursor: isEditable ? 'pointer' : 'default',
+            }}
+            onClick={handleRowClick}
+            onMouseEnter={(e) => {
+              const rowId = e.currentTarget.getAttribute('data-row-id');
+              if (rowId) {
+                const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
+                cells.forEach((cell: any) => {
+                  cell.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                });
+              }
+            }}
+            onMouseLeave={(e) => {
+              const rowId = e.currentTarget.getAttribute('data-row-id');
+              if (rowId) {
+                const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
+                cells.forEach((cell: any) => {
+                  cell.style.backgroundColor = 'transparent';
+                });
+              }
+            }}
+          >
+            <span style={{ color: '#cccccc', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
+              {node.key !== 'root' && (
+                <>
+                  <span style={{ fontWeight: 500 }}>{node.key}</span>
+                  <span style={{ color: '#808080', margin: '0 2px' }}>:</span>
+                </>
+              )}
             </span>
-          )}
-        </td>
-        <td style={{ padding: '1px 2px', width: 'auto', minWidth: '0' }}>
-          <span style={{ color: '#cccccc', fontSize: '13px', display: 'inline-block' }}>
-            {node.key !== 'root' && (
+          </div>
+          <div
+            data-row-id={rowId}
+            style={{
+              padding: '1px 2px',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: 'transparent',
+              cursor: isEditable ? 'pointer' : 'default',
+            }}
+            onClick={handleRowClick}
+            onMouseEnter={(e) => {
+              const rowId = e.currentTarget.getAttribute('data-row-id');
+              if (rowId) {
+                const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
+                cells.forEach((cell: any) => {
+                  cell.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                });
+              }
+            }}
+            onMouseLeave={(e) => {
+              const rowId = e.currentTarget.getAttribute('data-row-id');
+              if (rowId) {
+                const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
+                cells.forEach((cell: any) => {
+                  cell.style.backgroundColor = 'transparent';
+                });
+              }
+            }}
+          >
+            {isEditing ? (
+              <input
+                ref={inputRef}
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={handleBlur}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: typeColor,
+                  fontSize: 'inherit',
+                  padding: 0,
+                  margin: 0,
+                  outline: 'none',
+                  width: '100%',
+                  fontFamily: 'inherit',
+                  display: 'block',
+                }}
+              />
+            ) : (
               <>
-                <span style={{ fontWeight: 500 }}>{node.key}</span>
-                <span style={{ color: '#808080', margin: '0 2px' }}>:</span>
+                {node.type === 'boolean' ? (
+                  <input
+                    type="checkbox"
+                    checked={node.value === true}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleValueChange(e.target.checked);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      cursor: 'pointer',
+                      margin: 0,
+                      marginRight: '2px',
+                      verticalAlign: 'middle',
+                    }}
+                  />
+                ) : null}
+                <span style={{ color: typeColor, fontSize: 'inherit', display: 'inline-block' }}>
+                  {formatValue(node.value, node.type)}
+                </span>
               </>
             )}
-          </span>
-        </td>
-        <td style={{ padding: '1px 2px', position: 'relative', width: '200px', minWidth: '200px' }}>
-          {isEditing ? (
-            <input
-              ref={inputRef}
-              type={node.type === 'number' ? 'number' : 'text'}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={handleBlur}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: typeColor,
-                fontSize: '13px',
-                padding: 0,
-                margin: 0,
-                outline: 'none',
-                width: '100%',
-                fontFamily: 'inherit',
-                display: 'block',
-              }}
-            />
-          ) : (
-            <>
-              {node.type === 'boolean' ? (
+          </div>
+        </>
+      ) : (
+        <div
+          className="json-tree-row"
+          style={{
+            display: 'flex',
+            backgroundColor: 'transparent',
+            cursor: isEditable ? 'pointer' : 'default',
+            paddingLeft: `${indent}px`,
+            padding: '1px 2px',
+            minHeight: '20px',
+          }}
+          onClick={handleRowClick}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          <>
+            <div style={{
+              width: '16px',
+              minWidth: '16px',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+            }}>
+              {hasChildren && (
+                <span style={{
+                  transform: isExpanded ? 'rotate(90deg)' : 'none',
+                  transition: 'transform 0.1s',
+                  display: 'inline-block',
+                  fontSize: '10px',
+                  color: '#cccccc',
+                  width: '12px',
+                  textAlign: 'center',
+                }}>
+                  ▶
+                </span>
+              )}
+            </div>
+            <div style={{
+              padding: '1px 2px',
+              flex: '0 0 auto',
+              display: 'flex',
+              alignItems: 'center',
+            }}>
+              <span style={{ color: '#cccccc', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                {node.key !== 'root' && (
+                  <>
+                    <span style={{ fontWeight: 500 }}>{node.key}</span>
+                    <span style={{ color: '#808080', margin: '0 2px' }}>:</span>
+                  </>
+                )}
+              </span>
+            </div>
+            <div style={{
+              padding: '1px 2px',
+              position: 'relative',
+              flex: '0 0 auto',
+              display: 'flex',
+              alignItems: 'center',
+            }}>
+              {isEditing ? (
                 <input
-                  type="checkbox"
-                  checked={node.value === true}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    handleValueChange(e.target.checked);
-                  }}
+                  ref={inputRef}
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onBlur={handleBlur}
                   onClick={(e) => e.stopPropagation()}
                   style={{
-                    cursor: 'pointer',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: typeColor,
+                    fontSize: 'inherit',
+                    padding: 0,
                     margin: 0,
-                    marginRight: '2px',
-                    verticalAlign: 'middle',
+                    outline: 'none',
+                    width: '100%',
+                    fontFamily: 'inherit',
+                    display: 'block',
                   }}
                 />
-              ) : null}
-              <span style={{ color: typeColor, fontSize: '13px', display: 'inline-block' }}>
-                {formatValue(node.value, node.type)}
-              </span>
-            </>
-          )}
-        </td>
-      </tr>
+              ) : (
+                <>
+                  {node.type === 'boolean' ? (
+                    <input
+                      type="checkbox"
+                      checked={node.value === true}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleValueChange(e.target.checked);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        cursor: 'pointer',
+                        margin: 0,
+                        marginRight: '2px',
+                        verticalAlign: 'middle',
+                      }}
+                    />
+                  ) : null}
+                  <span style={{ color: typeColor, fontSize: 'inherit', display: 'inline-block' }}>
+                    {formatValue(node.value, node.type)}
+                  </span>
+                </>
+              )}
+            </div>
+          </>
+        </div>
+      )}
       {hasChildren && isExpanded && node.children && (
-        <>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '16px auto 1fr',
+          width: '100%',
+        }}>
           {node.children.map((child) => (
             <TreeNodeComponent
               key={child.path}
@@ -378,9 +588,10 @@ function TreeNodeComponent({
               onNodeClick={onNodeClick}
               onValueChange={onValueChange}
               rootData={rootData}
+              isInGridContainer={true}
             />
           ))}
-        </>
+        </div>
       )}
     </>
   );
@@ -477,7 +688,7 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
       <div className={`json-tree-view ${className}`} style={{
         padding: '16px',
         color: '#f48771',
-        fontSize: '13px',
+        fontSize: 'inherit',
       }}>
         Invalid JSON
       </div>
@@ -492,6 +703,7 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
       backgroundColor: '#1e1e1e',
       color: '#cccccc',
       fontFamily: 'var(--vscode-font-family, "Consolas", "Courier New", monospace)',
+      fontSize: 'var(--vscode-editor-font-size, 13px)',
     }}>
 
       {/* Tree View */}
@@ -500,39 +712,34 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
         overflow: 'auto',
         padding: '0',
       }}>
-        <table style={{
+        <div style={{
           width: '100%',
-          borderCollapse: 'collapse',
-          borderSpacing: 0,
         }}>
-          <tbody>
-            {(() => {
-              const rootChildren = getRootChildren(tree);
-              const rootData = tree.value;
-              return rootChildren.length > 0 ? (
-                rootChildren.map((child) => (
-                  <TreeNodeComponent
-                    key={child.path}
-                    node={child}
-                    expandedPaths={expandedPaths}
-                    onToggleExpand={toggleExpand}
-                    onNodeClick={onNodeSelect}
-                    onValueChange={updateValueAtPath}
-                    rootData={rootData}
-                  />
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={3} style={{ padding: '16px', color: '#808080', fontSize: '13px', textAlign: 'center' }}>
-                    Select a node...
-                  </td>
-                </tr>
-              );
-            })()}
-          </tbody>
-        </table>
+          {(() => {
+            const rootChildren = getRootChildren(tree);
+            const rootData = tree.value;
+            return rootChildren.length > 0 ? (
+              rootChildren.map((child) => (
+                <TreeNodeComponent
+                  key={child.path}
+                  node={child}
+                  expandedPaths={expandedPaths}
+                  onToggleExpand={toggleExpand}
+                  onNodeClick={onNodeSelect}
+                  onValueChange={updateValueAtPath}
+                  rootData={rootData}
+                />
+              ))
+            ) : (
+              <div style={{ padding: '16px', color: '#808080', fontSize: 'inherit', textAlign: 'center' }}>
+                Select a node...
+              </div>
+            );
+          })()}
+        </div>
       </div>
     </div>
   );
 }
+
 

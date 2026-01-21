@@ -138,8 +138,7 @@ h1 {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
-.json-tree-view input[type="text"],
-.json-tree-view input[type="number"] {
+.json-tree-view input[type="text"] {
   background: transparent !important;
   border: none !important;
   outline: none !important;
@@ -150,7 +149,6 @@ h1 {
   font-size: inherit !important;
   color: inherit !important;
   width: auto !important;
-  min-width: 50px;
 }
 
 .json-tree-highlighted {
@@ -217,9 +215,9 @@ h1 {
   padding: 0 !important;
   margin: 0 !important;
   font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace) !important;
-  font-size: inherit !important;
-  line-height: inherit !important;
-  color: inherit !important;
+  font-size: var(--vscode-editor-font-size, 14px) !important;
+  line-height: var(--vscode-editor-line-height, 1.5) !important;
+  color: var(--vscode-editor-foreground, #cccccc) !important;
   white-space: pre-wrap !important;
   word-wrap: break-word !important;
 }
@@ -229,10 +227,10 @@ h1 {
   padding: 0 !important;
   border: none !important;
   background: transparent !important;
-  font-family: inherit !important;
-  font-size: inherit !important;
-  line-height: inherit !important;
-  color: inherit !important;
+  font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace) !important;
+  font-size: var(--vscode-editor-font-size, 14px) !important;
+  line-height: var(--vscode-editor-line-height, 1.5) !important;
+  color: var(--vscode-editor-foreground, #cccccc) !important;
 }
 
 .json-editor-code-block code {
@@ -240,12 +238,30 @@ h1 {
   padding: 0 !important;
   border: none !important;
   background: transparent !important;
-  font-family: inherit !important;
-  font-size: inherit !important;
-  line-height: inherit !important;
-  color: inherit !important;
+  font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace) !important;
+  font-size: var(--vscode-editor-font-size, 14px) !important;
+  line-height: var(--vscode-editor-line-height, 1.5) !important;
+  color: var(--vscode-editor-foreground, #cccccc) !important;
   white-space: pre-wrap !important;
   word-wrap: break-word !important;
+}
+
+/* Ensure all text nodes maintain consistent styling */
+.json-editor-content .ProseMirror * {
+  font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace) !important;
+  font-size: var(--vscode-editor-font-size, 14px) !important;
+  line-height: var(--vscode-editor-line-height, 1.5) !important;
+  color: var(--vscode-editor-foreground, #cccccc) !important;
+}
+
+/* Ensure numbers are treated as plain text */
+.json-editor-content .ProseMirror span,
+.json-editor-content .ProseMirror code,
+.json-editor-content .ProseMirror pre {
+  font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace) !important;
+  font-size: var(--vscode-editor-font-size, 14px) !important;
+  line-height: var(--vscode-editor-line-height, 1.5) !important;
+  color: var(--vscode-editor-foreground, #cccccc) !important;
 }
 
 /* Search match highlighting */

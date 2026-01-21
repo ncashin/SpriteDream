@@ -210,8 +210,10 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
 
   return (
     <div
-      className="flex flex-col bg-[rgb(60,60,60)] rounded-sm min-w-[400px] max-w-[600px] max-h-[600px] shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+      className="flex flex-col bg-[rgb(60,60,60)] rounded-sm shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
       style={{
+        width: '20rem',
+        height: '20rem',
         fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
       }}
     >
@@ -321,7 +323,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         {isValidJSON && entityData ? (
           <JSONTreeView json={entityData} onChange={handleTreeViewChange} />
         ) : (
-          <div className="flex-1 flex items-center justify-center" style={{ color: '#f48771', fontSize: '13px' }}>
+          <div className="flex-1 flex items-center justify-center" style={{ color: '#f48771', fontSize: 'var(--vscode-editor-font-size, 14px)' }}>
             {entityData ? 'Invalid JSON - cannot display tree view' : 'Loading...'}
           </div>
         )}
