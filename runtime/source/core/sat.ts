@@ -140,50 +140,60 @@ export const handleCollisionPair = (
 
   let minOverlap = Infinity;
   let smallestNormal: Vector | null = null;
-  let direction: number = 1;
 
   for (const normal of normals) {
     const n = normalize(normal);
+
     const projA = colliderDefA.calculateProjection(ecs, entityA, n);
     const projB = colliderDefB.calculateProjection(ecs, entityB, n);
 
-    const overlapA = projB.max - projA.min;
-    const overlapB = projA.max - projB.min;
+    // Calculate overlap: positive means shapes overlap
+    const overlapA = projB.max - projA.min; // How much A overlaps B (A needs to move along +n)
+    const overlapB = projA.max - projB.min; // How much B overlaps A (A needs to move along -n)
 
+    // If there's no overlap along this axis, shapes are separated (but check other axes)
     if (overlapA <= 0 || overlapB <= 0) {
+      // Found a separating axis - shapes don't collide
       minOverlap = 0;
       smallestNormal = null;
       break;
     }
 
+    // Choose the smaller overlap (minimum translation distance)
+    // Determine which direction A should move to separate
     let currentOverlap: number;
-    let currentDirection: number;
+    let currentNormal: Vector;
 
     if (overlapA < overlapB) {
+      // A overlaps B less, so move A along +n
       currentOverlap = overlapA;
-      currentDirection = 1;
+      currentNormal = n;
     } else {
+      // B overlaps A less, so move A along -n (or equivalently, reverse normal)
       currentOverlap = overlapB;
-      currentDirection = -1;
+      currentNormal = scale(n, -1);
     }
 
     if (currentOverlap < minOverlap) {
       minOverlap = currentOverlap;
-      smallestNormal = n;
-      direction = currentDirection;
+      smallestNormal = currentNormal;
     }
   }
 
   if (smallestNormal && minOverlap > 0 && minOverlap < Infinity) {
+    // overlapAmount is positive and represents how much to move along the normal
+    // The normal represents the direction entityA should move to separate from entityB
     resolver(
       ecs,
       entityA,
       entityB,
-      minOverlap * direction,
+      minOverlap,
       smallestNormal
     );
 
     // Trigger collision callbacks
+    // For entityA's callback: pass the normal as-is (direction A should move)
+    // For entityB's callback: pass reversed normal (direction B should move, which is opposite)
     if (colliderA.callbackName) {
       const callbackDef = getCollisionCallback(colliderA.callbackName);
       if (callbackDef) {
@@ -191,7 +201,7 @@ export const handleCollisionPair = (
           ecs,
           entityA,
           entityB,
-          minOverlap * direction,
+          minOverlap,
           smallestNormal
         );
       }
@@ -204,8 +214,8 @@ export const handleCollisionPair = (
           ecs,
           entityB,
           entityA,
-          minOverlap * -direction,
-          smallestNormal
+          minOverlap,
+          scale(smallestNormal, -1)
         );
       }
     }
@@ -233,21 +243,29 @@ const defaultCollisionResolver: CollisionResolver = (
 
   if (!positionA || !positionB) return;
 
+  // Normal represents the direction entityA should move to separate from entityB
+  // overlapAmount is always positive and represents separation distance
   const n = normalize(overlapNormal);
-  const correction = scale(n, overlapAmount);
 
   // Default behavior based on body types
+  // Always separate kinematic bodies from static bodies fully
   if (colliderA.bodyType === "kinematic" && colliderB.bodyType === "static") {
+    // Move A along normal to separate from B
+    const correction = scale(n, overlapAmount);
     positionA.x += correction[0];
     positionA.y += correction[1];
   } else if (colliderA.bodyType === "static" && colliderB.bodyType === "kinematic") {
-    positionB.x -= correction[0];
-    positionB.y -= correction[1];
+    // Move B opposite to normal (since normal is from A's perspective)
+    const correction = scale(n, -overlapAmount);
+    positionB.x += correction[0];
+    positionB.y += correction[1];
   } else if (colliderA.bodyType === "kinematic" && colliderB.bodyType === "kinematic") {
-    positionA.x += correction[0] / 2;
-    positionA.y += correction[1] / 2;
-    positionB.x -= correction[0] / 2;
-    positionB.y -= correction[1] / 2;
+    // Split separation between both kinematic bodies
+    const halfCorrection = scale(n, overlapAmount / 2);
+    positionA.x += halfCorrection[0];
+    positionA.y += halfCorrection[1];
+    positionB.x -= halfCorrection[0];
+    positionB.y -= halfCorrection[1];
   }
   // If both static, do nothing
 };

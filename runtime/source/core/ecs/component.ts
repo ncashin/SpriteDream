@@ -1,8 +1,9 @@
 import type { Component } from "./ecs";
 
-export type PropertyInputType = 
+export type PropertyInputType =
   | { type: "dropdown"; options: string[] }
   | { type: "file"; accept?: string; directory?: string }
+  | { type: "color" }
   | { type: "text" }
   | { type: "number" }
   | { type: "boolean" };
@@ -76,6 +77,7 @@ export type ColliderComponent = Component & {
   bodyType: "static" | "kinematic";
   collisionEnabled: boolean;
   callbackName?: string;
+  bodyName?: string;
   // Offset from entity position (in world space)
   offsetX?: number;
   offsetY?: number;
@@ -111,20 +113,5 @@ export const ColliderComponentDefinition: ColliderComponent = defineComponent(
         options: ["rectangle", "circle"],
       },
     },
-  }
-);
-
-export type OnCollisionComponent = Component & {
-  type: "onCollision";
-  callbackName: string;
-};
-export const OnCollisionComponentDefinition: OnCollisionComponent = defineComponent(
-  {
-    type: "onCollision",
-    callbackName: "",
-  },
-  {
-    displayName: "On Collision",
-    description: "Callback triggered when entity collides with another entity",
   }
 );

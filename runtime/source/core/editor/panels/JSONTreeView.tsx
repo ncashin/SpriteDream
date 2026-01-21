@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { componentRegistry, type PropertyInputType } from '../../ecs/component';
 import { SearchableDropdown } from './SearchableDropdown';
 import { FileInput } from './FileInput';
+import { ColorInput } from './ColorInput';
 
 interface JSONTreeViewProps {
   json: string;
@@ -171,8 +172,8 @@ function TreeNodeComponent({
     if (isObjectOrArray && hasChildren) {
       onToggleExpand(node.path);
     } else if (!isObjectOrArray && !isEditing) {
-      // For dropdown and file types, don't enter edit mode - they handle their own state
-      if (customInputType?.type === 'dropdown' || customInputType?.type === 'file') {
+      // For dropdown, file, and color types, don't enter edit mode - they handle their own state
+      if (customInputType?.type === 'dropdown' || customInputType?.type === 'file' || customInputType?.type === 'color') {
         // These components will handle their own opening
         return;
       }
@@ -468,6 +469,13 @@ function TreeNodeComponent({
                   onChange={(value) => handleValueChange(value)}
                 />
               </div>
+            ) : customInputType?.type === 'color' ? (
+              <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
+                <ColorInput
+                  value={String(node.value || '#000000')}
+                  onChange={(value) => handleValueChange(value)}
+                />
+              </div>
             ) : isEditing ? (
               <input
                 ref={inputRef}
@@ -508,10 +516,11 @@ function TreeNodeComponent({
                       verticalAlign: 'middle',
                     }}
                   />
-                ) : null}
-                <span style={{ color: typeColor, fontSize: 'inherit', display: 'inline-block' }}>
-                  {formatValue(node.value, node.type)}
-                </span>
+                ) : (
+                  <span style={{ color: typeColor, fontSize: 'inherit', display: 'inline-block' }}>
+                    {formatValue(node.value, node.type)}
+                  </span>
+                )}
               </>
             )}
           </div>
@@ -596,6 +605,13 @@ function TreeNodeComponent({
                     onChange={(value) => handleValueChange(value)}
                   />
                 </div>
+              ) : customInputType?.type === 'color' ? (
+                <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
+                  <ColorInput
+                    value={String(node.value || '#000000')}
+                    onChange={(value) => handleValueChange(value)}
+                  />
+                </div>
               ) : isEditing ? (
                 <input
                   ref={inputRef}
@@ -636,10 +652,11 @@ function TreeNodeComponent({
                         verticalAlign: 'middle',
                       }}
                     />
-                  ) : null}
-                  <span style={{ color: typeColor, fontSize: 'inherit', display: 'inline-block' }}>
-                    {formatValue(node.value, node.type)}
-                  </span>
+                  ) : (
+                    <span style={{ color: typeColor, fontSize: 'inherit', display: 'inline-block' }}>
+                      {formatValue(node.value, node.type)}
+                    </span>
+                  )}
                 </>
               )}
             </div>

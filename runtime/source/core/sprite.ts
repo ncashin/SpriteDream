@@ -33,6 +33,9 @@ export const SpriteComponentDefinition: SpriteComponent = defineComponent(
         accept: ".png,.svg,.jpg,.jpeg",
         directory: "assets",
       },
+      color: {
+        type: "color",
+      },
     },
   }
 );
