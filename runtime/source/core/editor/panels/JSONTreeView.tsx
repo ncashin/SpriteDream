@@ -1,4 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { componentRegistry, type PropertyInputType } from '../../ecs/component';
+import { SearchableDropdown } from './SearchableDropdown';
+import { FileInput } from './FileInput';
 
 interface JSONTreeViewProps {
   json: string;
@@ -115,6 +118,31 @@ interface TreeNodeComponentProps {
   isInGridContainer?: boolean;
 }
 
+function getPropertyInputType(path: string): PropertyInputType | null {
+  // Extract component type from path (e.g., "position.x" -> "position")
+  const pathParts = path.split('.').filter(p => p !== 'root');
+  if (pathParts.length < 2) return null;
+
+  const componentType = pathParts[0];
+  const propertyName = pathParts[pathParts.length - 1];
+
+  const componentDef = componentRegistry[componentType];
+  if (!componentDef?.propertyInputTypes) return null;
+
+  // Check for exact property name match
+  if (componentDef.propertyInputTypes[propertyName]) {
+    return componentDef.propertyInputTypes[propertyName];
+  }
+
+  // Check for nested path (e.g., "collider.bodyType")
+  const fullPath = pathParts.slice(1).join('.');
+  if (componentDef.propertyInputTypes[fullPath]) {
+    return componentDef.propertyInputTypes[fullPath];
+  }
+
+  return null;
+}
+
 function TreeNodeComponent({
   node,
   expandedPaths,
@@ -133,10 +161,21 @@ function TreeNodeComponent({
   const isObjectOrArray = node.type === 'object' || node.type === 'array';
   const isEditable = !isObjectOrArray && node.key !== 'root';
 
+  // Get custom input type for this property
+  const customInputType = useMemo(() => {
+    if (!isEditable) return null;
+    return getPropertyInputType(node.path);
+  }, [node.path, isEditable]);
+
   const handleRowClick = () => {
     if (isObjectOrArray && hasChildren) {
       onToggleExpand(node.path);
     } else if (!isObjectOrArray && !isEditing) {
+      // For dropdown and file types, don't enter edit mode - they handle their own state
+      if (customInputType?.type === 'dropdown' || customInputType?.type === 'file') {
+        // These components will handle their own opening
+        return;
+      }
       setIsEditing(true);
       if (node.type === 'string') {
         setEditValue(String(node.value));
@@ -412,7 +451,24 @@ function TreeNodeComponent({
               }
             }}
           >
-            {isEditing ? (
+            {customInputType?.type === 'dropdown' ? (
+              <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
+                <SearchableDropdown
+                  value={String(node.value || '')}
+                  options={customInputType.options}
+                  onChange={(value) => handleValueChange(value)}
+                />
+              </div>
+            ) : customInputType?.type === 'file' ? (
+              <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
+                <FileInput
+                  value={String(node.value || '')}
+                  accept={customInputType.accept}
+                  directory={customInputType.directory}
+                  onChange={(value) => handleValueChange(value)}
+                />
+              </div>
+            ) : isEditing ? (
               <input
                 ref={inputRef}
                 type="text"
@@ -523,7 +579,24 @@ function TreeNodeComponent({
               display: 'flex',
               alignItems: 'center',
             }}>
-              {isEditing ? (
+              {customInputType?.type === 'dropdown' ? (
+                <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
+                  <SearchableDropdown
+                    value={String(node.value || '')}
+                    options={customInputType.options}
+                    onChange={(value) => handleValueChange(value)}
+                  />
+                </div>
+              ) : customInputType?.type === 'file' ? (
+                <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
+                  <FileInput
+                    value={String(node.value || '')}
+                    accept={customInputType.accept}
+                    directory={customInputType.directory}
+                    onChange={(value) => handleValueChange(value)}
+                  />
+                </div>
+              ) : isEditing ? (
                 <input
                   ref={inputRef}
                   type="text"

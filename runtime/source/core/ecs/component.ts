@@ -1,10 +1,18 @@
 import type { Component } from "./ecs";
 
+export type PropertyInputType = 
+  | { type: "dropdown"; options: string[] }
+  | { type: "file"; accept?: string; directory?: string }
+  | { type: "text" }
+  | { type: "number" }
+  | { type: "boolean" };
+
 export type ComponentDefinition = {
   type: string;
   defaultComponent: Component;
   displayName?: string;
   description?: string;
+  propertyInputTypes?: Record<string, PropertyInputType>;
 };
 
 export const componentRegistry: Record<string, ComponentDefinition> = {};
@@ -14,6 +22,7 @@ export function defineComponent<T extends Component>(
   options?: {
     displayName?: string;
     description?: string;
+    propertyInputTypes?: Record<string, PropertyInputType>;
   }
 ): T {
   const type = component.type;
@@ -22,6 +31,7 @@ export function defineComponent<T extends Component>(
     defaultComponent: JSON.parse(JSON.stringify(component)),
     displayName: options?.displayName || type,
     description: options?.description,
+    propertyInputTypes: options?.propertyInputTypes,
   };
   return component;
 }
@@ -91,6 +101,16 @@ export const ColliderComponentDefinition: ColliderComponent = defineComponent(
   {
     displayName: "Collider",
     description: "Collision detection and resolution component",
+    propertyInputTypes: {
+      bodyType: {
+        type: "dropdown",
+        options: ["static", "kinematic"],
+      },
+      colliderName: {
+        type: "dropdown",
+        options: ["rectangle", "circle"],
+      },
+    },
   }
 );
 

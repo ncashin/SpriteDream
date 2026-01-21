@@ -27,6 +27,13 @@ export const SpriteComponentDefinition: SpriteComponent = defineComponent(
   {
     displayName: "Sprite",
     description: "Visual representation of an entity",
+    propertyInputTypes: {
+      image: {
+        type: "file",
+        accept: ".png,.svg,.jpg,.jpeg",
+        directory: "assets",
+      },
+    },
   }
 );
 
