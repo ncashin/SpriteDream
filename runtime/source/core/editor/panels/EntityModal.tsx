@@ -3,7 +3,6 @@ import type { Component, Entity } from "../../ecs/ecs";
 import { useGameContext } from "../EditorContext";
 import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 import { componentRegistry } from "../../ecs/component";
-import { SearchInput } from "./SearchInput";
 
 interface EntityModalProps {
   isOpen: boolean;
@@ -17,52 +16,40 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const [entityData, setEntityData] = useState("");
   const [isValid, setIsValid] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [showAddComponent, setShowAddComponent] = useState(false);
-  const [componentSearchQuery, setComponentSearchQuery] = useState("");
+  const [showRemoveComponent, setShowRemoveComponent] = useState(false);
+  const addComponentDropdownRef = useRef<HTMLDivElement>(null);
+  const addComponentButtonRef = useRef<HTMLButtonElement>(null);
+  const removeComponentDropdownRef = useRef<HTMLDivElement>(null);
+  const removeComponentButtonRef = useRef<HTMLButtonElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const addComponentDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Search highlight effect
-  useEffect(() => {
-    if (!searchQuery.trim() || !textareaRef.current || isFocused) return;
-
-    const textarea = textareaRef.current;
-    const text = textarea.value;
-    const searchIndex = text.toLowerCase().indexOf(searchQuery.toLowerCase());
-
-    if (searchIndex !== -1) {
-      const textBeforeMatch = text.substring(0, searchIndex);
-      const lines = textBeforeMatch.split("\n");
-      const lineNumber = lines.length - 1;
-      const lineHeight =
-        parseFloat(getComputedStyle(textarea).lineHeight) ||
-        1.5 * parseFloat(getComputedStyle(textarea).fontSize);
-      const scrollTop = lineNumber * lineHeight - textarea.clientHeight / 2;
-      textarea.scrollTop = Math.max(0, scrollTop);
-      textarea.setSelectionRange(searchIndex, searchIndex + searchQuery.length);
-    }
-  }, [searchQuery, isFocused]);
 
   // Filter available components
   const availableComponents = useMemo(() => {
     if (!entity || !ecs) return [];
 
     const currentComponents = ecs.getEntity(entity);
-    const query = componentSearchQuery.toLowerCase();
 
     return Object.entries(componentRegistry)
-      .filter(([type, def]) => {
-        const matchesQuery =
-          type.toLowerCase().includes(query) ||
-          def.displayName?.toLowerCase().includes(query) ||
-          def.description?.toLowerCase().includes(query);
+      .filter(([type]) => {
         const notAlreadyAdded = !currentComponents[type];
-        return matchesQuery && notAlreadyAdded;
+        return notAlreadyAdded;
       })
       .map(([type, def]) => ({ type, def }));
-  }, [entity, ecs, componentSearchQuery]);
+  }, [entity, ecs]);
+
+  // Get current components on entity
+  const currentComponents = useMemo(() => {
+    if (!entity || !ecs) return [];
+
+    const components = ecs.getEntity(entity);
+    return Object.entries(components).map(([type, component]) => ({
+      type,
+      component: component as Component,
+      def: componentRegistry[type],
+    }));
+  }, [entity, ecs, entityData]);
 
   // Sync entity data from ECS
   useEffect(() => {
@@ -87,6 +74,8 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       if (e.key === "Escape") {
         if (showAddComponent) {
           setShowAddComponent(false);
+        } else if (showRemoveComponent) {
+          setShowRemoveComponent(false);
         } else {
           onClose();
         }
@@ -94,13 +83,22 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     };
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        showAddComponent &&
-        addComponentDropdownRef.current &&
-        !addComponentDropdownRef.current.contains(e.target as Node)
-      ) {
-        setShowAddComponent(false);
-        setComponentSearchQuery("");
+      const target = e.target as Node;
+
+      if (showAddComponent) {
+        const isClickInDropdown = addComponentDropdownRef.current?.contains(target);
+        const isClickOnButton = addComponentButtonRef.current?.contains(target);
+        if (!isClickInDropdown && !isClickOnButton) {
+          setShowAddComponent(false);
+        }
+      }
+
+      if (showRemoveComponent) {
+        const isClickInDropdown = removeComponentDropdownRef.current?.contains(target);
+        const isClickOnButton = removeComponentButtonRef.current?.contains(target);
+        if (!isClickInDropdown && !isClickOnButton) {
+          setShowRemoveComponent(false);
+        }
       }
     };
 
@@ -112,7 +110,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       document.removeEventListener("keydown", handleEscape);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen, entity, ecs, isFocused, onClose, showAddComponent]);
+  }, [isOpen, entity, ecs, isFocused, onClose, showAddComponent, showRemoveComponent]);
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -179,8 +177,36 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
 
     const newComponent = JSON.parse(JSON.stringify(componentDef.defaultComponent));
     ecs.addComponent(entity, newComponent);
+
+    // Immediately update the entity data to reflect the new component
+    try {
+      const data = ecs.getEntity(entity);
+      setEntityData(JSON.stringify(data, null, 2));
+      setIsValid(true);
+    } catch (error) {
+      setEntityData(`Error: ${error}`);
+      setIsValid(false);
+    }
+
     setShowAddComponent(false);
-    setComponentSearchQuery("");
+  };
+
+  const handleRemoveComponent = (component: Component) => {
+    if (!entity || !ecs) return;
+
+    ecs.removeComponent(entity, component);
+
+    // Immediately update the entity data to reflect the removed component
+    try {
+      const data = ecs.getEntity(entity);
+      setEntityData(JSON.stringify(data, null, 2));
+      setIsValid(true);
+    } catch (error) {
+      setEntityData(`Error: ${error}`);
+      setIsValid(false);
+    }
+
+    setShowRemoveComponent(false);
   };
 
   if (!isOpen || !entity) return null;
@@ -204,64 +230,96 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex gap-2 items-center p-1 border-b border-gray-500/20 bg-black/10">
-        <div className="flex-1 min-w-0">
-          <SearchInput
-            placeholder="Search JSON..."
-            value={searchQuery}
-            onChange={setSearchQuery}
-          />
-        </div>
-        <div className="relative flex-shrink-0" ref={addComponentDropdownRef}>
+      <div className="flex items-center border-b border-gray-500/20 bg-black/10">
+        <div className="relative flex-shrink-0">
           <button
-            onClick={() => setShowAddComponent(!showAddComponent)}
-            className={`flex items-center gap-1 px-3 py-0.5 text-xs border-none rounded-sm cursor-pointer text-white/90 transition-colors duration-100 min-h-5 ${showAddComponent ? "bg-gray-500/35" : "bg-gray-500/30"
+            ref={addComponentButtonRef}
+            onClick={() => {
+              setShowAddComponent(!showAddComponent);
+              setShowRemoveComponent(false);
+            }}
+            className={`flex items-center gap-1 px-3 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 min-h-5 ${showAddComponent ? "bg-gray-500/35" : "bg-transparent"
               } hover:bg-gray-500/35 active:bg-gray-500/40`}
           >
             <span className="codicon codicon-add" />
             <span>Add Component</span>
           </button>
-
-          {/* Dropdown */}
-          {showAddComponent && (
-            <div className="absolute top-full right-0 mt-1 bg-[rgb(60,60,60)] rounded min-w-[200px] max-w-[300px] max-h-[300px] flex flex-col z-[10001]">
-              <div className="p-1 px-2 border-b border-gray-500/20">
-                <SearchInput
-                  placeholder="Search Components..."
-                  value={componentSearchQuery}
-                  onChange={setComponentSearchQuery}
-                  autoFocus
-                />
-              </div>
-              <div className="overflow-auto max-h-[250px] bg-black/10 rounded-b-sm">
-                {availableComponents.length === 0 ? (
-                  <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
-                    {componentSearchQuery ? "No components found" : "No available components"}
-                  </div>
-                ) : (
-                  availableComponents.map(({ type, def }) => (
-                    <button
-                      key={type}
-                      onClick={() => handleAddComponent(type)}
-                      className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
-                    >
-                      <div>{def.displayName || type}</div>
-                      {def.description && (
-                        <div className="text-xs text-white/60 mt-0.5">
-                          {def.description}
-                        </div>
-                      )}
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
+        </div>
+        <div className="h-4 w-px bg-gray-500/20" />
+        <div className="relative flex-shrink-0">
+          <button
+            ref={removeComponentButtonRef}
+            onClick={() => {
+              setShowRemoveComponent(!showRemoveComponent);
+              setShowAddComponent(false);
+            }}
+            className={`flex items-center gap-1 px-3 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 min-h-5 ${showRemoveComponent ? "bg-gray-500/35" : "bg-transparent"
+              } hover:bg-gray-500/35 active:bg-gray-500/40`}
+          >
+            <span className="codicon codicon-remove" />
+            <span>Remove Component</span>
+          </button>
         </div>
       </div>
 
       {/* JSON Editor */}
       <div className="flex-1 overflow-auto bg-black/10 rounded-b-sm relative">
+        {/* Add Component List - Overlays textarea when open */}
+        {showAddComponent && (
+          <div
+            ref={addComponentDropdownRef}
+            className="absolute top-0 left-0 right-0 max-h-[250px] overflow-auto bg-[rgb(60,60,60)] border-b border-gray-500/20 z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+          >
+            {availableComponents.length === 0 ? (
+              <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
+                No available components
+              </div>
+            ) : (
+              availableComponents.map(({ type, def }) => (
+                <button
+                  key={type}
+                  onClick={() => handleAddComponent(type)}
+                  className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
+                >
+                  <div>{def.displayName || type}</div>
+                  {def.description && (
+                    <div className="text-xs text-white/60 mt-0.5">
+                      {def.description}
+                    </div>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        )}
+        {/* Remove Component List - Overlays textarea when open */}
+        {showRemoveComponent && (
+          <div
+            ref={removeComponentDropdownRef}
+            className="absolute top-0 left-0 right-0 max-h-[250px] overflow-auto bg-[rgb(60,60,60)] border-b border-gray-500/20 z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+          >
+            {currentComponents.length === 0 ? (
+              <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
+                No components to remove
+              </div>
+            ) : (
+              currentComponents.map(({ type, component, def }) => (
+                <button
+                  key={type}
+                  onClick={() => handleRemoveComponent(component)}
+                  className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
+                >
+                  <div>{def?.displayName || type}</div>
+                  {def?.description && (
+                    <div className="text-xs text-white/60 mt-0.5">
+                      {def.description}
+                    </div>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        )}
         <textarea
           ref={textareaRef}
           value={entityData}
