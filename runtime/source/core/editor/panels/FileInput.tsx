@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { listFiles } from "../../fileUtilities";
 
 interface FileInputProps {
   value: string;
@@ -14,8 +15,25 @@ export function FileInput({
   placeholder = "Select file...",
 }: FileInputProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [availableAssets, setAvailableAssets] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load available assets from assets folder
+  useEffect(() => {
+    const loadAssets = async () => {
+      try {
+        const files = await listFiles("assets");
+        const assetNames = new Set(files.map(([name]) => name));
+        setAvailableAssets(assetNames);
+      } catch (error) {
+        console.error("Failed to load assets:", error);
+        // If we can't load assets, allow all files (fallback)
+      }
+    };
+    loadAssets();
+  }, []);
 
   // Drag and drop handlers
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -37,6 +55,20 @@ export function FileInput({
     e.stopPropagation();
   }, []);
 
+  const validateAndSetFile = useCallback(
+    (fileName: string) => {
+      // Check if file exists in assets folder
+      if (availableAssets.size > 0 && !availableAssets.has(fileName)) {
+        setError(`File "${fileName}" is not in the assets folder`);
+        return false;
+      }
+      setError("");
+      onChange(fileName);
+      return true;
+    },
+    [availableAssets, onChange]
+  );
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -46,13 +78,11 @@ export function FileInput({
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) {
         const file = files[0];
-        // Extract just the filename
         const fileName = file.name;
-        // Update value with relative path from assets directory
-        onChange(fileName);
+        validateAndSetFile(fileName);
       }
     },
-    [onChange]
+    [validateAndSetFile]
   );
 
   const handleBrowseClick = () => {
@@ -63,7 +93,7 @@ export function FileInput({
     const files = e.target.files;
     if (files && files.length > 0) {
       const fileName = files[0].name;
-      onChange(fileName);
+      validateAndSetFile(fileName);
     }
     // Reset input so same file can be selected again
     if (fileInputRef.current) {
@@ -93,7 +123,7 @@ export function FileInput({
       <div
         onClick={(e) => {
           e.stopPropagation();
-          // Clicking the input opens file dialog directly
+          // Clicking opens file dialog directly - no dropdown
           handleBrowseClick();
         }}
         style={{
@@ -105,7 +135,11 @@ export function FileInput({
           color: isValueSet ? "#ce9178" : "#808080",
           fontSize: "inherit",
           width: "100%",
-          border: isDragging ? "1px dashed #4ec9b0" : "1px solid transparent",
+          border: error
+            ? "1px solid #f48771"
+            : isDragging
+              ? "1px dashed #4ec9b0"
+              : "1px solid transparent",
           borderRadius: "2px",
           backgroundColor: isDragging ? "rgba(78, 201, 176, 0.1)" : "transparent",
         }}
@@ -118,6 +152,7 @@ export function FileInput({
             className="codicon codicon-close"
             onClick={(e) => {
               e.stopPropagation();
+              setError("");
               onChange("");
             }}
             style={{
@@ -136,6 +171,18 @@ export function FileInput({
           />
         )}
       </div>
+      {error && (
+        <div
+          style={{
+            fontSize: "11px",
+            color: "#f48771",
+            marginTop: "2px",
+            paddingLeft: "2px",
+          }}
+        >
+          {error}
+        </div>
+      )}
     </div>
   );
 }
