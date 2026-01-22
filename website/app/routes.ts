@@ -8,4 +8,6 @@ export default [
   route("api/games/:id/thumbnail", "routes/api.games.$id.thumbnail.ts"),
   route("api/games/:id/download", "routes/api.games.$id.download.ts"),
   route("api/games/:id/bundle/*", "routes/api.games.$id.bundle.ts"),
+  route("api/runtime/*", "routes/api.runtime.$.ts"),
+  route("assets/*", "routes/assets.$.ts"),
 ] satisfies RouteConfig;
