@@ -130,7 +130,7 @@ export function EntityListPanel() {
       {/* Header */}
       <button
         className={`
-          flex items-center justify-between w-full min-h-5 px-1 pl-2 py-1
+          flex items-center justify-between w-full min-h-5 px-1 pl-3 py-1
           text-xs cursor-pointer outline-none select-none
           transition-colors duration-100 bg-transparent
           ${isExpanded
