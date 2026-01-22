@@ -100,17 +100,9 @@ export function EntityListPanel() {
 
     const newName = renameValue.trim();
     if (newName && newName !== renamingEntity) {
-      const allEntities = Object.keys(ecs.ecsInstance.entities);
-      if (!allEntities.includes(newName)) {
-        const oldEntityData = ecs.getEntity(renamingEntity);
-        const newEntity = ecs.createEntity(newName);
-
-        for (const component of Object.values(oldEntityData)) {
-          ecs.addComponent(newEntity, component);
-        }
-
-        ecs.destroyEntity(renamingEntity);
-        ecs.selectEntity(newEntity);
+      const success = ecs.renameEntity(renamingEntity, newName);
+      if (success) {
+        // Entity is already selected after rename, no need to call selectEntity
       }
     }
 

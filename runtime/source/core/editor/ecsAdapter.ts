@@ -167,6 +167,12 @@ export function initializeSceneECS<T extends InitialGameContext>(
     destroyEntityCallback: (entity: Entity) => {
       delete ecsData.entities[entity];
     },
+    renameEntityCallback: (oldEntity: Entity, newEntity: Entity) => {
+      if (ecsData.entities[oldEntity]) {
+        ecsData.entities[newEntity] = ecsData.entities[oldEntity];
+        delete ecsData.entities[oldEntity];
+      }
+    },
   });
 
   ecsInstance.entities = ecsData.entities || {};

@@ -160,7 +160,8 @@ function TreeNodeComponent({
   const typeColor = getTypeColor(node.type);
   const indent = node.level * 16;
   const isObjectOrArray = node.type === 'object' || node.type === 'array';
-  const isEditable = !isObjectOrArray && node.key !== 'root' && node.key !== 'type';
+  const isTypeField = node.key === 'type';
+  const isEditable = !isObjectOrArray && node.key !== 'root' && !isTypeField;
 
   // Get custom input type for this property
   const customInputType = useMemo(() => {
@@ -171,7 +172,7 @@ function TreeNodeComponent({
   const handleRowClick = () => {
     if (isObjectOrArray && hasChildren) {
       onToggleExpand(node.path);
-    } else if (!isObjectOrArray && !isEditing) {
+    } else if (!isObjectOrArray && !isEditing && isEditable) {
       // For dropdown, file, and color types, don't enter edit mode - they handle their own state
       if (customInputType?.type === 'dropdown' || customInputType?.type === 'file' || customInputType?.type === 'color') {
         // These components will handle their own opening
@@ -416,7 +417,9 @@ function TreeNodeComponent({
             <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
               {node.key !== 'root' && (
                 <>
-                  <span style={{ fontWeight: 500 }}>{node.key}</span>
+                  <span style={{ 
+                    fontWeight: 500
+                  }}>{node.key}</span>
                   <span style={{ color: 'var(--vscode-descriptionForeground, #808080)', margin: '0 2px' }}>:</span>
                 </>
               )}
@@ -517,8 +520,15 @@ function TreeNodeComponent({
                     }}
                   />
                 ) : (
-                  <span style={{ color: typeColor, fontSize: 'inherit', display: 'inline-block' }}>
-                    {formatValue(node.value, node.type)}
+                  <span style={{ 
+                    color: isTypeField ? 'var(--vscode-editor-foreground, #cccccc)' : typeColor, 
+                    fontSize: 'inherit', 
+                    display: 'inline-block',
+                    backgroundColor: isTypeField ? 'var(--vscode-textBlockQuote-background, rgba(128, 128, 128, 0.1))' : 'transparent',
+                    padding: isTypeField ? '1px 4px' : '0',
+                    borderRadius: isTypeField ? '2px' : '0'
+                  }}>
+                    {isTypeField && node.type === 'string' ? String(node.value) : formatValue(node.value, node.type)}
                   </span>
                 )}
               </>
@@ -575,7 +585,9 @@ function TreeNodeComponent({
             <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
               {node.key !== 'root' && (
                 <>
-                  <span style={{ fontWeight: 500 }}>{node.key}</span>
+                  <span style={{ 
+                    fontWeight: 500
+                  }}>{node.key}</span>
                   <span style={{ color: 'var(--vscode-descriptionForeground, #808080)', margin: '0 2px' }}>:</span>
                 </>
               )}
@@ -653,8 +665,12 @@ function TreeNodeComponent({
                       }}
                     />
                   ) : (
-                    <span style={{ color: typeColor, fontSize: 'inherit', display: 'inline-block' }}>
-                      {formatValue(node.value, node.type)}
+                    <span style={{ 
+                      color: isTypeField ? 'var(--vscode-editor-foreground, #cccccc)' : typeColor, 
+                      fontSize: 'inherit', 
+                      display: 'inline-block'
+                    }}>
+                      {isTypeField && node.type === 'string' ? String(node.value) : formatValue(node.value, node.type)}
                     </span>
                   )}
                 </>

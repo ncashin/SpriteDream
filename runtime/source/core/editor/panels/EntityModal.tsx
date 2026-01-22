@@ -5,7 +5,7 @@ import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 import { componentRegistry } from "../../ecs/component";
 import { JSONTreeView } from "./JSONTreeView";
 import { SearchInput } from "./SearchInput";
-import { X, Plus, Minus } from "@phosphor-icons/react";
+import { X, Plus, Minus, PencilSimple, Trash } from "@phosphor-icons/react";
 
 interface EntityModalProps {
   isOpen: boolean;
@@ -21,10 +21,13 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const [showRemoveComponent, setShowRemoveComponent] = useState(false);
   const [addComponentSearch, setAddComponentSearch] = useState("");
   const [removeComponentSearch, setRemoveComponentSearch] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
   const addComponentDropdownRef = useRef<HTMLDivElement>(null);
   const addComponentButtonRef = useRef<HTMLButtonElement>(null);
   const removeComponentDropdownRef = useRef<HTMLDivElement>(null);
   const removeComponentButtonRef = useRef<HTMLButtonElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   // Filter available components
   const availableComponents = useMemo(() => {
@@ -96,6 +99,9 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         } else if (showRemoveComponent) {
           setShowRemoveComponent(false);
           setRemoveComponentSearch("");
+        } else if (isRenaming) {
+          setIsRenaming(false);
+          setRenameValue("");
         } else {
           onClose();
         }
@@ -132,7 +138,15 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       document.removeEventListener("keydown", handleEscape);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen, entity, ecs, onClose, showAddComponent, showRemoveComponent]);
+  }, [isOpen, entity, ecs, onClose, showAddComponent, showRemoveComponent, isRenaming]);
+
+  // Focus rename input when renaming starts
+  useEffect(() => {
+    if (isRenaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [isRenaming]);
 
 
   const handleAddComponent = (componentType: string) => {
@@ -171,6 +185,46 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
 
     setShowRemoveComponent(false);
     setRemoveComponentSearch("");
+  };
+
+  const handleStartRename = () => {
+    if (!entity) return;
+    setIsRenaming(true);
+    setRenameValue(entity);
+  };
+
+  const handleRenameSubmit = (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!entity || !ecs || !isRenaming) return;
+
+    const newName = renameValue.trim();
+    if (newName && newName !== entity) {
+      const success = ecs.renameEntity(entity, newName);
+      if (success) {
+        // Entity is already selected after rename, no need to call selectEntity
+      }
+    }
+
+    setIsRenaming(false);
+    setRenameValue("");
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setIsRenaming(false);
+      setRenameValue("");
+    } else if (e.key === "Enter") {
+      handleRenameSubmit(e);
+    }
+  };
+
+  const handleDeleteEntity = () => {
+    if (!entity || !ecs) return;
+    ecs.destroyEntity(entity);
+    onClose();
   };
 
   const isValidJSON = useMemo(() => {
@@ -249,28 +303,89 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between min-h-5 px-1 pl-2 py-1 text-xs border-b select-none rounded-t-sm"
+        className="flex items-center justify-between min-h-5 px-2 py-1 text-xs border-b select-none rounded-t-sm"
         style={{
           color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
           borderBottomColor: 'var(--vscode-panel-border, rgba(128, 128, 128, 0.2))',
         }}
       >
-        <span>{entity}</span>
-        <button
-          className="flex items-center justify-center w-4 h-4 p-0.5 rounded-sm border-none cursor-pointer transition-colors duration-100 ml-1 bg-transparent"
-          style={{
-            color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-          onClick={onClose}
-        >
-          <X size={14} weight="bold" />
-        </button>
+        {isRenaming ? (
+          <form
+            onSubmit={handleRenameSubmit}
+            className="flex-1 min-w-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              ref={renameInputRef}
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={handleRenameKeyDown}
+              onBlur={handleRenameSubmit}
+              className="
+                w-full p-0 text-xs bg-transparent text-[#cccccc]
+                border-none outline-none overflow-hidden
+                text-ellipsis whitespace-nowrap min-w-0
+              "
+              style={{
+                color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
+              }}
+            />
+          </form>
+        ) : (
+          <>
+            <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{entity}</span>
+            <div className="flex items-center gap-1">
+              <button
+                className="flex items-center justify-center w-5 h-5 p-0.5 rounded-sm border-none cursor-pointer transition-colors duration-100 bg-transparent"
+                style={{
+                  color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                onClick={handleStartRename}
+                title="Rename entity"
+              >
+                <PencilSimple size={16} weight="bold" />
+              </button>
+              <button
+                className="flex items-center justify-center w-5 h-5 p-0.5 rounded-sm border-none cursor-pointer transition-colors duration-100 bg-transparent"
+                style={{
+                  color: 'var(--vscode-errorForeground, #f48771)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                onClick={handleDeleteEntity}
+                title="Delete entity"
+              >
+                <Trash size={16} weight="bold" />
+              </button>
+              <button
+                className="flex items-center justify-center w-5 h-5 p-0.5 rounded-sm border-none cursor-pointer transition-colors duration-100 ml-1 bg-transparent"
+                style={{
+                  color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                onClick={onClose}
+              >
+                <X size={16} weight="bold" />
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Toolbar */}

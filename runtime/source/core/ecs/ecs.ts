@@ -19,6 +19,7 @@ export type ECSInstance = {
     COMPONENT_TYPE_DEF: Component,
   ) => void;
   destroyEntityCallback?: (entity: Entity) => void;
+  renameEntityCallback?: (oldEntity: Entity, newEntity: Entity) => void;
 
   componentProxyHandler?: ComponentProxyHandler;
 };
@@ -39,6 +40,7 @@ export type ECSInstanceCreateInfo = {
     COMPONENT_TYPE_DEF: Component,
   ) => void;
   destroyEntityCallback?: (entity: Entity) => void;
+  renameEntityCallback?: (oldEntity: Entity, newEntity: Entity) => void;
   componentProxyHandler?: ComponentProxyHandler;
 };
 
@@ -77,6 +79,51 @@ export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
   if (instance.destroyEntityCallback) {
     instance.destroyEntityCallback(entity);
   }
+};
+
+export const renameEntity = (
+  instance: ECSInstance,
+  oldEntity: Entity,
+  newEntity: Entity,
+): boolean => {
+  // Validate new entity name
+  if (!newEntity || typeof newEntity !== 'string' || newEntity.trim() === '') {
+    return false;
+  }
+
+  // Check if old entity exists
+  if (!instance.entities[oldEntity]) {
+    return false;
+  }
+
+  // Check if new entity name already exists
+  if (instance.entities[newEntity]) {
+    return false;
+  }
+
+  // Move entity data
+  instance.entities[newEntity] = instance.entities[oldEntity];
+  delete instance.entities[oldEntity];
+
+  // Update composed pools - move entries from old name to new name
+  for (const composedPool of Object.values(instance.composedPools)) {
+    if (composedPool[oldEntity] !== undefined) {
+      composedPool[newEntity] = composedPool[oldEntity];
+      delete composedPool[oldEntity];
+    }
+  }
+
+  // Update selected entity if it was the renamed entity
+  if (instance.selectedEntity === oldEntity) {
+    instance.selectedEntity = newEntity;
+  }
+
+  // Call rename callback if provided
+  if (instance.renameEntityCallback) {
+    instance.renameEntityCallback(oldEntity, newEntity);
+  }
+
+  return true;
 };
 
 const lookupComponent = <ComponentType extends Component>(
@@ -311,6 +358,8 @@ export const curryECSInstance = (instance: ECSInstance) => ({
 
   createEntity: (name: string): Entity => createEntity(instance, name),
   destroyEntity: (entity: Entity) => destroyEntity(instance, entity),
+  renameEntity: (oldEntity: Entity, newEntity: Entity): boolean =>
+    renameEntity(instance, oldEntity, newEntity),
 
   addComponent: <ComponentType extends Component>(
     entity: Entity,
