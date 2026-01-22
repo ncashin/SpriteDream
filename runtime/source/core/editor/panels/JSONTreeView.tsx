@@ -417,7 +417,7 @@ function TreeNodeComponent({
             <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
               {node.key !== 'root' && (
                 <>
-                  <span style={{ 
+                  <span style={{
                     fontWeight: 500
                   }}>{node.key}</span>
                   <span style={{ color: 'var(--vscode-descriptionForeground, #808080)', margin: '0 2px' }}>:</span>
@@ -520,9 +520,9 @@ function TreeNodeComponent({
                     }}
                   />
                 ) : (
-                  <span style={{ 
-                    color: isTypeField ? 'var(--vscode-editor-foreground, #cccccc)' : typeColor, 
-                    fontSize: 'inherit', 
+                  <span style={{
+                    color: isTypeField ? 'var(--vscode-editor-foreground, #cccccc)' : typeColor,
+                    fontSize: 'inherit',
                     display: 'inline-block',
                     backgroundColor: isTypeField ? 'var(--vscode-textBlockQuote-background, rgba(128, 128, 128, 0.1))' : 'transparent',
                     padding: isTypeField ? '1px 4px' : '0',
@@ -562,36 +562,36 @@ function TreeNodeComponent({
               display: 'flex',
               alignItems: 'center',
             }}>
-            {hasChildren && (
-              <span style={{
-                transform: isExpanded ? 'rotate(90deg)' : 'none',
-                transition: 'transform 0.1s',
-                display: 'inline-block',
-                fontSize: '10px',
-                color: 'var(--vscode-editor-foreground, #cccccc)',
-                width: '12px',
-                textAlign: 'center',
-              }}>
-                ▶
-              </span>
-            )}
-          </div>
-          <div style={{
-            padding: '1px 2px',
-            flex: '0 0 auto',
-            display: 'flex',
-            alignItems: 'center',
-          }}>
-            <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
-              {node.key !== 'root' && (
-                <>
-                  <span style={{ 
-                    fontWeight: 500
-                  }}>{node.key}</span>
-                  <span style={{ color: 'var(--vscode-descriptionForeground, #808080)', margin: '0 2px' }}>:</span>
-                </>
+              {hasChildren && (
+                <span style={{
+                  transform: isExpanded ? 'rotate(90deg)' : 'none',
+                  transition: 'transform 0.1s',
+                  display: 'inline-block',
+                  fontSize: '10px',
+                  color: 'var(--vscode-editor-foreground, #cccccc)',
+                  width: '12px',
+                  textAlign: 'center',
+                }}>
+                  ▶
+                </span>
               )}
-            </span>
+            </div>
+            <div style={{
+              padding: '1px 2px',
+              flex: '0 0 auto',
+              display: 'flex',
+              alignItems: 'center',
+            }}>
+              <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                {node.key !== 'root' && (
+                  <>
+                    <span style={{
+                      fontWeight: 500
+                    }}>{node.key}</span>
+                    <span style={{ color: 'var(--vscode-descriptionForeground, #808080)', margin: '0 2px' }}>:</span>
+                  </>
+                )}
+              </span>
             </div>
             <div style={{
               padding: '1px 2px',
@@ -665,9 +665,9 @@ function TreeNodeComponent({
                       }}
                     />
                   ) : (
-                    <span style={{ 
-                      color: isTypeField ? 'var(--vscode-editor-foreground, #cccccc)' : typeColor, 
-                      fontSize: 'inherit', 
+                    <span style={{
+                      color: isTypeField ? 'var(--vscode-editor-foreground, #cccccc)' : typeColor,
+                      fontSize: 'inherit',
                       display: 'inline-block'
                     }}>
                       {isTypeField && node.type === 'string' ? String(node.value) : formatValue(node.value, node.type)}
@@ -744,7 +744,7 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
   const updateValueAtPath = useCallback((path: string, newValue: JSONValue) => {
     try {
       const pathParts = path.split('.').filter(p => p !== 'root');
-      
+
       // Prevent updates to "type" fields
       if (pathParts.length > 0 && pathParts[pathParts.length - 1] === 'type') {
         console.warn('Cannot modify "type" field - it is immutable');
@@ -809,22 +809,21 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
   }
 
   return (
-      <div className={`json-tree-view ${className}`} style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        backgroundColor: 'var(--vscode-editor-background, #1e1e1e)',
-        color: 'var(--vscode-editor-foreground, #cccccc)',
-        fontFamily: 'var(--vscode-font-family, "Consolas", "Courier New", monospace)',
-        fontSize: 'var(--vscode-editor-font-size, 13px)',
-      }}>
+    <div className={`json-tree-view ${className}`} style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      backgroundColor: 'var(--vscode-editor-background, #1e1e1e)',
+      color: 'var(--vscode-editor-foreground, #cccccc)',
+      fontFamily: 'var(--vscode-font-family, "Consolas", "Courier New", monospace)',
+      fontSize: 'var(--vscode-editor-font-size, 13px)',
+    }}>
 
       {/* Tree View */}
       <div style={{
         flex: 1,
         overflow: 'auto',
         padding: '0',
-        paddingLeft: '8px',
         paddingTop: '8px',
         paddingBottom: '16px',
       }}>
