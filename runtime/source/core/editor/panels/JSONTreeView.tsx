@@ -801,6 +801,7 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
         flex: 1,
         overflow: 'auto',
         padding: '0',
+        paddingBottom: '16px',
       }}>
         <div style={{
           width: '100%',

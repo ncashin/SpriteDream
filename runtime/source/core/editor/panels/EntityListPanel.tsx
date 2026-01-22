@@ -262,13 +262,13 @@ export function EntityListPanel() {
                       </span>
                       {hoveredEntity === entity && (
                         <div
-                          className="flex gap-0.5 items-center"
+                          className="flex gap-1.5 items-center"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
                             className="
-                              bg-transparent border-none cursor-pointer p-1
-                              w-4 h-4 rounded-md flex items-center justify-center
+                              bg-transparent border-none cursor-pointer p-0
+                              rounded-md flex items-center justify-center
                               transition-colors duration-100
                             "
                             style={{
@@ -287,8 +287,8 @@ export function EntityListPanel() {
                           </button>
                           <button
                             className="
-                              bg-transparent border-none cursor-pointer p-1
-                              w-4 h-4 rounded-md flex items-center justify-center
+                              bg-transparent border-none cursor-pointer p-0
+                              rounded-md flex items-center justify-center
                               transition-colors duration-100
                             "
                             style={{

@@ -13,7 +13,7 @@ export const EditorButton = forwardRef<HTMLButtonElement, EditorButtonProps>(
       <button
         ref={ref}
         disabled={disabled}
-        className={`px-3 py-0.5 text-[0.75rem] font-normal rounded-sm border-none cursor-pointer duration-100 ease-out inline-flex items-center justify-center gap-1 min-h-[20px] leading-[1.4em] outline-none focus:outline focus:outline-1 focus:outline-[var(--vscode-focusBorder,#007acc)] focus:-outline-offset-1 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+        className={`px-3 py-0.5 text-[0.75rem] font-normal rounded-sm border-none cursor-pointer duration-100 ease-out inline-flex items-center justify-center gap-1 min-h-[20px] leading-[1.4em] outline-none focus:outline focus:outline-1 focus:outline-[var(--vscode-focusBorder,#007acc)] focus:-outline-offset-1 disabled:cursor-not-allowed disabled:hover:cursor-not-allowed disabled:opacity-50 ${className}`}
         style={{
           fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)',
           color: 'var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))',

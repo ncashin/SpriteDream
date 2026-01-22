@@ -72,11 +72,17 @@ function main({ ecs, input }: GameContext) {
 
       const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
       const isNormalPointingUp = overlapNormal[1] < 0;
+      const isNormalPointingDown = overlapNormal[1] > 0;
       const isLandingOnTop = isVerticalCollision && isNormalPointingUp;
+      const isHittingHead = isVerticalCollision && isNormalPointingDown;
 
       if (velocity.y > 0 && isLandingOnTop) {
         velocity.y = 0;
         entityData.player.isGrounded = true;
+      }
+
+      if (velocity.y < 0 && isHittingHead) {
+        velocity.y = 0;
       }
     },
   });
