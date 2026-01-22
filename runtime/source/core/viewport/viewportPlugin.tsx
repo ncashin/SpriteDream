@@ -6,6 +6,7 @@ import { isEditorUpdateEnabled } from "../gameloop";
 import { isEditorMode } from "../utils";
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { EditorButton } from "../editor/EditorButton";
 
 export type Viewport = {
   x: number;
@@ -133,16 +134,15 @@ function ViewportDebugUI() {
   }, []);
 
   return (
-    <div className="absolute bottom-0 left-0 z-[10000] p-2 text-xs text-white/60 font-sans select-none leading-normal">
-      <div
+    <div className="absolute bottom-0 left-0 z-[10000] p-2 text-xs select-none leading-normal flex flex-row gap-2 items-end">
+      <EditorButton
         onClick={() => {
           resetViewport();
           setViewportState(getViewport());
         }}
-        className="cursor-pointer mb-1"
       >
         Reset Viewport
-      </div>
+      </EditorButton>
       <div>
         {viewportState.x.toFixed(1)}, {viewportState.y.toFixed(1)}, {(viewportState.scale * 100).toFixed(0)}%
       </div>
@@ -251,7 +251,7 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
         }
         viewportDebugRoot = null;
       }
-      
+
       // Create new container and root
       viewportDebugContainer = document.createElement("div");
       context.rootElement.appendChild(viewportDebugContainer);

@@ -300,7 +300,7 @@ function ToolLink({ href, icon, alt, label }: ToolLinkProps) {
 
 const TOOLS = [
   { href: "https://cursor.sh", icon: "/cursor.png", alt: "Cursor", label: "Cursor" },
-  { href: "https://claude.ai", icon: "/claude.png", alt: "Claude", label: "Claude" },
+  { href: "https://claude.ai", icon: "/claude.png", alt: "Claude Code", label: "Claude Code" },
   { href: "https://opencode.ai", icon: "/opencode.svg", alt: "OpenCode", label: "OpenCode" },
 ] as const;
 
@@ -311,9 +311,9 @@ export default function Home() {
     <div className="h-screen bg-[var(--color-bg-void)] grid-bg overflow-y-auto">
       <div className="spotlight fixed inset-0 pointer-events-none" />
 
-      <section className="flex pb-12 pt-12 px-10 h-[calc(100vh-3.5rem)]">
+      <section className="flex pb-12 pt-12 px-10 h-[calc(100vh-3.5rem)] h-max">
         <div className="flex gap-8 items-start w-full h-full">
-          <div className="sidebar flex flex-col justify-between pb-14">
+          <div className="sidebar flex flex-col justify-between pb-14 h-max">
             <div className="space-y-7 max-w-full">
               <div className="flex flex-row h-min gap-3.5 w-full min-w-0 items-center">
                 <img

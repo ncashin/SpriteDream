@@ -110,6 +110,5 @@ function main({ ecs, input }: GameContext) {
       playerEntity.velocity.y = -jumpStrength;
       playerEntity.player.isGrounded = false;
     }
-
   });
 }

@@ -160,7 +160,7 @@ function TreeNodeComponent({
   const typeColor = getTypeColor(node.type);
   const indent = node.level * 16;
   const isObjectOrArray = node.type === 'object' || node.type === 'array';
-  const isEditable = !isObjectOrArray && node.key !== 'root';
+  const isEditable = !isObjectOrArray && node.key !== 'root' && node.key !== 'type';
 
   // Get custom input type for this property
   const customInputType = useMemo(() => {
@@ -727,6 +727,14 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
 
   const updateValueAtPath = useCallback((path: string, newValue: JSONValue) => {
     try {
+      const pathParts = path.split('.').filter(p => p !== 'root');
+      
+      // Prevent updates to "type" fields
+      if (pathParts.length > 0 && pathParts[pathParts.length - 1] === 'type') {
+        console.warn('Cannot modify "type" field - it is immutable');
+        return;
+      }
+
       const data = JSON.parse(localData);
 
       const setNestedValue = (obj: any, pathParts: string[], value: JSONValue) => {
@@ -760,7 +768,6 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
         }
       };
 
-      const pathParts = path.split('.').filter(p => p !== 'root');
       if (pathParts.length > 0) {
         setNestedValue(data, pathParts, newValue);
         const updatedJson = JSON.stringify(data, null, 2);
