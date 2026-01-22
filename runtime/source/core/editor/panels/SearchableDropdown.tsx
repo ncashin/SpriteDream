@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { CaretDown } from "@phosphor-icons/react";
 
 interface SearchableDropdownProps {
     value: string;
@@ -80,10 +81,10 @@ export function SearchableDropdown({
                 }}
             >
                 <span style={{ flex: 1, textAlign: "left" }}>{value || placeholder}</span>
-                <span
-                    className="codicon codicon-chevron-down"
+                <CaretDown
+                    size={10}
+                    weight="bold"
                     style={{
-                        fontSize: "10px",
                         color: "#808080",
                         marginLeft: "4px",
                         transform: isOpen ? "rotate(180deg)" : "none",

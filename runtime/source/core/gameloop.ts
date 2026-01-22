@@ -1,4 +1,5 @@
 import { resetDragHandlerInitialization } from "./dragHandler";
+import { isEditorMode } from "./utils";
 
 export type CallbackId = number;
 
@@ -57,11 +58,7 @@ export const removeDrawCallback = (id: CallbackId): boolean => {
 };
 
 export const addEditorUpdateCallback = (callback: () => void): CallbackId => {
-  if (
-    typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    import.meta.env.DEV
-  ) {
+  if (isEditorMode()) {
     const id = nextCallbackId++;
     editorCallbacks[id] = callback;
     return id;

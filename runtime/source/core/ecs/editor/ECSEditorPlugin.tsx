@@ -6,6 +6,7 @@ import { registerDragHandler } from "../../dragHandler";
 import { getViewport } from "../../viewport/viewportPlugin";
 import type { ClickableEntityProvider } from "../ecs";
 import { setEditorGameContext } from "../../editor/editorInitializer";
+import { isEditorMode } from "../../utils";
 
 function getClickProviders(context: any): ClickableEntityProvider[] {
   const providers: ClickableEntityProvider[] = [];
@@ -46,7 +47,9 @@ function screenToWorld(
 function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof inputPlugin]>>(
   context: T
 ): void {
-  if (!(typeof import.meta !== "undefined" && import.meta.env?.DEV)) {
+  // Only initialize in dev mode or when editor mode is enabled
+  const isDev = typeof import.meta !== "undefined" && import.meta.env?.DEV;
+  if (!isDev && !isEditorMode()) {
     return;
   }
 

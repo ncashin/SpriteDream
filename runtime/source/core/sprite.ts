@@ -8,7 +8,12 @@ import {
 import { ecsPlugin } from "./scene/ecsAdapter";
 import { addDrawCallback } from "./gameloop";
 import { getViewport } from "./viewport/viewportPlugin";
-import type { HitFlashComponent } from "../scripts/boss";
+// HitFlashComponent type definition
+export type HitFlashComponent = Component & {
+  type: "hitFlash";
+  flashTime: number;
+  maxFlashTime: number;
+};
 
 export type SpriteComponent = Component & {
   type: "sprite";

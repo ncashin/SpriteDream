@@ -1,5 +1,5 @@
 import { writeFile, readFile } from "../fileUtilities";
-import { isDevelopment } from "../utils";
+import { isDevelopment, isEditorMode } from "../utils";
 
 export type SceneData = Record<string, unknown>;
 
@@ -258,7 +258,7 @@ export async function setSceneFile(
     if (content !== undefined) {
       sceneData = JSON.parse(content) as SceneData;
     } else {
-      if (!isDevelopment) {
+      if (!isDevelopment && !isEditorMode()) {
         throw new Error("Scene content must be provided in production mode");
       }
       const fileContent = await readFile(filePath);

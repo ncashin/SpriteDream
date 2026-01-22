@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import type { Entity } from "../../ecs/ecs";
 import { useGameContext } from "../EditorContext";
 import { addDrawCallback, removeDrawCallback } from "../../gameloop";
+import { CaretDown, CaretRight, Plus, PencilSimple, Trash } from "@phosphor-icons/react";
 
 export function EntityListPanel() {
   const gameContext = useGameContext();
@@ -158,10 +159,11 @@ export function EntityListPanel() {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <span>Entities ({entities.length})</span>
-        <span
-          className={`codicon text-xs ml-1 ${isExpanded ? "codicon-chevron-down" : "codicon-chevron-right"
-            }`}
-        />
+        {isExpanded ? (
+          <CaretDown size={12} weight="bold" className="ml-1" />
+        ) : (
+          <CaretRight size={12} weight="bold" className="ml-1" />
+        )}
       </button>
 
       {isExpanded && (
@@ -192,7 +194,7 @@ export function EntityListPanel() {
             }}
             onClick={handleCreateEntity}
           >
-            <span className="codicon codicon-add" />
+            <Plus size={12} weight="bold" />
             <span>New Entity</span>
           </button>
 
@@ -281,7 +283,7 @@ export function EntityListPanel() {
                             onClick={(e) => handleStartRename(entity, e)}
                             title="Rename entity"
                           >
-                            <span className="codicon codicon-edit text-[10px]" />
+                            <PencilSimple size={14} weight="bold" />
                           </button>
                           <button
                             className="
@@ -301,7 +303,7 @@ export function EntityListPanel() {
                             onClick={(e) => handleDeleteEntity(entity, e)}
                             title="Delete entity"
                           >
-                            <span className="codicon codicon-trash text-[10px]" />
+                            <Trash size={14} weight="bold" />
                           </button>
                         </div>
                       )}

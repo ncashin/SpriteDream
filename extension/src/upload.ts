@@ -97,7 +97,7 @@ async function createZipArchive(sourceDir: string, outputPath: string): Promise<
     });
 }
 
-async function buildRuntime(runtimePath: string, progress: (increment: number, message: string) => void): Promise<void> {
+async function buildRuntime(runtimePath: string, progress: (increment: number, message: string) => void, editorMode: boolean = false): Promise<void> {
     const nodeModulesPath = path.join(runtimePath, 'node_modules');
     if (!fs.existsSync(nodeModulesPath)) {
         progress(10, "Installing dependencies...");
@@ -115,13 +115,17 @@ async function buildRuntime(runtimePath: string, progress: (increment: number, m
         }
     }
 
-    progress(20, "Building runtime...");
+    progress(20, editorMode ? "Building runtime with editor enabled..." : "Building runtime...");
     await execAsync(`cd "${runtimePath}" && npx tsc`, {
         cwd: runtimePath,
         maxBuffer: 10 * 1024 * 1024
     });
 
-    const buildResult = await execAsync(`cd "${runtimePath}" && npx vite build --base ./`, {
+    const buildCommand = editorMode 
+        ? `cd "${runtimePath}" && npm run build:editor -- --base ./`
+        : `cd "${runtimePath}" && npx vite build --base ./`;
+    
+    const buildResult = await execAsync(buildCommand, {
         cwd: runtimePath,
         maxBuffer: 10 * 1024 * 1024
     });
@@ -321,7 +325,7 @@ export async function uploadGame(context: vscode.ExtensionContext) {
             progress.report({ increment: 0, message: "Building runtime..." });
 
             try {
-                await buildRuntime(runtimePath, (increment, message) => progress.report({ increment, message }));
+                await buildRuntime(runtimePath, (increment, message) => progress.report({ increment, message }), true);
             } catch (error: any) {
                 const errorOutput = error.stderr || error.stdout || error.message;
                 vscode.window.showErrorMessage(`Failed to build runtime:\n${errorOutput}`);

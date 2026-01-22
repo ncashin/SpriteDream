@@ -1,6 +1,6 @@
 import { setScene } from "./scene/scene";
 import type { Root } from "react-dom/client";
-import { isDevelopment } from "./utils";
+import { isDevelopment, isEditorMode } from "./utils";
 import { defineMainFunction, runGame } from "./runtimeWrapper";
 
 export type InitialGameContext = {
@@ -41,7 +41,10 @@ function createGameContext<T extends readonly Plugin<any, any>[]>(
   plugins: T,
   initialScene: string
 ): AccumulatePluginResults<T> {
-  if (!isDevelopment) {
+  // Set scene in production mode or when editor mode is enabled (e.g., on website landing page)
+  const editorEnabled = isEditorMode();
+  
+  if (!isDevelopment || editorEnabled) {
     void setScene(initialScene);
   }
 

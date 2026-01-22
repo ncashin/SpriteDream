@@ -2,9 +2,11 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import CodeBlock from "@tiptap/extension-code-block";
 import Placeholder from "@tiptap/extension-placeholder";
+import { Extension } from "@tiptap/core";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { Decoration, DecorationSet } from "@tiptap/pm/view";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "prosemirror-view";
+import { Plugin, PluginKey, type Transaction, type EditorState } from "prosemirror-state";
+import { MagnifyingGlass, ArrowUp, ArrowDown, X } from "@phosphor-icons/react";
 
 interface JSONEditorProps {
     value: string;
@@ -84,53 +86,58 @@ export function JSONEditor({
         currentMatchIndexRef.current = currentMatchIndex;
     }, [currentMatchIndex]);
 
-    // Create search plugin - needs to be created before editor initialization
-    const searchPlugin = useMemo(() => {
-        const plugin = new Plugin({
-            key: searchPluginKey,
-            state: {
-                init() {
-                    return DecorationSet.empty;
-                },
-                apply(tr, value, oldState, newState) {
-                    const query = searchQueryRef.current;
-                    if (!query || !newState.doc) {
-                        return DecorationSet.empty;
-                    }
+    // Create search plugin extension
+    const searchExtension = useMemo(() => {
+        return Extension.create({
+            name: 'searchHighlight',
+            addProseMirrorPlugins() {
+                const plugin: Plugin<DecorationSet> = new Plugin({
+                    key: searchPluginKey,
+                    state: {
+                        init() {
+                            return DecorationSet.empty;
+                        },
+                        apply(_tr: Transaction, _value: DecorationSet, _oldState: EditorState, newState: EditorState) {
+                            const query = searchQueryRef.current;
+                            if (!query || !newState.doc) {
+                                return DecorationSet.empty;
+                            }
 
-                    const text = newState.doc.textContent;
-                    const matches = findMatches(query, text);
-                    
-                    if (matches.length === 0) {
-                        return DecorationSet.empty;
-                    }
+                            const text = newState.doc.textContent;
+                            const matches = findMatches(query, text);
+                            
+                            if (matches.length === 0) {
+                                return DecorationSet.empty;
+                            }
 
-                    const currentIdx = currentMatchIndexRef.current;
-                    const decorations: Decoration[] = [];
-                    matches.forEach((match, index) => {
-                        try {
-                            const decoration = Decoration.inline(match.from, match.to, {
-                                class: index === currentIdx 
-                                    ? 'json-search-match json-search-match-active' 
-                                    : 'json-search-match',
+                            const currentIdx = currentMatchIndexRef.current;
+                            const decorations: Decoration[] = [];
+                            matches.forEach((match, index) => {
+                                try {
+                                    const decoration = Decoration.inline(match.from, match.to, {
+                                        class: index === currentIdx 
+                                            ? 'json-search-match json-search-match-active' 
+                                            : 'json-search-match',
+                                    });
+                                    decorations.push(decoration);
+                                } catch (e) {
+                                    // Skip invalid decorations
+                                    console.warn('Failed to create decoration:', e);
+                                }
                             });
-                            decorations.push(decoration);
-                        } catch (e) {
-                            // Skip invalid decorations
-                            console.warn('Failed to create decoration:', e);
-                        }
-                    });
 
-                    return DecorationSet.create(newState.doc, decorations);
-                },
-            },
-            props: {
-                decorations(state) {
-                    return plugin.getState(state);
-                },
+                            return DecorationSet.create(newState.doc, decorations);
+                        },
+                    },
+                    props: {
+                        decorations(state: EditorState): DecorationSet {
+                            return plugin.getState(state) || DecorationSet.empty;
+                        },
+                    },
+                });
+                return [plugin];
             },
         });
-        return plugin;
     }, [searchPluginKey, findMatches]);
 
     const editor = useEditor({
@@ -145,9 +152,9 @@ export function JSONEditor({
                 code: false,
                 codeBlock: false, // We'll use our own CodeBlock config
                 // Keep only essential features
-                history: true,
-                dropcursor: true,
-                gapcursor: true,
+                history: {},
+                dropcursor: {},
+                gapcursor: false,
             }),
             CodeBlock.configure({
                 HTMLAttributes: {
@@ -159,8 +166,8 @@ export function JSONEditor({
             Placeholder.configure({
                 placeholder,
             }),
+            searchExtension,
         ],
-        plugins: [searchPlugin],
         content: value ? `<pre><code>${value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>` : `<pre><code></code></pre>`,
         editorProps: {
             attributes: {
@@ -168,13 +175,13 @@ export function JSONEditor({
                 spellcheck: "false",
                 style: "font-family: var(--vscode-editor-font-family, 'Consolas', 'Courier New', monospace); font-size: var(--vscode-editor-font-size, 14px); line-height: var(--vscode-editor-line-height, 1.5); color: var(--vscode-editor-foreground, #cccccc);",
             },
-            transformPastedText(text) {
+            transformPastedText(text: string) {
                 // Preserve plain text when pasting
                 return text;
             },
             handleDOMEvents: {
                 // Prevent Enter from creating new paragraphs - keep it in code block
-                keydown: (view, event) => {
+                keydown: (_view: any, event: KeyboardEvent) => {
                     // Handle Cmd+F / Ctrl+F to open search
                     if ((event.metaKey || event.ctrlKey) && event.key === 'f') {
                         event.preventDefault();
@@ -191,7 +198,7 @@ export function JSONEditor({
                 },
             },
         },
-        onUpdate: ({ editor }) => {
+        onUpdate: ({ editor }: { editor: any }) => {
             // Extract text from code block while preserving formatting
             const text = getFormattedText(editor);
             onChange(text);
@@ -320,7 +327,7 @@ export function JSONEditor({
             {isSearchOpen && (
                 <div className="absolute top-0 left-0 right-0 z-50 bg-[#252526] border-b border-[#3e3e42] px-3 py-2 flex items-center gap-2 shadow-lg">
                     <div className="relative flex items-center min-w-0 flex-1">
-                        <span className="codicon codicon-search absolute left-2 pointer-events-none z-[1] text-white/60" />
+                        <MagnifyingGlass size={14} weight="bold" className="absolute left-2 pointer-events-none z-[1] text-white/60" />
                         <input
                             ref={searchInputRef}
                             type="text"
@@ -366,7 +373,7 @@ export function JSONEditor({
                                     className="p-1 rounded hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
                                     title="Previous (Shift+Enter)"
                                 >
-                                    <span className="codicon codicon-arrow-up text-white/60" />
+                                    <ArrowUp size={14} weight="bold" className="text-white/60" />
                                 </button>
                                 <button
                                     onClick={() => {
@@ -378,7 +385,7 @@ export function JSONEditor({
                                     className="p-1 rounded hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
                                     title="Next (Enter)"
                                 >
-                                    <span className="codicon codicon-arrow-down text-white/60" />
+                                    <ArrowDown size={14} weight="regular" className="text-white/60" />
                                 </button>
                             </div>
                             <button
@@ -390,7 +397,7 @@ export function JSONEditor({
                                 className="p-1 rounded hover:bg-white/10"
                                 title="Close (Esc)"
                             >
-                                <span className="codicon codicon-close text-white/60" />
+                                <X size={14} weight="bold" className="text-white/60" />
                             </button>
                         </div>
                     )}

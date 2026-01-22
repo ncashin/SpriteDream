@@ -1,3 +1,5 @@
+import { MagnifyingGlass } from "@phosphor-icons/react";
+
 interface SearchInputProps {
   placeholder: string;
   value: string;
@@ -28,8 +30,10 @@ export function SearchInput({
 
   return (
     <div className="relative flex items-center min-w-0 w-full">
-      <span
-        className="codicon codicon-search absolute left-2 pointer-events-none z-[1]"
+      <MagnifyingGlass
+        size={14}
+        weight="bold"
+        className="absolute left-2 pointer-events-none z-[1]"
         style={{
           color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.6))',
         }}

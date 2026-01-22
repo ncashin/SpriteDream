@@ -2,47 +2,56 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  publicDir: 'assets',
-  server: {
-    port: 7777,
-    strictPort: true,
-    watch: {
-      ignored: ['**/scenes/**'],
+export default defineConfig(({ mode }) => {
+  // Check if we're building with editor enabled
+  const editorEnabled = mode === 'editor';
+  
+  return {
+    plugins: [react(), tailwindcss()],
+    publicDir: 'assets',
+    define: {
+      // Define build-time constant for editor mode
+      'import.meta.env.VITE_EDITOR_ENABLED': JSON.stringify(editorEnabled),
     },
-  },
-  build: {
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        passes: 5,
-        unsafe: true,
-        unsafe_comps: true,
-        unsafe_math: true,
-        unsafe_methods: true,
-        unsafe_proto: true,
-        unsafe_regexp: true,
-        unsafe_undefined: true,
+    server: {
+      port: 7777,
+      strictPort: true,
+      watch: {
+        ignored: ['**/scenes/**'],
       },
-      mangle: {
-        toplevel: true,
-        properties: {
-          regex: /^_/,
+    },
+    build: {
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+          passes: 5,
+          unsafe: true,
+          unsafe_comps: true,
+          unsafe_math: true,
+          unsafe_methods: true,
+          unsafe_proto: true,
+          unsafe_regexp: true,
+          unsafe_undefined: true,
         },
-        safari10: false,
-      },
-      format: {
-        comments: false,
-      },
-    } as any,
-    sourcemap: false,
-    rollupOptions: {
-      output: {
-        manualChunks: undefined,
+        mangle: {
+          toplevel: true,
+          properties: {
+            regex: /^_/,
+          },
+          safari10: false,
+        },
+        format: {
+          comments: false,
+        },
+      } as any,
+      sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks: undefined,
+        },
       },
     },
-  },
+  };
 });

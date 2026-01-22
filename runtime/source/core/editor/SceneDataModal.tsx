@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { getScene } from '../scene/scene';
 import { JSONEditor } from './panels/JSONEditor';
 import { JSONTreeView } from './panels/JSONTreeView';
+import { X } from '@phosphor-icons/react';
 
 interface SceneDataModalProps {
   isOpen: boolean;
@@ -87,7 +88,7 @@ export function SceneDataModal({ isOpen, onClose }: SceneDataModalProps) {
           }}
           onClick={onClose}
         >
-          <span className="codicon codicon-close" />
+          <X size={14} weight="bold" />
         </button>
       </div>
       <div className="flex flex-1" style={{ overflow: 'hidden' }}>

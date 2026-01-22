@@ -9,14 +9,12 @@ import {
   setUpdateEnabled,
 } from "./gameloop";
 import type { InitialGameContext } from "./gameContext";
+import { isEditorMode } from "./utils";
 
 export type MainFunction = (initialContext: InitialGameContext) => void;
 
 const isDev = import.meta.env?.DEV === true;
 const isInIframe = window.parent !== window;
-const isEditorModeEnabled =
-  typeof window !== "undefined" &&
-  (window as any).__EDITOR_MODE_ENABLED__ === true;
 
 let mainFunction: MainFunction | null = null;
 let isInitialized = false;
@@ -36,10 +34,11 @@ export function runGame() {
 
   resetAllCallbacks();
 
-  if (isDev || isEditorModeEnabled) {
+  if (isDev || isEditorMode()) {
     initializeEditor();
     if (!hasSceneBeenLoaded) {
       setEditorEnabled(true);
+      // Don't auto-start the game when editor is enabled - user should click Run
       setUpdateEnabled(false);
       hasSceneBeenLoaded = true;
     }
@@ -67,7 +66,7 @@ const handleMessage = async (event: MessageEvent) => {
       try {
         let fileContent = content;
 
-        if (fileContent === undefined && isDev) {
+        if (fileContent === undefined && (isDev || isEditorMode())) {
           fileContent = await readFile(path);
         } else if (fileContent === undefined) {
           return;
@@ -117,6 +116,6 @@ if (import.meta.hot) {
   });
 }
 
-if (isDev || isEditorModeEnabled) {
+if (isDev || isEditorMode()) {
   initializeEditor();
 }

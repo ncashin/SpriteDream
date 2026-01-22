@@ -1,11 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { listFiles } from "../../fileUtilities";
+import { X } from "@phosphor-icons/react";
 
 interface FileInputProps {
   value: string;
   onChange: (value: string) => void;
   accept?: string; // e.g., "image/*", ".png,.svg"
   placeholder?: string;
+  directory?: string; // Optional directory prop (currently unused but kept for compatibility)
 }
 
 export function FileInput({
@@ -148,19 +150,19 @@ export function FileInput({
           {displayValue}
         </span>
         {isValueSet && (
-          <span
-            className="codicon codicon-close"
+          <X
+            size={10}
+            weight="bold"
             onClick={(e) => {
               e.stopPropagation();
               setError("");
               onChange("");
             }}
             style={{
-              fontSize: "10px",
-              color: "#808080",
               marginLeft: "4px",
               marginRight: "2px",
               cursor: "pointer",
+              color: "#808080",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = "#f48771";

@@ -5,6 +5,7 @@ import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 import { componentRegistry } from "../../ecs/component";
 import { JSONTreeView } from "./JSONTreeView";
 import { SearchInput } from "./SearchInput";
+import { X, Plus, Minus } from "@phosphor-icons/react";
 
 interface EntityModalProps {
   isOpen: boolean;
@@ -268,7 +269,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
           }}
           onClick={onClose}
         >
-          <span className="codicon codicon-close" />
+          <X size={14} weight="bold" />
         </button>
       </div>
 
@@ -312,7 +313,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
               e.currentTarget.style.backgroundColor = showAddComponent ? 'transparent' : 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
             }}
           >
-            <span className="codicon codicon-add text-[10px]" />
+            <Plus size={10} weight="bold" />
             <span>Add Component</span>
           </button>
         </div>
@@ -354,7 +355,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
               e.currentTarget.style.backgroundColor = showRemoveComponent ? 'transparent' : 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
             }}
           >
-            <span className="codicon codicon-remove text-[10px]" />
+            <Minus size={10} weight="bold" />
             <span>Remove Component</span>
           </button>
         </div>
