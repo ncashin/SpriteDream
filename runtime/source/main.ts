@@ -70,10 +70,8 @@ function main({ ecs, input }: GameContext) {
       const velocity = getComponent(_ecs, entity, VelocityComponentDefinition);
       if (!velocity) return;
 
-      // Normal represents direction entity should move to separate
-      // For landing detection: if normal points up (negative Y), player is landing on top
       const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
-      const isNormalPointingUp = overlapNormal[1] < 0; // Negative Y means up
+      const isNormalPointingUp = overlapNormal[1] < 0;
       const isLandingOnTop = isVerticalCollision && isNormalPointingUp;
 
       if (velocity.y > 0 && isLandingOnTop) {

@@ -4,8 +4,8 @@
       "player": {
         "position": {
           "type": "position",
-          "x": 25.156028368794345,
-          "y": -133.63525835866267
+          "x": 0,
+          "y": -100
         },
         "sprite": {
           "type": "sprite",
@@ -23,7 +23,7 @@
           "type": "player",
           "speed": 250,
           "gravity": 1800,
-          "jumpStrength": 500,
+          "jumpStrength": 750,
           "isGrounded": false
         },
         "collider": {

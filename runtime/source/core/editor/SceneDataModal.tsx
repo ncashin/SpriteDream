@@ -108,11 +108,11 @@ export function SceneDataModal({ isOpen, onClose }: SceneDataModalProps) {
           {isValidJSON ? (
             <JSONTreeView json={sceneData} />
           ) : (
-            <div 
-              className="flex-1 flex items-center justify-center" 
-              style={{ 
-                color: 'var(--vscode-errorForeground, #f48771)', 
-                fontSize: 'var(--vscode-editor-font-size, 13px)' 
+            <div
+              className="flex-1 flex items-center justify-center"
+              style={{
+                color: 'var(--vscode-errorForeground, #f48771)',
+                fontSize: 'var(--vscode-editor-font-size, 13px)'
               }}
             >
               Invalid JSON - cannot display tree view
