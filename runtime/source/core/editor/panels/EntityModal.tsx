@@ -303,7 +303,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between min-h-5 px-2 py-1 text-xs border-b select-none rounded-t-sm"
+        className="flex items-center justify-between min-h-5 px-1 py-1 text-xs border-b select-none rounded-t-sm"
         style={{
           color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
           borderBottomColor: 'var(--vscode-panel-border, rgba(128, 128, 128, 0.2))',
@@ -335,7 +335,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         ) : (
           <>
             <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{entity}</span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center">
               <button
                 className="flex items-center justify-center w-5 h-5 p-0.5 rounded-sm border-none cursor-pointer transition-colors duration-100 bg-transparent"
                 style={{
@@ -350,7 +350,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
                 onClick={handleStartRename}
                 title="Rename entity"
               >
-                <PencilSimple size={16} weight="bold" />
+                <PencilSimple size={14} weight="bold" />
               </button>
               <button
                 className="flex items-center justify-center w-5 h-5 p-0.5 rounded-sm border-none cursor-pointer transition-colors duration-100 bg-transparent"
@@ -366,10 +366,10 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
                 onClick={handleDeleteEntity}
                 title="Delete entity"
               >
-                <Trash size={16} weight="bold" />
+                <Trash size={14} weight="bold" />
               </button>
               <button
-                className="flex items-center justify-center w-5 h-5 p-0.5 rounded-sm border-none cursor-pointer transition-colors duration-100 ml-1 bg-transparent"
+                className="flex items-center justify-center w-5 h-5 p-0.5 rounded-sm border-none cursor-pointer transition-colors duration-100 bg-transparent"
                 style={{
                   color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
                 }}
@@ -381,7 +381,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
                 }}
                 onClick={onClose}
               >
-                <X size={16} weight="bold" />
+                <X size={14} weight="bold" />
               </button>
             </div>
           </>
