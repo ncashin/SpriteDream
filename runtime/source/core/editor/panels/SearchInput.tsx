@@ -29,7 +29,10 @@ export function SearchInput({
   return (
     <div className="relative flex items-center min-w-0 w-full">
       <span
-        className="codicon codicon-search absolute left-2 pointer-events-none z-[1] text-white/60"
+        className="codicon codicon-search absolute left-2 pointer-events-none z-[1]"
+        style={{
+          color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.6))',
+        }}
       />
       <input
         type="text"
@@ -38,9 +41,11 @@ export function SearchInput({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         autoFocus={autoFocus}
-        className="flex-1 w-full py-0.5 pr-3 pl-6 text-xs bg-gray-500/30 text-white/90 border-none rounded-sm outline-none min-w-0 min-h-5 box-border focus:outline focus:outline-1 focus:outline-[#007acc] focus:-outline-offset-1"
+        className="flex-1 w-full py-1.5 pr-3 pl-8 text-xs border-none outline-none min-w-0 min-h-[28px] box-border focus:outline focus:outline-1 focus:outline-[#007acc] focus:-outline-offset-1"
         style={{
           fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
+          color: 'var(--vscode-foreground, #cccccc)',
+          backgroundColor: 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))',
         }}
       />
     </div>

@@ -79,19 +79,19 @@ function getRootChildren(tree: TreeNode): TreeNode[] {
 function getTypeColor(type: TreeNode['type']): string {
   switch (type) {
     case 'string':
-      return '#ce9178'; // Orange/red
+      return 'var(--vscode-symbolIcon-stringForeground, #ce9178)'; // Orange/red
     case 'number':
-      return '#b5cea8'; // Green
+      return 'var(--vscode-symbolIcon-numberForeground, #b5cea8)'; // Green
     case 'boolean':
-      return '#569cd6'; // Blue
+      return 'var(--vscode-symbolIcon-keywordForeground, #569cd6)'; // Blue
     case 'null':
-      return '#569cd6'; // Blue
+      return 'var(--vscode-symbolIcon-keywordForeground, #569cd6)'; // Blue
     case 'object':
-      return '#4ec9b0'; // Cyan
+      return 'var(--vscode-symbolIcon-objectForeground, #4ec9b0)'; // Cyan
     case 'array':
-      return '#4ec9b0'; // Cyan
+      return 'var(--vscode-symbolIcon-arrayForeground, #4ec9b0)'; // Cyan
     default:
-      return '#cccccc';
+      return 'var(--vscode-editor-foreground, #cccccc)';
   }
 }
 
@@ -267,7 +267,7 @@ function TreeNodeComponent({
           }}
           onClick={handleRowClick}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+            e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05))';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
@@ -280,7 +280,7 @@ function TreeNodeComponent({
                 transition: 'transform 0.1s',
                 display: 'inline-block',
                 fontSize: '10px',
-                color: '#cccccc',
+                color: 'var(--vscode-editor-foreground, #cccccc)',
                 width: '12px',
                 textAlign: 'center',
                 flexShrink: 0,
@@ -288,7 +288,7 @@ function TreeNodeComponent({
                 ▶
               </span>
             )}
-            <span style={{ color: '#cccccc', fontSize: 'inherit' }}>
+            <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit' }}>
               {node.key !== 'root' && (
                 <span style={{ fontWeight: 500 }}>{node.key}</span>
               )}
@@ -376,7 +376,7 @@ function TreeNodeComponent({
                 transition: 'transform 0.1s',
                 display: 'inline-block',
                 fontSize: '10px',
-                color: '#cccccc',
+                color: 'var(--vscode-editor-foreground, #cccccc)',
                 width: '12px',
                 textAlign: 'center',
               }}>
@@ -399,7 +399,7 @@ function TreeNodeComponent({
               if (rowId) {
                 const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
                 cells.forEach((cell: any) => {
-                  cell.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                  cell.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05))';
                 });
               }
             }}
@@ -413,11 +413,11 @@ function TreeNodeComponent({
               }
             }}
           >
-            <span style={{ color: '#cccccc', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
               {node.key !== 'root' && (
                 <>
                   <span style={{ fontWeight: 500 }}>{node.key}</span>
-                  <span style={{ color: '#808080', margin: '0 2px' }}>:</span>
+                  <span style={{ color: 'var(--vscode-descriptionForeground, #808080)', margin: '0 2px' }}>:</span>
                 </>
               )}
             </span>
@@ -438,7 +438,7 @@ function TreeNodeComponent({
               if (rowId) {
                 const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
                 cells.forEach((cell: any) => {
-                  cell.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                  cell.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05))';
                 });
               }
             }}
@@ -538,7 +538,7 @@ function TreeNodeComponent({
           }}
           onClick={handleRowClick}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+            e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05))';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
@@ -552,34 +552,34 @@ function TreeNodeComponent({
               display: 'flex',
               alignItems: 'center',
             }}>
-              {hasChildren && (
-                <span style={{
-                  transform: isExpanded ? 'rotate(90deg)' : 'none',
-                  transition: 'transform 0.1s',
-                  display: 'inline-block',
-                  fontSize: '10px',
-                  color: '#cccccc',
-                  width: '12px',
-                  textAlign: 'center',
-                }}>
-                  ▶
-                </span>
-              )}
-            </div>
-            <div style={{
-              padding: '1px 2px',
-              flex: '0 0 auto',
-              display: 'flex',
-              alignItems: 'center',
-            }}>
-              <span style={{ color: '#cccccc', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
-                {node.key !== 'root' && (
-                  <>
-                    <span style={{ fontWeight: 500 }}>{node.key}</span>
-                    <span style={{ color: '#808080', margin: '0 2px' }}>:</span>
-                  </>
-                )}
+            {hasChildren && (
+              <span style={{
+                transform: isExpanded ? 'rotate(90deg)' : 'none',
+                transition: 'transform 0.1s',
+                display: 'inline-block',
+                fontSize: '10px',
+                color: 'var(--vscode-editor-foreground, #cccccc)',
+                width: '12px',
+                textAlign: 'center',
+              }}>
+                ▶
               </span>
+            )}
+          </div>
+          <div style={{
+            padding: '1px 2px',
+            flex: '0 0 auto',
+            display: 'flex',
+            alignItems: 'center',
+          }}>
+            <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
+              {node.key !== 'root' && (
+                <>
+                  <span style={{ fontWeight: 500 }}>{node.key}</span>
+                  <span style={{ color: 'var(--vscode-descriptionForeground, #808080)', margin: '0 2px' }}>:</span>
+                </>
+              )}
+            </span>
             </div>
             <div style={{
               padding: '1px 2px',
@@ -777,7 +777,7 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
     return (
       <div className={`json-tree-view ${className}`} style={{
         padding: '16px',
-        color: '#f48771',
+        color: 'var(--vscode-errorForeground, #f48771)',
         fontSize: 'inherit',
       }}>
         Invalid JSON
@@ -786,15 +786,15 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
   }
 
   return (
-    <div className={`json-tree-view ${className}`} style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      backgroundColor: '#1e1e1e',
-      color: '#cccccc',
-      fontFamily: 'var(--vscode-font-family, "Consolas", "Courier New", monospace)',
-      fontSize: 'var(--vscode-editor-font-size, 13px)',
-    }}>
+      <div className={`json-tree-view ${className}`} style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        backgroundColor: 'var(--vscode-editor-background, #1e1e1e)',
+        color: 'var(--vscode-editor-foreground, #cccccc)',
+        fontFamily: 'var(--vscode-font-family, "Consolas", "Courier New", monospace)',
+        fontSize: 'var(--vscode-editor-font-size, 13px)',
+      }}>
 
       {/* Tree View */}
       <div style={{
@@ -821,7 +821,7 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
                 />
               ))
             ) : (
-              <div style={{ padding: '16px', color: '#808080', fontSize: 'inherit', textAlign: 'center' }}>
+              <div style={{ padding: '16px', color: 'var(--vscode-descriptionForeground, #808080)', fontSize: 'inherit', textAlign: 'center' }}>
                 Select a node...
               </div>
             );

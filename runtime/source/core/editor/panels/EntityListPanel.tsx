@@ -128,9 +128,10 @@ export function EntityListPanel() {
 
   return (
     <div
-      className="flex flex-col w-[250px] bg-[rgb(60,60,60)] rounded-sm"
+      className="flex flex-col w-[250px] rounded-sm"
       style={{
         fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
+        backgroundColor: 'var(--vscode-panel-background, #3c3c3c)',
       }}
     >
       {/* Header */}
@@ -138,13 +139,22 @@ export function EntityListPanel() {
         className={`
           flex items-center justify-between w-full min-h-5 px-1 pl-2 py-1
           text-xs cursor-pointer outline-none select-none
-          transition-colors duration-100
+          transition-colors duration-100 bg-transparent
           ${isExpanded
-            ? "rounded-t-sm border-b border-gray-500/20"
+            ? "rounded-t-sm border-b"
             : "rounded-sm"
           }
-          text-white/90 bg-transparent hover:bg-white/10
         `}
+        style={{
+          color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
+          borderBottomColor: isExpanded ? 'var(--vscode-panel-border, rgba(128, 128, 128, 0.2))' : 'transparent',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }}
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <span>Entities ({entities.length})</span>
@@ -160,11 +170,26 @@ export function EntityListPanel() {
           <button
             className="
               flex items-center gap-1 w-full min-h-5 px-2 py-1
-              text-xs text-[#cccccc] cursor-pointer
-              bg-black/10 border-b border-gray-500/20
+              text-xs cursor-pointer border-b
               transition-colors duration-100
-              hover:bg-gray-500/35 active:bg-gray-500/40
             "
+            style={{
+              color: 'var(--vscode-foreground, #cccccc)',
+              backgroundColor: 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))',
+              borderBottomColor: 'var(--vscode-panel-border, rgba(128, 128, 128, 0.2))',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.35))';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))';
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.4))';
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.35))';
+            }}
             onClick={handleCreateEntity}
           >
             <span className="codicon codicon-add" />
@@ -172,9 +197,19 @@ export function EntityListPanel() {
           </button>
 
           {/* Entity List */}
-          <div className="overflow-auto p-0 pb-1 bg-black/10 h-[120px] rounded-b-sm">
+          <div
+            className="overflow-auto p-0 pb-1 h-[120px] rounded-b-sm"
+            style={{
+              backgroundColor: 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))',
+            }}
+          >
             {entities.length === 0 ? (
-              <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60">
+              <div
+                className="flex items-center justify-center min-h-5 px-2 py-1 text-xs"
+                style={{
+                  color: 'var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))',
+                }}
+              >
                 No entities
               </div>
             ) : (
@@ -183,15 +218,17 @@ export function EntityListPanel() {
                   key={entity}
                   className={`
                     flex items-center gap-1 min-h-5 px-2 py-1
-                    text-xs text-[#cccccc] cursor-pointer
+                    text-xs cursor-pointer
                     transition-colors duration-100
-                    ${selectedEntity === entity
-                      ? "bg-[#04395e]"
-                      : hoveredEntity === entity
-                        ? "bg-white/10"
-                        : "bg-transparent"
-                    }
                   `}
+                  style={{
+                    color: 'var(--vscode-foreground, #cccccc)',
+                    backgroundColor: selectedEntity === entity
+                      ? 'var(--vscode-list-activeSelectionBackground, #04395e)'
+                      : hoveredEntity === entity
+                        ? 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))'
+                        : 'transparent',
+                  }}
                   onClick={() => ecs.selectEntity(entity)}
                   onMouseEnter={() => setHoveredEntity(entity)}
                   onMouseLeave={() => setHoveredEntity(null)}
@@ -230,9 +267,17 @@ export function EntityListPanel() {
                             className="
                               bg-transparent border-none cursor-pointer p-1
                               w-4 h-4 rounded-md flex items-center justify-center
-                              text-white/90 transition-colors duration-100
-                              hover:bg-white/10
+                              transition-colors duration-100
                             "
+                            style={{
+                              color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
                             onClick={(e) => handleStartRename(entity, e)}
                             title="Rename entity"
                           >
@@ -242,9 +287,17 @@ export function EntityListPanel() {
                             className="
                               bg-transparent border-none cursor-pointer p-1
                               w-4 h-4 rounded-md flex items-center justify-center
-                              text-[#f48771] transition-colors duration-100
-                              hover:bg-white/10
+                              transition-colors duration-100
                             "
+                            style={{
+                              color: 'var(--vscode-errorForeground, #f48771)',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
                             onClick={(e) => handleDeleteEntity(entity, e)}
                             title="Delete entity"
                           >

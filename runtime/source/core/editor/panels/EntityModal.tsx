@@ -4,6 +4,7 @@ import { useGameContext } from "../EditorContext";
 import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 import { componentRegistry } from "../../ecs/component";
 import { JSONTreeView } from "./JSONTreeView";
+import { SearchInput } from "./SearchInput";
 
 interface EntityModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const [entityData, setEntityData] = useState("");
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [showRemoveComponent, setShowRemoveComponent] = useState(false);
+  const [addComponentSearch, setAddComponentSearch] = useState("");
+  const [removeComponentSearch, setRemoveComponentSearch] = useState("");
   const addComponentDropdownRef = useRef<HTMLDivElement>(null);
   const addComponentButtonRef = useRef<HTMLButtonElement>(null);
   const removeComponentDropdownRef = useRef<HTMLDivElement>(null);
@@ -33,8 +36,17 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         const notAlreadyAdded = !currentComponents[type];
         return notAlreadyAdded;
       })
-      .map(([type, def]) => ({ type, def }));
-  }, [entity, ecs]);
+      .map(([type, def]) => ({ type, def }))
+      .filter(({ type, def }) => {
+        if (!addComponentSearch) return true;
+        const searchLower = addComponentSearch.toLowerCase();
+        return (
+          type.toLowerCase().includes(searchLower) ||
+          (def.displayName || "").toLowerCase().includes(searchLower) ||
+          (def.description || "").toLowerCase().includes(searchLower)
+        );
+      });
+  }, [entity, ecs, addComponentSearch]);
 
   // Get current components on entity
   const currentComponents = useMemo(() => {
@@ -47,8 +59,17 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         type,
         component: component as Component,
         def: componentRegistry[type],
-      }));
-  }, [entity, ecs, entityData]);
+      }))
+      .filter(({ type, def }) => {
+        if (!removeComponentSearch) return true;
+        const searchLower = removeComponentSearch.toLowerCase();
+        return (
+          type.toLowerCase().includes(searchLower) ||
+          (def?.displayName || "").toLowerCase().includes(searchLower) ||
+          (def?.description || "").toLowerCase().includes(searchLower)
+        );
+      });
+  }, [entity, ecs, entityData, removeComponentSearch]);
 
   // Sync entity data from ECS
   useEffect(() => {
@@ -70,8 +91,10 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       if (e.key === "Escape") {
         if (showAddComponent) {
           setShowAddComponent(false);
+          setAddComponentSearch("");
         } else if (showRemoveComponent) {
           setShowRemoveComponent(false);
+          setRemoveComponentSearch("");
         } else {
           onClose();
         }
@@ -86,6 +109,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         const isClickOnButton = addComponentButtonRef.current?.contains(target);
         if (!isClickInDropdown && !isClickOnButton) {
           setShowAddComponent(false);
+          setAddComponentSearch("");
         }
       }
 
@@ -94,6 +118,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         const isClickOnButton = removeComponentButtonRef.current?.contains(target);
         if (!isClickInDropdown && !isClickOnButton) {
           setShowRemoveComponent(false);
+          setRemoveComponentSearch("");
         }
       }
     };
@@ -127,6 +152,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     }
 
     setShowAddComponent(false);
+    setAddComponentSearch("");
   };
 
   const handleRemoveComponent = (component: Component) => {
@@ -143,6 +169,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     }
 
     setShowRemoveComponent(false);
+    setRemoveComponentSearch("");
   };
 
   const isValidJSON = useMemo(() => {
@@ -210,18 +237,35 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
 
   return (
     <div
-      className="flex flex-col bg-[rgb(60,60,60)] rounded-sm shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+      className="flex flex-col rounded-sm"
       style={{
         width: '20rem',
         height: '20rem',
         fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, sans-serif)',
+        backgroundColor: 'var(--vscode-panel-background, #3c3c3c)',
+        boxShadow: 'var(--vscode-widget-shadow, 0 2px 8px rgba(0, 0, 0, 0.3))',
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between min-h-5 px-1 pl-2 py-1 text-xs border-b border-gray-500/20 text-white/90 select-none rounded-t-sm">
+      <div
+        className="flex items-center justify-between min-h-5 px-1 pl-2 py-1 text-xs border-b select-none rounded-t-sm"
+        style={{
+          color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
+          borderBottomColor: 'var(--vscode-panel-border, rgba(128, 128, 128, 0.2))',
+        }}
+      >
         <span>{entity}</span>
         <button
-          className="flex items-center justify-center w-4 h-4 p-0.5 rounded-sm border-none cursor-pointer text-white/90 transition-colors duration-100 ml-1 bg-transparent hover:bg-white/10"
+          className="flex items-center justify-center w-4 h-4 p-0.5 rounded-sm border-none cursor-pointer transition-colors duration-100 ml-1 bg-transparent"
+          style={{
+            color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
           onClick={onClose}
         >
           <span className="codicon codicon-close" />
@@ -229,37 +273,91 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-stretch border-b border-gray-500/20 bg-black/10 min-h-5">
-        <div className="relative flex-shrink-0">
+      <div
+        className="flex items-stretch border-b min-h-5"
+        style={{
+          borderBottomColor: 'var(--vscode-panel-border, rgba(128, 128, 128, 0.2))',
+          backgroundColor: 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))',
+        }}
+      >
+        <div className="relative flex-1">
           <button
             ref={addComponentButtonRef}
             onClick={() => {
               setShowAddComponent(!showAddComponent);
               setShowRemoveComponent(false);
+              if (!showAddComponent) {
+                setAddComponentSearch("");
+              }
             }}
-            className={`flex items-center justify-center gap-1 w-auto h-full px-2 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 whitespace-nowrap ${showAddComponent ? "bg-transparent" : "bg-gray-500/35"
-              } hover:bg-gray-600/50 active:bg-gray-700/70`}
+            className="flex items-center justify-center gap-1 h-full w-full px-2 py-1 text-xs border-none cursor-pointer transition-colors duration-100 whitespace-nowrap"
+            style={{
+              color: 'var(--vscode-foreground, #cccccc)',
+              backgroundColor: showAddComponent ? 'transparent' : 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))',
+            }}
+            onMouseEnter={(e) => {
+              if (!showAddComponent) {
+                e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.35))';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = showAddComponent ? 'transparent' : 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))';
+            }}
+            onMouseDown={(e) => {
+              if (!showAddComponent) {
+                e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.4))';
+              }
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.backgroundColor = showAddComponent ? 'transparent' : 'var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.35))';
+            }}
           >
             <span className="codicon codicon-add text-[10px]" />
             <span>Add Component</span>
           </button>
         </div>
-        <div className="w-px bg-gray-500/20 self-stretch" />
-        <div className="relative flex-shrink-0">
+        <div
+          className="w-px self-stretch"
+          style={{
+            backgroundColor: 'var(--vscode-panel-border, rgba(128, 128, 128, 0.2))',
+          }}
+        />
+        <div className="relative flex-1">
           <button
             ref={removeComponentButtonRef}
             onClick={() => {
               setShowRemoveComponent(!showRemoveComponent);
               setShowAddComponent(false);
+              if (!showRemoveComponent) {
+                setRemoveComponentSearch("");
+              }
             }}
-            className={`flex items-center justify-center gap-1 w-auto h-full px-2 py-1 text-xs border-none cursor-pointer text-white/90 transition-colors duration-100 whitespace-nowrap ${showRemoveComponent ? "bg-transparent" : "bg-gray-500/35"
-              } hover:bg-gray-600/50 active:bg-gray-700/70`}
+            className="flex items-center justify-center gap-1 h-full w-full px-2 py-1 text-xs border-none cursor-pointer transition-colors duration-100 whitespace-nowrap"
+            style={{
+              color: 'var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))',
+              backgroundColor: showRemoveComponent ? 'transparent' : 'var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.3))',
+            }}
+            onMouseEnter={(e) => {
+              if (!showRemoveComponent) {
+                e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.35))';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = showRemoveComponent ? 'transparent' : 'var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.3))';
+            }}
+            onMouseDown={(e) => {
+              if (!showRemoveComponent) {
+                e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.4))';
+              }
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.backgroundColor = showRemoveComponent ? 'transparent' : 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.35))';
+            }}
           >
             <span className="codicon codicon-remove text-[10px]" />
             <span>Remove Component</span>
           </button>
         </div>
-        <div className="flex-1" />
       </div>
 
       {/* JSON Tree View */}
@@ -268,62 +366,134 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         {showAddComponent && (
           <div
             ref={addComponentDropdownRef}
-            className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full overflow-auto"
+            className="absolute top-0 left-0 right-0 flex flex-col z-10 max-h-full overflow-hidden"
+            style={{
+              backgroundColor: 'var(--vscode-panel-background, #3c3c3c)',
+              boxShadow: 'var(--vscode-widget-shadow, 0 2px 8px rgba(0, 0, 0, 0.3))',
+            }}
           >
-            {availableComponents.length === 0 ? (
-              <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
-                No available components
-              </div>
-            ) : (
-              availableComponents.map(({ type, def }) => (
-                <button
-                  key={type}
-                  onClick={() => handleAddComponent(type)}
-                  className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
+            <div className="w-full">
+              <SearchInput
+                placeholder="Search components..."
+                value={addComponentSearch}
+                onChange={setAddComponentSearch}
+                autoFocus={true}
+              />
+            </div>
+            <div className="flex-1 overflow-auto">
+              {availableComponents.length === 0 ? (
+                <div
+                  className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-center"
+                  style={{
+                    color: 'var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))',
+                  }}
                 >
-                  <div>{def.displayName || type}</div>
-                  {def.description && (
-                    <div className="text-xs text-white/60 mt-0.5">
-                      {def.description}
-                    </div>
-                  )}
-                </button>
-              ))
-            )}
+                  {addComponentSearch ? 'No components match your search' : 'No available components'}
+                </div>
+              ) : (
+                availableComponents.map(({ type, def }) => (
+                  <button
+                    key={type}
+                    onClick={() => handleAddComponent(type)}
+                    className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-xs transition-colors duration-100 min-h-5 flex flex-col items-start"
+                    style={{
+                      color: 'var(--vscode-foreground, #cccccc)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <div>{def.displayName || type}</div>
+                    {def.description && (
+                      <div
+                        className="text-xs mt-0.5"
+                        style={{
+                          color: 'var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))',
+                        }}
+                      >
+                        {def.description}
+                      </div>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         )}
         {/* Remove Component List - Overlays tree view when open */}
         {showRemoveComponent && (
           <div
             ref={removeComponentDropdownRef}
-            className="absolute top-0 left-0 right-0 flex flex-col bg-[rgb(60,60,60)] z-10 shadow-[0_2px_8px_rgba(0,0,0,0.3)] max-h-full overflow-auto"
+            className="absolute top-0 left-0 right-0 flex flex-col z-10 max-h-full overflow-hidden"
+            style={{
+              backgroundColor: 'var(--vscode-panel-background, #3c3c3c)',
+              boxShadow: 'var(--vscode-widget-shadow, 0 2px 8px rgba(0, 0, 0, 0.3))',
+            }}
           >
-            {currentComponents.length === 0 ? (
-              <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-white/60 text-center">
-                No components to remove
-              </div>
-            ) : (
-              currentComponents.map(({ type, component, def }) => (
-                <button
-                  key={type}
-                  onClick={() => handleRemoveComponent(component)}
-                  className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-[#cccccc] text-xs transition-colors duration-100 min-h-5 flex flex-col items-start hover:bg-white/10"
+            <div className="w-full">
+              <SearchInput
+                placeholder="Search components..."
+                value={removeComponentSearch}
+                onChange={setRemoveComponentSearch}
+                autoFocus={true}
+              />
+            </div>
+            <div className="flex-1 overflow-auto">
+              {currentComponents.length === 0 ? (
+                <div
+                  className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-center"
+                  style={{
+                    color: 'var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))',
+                  }}
                 >
-                  <div>{def?.displayName || type}</div>
-                  {def?.description && (
-                    <div className="text-xs text-white/60 mt-0.5">
-                      {def.description}
-                    </div>
-                  )}
-                </button>
-              ))
-            )}
+                  {removeComponentSearch ? 'No components match your search' : 'No components to remove'}
+                </div>
+              ) : (
+                currentComponents.map(({ type, component, def }) => (
+                  <button
+                    key={type}
+                    onClick={() => handleRemoveComponent(component)}
+                    className="w-full px-2 py-1 text-left bg-transparent border-none cursor-pointer text-xs transition-colors duration-100 min-h-5 flex flex-col items-start"
+                    style={{
+                      color: 'var(--vscode-foreground, #cccccc)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <div>{def?.displayName || type}</div>
+                    {def?.description && (
+                      <div
+                        className="text-xs mt-0.5"
+                        style={{
+                          color: 'var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))',
+                        }}
+                      >
+                        {def.description}
+                      </div>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         )}
         {isValidJSON && entityData ? (
           <JSONTreeView json={entityData} onChange={handleTreeViewChange} />
         ) : (
-          <div className="flex-1 flex items-center justify-center" style={{ color: '#f48771', fontSize: 'var(--vscode-editor-font-size, 14px)' }}>
+          <div
+            className="flex-1 flex items-center justify-center"
+            style={{
+              color: 'var(--vscode-errorForeground, #f48771)',
+              fontSize: 'var(--vscode-editor-font-size, 14px)'
+            }}
+          >
             {entityData ? 'Invalid JSON - cannot display tree view' : 'Loading...'}
           </div>
         )}

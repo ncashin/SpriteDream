@@ -89,15 +89,11 @@
           "x": 0,
           "y": 0
         },
-        "platform": {
-          "type": "platform"
-        },
         "collider": {
           "type": "collider",
           "colliderName": "rectangle",
-          "resolverName": "static",
+          "bodyType": "static",
           "collisionEnabled": true,
-          "bodyName": "platform",
           "offsetX": 0,
           "offsetY": 0,
           "width": 200,
@@ -129,24 +125,16 @@
           "jumpStrength": 0,
           "isGrounded": false
         },
-        "platform": {
-          "type": "platform"
-        },
         "collider": {
           "type": "collider",
           "colliderName": "rectangle",
-          "resolverName": "static",
+          "bodyType": "static",
           "collisionEnabled": true,
-          "bodyName": "platform",
           "offsetX": 0,
           "offsetY": 0,
           "width": 200,
           "height": 20,
           "angle": 0
-        },
-        "onCollision": {
-          "type": "onCollision",
-          "callbackName": ""
         }
       }
     }

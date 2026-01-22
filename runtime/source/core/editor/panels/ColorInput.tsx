@@ -49,13 +49,15 @@ export function ColorInput({
                 onChange={handleColorChange}
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    width: "24px",
+                    width: "20px",
                     height: "20px",
+                    aspectRatio: "1",
                     cursor: "pointer",
-                    border: "1px solid #3e3e3e",
+                    border: "1px solid var(--vscode-input-border, #3e3e3e)",
                     borderRadius: "2px",
                     padding: 0,
                     backgroundColor: "transparent",
+                    boxSizing: "border-box",
                 }}
             />
             <input
@@ -67,9 +69,9 @@ export function ColorInput({
                 style={{
                     flex: 1,
                     backgroundColor: "transparent",
-                    border: "1px solid #3e3e3e",
+                    border: "1px solid var(--vscode-input-border, #3e3e3e)",
                     borderRadius: "2px",
-                    color: "#ce9178",
+                    color: "var(--vscode-symbolIcon-stringForeground, #ce9178)",
                     fontSize: "inherit",
                     padding: "2px 4px",
                     outline: "none",
@@ -77,10 +79,10 @@ export function ColorInput({
                     minWidth: 0,
                 }}
                 onFocus={(e) => {
-                    e.target.style.borderColor = "#4ec9b0";
+                    e.target.style.borderColor = "var(--vscode-focusBorder, #4ec9b0)";
                 }}
                 onBlur={(e) => {
-                    e.target.style.borderColor = "#3e3e3e";
+                    e.target.style.borderColor = "var(--vscode-input-border, #3e3e3e)";
                     handleTextBlur();
                 }}
             />
