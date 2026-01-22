@@ -139,6 +139,7 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     context2D.clearRect(0, 0, canvas.width, canvas.height);
 
     const viewport = getViewport();
+    const selectedEntity = context.ecs.getSelectedEntity();
 
     context2D.save();
 
@@ -152,20 +153,13 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     context2D.lineWidth = 1 / viewport.scale;
 
     const size = 8;
-    const outerRadius = size;
-    const innerRadius = size * 0.4;
-    const points = 5;
-    const angleStep = (Math.PI * 2) / (points * 2);
+    const radius = size;
 
+    // Draw triangle pointing up
     context2D.beginPath();
-    for (let i = 0; i < points * 2; i++) {
-      const angle = i * angleStep - Math.PI / 2;
-      const radius = i % 2 === 0 ? outerRadius : innerRadius;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-
-      i === 0 ? context2D.moveTo(x, y) : context2D.lineTo(x, y);
-    }
+    context2D.moveTo(0, -radius); // Top point
+    context2D.lineTo(-radius * 0.866, radius * 0.5); // Bottom left (cos(120°) * radius, sin(120°) * radius)
+    context2D.lineTo(radius * 0.866, radius * 0.5); // Bottom right (cos(60°) * radius, sin(60°) * radius)
     context2D.closePath();
     context2D.fill();
     context2D.stroke();
@@ -190,6 +184,7 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
           : 0;
 
         const rotation = player?.rotation || 0;
+        const isSelected = selectedEntity === entity;
 
         context2D.save();
         if (rotation !== 0) {
@@ -255,6 +250,23 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
             context2D.restore();
           }
         }
+
+        // Draw selection indicator
+        if (isSelected) {
+          context2D.save();
+          context2D.strokeStyle = "#00ffff";
+          context2D.lineWidth = 2 / viewport.scale;
+
+          const padding = 2 / viewport.scale;
+          const left = position.x - sprite.width / 2 - padding;
+          const top = position.y - sprite.height / 2 - padding;
+          const right = position.x + sprite.width / 2 + padding;
+          const bottom = position.y + sprite.height / 2 + padding;
+
+          context2D.strokeRect(left, top, right - left, bottom - top);
+          context2D.restore();
+        }
+
         context2D.restore();
       }
     );

@@ -292,24 +292,24 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
             }}
             className="flex items-center justify-center gap-1 h-full w-full px-2 py-1 text-xs border-none cursor-pointer transition-colors duration-100 whitespace-nowrap"
             style={{
-              color: 'var(--vscode-foreground, #cccccc)',
-              backgroundColor: showAddComponent ? 'transparent' : 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))',
+              color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
+              backgroundColor: showAddComponent ? 'transparent' : 'var(--vscode-panel-background, #3c3c3c)',
             }}
             onMouseEnter={(e) => {
               if (!showAddComponent) {
-                e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.35))';
+                e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
               }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = showAddComponent ? 'transparent' : 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))';
+              e.currentTarget.style.backgroundColor = showAddComponent ? 'transparent' : 'var(--vscode-panel-background, #3c3c3c)';
             }}
             onMouseDown={(e) => {
               if (!showAddComponent) {
-                e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.4))';
+                e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.15))';
               }
             }}
             onMouseUp={(e) => {
-              e.currentTarget.style.backgroundColor = showAddComponent ? 'transparent' : 'var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.35))';
+              e.currentTarget.style.backgroundColor = showAddComponent ? 'transparent' : 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
             }}
           >
             <span className="codicon codicon-add text-[10px]" />
@@ -334,24 +334,24 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
             }}
             className="flex items-center justify-center gap-1 h-full w-full px-2 py-1 text-xs border-none cursor-pointer transition-colors duration-100 whitespace-nowrap"
             style={{
-              color: 'var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))',
-              backgroundColor: showRemoveComponent ? 'transparent' : 'var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.3))',
+              color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
+              backgroundColor: showRemoveComponent ? 'transparent' : 'var(--vscode-panel-background, #3c3c3c)',
             }}
             onMouseEnter={(e) => {
               if (!showRemoveComponent) {
-                e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.35))';
+                e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
               }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = showRemoveComponent ? 'transparent' : 'var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.3))';
+              e.currentTarget.style.backgroundColor = showRemoveComponent ? 'transparent' : 'var(--vscode-panel-background, #3c3c3c)';
             }}
             onMouseDown={(e) => {
               if (!showRemoveComponent) {
-                e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.4))';
+                e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.15))';
               }
             }}
             onMouseUp={(e) => {
-              e.currentTarget.style.backgroundColor = showRemoveComponent ? 'transparent' : 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.35))';
+              e.currentTarget.style.backgroundColor = showRemoveComponent ? 'transparent' : 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
             }}
           >
             <span className="codicon codicon-remove text-[10px]" />

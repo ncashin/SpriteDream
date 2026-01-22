@@ -220,7 +220,8 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      const delta = e.deltaY > 0 ? -0.01 : 0.01;
+      // Ramping sensitivity: larger scrolls result in more zoom change
+      const delta = -e.deltaY * 0.001;
       zoomViewport(delta, x, y);
     };
 
