@@ -47,14 +47,14 @@ function isEntitiesArrayFormat(value: unknown): value is EntitiesArrayFormat {
 
 function migrateEntitiesArrayFormat(arrayData: EntitiesArrayFormat): SceneECSData {
   const entities: Record<Entity, Record<ComponentTypeString, Component>> = {};
-  
+
   // Convert entities array format to object format
   for (const entityObj of arrayData.entities) {
     const entityId = entityObj.id;
     if (!entityId || typeof entityId !== 'string') {
       continue; // Skip invalid entities
     }
-    
+
     // Copy all components (excluding the 'id' field)
     const components: Record<ComponentTypeString, Component> = {};
     for (const [key, value] of Object.entries(entityObj)) {
@@ -62,10 +62,10 @@ function migrateEntitiesArrayFormat(arrayData: EntitiesArrayFormat): SceneECSDat
         components[key] = value as Component;
       }
     }
-    
+
     entities[entityId] = components;
   }
-  
+
   return { entities };
 }
 
@@ -82,7 +82,7 @@ function isLegacySceneECSData(value: unknown): value is LegacySceneECSData {
 
 function migrateLegacyECSData(legacyData: LegacySceneECSData): SceneECSData {
   const entities: Record<Entity, Record<ComponentTypeString, Component>> = {};
-  
+
   // Convert componentPools format to entities format
   for (const [componentType, componentPool] of Object.entries(legacyData.componentPools)) {
     for (const [entity, component] of Object.entries(componentPool)) {
@@ -92,7 +92,7 @@ function migrateLegacyECSData(legacyData: LegacySceneECSData): SceneECSData {
       entities[entity][componentType] = component;
     }
   }
-  
+
   return { entities };
 }
 
@@ -102,7 +102,7 @@ export function initializeSceneECS<T extends InitialGameContext>(
   const scene = getScene();
 
   let ecsData: SceneECSData;
-  
+
   if (!scene.ecs) {
     scene.ecs = {
       entities: {},
@@ -135,12 +135,12 @@ export function initializeSceneECS<T extends InitialGameContext>(
           configurable: true,
         });
       }
-      
+
       const componentType = component.type;
       if (ecsData.entities[entity] && ecsData.entities[entity][componentType]) {
         ecsData.entities[entity][componentType][property] = newValue;
       }
-      
+
       return true;
     },
   };

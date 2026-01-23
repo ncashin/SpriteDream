@@ -1,44 +1,6 @@
 {
   "ecs": {
     "entities": {
-      "player": {
-        "position": {
-          "type": "position",
-          "x": 0,
-          "y": -100
-        },
-        "sprite": {
-          "type": "sprite",
-          "width": 32,
-          "height": 32,
-          "color": "#ff0000",
-          "image": "/jeremy.svg"
-        },
-        "velocity": {
-          "type": "velocity",
-          "x": 0,
-          "y": 0
-        },
-        "player": {
-          "type": "player",
-          "speed": 250,
-          "gravity": 1800,
-          "jumpStrength": 750,
-          "isGrounded": false
-        },
-        "collider": {
-          "type": "collider",
-          "colliderName": "rectangle",
-          "bodyType": "kinematic",
-          "collisionEnabled": true,
-          "callbackName": "player",
-          "offsetX": 0,
-          "offsetY": 0,
-          "width": 32,
-          "height": 32,
-          "angle": 0
-        }
-      },
       "floor": {
         "position": {
           "type": "position",
@@ -134,6 +96,44 @@
           "offsetY": 0,
           "width": 200,
           "height": 20,
+          "angle": 0
+        }
+      },
+      "player": {
+        "position": {
+          "type": "position",
+          "x": 301,
+          "y": -262
+        },
+        "sprite": {
+          "type": "sprite",
+          "width": 32,
+          "height": 32,
+          "color": "#ff0000",
+          "image": "/jeremy.svg"
+        },
+        "velocity": {
+          "type": "velocity",
+          "x": 0,
+          "y": 0
+        },
+        "player": {
+          "type": "player",
+          "speed": 250,
+          "gravity": 1800,
+          "jumpStrength": 750,
+          "isGrounded": false
+        },
+        "collider": {
+          "type": "collider",
+          "colliderName": "rectangle",
+          "bodyType": "kinematic",
+          "collisionEnabled": true,
+          "callbackName": "player",
+          "offsetX": 0,
+          "offsetY": 0,
+          "width": 32,
+          "height": 32,
           "angle": 0
         }
       }

@@ -41,10 +41,9 @@ function createGameContext<T extends readonly Plugin<any, any>[]>(
   plugins: T,
   initialScene: string
 ): AccumulatePluginResults<T> {
-  // Set scene in production mode or when editor mode is enabled (e.g., on website landing page)
   const editorEnabled = isEditorMode();
-  
-  if (!isDevelopment || editorEnabled) {
+
+  if (!isDevelopment && editorEnabled) {
     void setScene(initialScene);
   }
 

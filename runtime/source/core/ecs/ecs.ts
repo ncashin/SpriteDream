@@ -66,14 +66,12 @@ export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
     instance.selectedEntity = null;
   }
 
-  // Remove from composed pools
   for (const composedPool of Object.values(instance.composedPools)) {
     if (composedPool[entity] !== undefined) {
       delete composedPool[entity];
     }
   }
 
-  // Remove entity
   delete instance.entities[entity];
 
   if (instance.destroyEntityCallback) {
@@ -86,26 +84,10 @@ export const renameEntity = (
   oldEntity: Entity,
   newEntity: Entity,
 ): boolean => {
-  // Validate new entity name
-  if (!newEntity || typeof newEntity !== 'string' || newEntity.trim() === '') {
-    return false;
-  }
 
-  // Check if old entity exists
-  if (!instance.entities[oldEntity]) {
-    return false;
-  }
-
-  // Check if new entity name already exists
-  if (instance.entities[newEntity]) {
-    return false;
-  }
-
-  // Move entity data
   instance.entities[newEntity] = instance.entities[oldEntity];
   delete instance.entities[oldEntity];
 
-  // Update composed pools - move entries from old name to new name
   for (const composedPool of Object.values(instance.composedPools)) {
     if (composedPool[oldEntity] !== undefined) {
       composedPool[newEntity] = composedPool[oldEntity];
@@ -113,12 +95,10 @@ export const renameEntity = (
     }
   }
 
-  // Update selected entity if it was the renamed entity
   if (instance.selectedEntity === oldEntity) {
     instance.selectedEntity = newEntity;
   }
 
-  // Call rename callback if provided
   if (instance.renameEntityCallback) {
     instance.renameEntityCallback(oldEntity, newEntity);
   }
@@ -221,7 +201,6 @@ export const addComponent = <ComponentType extends Component>(
 ) => {
   createComponentReference(instance, entity, COMPONENT_TYPE_DEF);
 
-  // Update composed pools
   for (const keyToUpdate of lookupAssociatedComposedPoolKeys(
     instance,
     COMPONENT_TYPE_DEF,
@@ -255,7 +234,6 @@ export const removeComponent = <ComponentType extends Component>(
   entity: Entity,
   COMPONENT_TYPE_DEF: ComponentType,
 ) => {
-  // Update composed pools
   for (const keyToUpdate of lookupAssociatedComposedPoolKeys(
     instance,
     COMPONENT_TYPE_DEF,
@@ -269,7 +247,6 @@ export const removeComponent = <ComponentType extends Component>(
     instance.removeComponentCallback(entity, COMPONENT_TYPE_DEF);
   }
 
-  // Remove component from entity
   const entityComponents = instance.entities[entity];
   if (entityComponents) {
     delete entityComponents[COMPONENT_TYPE_DEF.type];
@@ -299,11 +276,9 @@ export const queryComponents = <const ComposedType extends Component[]>(
     );
   }
 
-  // Iterate through all entities
   for (const [entityID, entityComponents] of Object.entries(instance.entities)) {
     const composedComponents: Component[] = [];
 
-    // Check if entity has all required components
     for (const componentType of componentTypes) {
       const component = entityComponents[componentType];
       if (component === undefined) break;
