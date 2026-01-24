@@ -11,6 +11,8 @@ import {
   restoreSceneFromSnapshot,
 } from "../scene/scene";
 import { runGame } from "../runtimeWrapper";
+import { getDefaultStore } from "jotai";
+import { gameContextAtom } from "./useGameContext";
 
 export function RunStopButton() {
   const [isRunning, setIsRunning] = useState(isUpdateEnabled());
@@ -22,11 +24,27 @@ export function RunStopButton() {
 
     const wasRunning = isUpdateEnabled();
 
+    // Get the game context to access ECS
+    const gameContext = getDefaultStore().get(gameContextAtom);
+    const ecs = gameContext?.ecs as any;
+
+    // Save the selected entity before snapshot operations
+    const selectedEntity = ecs?.getSelectedEntity?.() ?? null;
+
     if (wasRunning) {
       await restoreSceneFromSnapshot();
       setPersistenceEnabled(true);
       setEditorUpdateEnabled(true);
       setUpdateEnabled(false);
+
+      // Restore the selected entity after restoring snapshot
+      if (ecs && selectedEntity !== null) {
+        // Verify the entity still exists before selecting it
+        const allEntities = Object.keys(ecs.ecsInstance?.entities || {});
+        if (allEntities.includes(selectedEntity)) {
+          ecs.selectEntity(selectedEntity);
+        }
+      }
     } else {
       saveSceneSnapshot();
       setPersistenceEnabled(false);

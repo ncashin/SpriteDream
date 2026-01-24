@@ -83,10 +83,22 @@ export function collisionPlugin<
     if (entities.length === 0) return;
 
     const viewport = getViewport();
-    const { canvas, context2D } = context;
+    const { context2D } = context;
+
+    // Enable anti-aliasing for smooth rendering
+    context2D.imageSmoothingEnabled = true;
+    context2D.imageSmoothingQuality = "high";
+
+    // Use display dimensions (canvas internal resolution is separate)
+    const displayWidth = window.innerWidth;
+    const displayHeight = window.innerHeight;
+
+    // Apply DPR transform for high-resolution rendering (same as sprite plugin)
+    const dpr = window.devicePixelRatio || 1;
+    context2D.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     context2D.save();
-    context2D.translate(canvas.width / 2, canvas.height / 2);
+    context2D.translate(displayWidth / 2, displayHeight / 2);
     context2D.scale(viewport.scale, viewport.scale);
     context2D.translate(-viewport.x, -viewport.y);
     debugDrawColliders(context.ecs.ecsInstance, entities, context2D);

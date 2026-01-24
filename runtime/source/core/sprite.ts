@@ -49,29 +49,91 @@ export const SpriteComponentDefinition: SpriteComponent = defineComponent(
 
 let resizeHandler: (() => void) | null = null;
 
+// Image cache to prevent reloading images every frame
+const imageCache = new Map<string, HTMLImageElement>();
+const imageLoadPromises = new Map<string, Promise<HTMLImageElement>>();
+
+function getImage(path: string): HTMLImageElement | null {
+  const normalizedPath = normalizeAssetPath(path);
+  
+  // Return cached image if available and loaded
+  const cached = imageCache.get(normalizedPath);
+  if (cached && cached.complete) {
+    return cached;
+  }
+  
+  // If image is already being loaded, return the existing promise's result
+  if (imageLoadPromises.has(normalizedPath)) {
+    return null; // Still loading, will be available next frame
+  }
+  
+  // Start loading the image
+  const img = new Image();
+  const loadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+    img.onload = () => {
+      imageCache.set(normalizedPath, img);
+      imageLoadPromises.delete(normalizedPath);
+      resolve(img);
+    };
+    img.onerror = () => {
+      console.warn(`Failed to load image: ${path}`);
+      imageLoadPromises.delete(normalizedPath);
+      reject(new Error(`Failed to load image: ${path}`));
+    };
+    img.src = normalizedPath;
+  });
+  
+  imageLoadPromises.set(normalizedPath, loadPromise);
+  
+  // If image is already cached in browser, it might be complete immediately
+  if (img.complete) {
+    imageCache.set(normalizedPath, img);
+    imageLoadPromises.delete(normalizedPath);
+    return img;
+  }
+  
+  return null; // Still loading
+}
+
+function updateCanvasResolution(canvas: HTMLCanvasElement): void {
+  const dpr = window.devicePixelRatio || 1;
+  const displayWidth = window.innerWidth;
+  const displayHeight = window.innerHeight;
+  
+  // Set internal resolution (higher for retina displays)
+  canvas.width = displayWidth * dpr;
+  canvas.height = displayHeight * dpr;
+  
+  // Set CSS size to display size (separate from resolution)
+  canvas.style.width = `${displayWidth}px`;
+  canvas.style.height = `${displayHeight}px`;
+}
+
 function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
   let canvas = parent.querySelector("canvas") as HTMLCanvasElement | null;
 
   if (!canvas) {
     canvas = document.createElement("canvas");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
     canvas.style.display = "block";
     canvas.style.margin = "0";
     canvas.style.padding = "0";
     canvas.style.pointerEvents = "auto";
     canvas.style.touchAction = "none";
 
+    updateCanvasResolution(canvas);
+
     if (resizeHandler) {
       window.removeEventListener("resize", resizeHandler);
     }
     resizeHandler = () => {
-      canvas!.width = window.innerWidth;
-      canvas!.height = window.innerHeight;
+      updateCanvasResolution(canvas!);
     };
     window.addEventListener("resize", resizeHandler);
 
     parent.appendChild(canvas);
+  } else {
+    // Update existing canvas resolution
+    updateCanvasResolution(canvas);
   }
 
   return canvas;
@@ -100,6 +162,10 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   if (!context2D) {
     throw new Error("Failed to get 2D rendering context from canvas");
   }
+
+  // Enable anti-aliasing for smooth rendering
+  context2D.imageSmoothingEnabled = true;
+  context2D.imageSmoothingQuality = "high";
 
   const spriteClickProvider: ClickableEntityProvider = {
     checkClick: (worldX: number, worldY: number): string | null => {
@@ -145,14 +211,27 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   addDrawCallback(() => {
     if (!canvas || !context2D) return;
 
-    context2D.clearRect(0, 0, canvas.width, canvas.height);
+    // Re-enable anti-aliasing (canvas resize can reset context properties)
+    context2D.imageSmoothingEnabled = true;
+    context2D.imageSmoothingQuality = "high";
+
+    // Scale context by device pixel ratio for high-resolution rendering
+    // This must be done each frame because canvas resize resets the context
+    const dpr = window.devicePixelRatio || 1;
+    context2D.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Clear using display dimensions (context is already scaled by dpr)
+    const displayWidth = window.innerWidth;
+    const displayHeight = window.innerHeight;
+    context2D.clearRect(0, 0, displayWidth, displayHeight);
 
     const viewport = getViewport();
     const selectedEntity = context.ecs.getSelectedEntity();
 
     context2D.save();
 
-    context2D.translate(canvas.width / 2, canvas.height / 2);
+    // Use display dimensions (context is already scaled by dpr)
+    context2D.translate(displayWidth / 2, displayHeight / 2);
     context2D.scale(viewport.scale, viewport.scale);
     context2D.translate(-viewport.x, -viewport.y);
 
@@ -210,11 +289,9 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
         }
 
         if (sprite.image) {
-          const normalizedImagePath = normalizeAssetPath(sprite.image);
-          const img = new Image();
-          img.src = normalizedImagePath;
+          const img = getImage(sprite.image);
 
-          if (img.complete) {
+          if (img) {
             context2D.drawImage(
               img,
               worldPos.x - scaledWidth / 2,
@@ -223,6 +300,7 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
               scaledHeight
             );
             if (isFlashing) {
+              context2D.save();
               context2D.globalCompositeOperation = "source-atop";
               context2D.globalAlpha = flashIntensity * 0.7;
               context2D.fillStyle = "#ffffff";
@@ -232,8 +310,10 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
                 scaledWidth,
                 scaledHeight
               );
+              context2D.restore();
             }
           } else {
+            // Image is still loading, show fallback color
             context2D.fillStyle = sprite.color;
             context2D.fillRect(
               worldPos.x - scaledWidth / 2,
@@ -241,11 +321,6 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
               scaledWidth,
               scaledHeight
             );
-            img.onload = () => {
-            };
-            img.onerror = () => {
-              console.warn(`Failed to load image: ${sprite.image}`);
-            };
           }
         } else {
           context2D.fillStyle = sprite.color;
