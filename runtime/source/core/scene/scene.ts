@@ -2,7 +2,7 @@ import { writeFile, readFile } from "../fileUtilities";
 import { isDevelopment, isEditorMode } from "../utils";
 import { undoRedoManager } from "../editor/undoRedo";
 
-export type SceneData = Record<string, unknown>;
+export type SceneData = any;
 
 let currentScene: SceneData | null = null;
 let currentFilePath: string | null = null;
