@@ -51,7 +51,7 @@ let resizeHandler: (() => void) | null = null;
 
 function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
   let canvas = parent.querySelector("canvas") as HTMLCanvasElement | null;
-  
+
   if (!canvas) {
     canvas = document.createElement("canvas");
     canvas.width = window.innerWidth;

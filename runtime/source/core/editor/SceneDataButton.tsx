@@ -2,7 +2,7 @@ import { EditorButton } from "./EditorButton";
 
 export function SceneDataButton() {
   return (
-    <EditorButton onClick={() => {}} disabled>
+    <EditorButton onClick={(e) => {}} disabled>
       Settings
     </EditorButton>
   );

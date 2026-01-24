@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { EditorButton } from "./EditorButton";
 import {
   setEditorUpdateEnabled,
@@ -16,7 +16,10 @@ export function RunStopButton() {
   const [isRunning, setIsRunning] = useState(isUpdateEnabled());
   const runButtonRef = useRef<HTMLButtonElement>(null);
 
-  const handleRunStop = async () => {
+  const handleRunStop = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
     const wasRunning = isUpdateEnabled();
 
     if (wasRunning) {
