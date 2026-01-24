@@ -522,7 +522,9 @@ const createSceneEntitiesProxy = (
       if (typeof property === "string") {
         const wasNew = !(property in target);
         const result = Reflect.set(target, property, value);
-        if (wasNew) {
+        // Always invalidate pools when entities are added or modified
+        // This ensures restored entities are properly included in pools
+        if (wasNew || (value && typeof value === "object" && !Array.isArray(value))) {
           invalidateComposedPools(instance);
         }
         return result;
@@ -533,6 +535,7 @@ const createSceneEntitiesProxy = (
       if (typeof property === "string") {
         const hadProperty = property in target;
         const result = Reflect.deleteProperty(target, property);
+        // Always invalidate pools when entities are deleted
         if (hadProperty && result) {
           invalidateComposedPools(instance);
         }
@@ -549,7 +552,8 @@ const createSceneEntitiesProxy = (
             if (typeof componentType === "string") {
               const wasNew = !(componentType in entityTarget);
               const result = Reflect.set(entityTarget, componentType, componentValue);
-              if (wasNew) {
+              // Always invalidate pools when components are added or modified
+              if (wasNew || (componentValue && typeof componentValue === "object")) {
                 invalidateComposedPools(instance);
               }
               return result;
@@ -559,6 +563,7 @@ const createSceneEntitiesProxy = (
           deleteProperty: (entityTarget, componentType) => {
             if (typeof componentType === "string") {
               const result = Reflect.deleteProperty(entityTarget, componentType);
+              // Always invalidate pools when components are removed
               invalidateComposedPools(instance);
               return result;
             }
@@ -587,8 +592,19 @@ export const currySceneECSData = (
   // Expose a method to update entities reference (for undo/redo scenarios)
   (curried as any).updateSceneEntities = (newEntities: Record<Entity, EntityComponents>) => {
     (curried as any)._originalEntities = newEntities;
+
+    // Update the entities reference to point to the new scene data
+    // This ensures the ECS instance always reflects scene data
     ecsInstance.entities = createSceneEntitiesProxy(newEntities, ecsInstance);
+
+    // Invalidate pools so they'll be rebuilt on next query
+    // This ensures restored entities are properly included in pools
     invalidateComposedPools(ecsInstance);
+
+    // Also clear selected entity if it no longer exists
+    if (ecsInstance.selectedEntity && !newEntities[ecsInstance.selectedEntity]) {
+      ecsInstance.selectedEntity = null;
+    }
   };
 
   return curried;

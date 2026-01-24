@@ -150,34 +150,15 @@ function ViewportDebugUI() {
 
   return (
   <div className="absolute bottom-0 left-0 z-[10000] p-2 text-xs select-none leading-normal flex flex-row gap-2 items-end">
-  <button
-    className="px-3 py-0.5 text-[0.75rem] font-normal rounded-sm border-none cursor-pointer duration-100 ease-out inline-flex items-center justify-center gap-1 min-h-[20px] leading-[1.4em] outline-none focus:outline focus:outline-1 focus:outline-[var(--vscode-focusBorder,#007acc)] focus:-outline-offset-1"
-    style={{
-      fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)',
-      color: 'var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))',
-      backgroundColor: 'var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.3))',
-      pointerEvents: "auto",
-      zIndex: 10001,
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.35))';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.3))';
-    }}
-    onMouseDown={(e) => {
-      e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.4))';
-    }}
-    onMouseUp={(e) => {
-      e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.35))';
-    }}
+  <span
+    className="clickable-text"
     onClick={() => {
     resetViewport();
     setViewportState(getViewport());
     }}
   >
     Reset Viewport
-  </button>
+  </span>
   <div>
     {viewportState.x.toFixed(1)}, {viewportState.y.toFixed(1)}, {(viewportState.scale * 100).toFixed(0)}%
   </div>
