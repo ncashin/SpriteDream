@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { ComponentType } from "react";
-import { setGameContext, type GameContextType } from "./EditorContext";
+import { setGameContext, type GameContextType } from "./useGameContext.tsx";
 
 let editorRoot: Root | null = null;
 let editorContainer: HTMLDivElement | null = null;

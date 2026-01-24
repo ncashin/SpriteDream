@@ -1,7 +1,7 @@
-import { useScene } from "./core/editor/useScene";
+import { useScene } from "./core/editor/useScene.tsx";
 
 export function GameUI() {
-    const scene = useScene();
+    const { scene } = useScene();
     const isGrounded = scene?.ecs?.entities?.player?.player?.isGrounded ?? false;
 
     return (
