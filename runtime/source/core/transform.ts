@@ -242,13 +242,7 @@ export function setParent(
     entity: Entity,
     parentId: Entity | null
 ): void {
-    // Use the pluggable setParentHandler if available
-    if (ecs.setParentHandler) {
-        ecs.setParentHandler(ecs, entity, parentId);
-        return;
-    }
-
-    // Default implementation: Get the child's world transform before changing parent
+    // Get the child's world transform before changing parent
     // This preserves the entity's position, rotation, and scale in world space
     let childWorldTransform = getWorldTransform(ecs, entity);
     if (!childWorldTransform) {

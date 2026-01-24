@@ -4,6 +4,267 @@ import { useGameContext } from "../EditorContext";
 import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 import { CaretDown, CaretRight, Plus, PencilSimple, Trash } from "@phosphor-icons/react";
 import { getChildren } from "../../transform";
+import {
+  DndContext,
+  DragOverlay,
+  useDraggable,
+  useDroppable,
+  type DragStartEvent,
+  type DragOverEvent,
+  type DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+
+// Helper function to check if an entity is a descendant
+function isDescendant(ecs: any, parent: Entity, child: Entity): boolean {
+  const children = getChildren(ecs.ecsInstance, parent);
+  if (children.includes(child)) return true;
+  for (const c of children) {
+    if (isDescendant(ecs, c, child)) return true;
+  }
+  return false;
+}
+
+// Droppable Container Component for unparenting
+function DroppableContainer({
+  children,
+  overId,
+}: {
+  children: React.ReactNode;
+  overId: Entity | string | null;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'entity-list-container',
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        minHeight: '120px',
+        backgroundColor: (isOver || overId === 'entity-list-container')
+          ? 'var(--vscode-list-activeSelectionBackground, #04395e)'
+          : undefined,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Draggable Entity Item Component
+function DraggableEntityItem({
+  entity,
+  ecs,
+  selectedEntity,
+  hoveredEntity,
+  renamingEntity,
+  renameValue,
+  renameInputRef,
+  expandedEntities,
+  overId,
+  onSelect,
+  onHover,
+  onStartRename,
+  onRenameSubmit,
+  onRenameKeyDown,
+  onRenameChange,
+  onDelete,
+  onToggleExpand,
+}: {
+  entity: Entity;
+  ecs: any;
+  selectedEntity: Entity | null;
+  hoveredEntity: Entity | null;
+  renamingEntity: Entity | null;
+  renameValue: string;
+  renameInputRef: React.RefObject<HTMLInputElement>;
+  expandedEntities: Set<Entity>;
+  overId: Entity | string | null;
+  activeId: Entity | null;
+  onSelect: (entity: Entity) => void;
+  onHover: (entity: Entity | null) => void;
+  onStartRename: (entity: Entity, e: React.MouseEvent) => void;
+  onRenameSubmit: (e: React.FormEvent) => void;
+  onRenameKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onRenameChange: (value: string) => void;
+  onDelete: (entity: Entity, e: React.MouseEvent) => void;
+  onToggleExpand: (entity: Entity, e: React.MouseEvent) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform: dragTransform, isDragging } = useDraggable({
+    id: entity,
+  });
+
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+    id: entity,
+  });
+
+  const children = getChildren(ecs.ecsInstance, entity);
+  const hasChildren = children.length > 0;
+  const isExpanded = expandedEntities.has(entity);
+
+  const components = ecs.ecsInstance.entities[entity];
+  const transform = components?.transform;
+  const isChild = transform && transform.parent;
+
+  const dragStyle = dragTransform
+    ? {
+      transform: `translate3d(${dragTransform.x}px, ${dragTransform.y}px, 0)`,
+    }
+    : undefined;
+
+  return (
+    <div
+      ref={setDroppableRef}
+      className={`
+        flex items-center gap-1 min-h-5 px-2 py-1
+        text-xs cursor-pointer
+        transition-colors duration-100
+        ${isDragging ? 'opacity-50' : ''}
+      `}
+      style={{
+        color: 'var(--vscode-foreground, #cccccc)',
+        backgroundColor: (isOver || overId === entity)
+          ? 'var(--vscode-list-activeSelectionBackground, #04395e)'
+          : selectedEntity === entity
+            ? 'var(--vscode-list-activeSelectionBackground, #04395e)'
+            : hoveredEntity === entity
+              ? 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))'
+              : isChild
+                ? 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.15))'
+                : 'transparent',
+        opacity: isDragging ? 0.5 : undefined,
+      }}
+      onClick={() => onSelect(entity)}
+      onMouseEnter={() => onHover(entity)}
+      onMouseLeave={() => onHover(null)}
+    >
+      {renamingEntity === entity ? (
+        <form
+          onSubmit={onRenameSubmit}
+          className="flex flex-1 min-w-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <input
+            ref={renameInputRef}
+            type="text"
+            value={renameValue}
+            onChange={(e) => onRenameChange(e.target.value)}
+            onKeyDown={onRenameKeyDown}
+            onBlur={onRenameSubmit}
+            className="
+              flex-1 p-0 text-xs bg-transparent text-[#cccccc]
+              border-none outline-none overflow-hidden
+              text-ellipsis whitespace-nowrap min-w-0 w-full
+            "
+          />
+        </form>
+      ) : (
+        <>
+          <span
+            ref={setNodeRef}
+            className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap cursor-grab active:cursor-grabbing"
+            style={dragStyle}
+            {...attributes}
+            {...listeners}
+          >
+            {entity}
+          </span>
+          <div className="flex items-center gap-1.5">
+            {hoveredEntity === entity && (
+              <div
+                className="flex gap-1.5 items-center"
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <button
+                  className="
+                    bg-transparent border-none cursor-pointer p-0
+                    rounded-md flex items-center justify-center
+                    transition-colors duration-100
+                  "
+                  style={{
+                    color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartRename(entity, e);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title="Rename entity"
+                >
+                  <PencilSimple size={14} weight="bold" />
+                </button>
+                <button
+                  className="
+                    bg-transparent border-none cursor-pointer p-0
+                    rounded-md flex items-center justify-center
+                    transition-colors duration-100
+                  "
+                  style={{
+                    color: 'var(--vscode-errorForeground, #f48771)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(entity, e);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title="Delete entity"
+                >
+                  <Trash size={14} weight="bold" />
+                </button>
+              </div>
+            )}
+                          {hasChildren && (
+                            <button
+                              className="
+                                bg-transparent border-none cursor-pointer p-0
+                                flex items-center justify-center
+                                transition-colors duration-100
+                              "
+                              style={{
+                                color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.7))',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = 'var(--vscode-foreground, rgba(255, 255, 255, 0.7))';
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleExpand(entity, e);
+                              }}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              title={isExpanded ? "Collapse" : "Expand"}
+                            >
+                              {isExpanded ? (
+                                <CaretDown size={12} weight="bold" />
+                              ) : (
+                                <CaretRight size={12} weight="bold" />
+                              )}
+                            </button>
+                          )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export function EntityListPanel() {
   const gameContext = useGameContext();
@@ -15,8 +276,8 @@ export function EntityListPanel() {
   const [renameValue, setRenameValue] = useState("");
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
-  const [draggedEntity, setDraggedEntity] = useState<Entity | null>(null);
-  const [dragOverEntity, setDragOverEntity] = useState<Entity | null>(null);
+  const [activeId, setActiveId] = useState<Entity | null>(null);
+  const [overId, setOverId] = useState<Entity | string | null>(null);
   const [expandedEntities, setExpandedEntities] = useState<Set<Entity>>(new Set());
 
   // Sync entities from ECS
@@ -137,79 +398,86 @@ export function EntityListPanel() {
     }
   };
 
-
-  const handleDragStart = (entity: Entity, e: React.DragEvent) => {
-    e.dataTransfer.effectAllowed = "move";
-    setDraggedEntity(entity);
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as Entity);
   };
 
-  const handleDragOver = (entity: Entity, e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
 
-    // Don't allow dropping on self or descendants
-    if (draggedEntity === entity) {
-      setDragOverEntity(null);
+    if (!over || active.id === over.id) {
+      setOverId(null);
       return;
     }
 
-    // Check if entity is a descendant of dragged entity
-    const isDescendant = (parent: Entity, child: Entity): boolean => {
-      const children = getChildren(ecs.ecsInstance, parent);
-      if (children.includes(child)) return true;
-      for (const c of children) {
-        if (isDescendant(c, child)) return true;
-      }
-      return false;
-    };
+    const draggedEntity = active.id as Entity;
+    const targetId = over.id;
 
-    if (draggedEntity && isDescendant(draggedEntity, entity)) {
-      setDragOverEntity(null);
+    // Special case: container (empty space) is always a valid drop target
+    if (targetId === 'entity-list-container') {
+      setOverId('entity-list-container');
       return;
     }
 
-    setDragOverEntity(entity);
-  };
+    // Otherwise, target should be an entity
+    const targetEntity = targetId as Entity;
 
-  const handleDragLeave = () => {
-    setDragOverEntity(null);
-  };
-
-  const handleDrop = (targetEntity: Entity, e: React.DragEvent) => {
-    e.preventDefault();
-
-    if (!draggedEntity || draggedEntity === targetEntity) {
-      setDraggedEntity(null);
-      setDragOverEntity(null);
+    // Don't allow dropping on self
+    if (draggedEntity === targetEntity) {
+      setOverId(null);
       return;
     }
 
     // Check if target is a descendant (prevent cycles)
-    const isDescendant = (parent: Entity, child: Entity): boolean => {
-      const children = getChildren(ecs.ecsInstance, parent);
-      if (children.includes(child)) return true;
-      for (const c of children) {
-        if (isDescendant(c, child)) return true;
-      }
-      return false;
-    };
+    if (isDescendant(ecs, draggedEntity, targetEntity)) {
+      setOverId(null);
+      return;
+    }
 
-    if (isDescendant(draggedEntity, targetEntity)) {
-      setDraggedEntity(null);
-      setDragOverEntity(null);
+    setOverId(targetEntity);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    const draggedEntity = active.id as Entity;
+
+    // If dropped on nothing or on self, just clear state
+    if (!over || active.id === over.id) {
+      setActiveId(null);
+      setOverId(null);
+      return;
+    }
+
+    const targetId = over.id;
+
+    // Special case: if dropped on container (empty space), unparent
+    if (targetId === 'entity-list-container') {
+      ecs.setParent(draggedEntity, null);
+      setActiveId(null);
+      setOverId(null);
+      return;
+    }
+
+    // Otherwise, target should be an entity
+    const targetEntity = targetId as Entity;
+
+    // Check if target is a descendant (prevent cycles)
+    if (isDescendant(ecs, draggedEntity, targetEntity)) {
+      setActiveId(null);
+      setOverId(null);
       return;
     }
 
     // Reparent the entity
     ecs.setParent(draggedEntity, targetEntity);
 
-    setDraggedEntity(null);
-    setDragOverEntity(null);
+    setActiveId(null);
+    setOverId(null);
   };
 
-  const handleDragEnd = () => {
-    setDraggedEntity(null);
-    setDragOverEntity(null);
+  const handleDragCancel = () => {
+    setActiveId(null);
+    setOverId(null);
   };
 
   const toggleExpand = (entity: Entity, e: React.MouseEvent) => {
@@ -263,6 +531,15 @@ export function EntityListPanel() {
     // Only show entities that are either root entities or have an expanded parent chain
     return result;
   };
+
+  // Configure sensors with activation distance to prevent accidental drags
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before starting drag
+      },
+    })
+  );
 
   return (
     <div
@@ -336,172 +613,76 @@ export function EntityListPanel() {
           </button>
 
           {/* Entity List */}
-          <div
-            className="overflow-auto p-0 pb-1 h-[120px] rounded-b-sm"
-            style={{
-              backgroundColor: 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))',
-            }}
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
           >
-            {entities.length === 0 ? (
+            <DroppableContainer overId={overId}>
               <div
-                className="flex items-center justify-center min-h-5 px-2 py-1 text-xs"
+                className="overflow-auto p-0 pb-1 h-[120px] rounded-b-sm"
                 style={{
-                  color: 'var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))',
+                  backgroundColor: 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))',
                 }}
               >
-                No entities
-              </div>
-            ) : (
-              getVisibleEntities().map((entity) => {
-                const isDragged = draggedEntity === entity;
-                const isDragOver = dragOverEntity === entity;
-                const children = getChildren(ecs.ecsInstance, entity);
-                const hasChildren = children.length > 0;
-                const isExpanded = expandedEntities.has(entity);
-
-                // Check if this entity is a child (has a parent)
-                const components = ecs.ecsInstance.entities[entity];
-                const transform = components?.transform;
-                const isChild = transform && transform.parent;
-
-                return (
-                  <div
+              {entities.length === 0 ? (
+                <div
+                  className="flex items-center justify-center min-h-5 px-2 py-1 text-xs"
+                  style={{
+                    color: 'var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))',
+                  }}
+                >
+                  No entities
+                </div>
+              ) : (
+                getVisibleEntities().map((entity) => (
+                  <DraggableEntityItem
                     key={entity}
-                    draggable
-                    onDragStart={(e) => handleDragStart(entity, e)}
-                    onDragOver={(e) => handleDragOver(entity, e)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(entity, e)}
-                    onDragEnd={handleDragEnd}
-                    className={`
-                      flex items-center gap-1 min-h-5 px-2 py-1
-                      text-xs cursor-pointer
-                      transition-colors duration-100
-                      ${isDragged ? 'opacity-50' : ''}
-                    `}
-                    style={{
-                      color: 'var(--vscode-foreground, #cccccc)',
-                      backgroundColor: isDragOver
-                        ? 'var(--vscode-list-activeSelectionBackground, #04395e)'
-                        : selectedEntity === entity
-                          ? 'var(--vscode-list-activeSelectionBackground, #04395e)'
-                          : hoveredEntity === entity
-                            ? 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))'
-                            : isChild
-                              ? 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.15))'
-                              : 'transparent',
-                    }}
-                    onClick={() => ecs.selectEntity(entity)}
-                    onMouseEnter={() => setHoveredEntity(entity)}
-                    onMouseLeave={() => setHoveredEntity(null)}
-                  >
-                    {renamingEntity === entity ? (
-                      <form
-                        onSubmit={handleRenameSubmit}
-                        className="flex flex-1 min-w-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <input
-                          ref={renameInputRef}
-                          type="text"
-                          value={renameValue}
-                          onChange={(e) => setRenameValue(e.target.value)}
-                          onKeyDown={handleRenameKeyDown}
-                          onBlur={handleRenameSubmit}
-                          className="
-                            flex-1 p-0 text-xs bg-transparent text-[#cccccc]
-                            border-none outline-none overflow-hidden
-                            text-ellipsis whitespace-nowrap min-w-0 w-full
-                          "
-                        />
-                      </form>
-                    ) : (
-                      <>
-                        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                          {entity}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          {hoveredEntity === entity && (
-                            <div
-                              className="flex gap-1.5 items-center"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <button
-                                className="
-                                  bg-transparent border-none cursor-pointer p-0
-                                  rounded-md flex items-center justify-center
-                                  transition-colors duration-100
-                                "
-                                style={{
-                                  color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))',
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'transparent';
-                                }}
-                                onClick={(e) => handleStartRename(entity, e)}
-                                title="Rename entity"
-                              >
-                                <PencilSimple size={14} weight="bold" />
-                              </button>
-                              <button
-                                className="
-                                  bg-transparent border-none cursor-pointer p-0
-                                  rounded-md flex items-center justify-center
-                                  transition-colors duration-100
-                                "
-                                style={{
-                                  color: 'var(--vscode-errorForeground, #f48771)',
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'transparent';
-                                }}
-                                onClick={(e) => handleDeleteEntity(entity, e)}
-                                title="Delete entity"
-                              >
-                                <Trash size={14} weight="bold" />
-                              </button>
-                            </div>
-                          )}
-                          {hasChildren && (
-                            <button
-                              className="
-                                bg-transparent border-none cursor-pointer p-0
-                                flex items-center justify-center
-                                transition-colors duration-100
-                              "
-                              style={{
-                                color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.7))',
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.color = 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.color = 'var(--vscode-foreground, rgba(255, 255, 255, 0.7))';
-                              }}
-                              onClick={(e) => toggleExpand(entity, e)}
-                              title={isExpanded ? "Collapse" : "Expand"}
-                            >
-                              {isExpanded ? (
-                                <CaretDown size={12} weight="bold" />
-                              ) : (
-                                <CaretRight size={12} weight="bold" />
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
+                    entity={entity}
+                    ecs={ecs}
+                    selectedEntity={selectedEntity}
+                    hoveredEntity={hoveredEntity}
+                    renamingEntity={renamingEntity}
+                    renameValue={renameValue}
+                    renameInputRef={renameInputRef}
+                    expandedEntities={expandedEntities}
+                    overId={overId}
+                    activeId={activeId}
+                    onSelect={(entity) => ecs.selectEntity(entity)}
+                    onHover={setHoveredEntity}
+                    onStartRename={handleStartRename}
+                    onRenameSubmit={handleRenameSubmit}
+                    onRenameKeyDown={handleRenameKeyDown}
+                    onRenameChange={setRenameValue}
+                    onDelete={handleDeleteEntity}
+                    onToggleExpand={toggleExpand}
+                  />
+                ))
+              )}
+              </div>
+            </DroppableContainer>
+            <DragOverlay>
+              {activeId ? (
+                <div
+                  className="
+                    flex items-center gap-1 min-h-5 px-2 py-1
+                    text-xs cursor-pointer
+                    opacity-50
+                  "
+                  style={{
+                    color: 'var(--vscode-foreground, #cccccc)',
+                    backgroundColor: 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.15))',
+                  }}
+                >
+                  <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    {activeId}
+                  </span>
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         </>
       )}
     </div>
