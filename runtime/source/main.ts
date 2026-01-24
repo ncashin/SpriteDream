@@ -13,6 +13,8 @@ import { getEntity } from "./core/ecs/ecs";
 import { defineComponent, VelocityComponentDefinition } from "./core/ecs/component";
 import { registerCollisionCallback } from "./core/collision/collisionCallbacks";
 import initialScene from "../scenes/default.scene?raw";
+import { EditorUI } from "./EditorUI";
+import { GameUI } from "./GameUI";
 
 export {
   getViewport,
@@ -60,6 +62,8 @@ initializeGame({
   plugins,
   initialScene,
   main,
+  EditorUI,
+  GameUI,
 });
 
 function main({ ecs, input }: GameContext) {

@@ -46,9 +46,9 @@ export const updateViewport = (deltaX: number, deltaY: number): void => {
 function getCanvasDisplaySize(): { width: number; height: number } {
   const canvas = document.querySelector("canvas");
   if (canvas) {
-    // Use the CSS dimensions, which are the display size
-    const rect = canvas.getBoundingClientRect();
-    return { width: rect.width, height: rect.height };
+  // Use the CSS dimensions, which are the display size
+  const rect = canvas.getBoundingClientRect();
+  return { width: rect.width, height: rect.height };
   }
   return { width: window.innerWidth, height: window.innerHeight };
 }
@@ -100,9 +100,9 @@ const updateViewportForResize = (): void => {
 
   // Initialize target dimensions if not set yet
   if (targetWorldWidth === null || targetWorldHeight === null) {
-    targetWorldWidth = width / viewport.scale;
-    targetWorldHeight = height / viewport.scale;
-    return;
+  targetWorldWidth = width / viewport.scale;
+  targetWorldHeight = height / viewport.scale;
+  return;
   }
 
   // Calculate the scale needed to maintain the same world dimensions
@@ -121,32 +121,32 @@ function ViewportDebugUI() {
   const animationFrameRef = React.useRef<number>();
 
   React.useEffect(() => {
-    const updateViewport = () => {
-      setViewportState(getViewport());
-      animationFrameRef.current = requestAnimationFrame(updateViewport);
-    };
-    animationFrameRef.current = requestAnimationFrame(updateViewport);
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
+  const updateViewport = () => {
+  setViewportState(getViewport());
+  animationFrameRef.current = requestAnimationFrame(updateViewport);
+  };
+  animationFrameRef.current = requestAnimationFrame(updateViewport);
+  return () => {
+  if (animationFrameRef.current) {
+    cancelAnimationFrame(animationFrameRef.current);
+  }
+  };
   }, []);
 
   return (
-    <div className="absolute bottom-0 left-0 z-[10000] p-2 text-xs select-none leading-normal flex flex-row gap-2 items-end">
-      <EditorButton
-        onClick={() => {
-          resetViewport();
-          setViewportState(getViewport());
-        }}
-      >
-        Reset Viewport
-      </EditorButton>
-      <div>
-        {viewportState.x.toFixed(1)}, {viewportState.y.toFixed(1)}, {(viewportState.scale * 100).toFixed(0)}%
-      </div>
-    </div>
+  <div className="absolute bottom-0 left-0 z-[10000] p-2 text-xs select-none leading-normal flex flex-row gap-2 items-end">
+  <EditorButton
+    onClick={() => {
+    resetViewport();
+    setViewportState(getViewport());
+    }}
+  >
+    Reset Viewport
+  </EditorButton>
+  <div>
+    {viewportState.x.toFixed(1)}, {viewportState.y.toFixed(1)}, {(viewportState.scale * 100).toFixed(0)}%
+  </div>
+  </div>
   );
 }
 
@@ -157,13 +157,13 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
   context: T
 ): ContextExtension<T, {}> {
   addStartCallback(() => {
-    resetViewport();
+  resetViewport();
   });
 
   const resizeHandler = () => {
-    requestAnimationFrame(() => {
-      updateViewportForResize();
-    });
+  requestAnimationFrame(() => {
+  updateViewportForResize();
+  });
   };
 
   window.addEventListener("resize", resizeHandler);
@@ -172,90 +172,90 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
   let viewportDragStartY: number = 0;
 
   registerDragHandler(
-    {
-      priority: 0,
-      canHandle: () => {
-        if (!isEditorUpdateEnabled()) {
-          return false;
-        }
-        return true;
-      },
-      onDragStart: () => {
-        const viewportState = getViewport();
-        viewportDragStartX = viewportState.x;
-        viewportDragStartY = viewportState.y;
-      },
-      onDrag: (worldDeltaX, worldDeltaY) => {
-        const newViewportX = viewportDragStartX - worldDeltaX;
-        const newViewportY = viewportDragStartY - worldDeltaY;
-        setViewport(newViewportX, newViewportY);
-      },
-      onDragEnd: () => {
-      },
-      cursor: "grabbing",
-    },
-    context
+  {
+  priority: 0,
+  canHandle: () => {
+    if (!isEditorUpdateEnabled()) {
+    return false;
+    }
+    return true;
+  },
+  onDragStart: () => {
+    const viewportState = getViewport();
+    viewportDragStartX = viewportState.x;
+    viewportDragStartY = viewportState.y;
+  },
+  onDrag: (worldDeltaX, worldDeltaY) => {
+    const newViewportX = viewportDragStartX - worldDeltaX;
+    const newViewportY = viewportDragStartY - worldDeltaY;
+    setViewport(newViewportX, newViewportY);
+  },
+  onDragEnd: () => {
+  },
+  cursor: "grabbing",
+  },
+  context
   );
 
   const gameRoot = document.querySelector("#gameRoot") as HTMLElement | null;
   if (gameRoot) {
-    const wheelHandler = (e: WheelEvent) => {
-      if (!isEditorUpdateEnabled()) {
-        return;
-      }
+  const wheelHandler = (e: WheelEvent) => {
+  if (!isEditorUpdateEnabled()) {
+    return;
+  }
 
-      const editorRoot = document.querySelector("#editor");
-      if (editorRoot) {
-        const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
-        if (elementAtPoint && editorRoot.contains(elementAtPoint) && elementAtPoint !== editorRoot) {
-          return;
-        }
-      }
+  const editorRoot = document.querySelector("#editor");
+  if (editorRoot) {
+    const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
+    if (elementAtPoint && editorRoot.contains(elementAtPoint) && elementAtPoint !== editorRoot) {
+    return;
+    }
+  }
 
-      const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
-      if (!canvas) return;
+  const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
+  if (!canvas) return;
 
-      e.preventDefault();
-      e.stopPropagation();
+  e.preventDefault();
+  e.stopPropagation();
 
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      // Ramping sensitivity: larger scrolls result in more zoom change
-      const delta = -e.deltaY * 0.001;
-      zoomViewport(delta, x, y);
-    };
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  // Ramping sensitivity: larger scrolls result in more zoom change
+  const delta = -e.deltaY * 0.001;
+  zoomViewport(delta, x, y);
+  };
 
-    gameRoot.addEventListener("wheel", wheelHandler, {
-      passive: false,
-    });
+  gameRoot.addEventListener("wheel", wheelHandler, {
+  passive: false,
+  });
   }
 
   if (isEditorMode()) {
-    if (
-      !viewportDebugContainer ||
-      !viewportDebugContainer.parentElement ||
-      viewportDebugContainer.parentElement !== context.rootElement
-    ) {
-      if (viewportDebugContainer && viewportDebugContainer.parentElement) {
-        viewportDebugContainer.remove();
-      }
-      if (viewportDebugRoot) {
-        try {
-          viewportDebugRoot.unmount();
-        } catch (e) {
-        }
-        viewportDebugRoot = null;
-      }
-
-      viewportDebugContainer = document.createElement("div");
-      context.rootElement.appendChild(viewportDebugContainer);
-      viewportDebugRoot = createRoot(viewportDebugContainer);
+  if (
+  !viewportDebugContainer ||
+  !viewportDebugContainer.parentElement ||
+  viewportDebugContainer.parentElement !== context.rootElement
+  ) {
+  if (viewportDebugContainer && viewportDebugContainer.parentElement) {
+    viewportDebugContainer.remove();
+  }
+  if (viewportDebugRoot) {
+    try {
+    viewportDebugRoot.unmount();
+    } catch (e) {
     }
+    viewportDebugRoot = null;
+  }
 
-    if (viewportDebugRoot) {
-      viewportDebugRoot.render(React.createElement(ViewportDebugUI));
-    }
+  viewportDebugContainer = document.createElement("div");
+  context.rootElement.appendChild(viewportDebugContainer);
+  viewportDebugRoot = createRoot(viewportDebugContainer);
+  }
+
+  if (viewportDebugRoot) {
+  viewportDebugRoot.render(React.createElement(ViewportDebugUI));
+  }
   }
 
   return context;

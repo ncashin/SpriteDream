@@ -12,43 +12,43 @@ export function EntityModalContainer() {
 
   // Sync entities from ECS
   useEffect(() => {
-    if (!ecs) return;
+  if (!ecs) return;
 
-    const updateEntities = () => {
-      const allEntities = Object.keys(ecs.ecsInstance.entities);
-      setEntities((prev) => {
-        if (
-          prev.length !== allEntities.length ||
-          !prev.every((e, i) => e === allEntities[i])
-        ) {
-          return allEntities;
-        }
-        return prev;
-      });
-    };
+  const updateEntities = () => {
+  const allEntities = Object.keys(ecs.ecsInstance.entities);
+  setEntities((prev) => {
+    if (
+    prev.length !== allEntities.length ||
+    !prev.every((e, i) => e === allEntities[i])
+    ) {
+    return allEntities;
+    }
+    return prev;
+  });
+  };
 
-    updateEntities();
-    const callbackId = addDrawCallback(updateEntities);
+  updateEntities();
+  const callbackId = addDrawCallback(updateEntities);
 
-    return () => {
-      removeDrawCallback(callbackId);
-    };
+  return () => {
+  removeDrawCallback(callbackId);
+  };
   }, [ecs]);
 
   // Sync selected entity from ECS
   useEffect(() => {
-    if (!ecs) return;
+  if (!ecs) return;
 
-    const updateSelection = () => {
-      setSelectedEntity(ecs.getSelectedEntity() ?? null);
-    };
+  const updateSelection = () => {
+  setSelectedEntity(ecs.getSelectedEntity() ?? null);
+  };
 
-    updateSelection();
-    const callbackId = addDrawCallback(updateSelection);
+  updateSelection();
+  const callbackId = addDrawCallback(updateSelection);
 
-    return () => {
-      removeDrawCallback(callbackId);
-    };
+  return () => {
+  removeDrawCallback(callbackId);
+  };
   }, [ecs]);
 
   if (!ecs) return null;
@@ -58,11 +58,11 @@ export function EntityModalContainer() {
   const validSelectedEntity = isValidEntity ? selectedEntity : null;
 
   return (
-    <EntityModal
-      isOpen={validSelectedEntity !== null}
-      entity={validSelectedEntity}
-      onClose={() => ecs.clearSelection()}
-    />
+  <EntityModal
+  isOpen={validSelectedEntity !== null}
+  entity={validSelectedEntity}
+  onClose={() => ecs.clearSelection()}
+  />
   );
 }
 

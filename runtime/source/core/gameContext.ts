@@ -1,4 +1,5 @@
 import type { Root } from "react-dom/client";
+import type { ComponentType } from "react";
 import { defineMainFunction, runGame } from "./runtimeWrapper";
 import { setScene, hasScene } from "./scene/scene";
 
@@ -33,6 +34,8 @@ export type GameConfig<T extends readonly Plugin<any, any>[]> = {
   plugins: T;
   initialScene: string;
   main?: (context: AccumulatePluginResults<T>) => void;
+  EditorUI?: ComponentType;
+  GameUI?: ComponentType;
 };
 
 function createGameContext<T extends readonly Plugin<any, any>[]>(
@@ -50,6 +53,8 @@ export function initializeGame<T extends readonly Plugin<any, any>[]>({
   plugins,
   initialScene,
   main,
+  EditorUI,
+  GameUI,
 }: GameConfig<T>): void {
   if (!hasScene()) {
     setScene(initialScene);
@@ -60,5 +65,5 @@ export function initializeGame<T extends readonly Plugin<any, any>[]>({
     main?.(gameContext);
   });
 
-  runGame();
+  runGame(EditorUI, GameUI);
 }

@@ -1,17 +1,22 @@
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { Editor } from "./Editor";
+import type { ComponentType } from "react";
 import { setGameContext, type GameContextType } from "./EditorContext";
 
 let editorRoot: Root | null = null;
 let editorContainer: HTMLDivElement | null = null;
+let EditorComponent: ComponentType | null = null;
 
 export function setEditorGameContext(context: GameContextType | null) {
   setGameContext(context);
   renderEditor();
 }
 
-export function initializeEditor() {
+export function initializeEditor(Editor?: ComponentType) {
+  if (Editor) {
+    EditorComponent = Editor;
+  }
+
   const editor = document.querySelector<HTMLDivElement>("#editor");
   if (!editor) {
     console.error("Could not find #editor element");
@@ -37,8 +42,8 @@ export function initializeEditor() {
 }
 
 function renderEditor() {
-  if (editorRoot) {
-    editorRoot.render(React.createElement(Editor));
+  if (editorRoot && EditorComponent) {
+    editorRoot.render(React.createElement(EditorComponent));
   }
 }
 
