@@ -7,6 +7,10 @@ import { isEditorMode } from "../utils";
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { EditorButton } from "../editor/EditorButton";
+import {
+  isEditorUIVisible,
+  subscribeToVisibilityChanges,
+} from "../editor/uiVisibility.ts";
 
 export type Viewport = {
   x: number;
@@ -118,6 +122,7 @@ const updateViewportForResize = (): void => {
 
 function ViewportDebugUI() {
   const [viewportState, setViewportState] = React.useState(getViewport());
+  const [editorUIVisible, setEditorUIVisible] = React.useState(isEditorUIVisible());
   const animationFrameRef = React.useRef<number>();
 
   React.useEffect(() => {
@@ -132,6 +137,17 @@ function ViewportDebugUI() {
   }
   };
   }, []);
+
+  React.useEffect(() => {
+    const unsubscribe = subscribeToVisibilityChanges(() => {
+      setEditorUIVisible(isEditorUIVisible());
+    });
+    return unsubscribe;
+  }, []);
+
+  if (!editorUIVisible) {
+    return null;
+  }
 
   return (
   <div className="absolute bottom-0 left-0 z-[10000] p-2 text-xs select-none leading-normal flex flex-row gap-2 items-end">
