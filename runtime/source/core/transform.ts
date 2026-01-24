@@ -1,5 +1,5 @@
 import type { ECSInstance, Entity } from "./ecs/ecs";
-import { getComponent, getEntity } from "./ecs/ecs";
+import { getEntity } from "./ecs/ecs";
 import {
     TransformComponentDefinition,
     type TransformComponent,
@@ -18,7 +18,7 @@ export function getTransform(
     ecs: ECSInstance,
     entity: Entity
 ): Transform | null {
-    const transform = getComponent(ecs, entity, TransformComponentDefinition);
+    const transform = getEntity(ecs, entity)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;
     if (transform) {
         return {
             x: transform.x,
@@ -29,7 +29,7 @@ export function getTransform(
         };
     }
 
-    const position = getComponent(ecs, entity, PositionComponentDefinition);
+    const position = getEntity(ecs, entity)[PositionComponentDefinition.type] as typeof PositionComponentDefinition | undefined;
     if (position) {
         return {
             x: position.x,
@@ -50,7 +50,7 @@ export function getWorldTransform(
     const localTransform = getTransform(ecs, entity);
     if (!localTransform) return null;
 
-    const transform = getComponent(ecs, entity, TransformComponentDefinition);
+    const transform = getEntity(ecs, entity)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;
     const parentId = transform?.parent;
 
     if (!parentId) {
@@ -110,7 +110,7 @@ export function setTransform(
     entity: Entity,
     transform: Partial<Transform & { parent?: string }>
 ): void {
-    const existing = getComponent(ecs, entity, TransformComponentDefinition);
+    const existing = getEntity(ecs, entity)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;
     if (existing) {
         // Set each property individually to ensure proxy handlers are triggered
         // and changes are properly persisted to the scene
@@ -146,7 +146,7 @@ export function setWorldPosition(
     worldX: number,
     worldY: number
 ): void {
-    const transform = getComponent(ecs, entity, TransformComponentDefinition);
+    const transform = getEntity(ecs, entity)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;
     const parentId = transform?.parent;
 
     if (!parentId) {
@@ -187,7 +187,7 @@ export function setWorldTransform(
     worldTransform: Transform,
     overrideParent?: Entity | null
 ): void {
-    const transform = getComponent(ecs, entity, TransformComponentDefinition);
+    const transform = getEntity(ecs, entity)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;
     // Use overrideParent if provided, otherwise read from component
     const parentId = overrideParent !== undefined ? overrideParent : transform?.parent;
 
@@ -253,7 +253,7 @@ export function setParent(
 
     // Validate that the new parent exists (if not null)
     if (parentId) {
-        const parentTransform = getComponent(ecs, parentId, TransformComponentDefinition);
+        const parentTransform = getEntity(ecs, parentId)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;
         if (!parentTransform) {
             console.warn(`Cannot reparent: parent entity "${parentId}" has no transform component`);
             return;
@@ -337,7 +337,7 @@ export function getParents(
     let currentEntity: Entity | undefined = entity;
 
     while (currentEntity) {
-        const transform: TransformComponent | undefined = getComponent(ecs, currentEntity, TransformComponentDefinition);
+        const transform: TransformComponent | undefined = getEntity(ecs, currentEntity)[TransformComponentDefinition.type] as TransformComponent | undefined;
         const parentId: Entity | undefined = transform?.parent;
 
         if (!parentId) {
@@ -387,7 +387,7 @@ export function worldDirectionToLocal(
     worldDirX: number,
     worldDirY: number
 ): { x: number; y: number } {
-    const transform = getComponent(ecs, entity, TransformComponentDefinition);
+    const transform = getEntity(ecs, entity)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;
     const parentId = transform?.parent;
 
     if (!parentId) {
@@ -438,7 +438,7 @@ export function worldDistanceToLocal(
     entity: Entity,
     worldDistance: number
 ): number {
-    const transform = getComponent(ecs, entity, TransformComponentDefinition);
+    const transform = getEntity(ecs, entity)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;
     const parentId = transform?.parent;
 
     if (!parentId) {

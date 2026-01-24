@@ -7,8 +7,8 @@ import { collisionPlugin } from "./core/collision/collisionPlugin";
 import { ecsEditorPlugin } from "./core/ecs/editor/ECSEditorPlugin";
 import { addUpdateCallback } from "./core/gameloop";
 import type { Component } from "./core/ecs/ecs";
+import { getEntity } from "./core/ecs/ecs";
 import { defineComponent, VelocityComponentDefinition } from "./core/ecs/component";
-import { getComponent } from "./core/ecs/ecs";
 import { registerCollisionCallback } from "./core/collision/collisionCallbacks";
 import initialScene from "../scenes/default.scene?raw";
 
@@ -69,7 +69,7 @@ function main({ ecs, input }: GameContext) {
         return;
       }
 
-      const velocity = getComponent(_ecs, entity, VelocityComponentDefinition)!;
+      const velocity = getEntity(_ecs, entity)[VelocityComponentDefinition.type] as typeof VelocityComponentDefinition;
 
       const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
       const isNormalPointingUp = overlapNormal[1] < 0;

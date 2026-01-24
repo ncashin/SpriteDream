@@ -338,26 +338,41 @@ export const createComponentProxy = <ComponentType extends Component>(
   });
 };
 
-export const getComponent = <ComponentType extends Component>(
-  instance: ECSInstance,
-  entity: Entity,
-  COMPONENT_TYPE_DEF: ComponentType,
-): ComponentType | undefined => {
-  if (instance.componentProxyHandler !== undefined) {
-    return createComponentProxy(instance, entity, COMPONENT_TYPE_DEF);
-  }
-  return lookupComponent(instance, entity, COMPONENT_TYPE_DEF);
+export type EntityWithComponents<ComposedType extends Component[]> = Record<string, Component> & {
+  [K in ComposedType[number]as K['type']]: K;
 };
 
-export const getEntity = (
+// Overload for type-guarded access with component array
+export function getEntity<const ComposedType extends Component[]>(
   instance: ECSInstance,
   entity: Entity,
-): Record<string, Component> => {
-  if (!instance.entities[entity]) {
-    return createEntityProxy(instance, entity);
+  COMPONENT_TYPE_DEFS: ComposedType,
+): EntityWithComponents<ComposedType> | null;
+
+// Overload for regular access without type guarding
+export function getEntity(
+  instance: ECSInstance,
+  entity: Entity,
+): Record<string, Component>;
+
+// Implementation
+export function getEntity<const ComposedType extends Component[]>(
+  instance: ECSInstance,
+  entity: Entity,
+  COMPONENT_TYPE_DEFS?: ComposedType,
+): Record<string, Component> | EntityWithComponents<ComposedType> | null {
+  const entityProxy = createEntityProxy(instance, entity);
+
+  // If component array is provided, perform type guarding
+  if (COMPONENT_TYPE_DEFS !== undefined) {
+    if (hasComponents(entityProxy, COMPONENT_TYPE_DEFS)) {
+      return entityProxy;
+    }
+    return null;
   }
-  return createEntityProxy(instance, entity);
-};
+
+  return entityProxy;
+}
 
 export const queryEntities = <const ComposedType extends Component[]>(
   instance: ECSInstance,
@@ -452,13 +467,21 @@ export const curryECSInstance = (instance: ECSInstance) => ({
   renameEntity: (oldEntity: Entity, newEntity: Entity): boolean =>
     renameEntity(instance, oldEntity, newEntity),
 
-  getComponent: <ComponentType extends Component>(
+  getEntity: (<const ComposedType extends Component[]>(
     entity: Entity,
-    COMPONENT_TYPE_DEF: ComponentType,
-  ): ComponentType | undefined =>
-    getComponent(instance, entity, COMPONENT_TYPE_DEF),
-  getEntity: (entity: Entity): any =>
-    getEntity(instance, entity),
+    COMPONENT_TYPE_DEFS?: ComposedType,
+  ) => {
+    if (COMPONENT_TYPE_DEFS !== undefined) {
+      return getEntity(instance, entity, COMPONENT_TYPE_DEFS);
+    }
+    return getEntity(instance, entity);
+  }) as {
+    <const ComposedType extends Component[]>(
+      entity: Entity,
+      COMPONENT_TYPE_DEFS: ComposedType,
+    ): EntityWithComponents<ComposedType> | null;
+    (entity: Entity): Record<string, Component>;
+  },
   hasComponents: <const ComposedType extends Component[]>(
     entityData: Record<string, Component>,
     COMPONENT_TYPE_DEFS: ComposedType,
@@ -488,11 +511,6 @@ export const setParent = (
   if (instance.setParentHandler) {
     instance.setParentHandler(instance, entity, parentId);
   }
-};
-
-
-type EntityWithComponents<ComposedType extends Component[]> = Record<string, Component> & {
-  [K in ComposedType[number]as K['type']]: K;
 };
 
 export const hasComponents = <const ComposedType extends Component[]>(

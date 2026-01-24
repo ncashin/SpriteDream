@@ -1,7 +1,7 @@
 import type { Vector } from "./vector";
 import { create, add, sub, scale, dot, length, normalize } from "./vector";
 import type { ECSInstance, Entity } from "./ecs/ecs";
-import { getComponent } from "./ecs/ecs";
+import { getEntity } from "./ecs/ecs";
 import {
   TransformComponentDefinition,
   VelocityComponentDefinition,
@@ -26,7 +26,7 @@ export const getEntityVelocity = (
   ecs: ECSInstance,
   entity: Entity
 ): Vector | null => {
-  const velocity = getComponent(ecs, entity, VelocityComponentDefinition);
+  const velocity = getEntity(ecs, entity)[VelocityComponentDefinition.type] as typeof VelocityComponentDefinition | undefined;
   if (!velocity) return null;
   return create(velocity.x, velocity.y);
 };
@@ -35,7 +35,7 @@ export const getEntityCollider = (
   ecs: ECSInstance,
   entity: Entity
 ): ColliderComponent | null => {
-  return getComponent(ecs, entity, ColliderComponentDefinition) ?? null;
+  return (getEntity(ecs, entity)[ColliderComponentDefinition.type] as ColliderComponent | undefined) ?? null;
 };
 
 export const getCollisionPosition = (
@@ -332,8 +332,8 @@ const defaultCollisionResolver: CollisionResolver = (
 
   if (!colliderA || !colliderB) return;
 
-  const transformA = getComponent(ecs, entityA, TransformComponentDefinition);
-  const transformB = getComponent(ecs, entityB, TransformComponentDefinition);
+  const transformA = getEntity(ecs, entityA)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;
+  const transformB = getEntity(ecs, entityB)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;
 
   if (!transformA || !transformB) return;
 
