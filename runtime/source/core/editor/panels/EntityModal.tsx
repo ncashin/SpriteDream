@@ -82,6 +82,12 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     const updateEntityData = () => {
       try {
         const data = ecs.getEntity(entity);
+        // Ensure transform.parent field is always present (set to null if undefined)
+        if (data.transform && typeof data.transform === 'object') {
+          if (!('parent' in data.transform) || data.transform.parent === undefined) {
+            data.transform.parent = null;
+          }
+        }
         setEntityData(JSON.stringify(data, null, 2));
       } catch (error) {
         setEntityData(`Error: ${error}`);
@@ -601,7 +607,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
           </div>
         )}
         {isValidJSON && entityData ? (
-          <JSONTreeView json={entityData} onChange={handleTreeViewChange} />
+          <JSONTreeView json={entityData} onChange={handleTreeViewChange} ecs={ecs?.ecsInstance} entity={entity} />
         ) : (
           <div
             className="flex-1 flex items-center justify-center"

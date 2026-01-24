@@ -1,13 +1,14 @@
 import type { ContextExtension, RequirePlugin } from "./gameContext";
 import type { Component, Entity, ClickableEntityProvider } from "./ecs/ecs";
 import {
-  PositionComponentDefinition,
-  type PositionComponent,
+  TransformComponentDefinition,
+  type TransformComponent,
   defineComponent,
 } from "./ecs/component";
 import { ecsPlugin } from "./scene/ecsAdapter";
 import { addDrawCallback } from "./gameloop";
 import { getViewport } from "./viewport/viewportPlugin";
+import { getWorldTransform, getWorldPosition } from "./transform";
 // HitFlashComponent type definition
 export type HitFlashComponent = Component & {
   type: "hitFlash";
@@ -114,15 +115,25 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
       let clickedEntity: string | null = null;
 
       context.ecs.runQuery(
-        [PositionComponentDefinition, SpriteComponentDefinition],
-        (entity: Entity, components: [PositionComponent, SpriteComponent]) => {
+        [TransformComponentDefinition, SpriteComponentDefinition],
+        (entity: Entity, components: [TransformComponent, SpriteComponent]) => {
           if (clickedEntity) return;
-          const [position, sprite] = components;
-          if (position && sprite && typeof position.x === "number" && typeof sprite.width === "number") {
-            const left = position.x - sprite.width / 2;
-            const right = position.x + sprite.width / 2;
-            const top = position.y - sprite.height / 2;
-            const bottom = position.y + sprite.height / 2;
+          const [transform, sprite] = components;
+          if (transform && sprite && typeof sprite.width === "number") {
+            const worldPos = getWorldPosition(context.ecs.ecsInstance, entity);
+            if (!worldPos) return;
+
+            const worldTransform = getWorldTransform(context.ecs.ecsInstance, entity);
+            if (!worldTransform) return;
+
+            // Account for scale
+            const scaledWidth = sprite.width * worldTransform.scaleX;
+            const scaledHeight = sprite.height * worldTransform.scaleY;
+
+            const left = worldPos.x - scaledWidth / 2;
+            const right = worldPos.x + scaledWidth / 2;
+            const top = worldPos.y - scaledHeight / 2;
+            const bottom = worldPos.y + scaledHeight / 2;
             if (
               worldX >= left &&
               worldX <= right &&
@@ -171,15 +182,18 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     context2D.restore();
 
     context.ecs.runQuery(
-      [PositionComponentDefinition, SpriteComponentDefinition],
-      (entity: Entity, components: [PositionComponent, SpriteComponent]) => {
-        const [position, sprite] = components;
+      [TransformComponentDefinition, SpriteComponentDefinition],
+      (entity: Entity, components: [TransformComponent, SpriteComponent]) => {
+        const [, sprite] = components;
+        const worldTransform = getWorldTransform(context.ecs.ecsInstance, entity);
+        if (!worldTransform) return;
+
+        const worldPos = getWorldPosition(context.ecs.ecsInstance, entity);
+        if (!worldPos) return;
+
         const entityComponents = context.ecs.getEntity(entity);
         const hitFlash = entityComponents.hitFlash as
           | HitFlashComponent
-          | undefined;
-        const player = entityComponents.player as
-          | { rotation?: number }
           | undefined;
 
         const isFlashing =
@@ -188,14 +202,18 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
           ? 1 - hitFlash!.flashTime / hitFlash!.maxFlashTime
           : 0;
 
-        const rotation = player?.rotation || 0;
+        const rotationRad = (worldTransform.rotation * Math.PI) / 180;
         const isSelected = selectedEntity === entity;
 
+        // Apply scale
+        const scaledWidth = sprite.width * worldTransform.scaleX;
+        const scaledHeight = sprite.height * worldTransform.scaleY;
+
         context2D.save();
-        if (rotation !== 0) {
-          context2D.translate(position.x, position.y);
-          context2D.rotate(rotation);
-          context2D.translate(-position.x, -position.y);
+        if (rotationRad !== 0) {
+          context2D.translate(worldPos.x, worldPos.y);
+          context2D.rotate(rotationRad);
+          context2D.translate(-worldPos.x, -worldPos.y);
         }
 
         if (sprite.image) {
@@ -204,29 +222,29 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
           if (img && img.complete) {
             context2D.drawImage(
               img,
-              position.x - sprite.width / 2,
-              position.y - sprite.height / 2,
-              sprite.width,
-              sprite.height
+              worldPos.x - scaledWidth / 2,
+              worldPos.y - scaledHeight / 2,
+              scaledWidth,
+              scaledHeight
             );
             if (isFlashing) {
               context2D.globalCompositeOperation = "source-atop";
               context2D.globalAlpha = flashIntensity * 0.7;
               context2D.fillStyle = "#ffffff";
               context2D.fillRect(
-                position.x - sprite.width / 2,
-                position.y - sprite.height / 2,
-                sprite.width,
-                sprite.height
+                worldPos.x - scaledWidth / 2,
+                worldPos.y - scaledHeight / 2,
+                scaledWidth,
+                scaledHeight
               );
             }
           } else {
             context2D.fillStyle = sprite.color;
             context2D.fillRect(
-              position.x - sprite.width / 2,
-              position.y - sprite.height / 2,
-              sprite.width,
-              sprite.height
+              worldPos.x - scaledWidth / 2,
+              worldPos.y - scaledHeight / 2,
+              scaledWidth,
+              scaledHeight
             );
             if (img === undefined) {
               loadImage(sprite.image).catch((error) => {
@@ -237,20 +255,20 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
         } else {
           context2D.fillStyle = sprite.color;
           context2D.fillRect(
-            position.x - sprite.width / 2,
-            position.y - sprite.height / 2,
-            sprite.width,
-            sprite.height
+            worldPos.x - scaledWidth / 2,
+            worldPos.y - scaledHeight / 2,
+            scaledWidth,
+            scaledHeight
           );
           if (isFlashing) {
             context2D.save();
             context2D.globalAlpha = flashIntensity * 0.7;
             context2D.fillStyle = "#ffffff";
             context2D.fillRect(
-              position.x - sprite.width / 2,
-              position.y - sprite.height / 2,
-              sprite.width,
-              sprite.height
+              worldPos.x - scaledWidth / 2,
+              worldPos.y - scaledHeight / 2,
+              scaledWidth,
+              scaledHeight
             );
             context2D.restore();
           }
@@ -263,10 +281,10 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
           context2D.lineWidth = 2 / viewport.scale;
 
           const padding = 2 / viewport.scale;
-          const left = position.x - sprite.width / 2 - padding;
-          const top = position.y - sprite.height / 2 - padding;
-          const right = position.x + sprite.width / 2 + padding;
-          const bottom = position.y + sprite.height / 2 + padding;
+          const left = worldPos.x - scaledWidth / 2 - padding;
+          const top = worldPos.y - scaledHeight / 2 - padding;
+          const right = worldPos.x + scaledWidth / 2 + padding;
+          const bottom = worldPos.y + scaledHeight / 2 + padding;
 
           context2D.strokeRect(left, top, right - left, bottom - top);
           context2D.restore();

@@ -3,12 +3,16 @@ import { componentRegistry, type PropertyInputType } from '../../ecs/component';
 import { SearchableDropdown } from './SearchableDropdown';
 import { FileInput } from './FileInput';
 import { ColorInput } from './ColorInput';
+import type { ECSInstance, Entity } from '../../ecs/ecs';
+import { setParent, getChildren } from '../../transform';
 
 interface JSONTreeViewProps {
   json: string;
   onNodeSelect?: (path: string, value: any) => void;
   onChange?: (json: string) => void;
   className?: string;
+  ecs?: ECSInstance;
+  entity?: Entity;
 }
 
 type JSONValue = string | number | boolean | null | { [key: string]: JSONValue } | JSONValue[];
@@ -54,7 +58,22 @@ function createTreeNode(key: string, value: JSONValue, parentPath: string, level
 
   if (type === 'object' && value !== null) {
     const obj = value as { [key: string]: JSONValue };
-    node.children = Object.entries(obj).map(([k, v]) =>
+    let entries = Object.entries(obj);
+
+    // If this is a transform component, reorder to put parent first
+    if (key === 'transform' || path === 'root.transform' || path.endsWith('.transform')) {
+      const parentEntry = entries.find(([k]) => k === 'parent');
+      const typeEntry = entries.find(([k]) => k === 'type');
+      const otherEntries = entries.filter(([k]) => k !== 'parent' && k !== 'type');
+
+      // Reconstruct entries with parent first, then type, then rest
+      entries = [];
+      if (parentEntry) entries.push(parentEntry);
+      if (typeEntry) entries.push(typeEntry);
+      entries.push(...otherEntries);
+    }
+
+    node.children = entries.map(([k, v]) =>
       createTreeNode(k, v, path, level + 1)
     );
   } else if (type === 'array') {
@@ -117,6 +136,8 @@ interface TreeNodeComponentProps {
   onValueChange?: (path: string, newValue: JSONValue) => void;
   rootData: any;
   isInGridContainer?: boolean;
+  ecs?: ECSInstance;
+  entity?: Entity;
 }
 
 function getPropertyInputType(path: string): PropertyInputType | null {
@@ -151,7 +172,9 @@ function TreeNodeComponent({
   onNodeClick,
   onValueChange,
   rootData,
-  isInGridContainer = false
+  isInGridContainer = false,
+  ecs,
+  entity
 }: TreeNodeComponentProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -162,12 +185,39 @@ function TreeNodeComponent({
   const isObjectOrArray = node.type === 'object' || node.type === 'array';
   const isTypeField = node.key === 'type';
   const isEditable = !isObjectOrArray && node.key !== 'root' && !isTypeField;
+  const isTransformParent = node.path === 'root.transform.parent' ||
+    node.path === 'transform.parent' ||
+    node.path.endsWith('.transform.parent');
 
   // Get custom input type for this property
   const customInputType = useMemo(() => {
     if (!isEditable) return null;
     return getPropertyInputType(node.path);
   }, [node.path, isEditable]);
+
+  // Get available entities for parent selection (excluding self and descendants)
+  const availableParentEntities = useMemo(() => {
+    if (!isTransformParent || !ecs || !entity) return [];
+
+    const allEntities = Object.keys(ecs.entities);
+
+    // Helper to check if an entity is a descendant
+    const isDescendant = (parent: Entity, child: Entity): boolean => {
+      const children = getChildren(ecs, parent);
+      if (children.includes(child)) return true;
+      for (const c of children) {
+        if (isDescendant(c, child)) return true;
+      }
+      return false;
+    };
+
+    // Filter out self and descendants
+    return allEntities.filter(e => {
+      if (e === entity) return false;
+      if (isDescendant(entity, e)) return false;
+      return true;
+    });
+  }, [isTransformParent, ecs, entity]);
 
   const handleRowClick = () => {
     if (isObjectOrArray && hasChildren) {
@@ -189,7 +239,31 @@ function TreeNodeComponent({
   };
 
   const handleValueChange = (newValue: JSONValue) => {
-    if (onValueChange) {
+    // Special handling for transform.parent - use setParent function
+    if (isTransformParent && ecs && entity) {
+      const parentId = newValue === null || newValue === '' || newValue === undefined
+        ? null
+        : String(newValue);
+
+      // Validate parent exists if not null
+      if (parentId && !ecs.entities[parentId]) {
+        console.warn(`Parent entity "${parentId}" does not exist`);
+        return;
+      }
+
+      // Use setParent to properly handle transform conversion
+      setParent(ecs, entity, parentId);
+
+      // Trigger onChange to refresh the view
+      if (onValueChange) {
+        // Get the updated value from the transform component
+        const transform = ecs.entities[entity]?.transform;
+        const updatedValue: JSONValue = (transform && 'parent' in transform && typeof transform.parent === 'string')
+          ? transform.parent
+          : null;
+        onValueChange(node.path, updatedValue);
+      }
+    } else if (onValueChange) {
       onValueChange(node.path, newValue);
     }
     setIsEditing(false);
@@ -317,6 +391,8 @@ function TreeNodeComponent({
                 onValueChange={onValueChange}
                 rootData={rootData}
                 isInGridContainer={true}
+                ecs={ecs}
+                entity={entity}
               />
             ))}
           </div>
@@ -455,7 +531,16 @@ function TreeNodeComponent({
               }
             }}
           >
-            {customInputType?.type === 'dropdown' ? (
+            {isTransformParent && ecs && entity ? (
+              <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
+                <SearchableDropdown
+                  value={String(node.value || '')}
+                  options={['', ...availableParentEntities]}
+                  onChange={(value) => handleValueChange(value === '' ? null : value)}
+                  placeholder="No parent"
+                />
+              </div>
+            ) : customInputType?.type === 'dropdown' ? (
               <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
                 <SearchableDropdown
                   value={String(node.value || '')}
@@ -600,7 +685,16 @@ function TreeNodeComponent({
               display: 'flex',
               alignItems: 'center',
             }}>
-              {customInputType?.type === 'dropdown' ? (
+              {isTransformParent && ecs && entity ? (
+                <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
+                  <SearchableDropdown
+                    value={String(node.value || '')}
+                    options={['', ...availableParentEntities]}
+                    onChange={(value) => handleValueChange(value === '' ? null : value)}
+                    placeholder="No parent"
+                  />
+                </div>
+              ) : customInputType?.type === 'dropdown' ? (
                 <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
                   <SearchableDropdown
                     value={String(node.value || '')}
@@ -695,6 +789,8 @@ function TreeNodeComponent({
               onValueChange={onValueChange}
               rootData={rootData}
               isInGridContainer={true}
+              ecs={ecs}
+              entity={entity}
             />
           ))}
         </div>
@@ -703,7 +799,7 @@ function TreeNodeComponent({
   );
 }
 
-export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: JSONTreeViewProps) {
+export function JSONTreeView({ json, onNodeSelect, onChange, className = '', ecs, entity }: JSONTreeViewProps) {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [localData, setLocalData] = useState(json);
 
@@ -843,6 +939,8 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '' }: J
                   onNodeClick={onNodeSelect}
                   onValueChange={updateValueAtPath}
                   rootData={rootData}
+                  ecs={ecs}
+                  entity={entity}
                 />
               ))
             ) : (

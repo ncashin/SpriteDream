@@ -7,6 +7,7 @@ import { getViewport } from "../../viewport/viewportPlugin";
 import type { ClickableEntityProvider } from "../ecs";
 import { setEditorGameContext } from "../../editor/editorInitializer";
 import { isEditorMode } from "../../utils";
+import { getWorldPosition, setWorldPosition } from "../../transform";
 
 function getClickProviders(context: any): ClickableEntityProvider[] {
   const providers: ClickableEntityProvider[] = [];
@@ -60,7 +61,7 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
     return;
   }
 
-  let entityDragStartPosition: { x: number; y: number } | null = null;
+  let entityDragStartWorldPosition: { x: number; y: number } | null = null;
   let draggedEntity: string | null = null;
   let hasDragged = false;
 
@@ -77,25 +78,28 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
         const clickedEntity = checkClickProviders(context, worldX, worldY);
         if (clickedEntity) {
           draggedEntity = clickedEntity;
-          const entityComponents = context.ecs.getEntity(clickedEntity);
-          const position = entityComponents?.position;
-          if (position && typeof position.x === "number" && typeof position.y === "number") {
-            entityDragStartPosition = { x: position.x, y: position.y };
+          // Store the world position at drag start (not local transform values)
+          const worldPos = getWorldPosition(context.ecs.ecsInstance, clickedEntity);
+          if (worldPos) {
+            entityDragStartWorldPosition = { x: worldPos.x, y: worldPos.y };
+          } else {
+            // Fallback: if no transform, use the click position
+            entityDragStartWorldPosition = { x: worldX, y: worldY };
           }
         }
       },
       onDrag: (worldDeltaX, worldDeltaY) => {
-        if (entityDragStartPosition && draggedEntity) {
-          const entityComponents = context.ecs.getEntity(draggedEntity);
-          const position = entityComponents?.position;
-          if (position && typeof position.x === "number" && typeof position.y === "number") {
-            position.x = entityDragStartPosition.x + worldDeltaX;
-            position.y = entityDragStartPosition.y + worldDeltaY;
-          }
+        if (entityDragStartWorldPosition && draggedEntity) {
+          // Calculate new world position
+          const newWorldX = entityDragStartWorldPosition.x + worldDeltaX;
+          const newWorldY = entityDragStartWorldPosition.y + worldDeltaY;
+          
+          // Set world position (automatically converts to local space)
+          setWorldPosition(context.ecs.ecsInstance, draggedEntity, newWorldX, newWorldY);
         }
       },
       onDragEnd: () => {
-        entityDragStartPosition = null;
+        entityDragStartWorldPosition = null;
         draggedEntity = null;
         hasDragged = false;
       },

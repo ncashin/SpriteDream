@@ -9,6 +9,8 @@ import {
   type ComponentTypeString,
 } from "../ecs/ecs";
 import type { InitialGameContext, ContextExtension } from "../gameContext";
+import { TransformComponentDefinition } from "../ecs/component";
+import { setParent as setParentTransform } from "../transform";
 
 type SceneECSData = {
   entities: Record<Entity, Record<ComponentTypeString, Component>>;
@@ -147,6 +149,8 @@ export function initializeSceneECS<T extends InitialGameContext>(
 
   const ecsInstance: ECSInstance = createECSInstance({
     componentProxyHandler,
+    defaultComponent: TransformComponentDefinition,
+    setParentHandler: setParentTransform,
     addComponentCallback: (entity: Entity, component: Component) => {
       if (!ecsData.entities[entity]) {
         ecsData.entities[entity] = {};

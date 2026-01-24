@@ -9,10 +9,34 @@ import {
   type ComponentTypeString,
 } from "../ecs/ecs";
 import type { InitialGameContext, ContextExtension } from "../gameContext";
+import { TransformComponentDefinition } from "../ecs/component";
+import { setParent as setParentTransform } from "../transform";
 
 type SceneECSData = {
   entities: Record<Entity, Record<ComponentTypeString, Component>>;
 };
+
+/**
+ * Migrate position components to transform components
+ * This ensures backward compatibility with old scene files
+ */
+function migratePositionToTransform(ecsData: SceneECSData): void {
+  for (const entityId in ecsData.entities) {
+    const entity = ecsData.entities[entityId];
+    if (entity.position && !entity.transform) {
+      const position = entity.position as { x?: number; y?: number; type?: string };
+      entity.transform = {
+        type: "transform",
+        x: typeof position.x === "number" ? position.x : 0,
+        y: typeof position.y === "number" ? position.y : 0,
+        rotation: 0,
+        scaleX: 1,
+        scaleY: 1,
+      };
+      // Keep position for backward compatibility, but prefer transform
+    }
+  }
+}
 
 export function ecsPlugin<T extends InitialGameContext>(
   context: T
@@ -40,6 +64,9 @@ export function ecsPlugin<T extends InitialGameContext>(
     scene.ecs = ecsData;
   }
 
+  // Migrate position components to transform components
+  migratePositionToTransform(ecsData);
+
   const componentProxyHandler: ComponentProxyHandler = {
     set: (entity: Entity, component: Component, property: string, newValue: unknown): boolean => {
       if (property in component) {
@@ -64,6 +91,8 @@ export function ecsPlugin<T extends InitialGameContext>(
 
   const ecsInstance: ECSInstance = createECSInstance({
     componentProxyHandler,
+    defaultComponent: TransformComponentDefinition,
+    setParentHandler: setParentTransform,
     addComponentCallback: (entity: Entity, component: Component) => {
       if (!ecsData.entities[entity]) {
         ecsData.entities[entity] = {};

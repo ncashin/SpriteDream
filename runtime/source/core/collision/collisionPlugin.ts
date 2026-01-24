@@ -3,15 +3,16 @@ import { ecsPlugin } from "../scene/ecsAdapter";
 import { spritePlugin } from "../sprite";
 import type { Entity, ClickableEntityProvider } from "../ecs/ecs";
 import {
-  PositionComponentDefinition,
+  TransformComponentDefinition,
   ColliderComponentDefinition,
   VelocityComponentDefinition,
-  type PositionComponent,
+  type TransformComponent,
   type ColliderComponent,
 } from "../ecs/component";
 import { addUpdateCallback, addEditorDrawCallback } from "../gameloop";
 import { updateCollisions, debugDrawColliders } from "../sat";
 import { getViewport } from "../viewport/viewportPlugin";
+import { getWorldPosition, getWorldTransform, setWorldPosition } from "../transform";
 
 export function collisionPlugin<
   T extends RequirePlugin<[typeof ecsPlugin, typeof spritePlugin]>
@@ -19,10 +20,10 @@ export function collisionPlugin<
   const getCollisionEntities = (): Entity[] => {
     const entities: Entity[] = [];
     context.ecs.runQuery(
-      [PositionComponentDefinition, ColliderComponentDefinition],
+      [TransformComponentDefinition, ColliderComponentDefinition],
       (entity, components) => {
         const [, collider] = components as [
-          PositionComponent,
+          TransformComponent,
           ColliderComponent
         ];
         if (collider.collisionEnabled) {
@@ -39,14 +40,20 @@ export function collisionPlugin<
 
     context.ecs.runQuery(
       [
-        PositionComponentDefinition,
+        TransformComponentDefinition,
         VelocityComponentDefinition,
         ColliderComponentDefinition,
       ],
-      (entity, [position, velocity, collider]) => {
+      (entity, [transform, velocity, collider]) => {
         if (collider.collisionEnabled) {
-          position.x += velocity.x * deltaTime;
-          position.y += velocity.y * deltaTime;
+          // Velocity is in world space, so we need to apply it to world position
+          // then convert back to local space
+          const currentWorldPos = getWorldPosition(context.ecs.ecsInstance, entity);
+          if (currentWorldPos) {
+            const newWorldX = currentWorldPos.x + velocity.x * deltaTime;
+            const newWorldY = currentWorldPos.y + velocity.y * deltaTime;
+            setWorldPosition(context.ecs.ecsInstance, entity, newWorldX, newWorldY);
+          }
           collisionEntities.push(entity);
         }
       }
@@ -79,19 +86,30 @@ export function collisionPlugin<
       let clickedEntity: string | null = null;
 
       context.ecs.runQuery(
-        [PositionComponentDefinition, ColliderComponentDefinition],
-        (entity: Entity, components: [PositionComponent, ColliderComponent]) => {
+        [TransformComponentDefinition, ColliderComponentDefinition],
+        (entity: Entity, components: [TransformComponent, ColliderComponent]) => {
           if (clickedEntity) return;
-          const [position, collider] = components;
-          if (position && collider && collider.collisionEnabled) {
+          const [transform, collider] = components;
+          if (transform && collider && collider.collisionEnabled) {
+            const worldPos = getWorldPosition(context.ecs.ecsInstance, entity);
+            if (!worldPos) return;
+            
+            const worldTransform = getWorldTransform(context.ecs.ecsInstance, entity);
+            if (!worldTransform) return;
+            
             const width = collider.width ?? 32;
             const height = collider.height ?? 32;
             const offsetX = collider.offsetX ?? 0;
             const offsetY = collider.offsetY ?? 0;
-            const left = position.x + offsetX - width / 2;
-            const right = position.x + offsetX + width / 2;
-            const top = position.y + offsetY - height / 2;
-            const bottom = position.y + offsetY + height / 2;
+            
+            // Apply scale to collider dimensions
+            const scaledWidth = width * worldTransform.scaleX;
+            const scaledHeight = height * worldTransform.scaleY;
+            
+            const left = worldPos.x + offsetX - scaledWidth / 2;
+            const right = worldPos.x + offsetX + scaledWidth / 2;
+            const top = worldPos.y + offsetY - scaledHeight / 2;
+            const bottom = worldPos.y + offsetY + scaledHeight / 2;
             if (
               worldX >= left &&
               worldX <= right &&

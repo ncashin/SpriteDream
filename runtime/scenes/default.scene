@@ -2,10 +2,14 @@
   "ecs": {
     "entities": {
       "floor": {
-        "position": {
-          "type": "position",
+        "transform": {
+          "type": "transform",
           "x": 0,
-          "y": 350
+          "y": 350,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "parent": null
         },
         "sprite": {
           "type": "sprite",
@@ -35,10 +39,14 @@
         }
       },
       "platform1": {
-        "position": {
-          "type": "position",
+        "transform": {
+          "type": "transform",
           "x": -200,
-          "y": 100
+          "y": 100,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "parent": null
         },
         "sprite": {
           "type": "sprite",
@@ -64,10 +72,14 @@
         }
       },
       "platform2": {
-        "position": {
-          "type": "position",
+        "transform": {
+          "type": "transform",
           "x": 200,
-          "y": 100
+          "y": 100,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "parent": null
         },
         "sprite": {
           "type": "sprite",
@@ -79,13 +91,6 @@
           "type": "velocity",
           "x": 0,
           "y": 0
-        },
-        "player": {
-          "type": "player",
-          "speed": 0,
-          "gravity": 0,
-          "jumpStrength": 0,
-          "isGrounded": false
         },
         "collider": {
           "type": "collider",
@@ -100,10 +105,14 @@
         }
       },
       "player": {
-        "position": {
-          "type": "position",
-          "x": 301,
-          "y": -262
+        "transform": {
+          "type": "transform",
+          "x": -120,
+          "y": -184,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "parent": "platform1"
         },
         "sprite": {
           "type": "sprite",

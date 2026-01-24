@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { CaretDown } from "@phosphor-icons/react";
 
 interface SearchableDropdownProps {
@@ -20,9 +20,26 @@ export function SearchableDropdown({
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const filteredOptions = options.filter((option) =>
+    // Detect if this is a parent dropdown (first option is empty string)
+    const isParentDropdown = useMemo(() => options.length > 0 && options[0] === '', [options]);
+    
+    // Separate "No Parent" option from other options
+    const { noParentOption, regularOptions } = useMemo(() => {
+        if (isParentDropdown) {
+            return {
+                noParentOption: options[0],
+                regularOptions: options.slice(1)
+            };
+        }
+        return { noParentOption: null, regularOptions: options };
+    }, [options, isParentDropdown]);
+
+    const filteredRegularOptions = regularOptions.filter((option) =>
         option.toLowerCase().includes(searchQuery.toLowerCase())
     );
+    
+    // Show "No Parent" if search matches or search is empty
+    const showNoParent = isParentDropdown && (searchQuery === '' || 'no parent'.includes(searchQuery.toLowerCase()));
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -75,7 +92,7 @@ export function SearchableDropdown({
                     cursor: "pointer",
                     minHeight: "20px",
                     padding: "2px 4px",
-                    color: "#ce9178",
+                    color: "var(--vscode-symbolIcon-stringForeground, #ce9178)",
                     fontSize: "inherit",
                     width: "100%",
                 }}
@@ -85,7 +102,7 @@ export function SearchableDropdown({
                     size={10}
                     weight="bold"
                     style={{
-                        color: "#808080",
+                        color: "var(--vscode-descriptionForeground, #808080)",
                         marginLeft: "4px",
                         transform: isOpen ? "rotate(180deg)" : "none",
                         transition: "transform 0.1s",
@@ -100,8 +117,8 @@ export function SearchableDropdown({
                         left: 0,
                         right: 0,
                         zIndex: 1000,
-                        backgroundColor: "#000000",
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        backgroundColor: "var(--vscode-dropdown-background, var(--vscode-editor-background, #1e1e1e))",
+                        border: "1px solid var(--vscode-dropdown-border, rgba(255, 255, 255, 0.1))",
                         marginTop: "2px",
                         maxHeight: "200px",
                         overflow: "hidden",
@@ -110,7 +127,7 @@ export function SearchableDropdown({
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div style={{ padding: "2px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}>
+                    <div style={{ padding: "2px", borderBottom: "1px solid var(--vscode-dropdown-border, rgba(255, 255, 255, 0.1))" }}>
                         <input
                             ref={inputRef}
                             type="text"
@@ -123,9 +140,9 @@ export function SearchableDropdown({
                                 width: "100%",
                                 padding: "2px 4px",
                                 fontSize: "inherit",
-                                backgroundColor: "transparent",
+                                backgroundColor: "var(--vscode-input-background, transparent)",
                                 border: "none",
-                                color: "#cccccc",
+                                color: "var(--vscode-input-foreground, var(--vscode-dropdown-foreground, #cccccc))",
                                 outline: "none",
                                 fontFamily: 'inherit',
                             }}
@@ -137,19 +154,45 @@ export function SearchableDropdown({
                             maxHeight: "150px",
                         }}
                     >
-                        {filteredOptions.length === 0 ? (
+                        {showNoParent && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelect('');
+                                }}
+                                style={{
+                                    width: "100%",
+                                    padding: "2px 4px",
+                                    textAlign: "left",
+                                    backgroundColor: "transparent",
+                                    border: "none",
+                                    color: "var(--vscode-testing-iconPassed, #89d185)",
+                                    fontSize: "inherit",
+                                    cursor: "pointer",
+                                }}
+                                onMouseEnter={(e) => {
+                                    // Keep transparent background on hover for "No Parent"
+                                }}
+                                onMouseLeave={(e) => {
+                                    // Keep transparent background
+                                }}
+                            >
+                                No Parent
+                            </button>
+                        )}
+                        {filteredRegularOptions.length === 0 && !showNoParent ? (
                             <div
                                 style={{
                                     padding: "4px 8px",
                                     textAlign: "center",
-                                    color: "#808080",
+                                    color: "var(--vscode-descriptionForeground, #808080)",
                                     fontSize: "inherit",
                                 }}
                             >
                                 No options found
                             </div>
                         ) : (
-                            filteredOptions.map((option) => (
+                            filteredRegularOptions.map((option) => (
                                 <button
                                     key={option}
                                     onClick={(e) => {
@@ -162,12 +205,12 @@ export function SearchableDropdown({
                                         textAlign: "left",
                                         backgroundColor: "transparent",
                                         border: "none",
-                                        color: "#cccccc",
+                                        color: "var(--vscode-dropdown-foreground, var(--vscode-editor-foreground, #cccccc))",
                                         fontSize: "inherit",
                                         cursor: "pointer",
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                                        e.currentTarget.style.backgroundColor = "var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1))";
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = "transparent";

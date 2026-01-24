@@ -3,7 +3,7 @@ import { create, add, sub, scale, dot, length, normalize } from "./vector";
 import type { ECSInstance, Entity } from "./ecs/ecs";
 import { getComponent } from "./ecs/ecs";
 import {
-  PositionComponentDefinition,
+  TransformComponentDefinition,
   VelocityComponentDefinition,
   ColliderComponentDefinition,
   type ColliderComponent,
@@ -11,14 +11,15 @@ import {
 import {
   getCollisionCallback,
 } from "./collision/collisionCallbacks";
+import { getWorldPosition, getWorldTransform } from "./transform";
 
 export const getEntityPosition = (
   ecs: ECSInstance,
   entity: Entity
 ): Vector | null => {
-  const position = getComponent(ecs, entity, PositionComponentDefinition);
-  if (!position) return null;
-  return create(position.x, position.y);
+  const worldPos = getWorldPosition(ecs, entity);
+  if (!worldPos) return null;
+  return create(worldPos.x, worldPos.y);
 };
 
 export const getEntityVelocity = (
@@ -45,9 +46,20 @@ export const getCollisionPosition = (
   const collider = getEntityCollider(ecs, entity);
   if (!position || !collider) return null;
 
-  const offsetX = collider.offsetX ?? 0;
-  const offsetY = collider.offsetY ?? 0;
-  return add(position, create(offsetX, offsetY));
+  const worldTransform = getWorldTransform(ecs, entity);
+  if (!worldTransform) return position;
+
+  const offsetX = (collider.offsetX ?? 0) * worldTransform.scaleX;
+  const offsetY = (collider.offsetY ?? 0) * worldTransform.scaleY;
+  
+  // Apply rotation to offset if needed
+  const rotationRad = (worldTransform.rotation * Math.PI) / 180;
+  const cos = Math.cos(rotationRad);
+  const sin = Math.sin(rotationRad);
+  const rotatedOffsetX = offsetX * cos - offsetY * sin;
+  const rotatedOffsetY = offsetX * sin + offsetY * cos;
+  
+  return add(position, create(rotatedOffsetX, rotatedOffsetY));
 };
 
 export const getRectangleTopLeft = (
@@ -238,10 +250,10 @@ const defaultCollisionResolver: CollisionResolver = (
 
   if (!colliderA || !colliderB) return;
 
-  const positionA = getComponent(ecs, entityA, PositionComponentDefinition);
-  const positionB = getComponent(ecs, entityB, PositionComponentDefinition);
+  const transformA = getComponent(ecs, entityA, TransformComponentDefinition);
+  const transformB = getComponent(ecs, entityB, TransformComponentDefinition);
 
-  if (!positionA || !positionB) return;
+  if (!transformA || !transformB) return;
 
   // Normal represents the direction entityA should move to separate from entityB
   // overlapAmount is always positive and represents separation distance
@@ -252,20 +264,20 @@ const defaultCollisionResolver: CollisionResolver = (
   if (colliderA.bodyType === "kinematic" && colliderB.bodyType === "static") {
     // Move A along normal to separate from B
     const correction = scale(n, overlapAmount);
-    positionA.x += correction[0];
-    positionA.y += correction[1];
+    transformA.x += correction[0];
+    transformA.y += correction[1];
   } else if (colliderA.bodyType === "static" && colliderB.bodyType === "kinematic") {
     // Move B opposite to normal (since normal is from A's perspective)
     const correction = scale(n, -overlapAmount);
-    positionB.x += correction[0];
-    positionB.y += correction[1];
+    transformB.x += correction[0];
+    transformB.y += correction[1];
   } else if (colliderA.bodyType === "kinematic" && colliderB.bodyType === "kinematic") {
     // Split separation between both kinematic bodies
     const halfCorrection = scale(n, overlapAmount / 2);
-    positionA.x += halfCorrection[0];
-    positionA.y += halfCorrection[1];
-    positionB.x -= halfCorrection[0];
-    positionB.y -= halfCorrection[1];
+    transformA.x += halfCorrection[0];
+    transformA.y += halfCorrection[1];
+    transformB.x -= halfCorrection[0];
+    transformB.y -= halfCorrection[1];
   }
   // If both static, do nothing
 };
@@ -299,9 +311,12 @@ export const RECTANGLE_COLLIDER: ColliderDefinition = {
   name: "rectangle",
   getNormals: (ecs, entity, _other) => {
     const collider = getEntityCollider(ecs, entity);
-    const angle = (((collider?.angle ?? 0) || 0) * Math.PI) / 180;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
+    const worldTransform = getWorldTransform(ecs, entity);
+    const colliderAngle = (collider?.angle ?? 0) * Math.PI / 180;
+    const transformAngle = worldTransform ? (worldTransform.rotation * Math.PI) / 180 : 0;
+    const totalAngle = colliderAngle + transformAngle;
+    const cos = Math.cos(totalAngle);
+    const sin = Math.sin(totalAngle);
 
     const rotateVector = (v: Vector) =>
       create(v[0] * cos - v[1] * sin, v[0] * sin + v[1] * cos);
@@ -314,13 +329,16 @@ export const RECTANGLE_COLLIDER: ColliderDefinition = {
     const center = getCollisionPosition(ecs, entity);
     if (!collider || !center) return point;
 
-    const width = collider.width ?? 32;
-    const height = collider.height ?? 32;
-    const angle = ((collider.angle ?? 0) * Math.PI) / 180;
+    const worldTransform = getWorldTransform(ecs, entity);
+    const width = (collider.width ?? 32) * (worldTransform?.scaleX ?? 1);
+    const height = (collider.height ?? 32) * (worldTransform?.scaleY ?? 1);
+    const colliderAngle = (collider.angle ?? 0) * Math.PI / 180;
+    const transformAngle = worldTransform ? (worldTransform.rotation * Math.PI) / 180 : 0;
+    const totalAngle = colliderAngle + transformAngle;
 
     const localPoint = sub(point, center);
-    const cos = Math.cos(-angle);
-    const sin = Math.sin(-angle);
+    const cos = Math.cos(-totalAngle);
+    const sin = Math.sin(-totalAngle);
 
     const rotatedPoint = create(
       localPoint[0] * cos - localPoint[1] * sin,
@@ -333,8 +351,8 @@ export const RECTANGLE_COLLIDER: ColliderDefinition = {
     const clampedY = Math.max(-hh, Math.min(hh, rotatedPoint[1]));
 
     const localClamped = create(clampedX, clampedY);
-    const cos2 = Math.cos(angle);
-    const sin2 = Math.sin(angle);
+    const cos2 = Math.cos(totalAngle);
+    const sin2 = Math.sin(totalAngle);
 
     const worldClamped = create(
       localClamped[0] * cos2 - localClamped[1] * sin2,
@@ -349,9 +367,12 @@ export const RECTANGLE_COLLIDER: ColliderDefinition = {
     const center = getCollisionPosition(ecs, entity);
     if (!collider || !center) return { min: 0, max: 0 };
 
-    const width = collider.width ?? 32;
-    const height = collider.height ?? 32;
-    const angle = ((collider.angle ?? 0) * Math.PI) / 180;
+    const worldTransform = getWorldTransform(ecs, entity);
+    const width = (collider.width ?? 32) * (worldTransform?.scaleX ?? 1);
+    const height = (collider.height ?? 32) * (worldTransform?.scaleY ?? 1);
+    const colliderAngle = (collider.angle ?? 0) * Math.PI / 180;
+    const transformAngle = worldTransform ? (worldTransform.rotation * Math.PI) / 180 : 0;
+    const totalAngle = colliderAngle + transformAngle;
 
     const hw = width / 2;
     const hh = height / 2;
@@ -363,8 +384,8 @@ export const RECTANGLE_COLLIDER: ColliderDefinition = {
       create(-hw, hh),
     ];
 
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
+    const cos = Math.cos(totalAngle);
+    const sin = Math.sin(totalAngle);
 
     const corners = localCorners.map((localCorner) => {
       const worldCorner = create(
@@ -386,16 +407,19 @@ export const RECTANGLE_COLLIDER: ColliderDefinition = {
     const center = getCollisionPosition(ecs, entity);
     if (!collider || !center) return;
 
-    const width = collider.width ?? 32;
-    const height = collider.height ?? 32;
-    const angle = ((collider.angle ?? 0) * Math.PI) / 180;
+    const worldTransform = getWorldTransform(ecs, entity);
+    const width = (collider.width ?? 32) * (worldTransform?.scaleX ?? 1);
+    const height = (collider.height ?? 32) * (worldTransform?.scaleY ?? 1);
+    const colliderAngle = (collider.angle ?? 0) * Math.PI / 180;
+    const transformAngle = worldTransform ? (worldTransform.rotation * Math.PI) / 180 : 0;
+    const totalAngle = colliderAngle + transformAngle;
 
     context.save();
     context.strokeStyle = "#ff0000";
     context.lineWidth = 2;
 
     context.translate(center[0], center[1]);
-    context.rotate(angle);
+    context.rotate(totalAngle);
 
     context.strokeRect(-width / 2, -height / 2, width, height);
     context.restore();
@@ -427,7 +451,10 @@ export const CIRCLE_COLLIDER: ColliderDefinition = {
     const collider = getEntityCollider(ecs, entity);
     if (!position || !collider) return point;
 
-    const radius = collider.radius ?? 16;
+    const worldTransform = getWorldTransform(ecs, entity);
+    const baseRadius = collider.radius ?? 16;
+    const scale = worldTransform ? Math.max(worldTransform.scaleX, worldTransform.scaleY) : 1;
+    const radius = baseRadius * scale;
     const direction = sub(point, position);
     if (length(direction) <= radius) {
       return point;
@@ -440,7 +467,10 @@ export const CIRCLE_COLLIDER: ColliderDefinition = {
     const collider = getEntityCollider(ecs, entity);
     if (!position || !collider) return { min: 0, max: 0 };
 
-    const radius = collider.radius ?? 16;
+    const worldTransform = getWorldTransform(ecs, entity);
+    const baseRadius = collider.radius ?? 16;
+    const scale = worldTransform ? Math.max(worldTransform.scaleX, worldTransform.scaleY) : 1;
+    const radius = baseRadius * scale;
     const projection = dot(position, normal);
     return {
       min: projection - radius,
@@ -454,7 +484,10 @@ export const CIRCLE_COLLIDER: ColliderDefinition = {
     const velocity = getEntityVelocity(ecs, entity);
     if (!position || !collider) return;
 
-    const radius = collider.radius ?? 16;
+    const worldTransform = getWorldTransform(ecs, entity);
+    const baseRadius = collider.radius ?? 16;
+    const scale = worldTransform ? Math.max(worldTransform.scaleX, worldTransform.scaleY) : 1;
+    const radius = baseRadius * scale;
 
     context.save();
     context.strokeStyle = "#ff0000";

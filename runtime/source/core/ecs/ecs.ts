@@ -22,6 +22,8 @@ export type ECSInstance = {
   renameEntityCallback?: (oldEntity: Entity, newEntity: Entity) => void;
 
   componentProxyHandler?: ComponentProxyHandler;
+  defaultComponent?: Component;
+  setParentHandler?: SetParentHandler;
 };
 
 export type ComponentProxyHandler = {
@@ -33,6 +35,12 @@ export type ComponentProxyHandler = {
   ) => boolean;
 };
 
+export type SetParentHandler = (
+  instance: ECSInstance,
+  entity: Entity,
+  parentId: Entity | null,
+) => void;
+
 export type ECSInstanceCreateInfo = {
   addComponentCallback?: (entity: Entity, component: Component) => void;
   removeComponentCallback?: (
@@ -42,6 +50,8 @@ export type ECSInstanceCreateInfo = {
   destroyEntityCallback?: (entity: Entity) => void;
   renameEntityCallback?: (oldEntity: Entity, newEntity: Entity) => void;
   componentProxyHandler?: ComponentProxyHandler;
+  defaultComponent?: Component;
+  setParentHandler?: SetParentHandler;
 };
 
 export const createECSInstance = (
@@ -55,10 +65,20 @@ export const createECSInstance = (
   ...ecsInstanceCreateInfo,
 });
 
-export const createEntity = (_instance: ECSInstance, name: string): Entity => {
+export const createEntity = (instance: ECSInstance, name: string): Entity => {
   if (!name || typeof name !== 'string' || name.trim() === '') {
     throw new Error('Entity name is required and must be a non-empty string');
   }
+
+  // Ensure entity exists in the instance
+  const entityComponents = ensureEntity(instance, name);
+
+  // Add default component if configured and not already present
+  if (instance.defaultComponent && !entityComponents[instance.defaultComponent.type]) {
+    const defaultComponent = structuredClone(instance.defaultComponent);
+    addComponent(instance, name, defaultComponent);
+  }
+
   return name;
 };
 export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
@@ -364,7 +384,20 @@ export const curryECSInstance = (instance: ECSInstance) => ({
   selectEntity: (entity: Entity | null) => selectEntity(instance, entity),
   getSelectedEntity: (): Entity | null => getSelectedEntity(instance),
   clearSelection: () => clearSelection(instance),
+
+  setParent: (entity: Entity, parentId: Entity | null) =>
+    setParent(instance, entity, parentId),
 });
+
+export const setParent = (
+  instance: ECSInstance,
+  entity: Entity,
+  parentId: Entity | null,
+): void => {
+  if (instance.setParentHandler) {
+    instance.setParentHandler(instance, entity, parentId);
+  }
+};
 
 export const provideECSInstanceFunctions = (
   ecsInstanceCreateInfo?: ECSInstanceCreateInfo,

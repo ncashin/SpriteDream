@@ -27,9 +27,17 @@ export function defineComponent<T extends Component>(
   }
 ): T {
   const type = component.type;
+  // Deep clone component, ensuring transform.parent is preserved as null if undefined
+  const cloned = JSON.parse(JSON.stringify(component));
+  // Ensure transform.parent field is always present in defaultComponent
+  if (type === 'transform' && cloned && typeof cloned === 'object') {
+    if (!('parent' in cloned) || cloned.parent === undefined) {
+      cloned.parent = null;
+    }
+  }
   componentRegistry[type] = {
     type,
-    defaultComponent: JSON.parse(JSON.stringify(component)),
+    defaultComponent: cloned,
     displayName: options?.displayName || type,
     description: options?.description,
     propertyInputTypes: options?.propertyInputTypes,
@@ -37,6 +45,43 @@ export function defineComponent<T extends Component>(
   return component;
 }
 
+export type TransformComponent = Component & {
+  type: "transform";
+  x: number;
+  y: number;
+  rotation: number; // in degrees
+  scaleX: number;
+  scaleY: number;
+  parent?: string; // Entity ID of parent (for scene graph)
+};
+export const TransformComponentDefinition: TransformComponent = defineComponent(
+  {
+    type: "transform",
+    x: 0,
+    y: 0,
+    rotation: 0,
+    scaleX: 1,
+    scaleY: 1,
+    parent: undefined,
+  },
+  {
+    displayName: "Transform",
+    description: "Entity transform (position, rotation, scale) in local space (relative to parent if one exists)",
+    propertyInputTypes: {
+      rotation: {
+        type: "number",
+      },
+      scaleX: {
+        type: "number",
+      },
+      scaleY: {
+        type: "number",
+      },
+    },
+  }
+);
+
+// Legacy PositionComponent for backward compatibility during migration
 export type PositionComponent = Component & {
   type: "position";
   x: number;
@@ -50,7 +95,7 @@ export const PositionComponentDefinition: PositionComponent = defineComponent(
   },
   {
     displayName: "Position",
-    description: "Entity position in 2D space",
+    description: "Entity position in 2D space (deprecated - use transform)",
   }
 );
 
