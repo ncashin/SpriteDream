@@ -417,11 +417,33 @@ export function EntityListPanel() {
     }
   }, [renamingEntity]);
 
-  // Keyboard shortcuts for undo/redo and copy/paste
+  // Keyboard shortcuts for undo/redo, copy/paste, and delete
   useEffect(() => {
     if (!ecs) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle keyboard shortcuts if user is typing in an input field
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      // Delete: Delete or Backspace key (no modifier required)
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEntity) {
+        e.preventDefault();
+        // Start undo action to group all diffs from entity deletion
+        startUndoAction();
+        ecs.destroyEntity(selectedEntity);
+        setHoveredEntity(null);
+        // Remove from expanded set if it was there
+        setExpandedEntities((prev) => {
+          const next = new Set(prev);
+          next.delete(selectedEntity);
+          return next;
+        });
+        return;
+      }
+
       // Check for modifier keys (Ctrl on Windows/Linux, Cmd on Mac)
       const isModifierPressed = e.ctrlKey || e.metaKey;
       if (!isModifierPressed) return;
