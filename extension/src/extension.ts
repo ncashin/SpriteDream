@@ -232,7 +232,7 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
             provider,
             {
                 webviewOptions: {
-                    retainContextWhenHidden: false,
+                    retainContextWhenHidden: true,
                 },
                 supportsMultipleEditorsPerDocument: true,
             }

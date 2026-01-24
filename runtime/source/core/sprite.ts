@@ -10,7 +10,7 @@ import { addDrawCallback, isUpdateEnabled } from "./gameloop";
 import { getViewport } from "./viewport/viewportPlugin";
 import { getWorldTransform, getWorldPosition } from "./transform";
 import { isEditorMode } from "./utils";
-// HitFlashComponent type definition
+
 export type HitFlashComponent = Component & {
   type: "hitFlash";
   flashTime: number;
@@ -47,22 +47,32 @@ export const SpriteComponentDefinition: SpriteComponent = defineComponent(
   }
 );
 
-function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  canvas.style.display = "block";
-  canvas.style.margin = "0";
-  canvas.style.padding = "0";
-  canvas.style.pointerEvents = "auto";
-  canvas.style.touchAction = "none";
+let resizeHandler: (() => void) | null = null;
 
-  window.addEventListener("resize", () => {
+function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
+  let canvas = parent.querySelector("canvas") as HTMLCanvasElement | null;
+  
+  if (!canvas) {
+    canvas = document.createElement("canvas");
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-  });
+    canvas.style.display = "block";
+    canvas.style.margin = "0";
+    canvas.style.padding = "0";
+    canvas.style.pointerEvents = "auto";
+    canvas.style.touchAction = "none";
 
-  parent.appendChild(canvas);
+    if (resizeHandler) {
+      window.removeEventListener("resize", resizeHandler);
+    }
+    resizeHandler = () => {
+      canvas!.width = window.innerWidth;
+      canvas!.height = window.innerHeight;
+    };
+    window.addEventListener("resize", resizeHandler);
+
+    parent.appendChild(canvas);
+  }
 
   return canvas;
 }
@@ -133,7 +143,6 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
 
 
   addDrawCallback(() => {
-    // Safety check: ensure canvas and context are still valid
     if (!canvas || !context2D) return;
 
     context2D.clearRect(0, 0, canvas.width, canvas.height);
@@ -147,7 +156,6 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     context2D.scale(viewport.scale, viewport.scale);
     context2D.translate(-viewport.x, -viewport.y);
 
-    // Only draw origin in editor mode when game is not running
     if (isEditorMode() && !isUpdateEnabled()) {
       context2D.save();
       context2D.strokeStyle = "#00ffff";
@@ -157,11 +165,10 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
       const size = 8;
       const radius = size;
 
-      // Draw triangle pointing up
       context2D.beginPath();
-      context2D.moveTo(0, -radius); // Top point
-      context2D.lineTo(-radius * 0.866, radius * 0.5); // Bottom left (cos(120°) * radius, sin(120°) * radius)
-      context2D.lineTo(radius * 0.866, radius * 0.5); // Bottom right (cos(60°) * radius, sin(60°) * radius)
+      context2D.moveTo(0, -radius);
+      context2D.lineTo(-radius * 0.866, radius * 0.5);
+      context2D.lineTo(radius * 0.866, radius * 0.5);
       context2D.closePath();
       context2D.fill();
       context2D.stroke();
@@ -192,7 +199,6 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
         const rotationRad = (worldTransform.rotation * Math.PI) / 180;
         const isSelected = selectedEntity === entity;
 
-        // Apply scale
         const scaledWidth = sprite.width * worldTransform.scaleX;
         const scaledHeight = sprite.height * worldTransform.scaleY;
 
@@ -236,7 +242,6 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
               scaledHeight
             );
             img.onload = () => {
-              // Image will be drawn on next frame
             };
             img.onerror = () => {
               console.warn(`Failed to load image: ${sprite.image}`);
@@ -264,7 +269,6 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
           }
         }
 
-        // Draw selection indicator
         if (isSelected) {
           context2D.save();
           context2D.strokeStyle = "#00ffff";

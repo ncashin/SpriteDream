@@ -1,8 +1,6 @@
 import { getScene } from "./scene";
 import {
-  createECSInstance,
-  curryECSInstance,
-  type ECSInstance,
+  currySceneECSData,
   type Component,
   type Entity,
   type ComponentProxyHandler,
@@ -67,6 +65,9 @@ export function ecsPlugin<T extends InitialGameContext>(
   // Migrate position components to transform components
   migratePositionToTransform(ecsData);
 
+  // Store reference to original entities for callbacks
+  const originalEntities = ecsData.entities || {};
+
   const componentProxyHandler: ComponentProxyHandler = {
     set: (entity: Entity, component: Component, property: string, newValue: unknown): boolean => {
       if (property in component) {
@@ -81,37 +82,40 @@ export function ecsPlugin<T extends InitialGameContext>(
       }
 
       const componentType = component.type;
-      if (ecsData.entities[entity] && ecsData.entities[entity][componentType]) {
-        ecsData.entities[entity][componentType][property] = newValue;
+      if (originalEntities[entity] && originalEntities[entity][componentType]) {
+        originalEntities[entity][componentType][property] = newValue;
       }
 
       return true;
     },
   };
 
-  const ecsInstance: ECSInstance = createECSInstance({
+  const ecs = currySceneECSData(originalEntities, {
     componentProxyHandler,
     defaultComponent: TransformComponentDefinition,
     setParentHandler: setParentTransform,
     addComponentCallback: (entity: Entity, component: Component) => {
-      if (!ecsData.entities[entity]) {
-        ecsData.entities[entity] = {};
+      if (!originalEntities[entity]) {
+        originalEntities[entity] = {};
       }
-      const existingComponent = ecsData.entities[entity][component.type];
+      const existingComponent = originalEntities[entity][component.type];
       if (existingComponent) {
         Object.assign(existingComponent, component);
       } else {
-        ecsData.entities[entity][component.type] = JSON.parse(JSON.stringify(component));
+        originalEntities[entity][component.type] = JSON.parse(JSON.stringify(component));
       }
     },
     removeComponentCallback: (entity: Entity, COMPONENT_TYPE_DEF: Component) => {
       const componentType = COMPONENT_TYPE_DEF.type;
-      if (ecsData.entities[entity] && ecsData.entities[entity][componentType]) {
-        delete ecsData.entities[entity][componentType];
+      if (originalEntities[entity] && originalEntities[entity][componentType]) {
+        delete originalEntities[entity][componentType];
       }
     },
     destroyEntityCallback: (entity: Entity) => {
-      delete ecsData.entities[entity];
+      // Delete directly from original entities reference to ensure it persists
+      if (originalEntities[entity]) {
+        delete originalEntities[entity];
+      }
     },
     renameEntityCallback: (oldEntity: Entity, newEntity: Entity) => {
       if (ecsData.entities[oldEntity]) {
@@ -120,10 +124,6 @@ export function ecsPlugin<T extends InitialGameContext>(
       }
     },
   });
-
-  ecsInstance.entities = ecsData.entities || {};
-
-  const ecs = curryECSInstance(ecsInstance);
 
   const extendedContext = {
     ...context,

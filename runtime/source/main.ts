@@ -90,8 +90,8 @@ function main({ ecs, input }: GameContext) {
 
   addUpdateCallback((deltaTime: number) => {
     const playerEntityId = "player";
-    const playerEntity = ecs.getEntity(playerEntityId);
-    if (!ecs.hasComponents(playerEntity, [PlayerComponentDefinition, VelocityComponentDefinition])) {
+    const playerEntity = ecs.getEntity(playerEntityId, [PlayerComponentDefinition, VelocityComponentDefinition]);
+    if (!playerEntity) {
       return;
     }
     const { speed, jumpStrength, gravity } = playerEntity.player;
@@ -107,7 +107,7 @@ function main({ ecs, input }: GameContext) {
       }
     }
 
-    playerEntity.velocity.y += gravity * deltaTime;
+    playerEntity.velocity.y -= gravity * deltaTime;
 
     if (input.isKeyPressed(" ") && playerEntity.player.isGrounded) {
       playerEntity.velocity.y = -jumpStrength;

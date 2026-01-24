@@ -232,27 +232,22 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
   }
 
   if (isEditorMode()) {
-    // Check if container needs to be recreated (e.g., after game root was cleared)
     if (
       !viewportDebugContainer ||
       !viewportDebugContainer.parentElement ||
       viewportDebugContainer.parentElement !== context.rootElement
     ) {
-      // Clean up old container and root if they exist
       if (viewportDebugContainer && viewportDebugContainer.parentElement) {
         viewportDebugContainer.remove();
       }
       if (viewportDebugRoot) {
-        // Unmount the old root if it exists
         try {
           viewportDebugRoot.unmount();
         } catch (e) {
-          // Root might already be unmounted, ignore
         }
         viewportDebugRoot = null;
       }
 
-      // Create new container and root
       viewportDebugContainer = document.createElement("div");
       context.rootElement.appendChild(viewportDebugContainer);
       viewportDebugRoot = createRoot(viewportDebugContainer);

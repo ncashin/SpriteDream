@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { EditorButton } from "./EditorButton";
 import {
-    setEditorEnabled,
+    setEditorUpdateEnabled,
     setUpdateEnabled,
     isUpdateEnabled,
 } from "../gameloop";
@@ -16,22 +16,8 @@ export function RunStopButton() {
     const [isRunning, setIsRunning] = useState(isUpdateEnabled());
     const runButtonRef = useRef<HTMLButtonElement>(null);
 
-    // Sync state with actual running state after HMR or other state changes
     useEffect(() => {
         setIsRunning(isUpdateEnabled());
-        
-        // Listen for HMR updates to resync state
-        if (import.meta.hot) {
-            const handleUpdate = () => {
-                setIsRunning(isUpdateEnabled());
-            };
-            import.meta.hot.on("vite:afterUpdate", handleUpdate);
-            return () => {
-                if (import.meta.hot) {
-                    import.meta.hot.off("vite:afterUpdate", handleUpdate);
-                }
-            };
-        }
     }, []);
 
     const handleRunStop = async () => {
@@ -40,12 +26,12 @@ export function RunStopButton() {
         if (wasRunning) {
             await restoreSceneFromSnapshot();
             setPersistenceEnabled(true);
-            setEditorEnabled(true);
+            setEditorUpdateEnabled(true);
             setUpdateEnabled(false);
         } else {
             saveSceneSnapshot();
             setPersistenceEnabled(false);
-            setEditorEnabled(false);
+            setEditorUpdateEnabled(false);
             setUpdateEnabled(true);
         }
 

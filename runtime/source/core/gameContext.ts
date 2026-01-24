@@ -1,7 +1,6 @@
-import { setScene } from "./scene/scene";
 import type { Root } from "react-dom/client";
-import { isDevelopment, isEditorMode } from "./utils";
 import { defineMainFunction, runGame } from "./runtimeWrapper";
+import { setScene, hasScene } from "./scene/scene";
 
 export type InitialGameContext = {
   rootElement: HTMLElement;
@@ -41,12 +40,6 @@ function createGameContext<T extends readonly Plugin<any, any>[]>(
   plugins: T,
   initialScene: string
 ): AccumulatePluginResults<T> {
-  const editorEnabled = isEditorMode();
-
-  if (!isDevelopment && editorEnabled) {
-    void setScene(initialScene);
-  }
-
   return (plugins as unknown as Plugin<any, any>[]).reduce(
     (context, plugin) => plugin(context),
     initialContext as AccumulatePluginResults<T>
@@ -58,6 +51,10 @@ export function initializeGame<T extends readonly Plugin<any, any>[]>({
   initialScene,
   main,
 }: GameConfig<T>): void {
+  if (!hasScene()) {
+    setScene(initialScene);
+  }
+
   defineMainFunction((initialContext: InitialGameContext) => {
     const gameContext = createGameContext(initialContext, plugins, initialScene);
     main?.(gameContext);

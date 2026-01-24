@@ -1,12 +1,12 @@
 import { getScene } from "../scene/scene";
 import {
-  createECSInstance,
-  curryECSInstance,
-  type ECSInstance,
+  currySceneECSData,
+  invalidateComposedPools,
   type Component,
   type Entity,
   type ComponentProxyHandler,
   type ComponentTypeString,
+  curryECSInstance,
 } from "../ecs/ecs";
 import type { InitialGameContext, ContextExtension } from "../gameContext";
 import { TransformComponentDefinition } from "../ecs/component";
@@ -126,6 +126,9 @@ export function initializeSceneECS<T extends InitialGameContext>(
     scene.ecs = ecsData;
   }
 
+  // Store reference to original entities for callbacks
+  const originalEntities = ecsData.entities || {};
+
   const componentProxyHandler: ComponentProxyHandler = {
     set: (entity: Entity, component: Component, property: string, newValue: unknown): boolean => {
       if (property in component) {
@@ -140,58 +143,60 @@ export function initializeSceneECS<T extends InitialGameContext>(
       }
 
       const componentType = component.type;
-      if (ecsData.entities[entity] && ecsData.entities[entity][componentType]) {
-        ecsData.entities[entity][componentType][property] = newValue;
+      if (originalEntities[entity] && originalEntities[entity][componentType]) {
+        originalEntities[entity][componentType][property] = newValue;
       }
 
       return true;
     },
   };
 
-  const ecsInstance: ECSInstance = createECSInstance({
+  const ecs = currySceneECSData(originalEntities, {
     componentProxyHandler,
     defaultComponent: TransformComponentDefinition,
     setParentHandler: setParentTransform,
     addComponentCallback: (entity: Entity, component: Component) => {
-      if (!ecsData.entities[entity]) {
-        ecsData.entities[entity] = {};
+      if (!originalEntities[entity]) {
+        originalEntities[entity] = {};
       }
-      const existingComponent = ecsData.entities[entity][component.type];
+      const existingComponent = originalEntities[entity][component.type];
       if (existingComponent) {
         Object.assign(existingComponent, component);
       } else {
-        ecsData.entities[entity][component.type] = JSON.parse(JSON.stringify(component));
+        originalEntities[entity][component.type] = JSON.parse(JSON.stringify(component));
       }
     },
     removeComponentCallback: (entity: Entity, COMPONENT_TYPE_DEF: Component) => {
       const componentType = COMPONENT_TYPE_DEF.type;
-      if (ecsData.entities[entity] && ecsData.entities[entity][componentType]) {
-        delete ecsData.entities[entity][componentType];
+      if (originalEntities[entity] && originalEntities[entity][componentType]) {
+        delete originalEntities[entity][componentType];
       }
     },
     destroyEntityCallback: (entity: Entity) => {
-      delete ecsData.entities[entity];
+      // Delete directly from original entities reference to ensure it persists
+      if (originalEntities[entity]) {
+        delete originalEntities[entity];
+      }
     },
     renameEntityCallback: (oldEntity: Entity, newEntity: Entity) => {
-      if (ecsData.entities[oldEntity]) {
-        ecsData.entities[newEntity] = ecsData.entities[oldEntity];
-        delete ecsData.entities[oldEntity];
+      if (originalEntities[oldEntity]) {
+        originalEntities[newEntity] = originalEntities[oldEntity];
+        delete originalEntities[oldEntity];
       }
     },
   });
-
-  ecsInstance.entities = ecsData.entities || {};
 
   // Register callback to update ECS instance after undo/redo
   undoRedoManager.setECSUpdateCallback(() => {
     // Update the ECS instance's entities reference to point to the restored scene data
-    ecsInstance.entities = ecsData.entities || {};
-    // Clear composed pools since entities have changed
-    ecsInstance.composedPools = {};
-    ecsInstance.associatedComposedPoolKeys = {};
+    // Note: originalEntities and ecsData.entities are the same reference
+    if ((ecs as any).updateSceneEntities) {
+      (ecs as any).updateSceneEntities(originalEntities);
+    } else {
+      ecs.ecsInstance.entities = originalEntities;
+      invalidateComposedPools(ecs.ecsInstance);
+    }
   });
-
-  const ecs = curryECSInstance(ecsInstance);
 
   return {
     ...context,
