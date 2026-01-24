@@ -308,3 +308,36 @@ h1 {
   background-color: rgba(255, 255, 0, 0.5) !important;
   outline: 1px solid rgba(255, 255, 0, 0.8);
 }
+
+/* Clickable text class for UI controls */
+.clickable-text {
+  cursor: pointer;
+  user-select: none;
+  pointer-events: auto !important;
+  z-index: 10001 !important;
+  position: relative;
+  color: var(--vscode-button-foreground, rgba(255, 255, 255, 0.9));
+  font-size: inherit;
+  padding: 0 4px;
+  border-radius: 2px;
+  transition: background-color 0.1s ease;
+  font-family: inherit;
+  touch-action: auto !important;
+}
+
+.clickable-text:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.35));
+}
+
+.clickable-text:active {
+  background-color: var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.4));
+}
+
+/* Ensure clickable text is always above editor and gameUI */
+#editor .clickable-text,
+#gameUI .clickable-text,
+.clickable-text {
+  pointer-events: auto !important;
+  z-index: 10001 !important;
+  position: relative;
+}

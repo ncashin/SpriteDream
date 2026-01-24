@@ -6,7 +6,6 @@ import { isEditorUpdateEnabled } from "../gameloop";
 import { isEditorMode } from "../utils";
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { EditorButton } from "../editor/EditorButton";
 import {
   isEditorUIVisible,
   subscribeToVisibilityChanges,
@@ -151,14 +150,34 @@ function ViewportDebugUI() {
 
   return (
   <div className="absolute bottom-0 left-0 z-[10000] p-2 text-xs select-none leading-normal flex flex-row gap-2 items-end">
-  <EditorButton
+  <button
+    className="px-3 py-0.5 text-[0.75rem] font-normal rounded-sm border-none cursor-pointer duration-100 ease-out inline-flex items-center justify-center gap-1 min-h-[20px] leading-[1.4em] outline-none focus:outline focus:outline-1 focus:outline-[var(--vscode-focusBorder,#007acc)] focus:-outline-offset-1"
+    style={{
+      fontFamily: 'var(--vscode-font-family, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)',
+      color: 'var(--vscode-button-foreground, rgba(255, 255, 255, 0.9))',
+      backgroundColor: 'var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.3))',
+      pointerEvents: "auto",
+      zIndex: 10001,
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.35))';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.3))';
+    }}
+    onMouseDown={(e) => {
+      e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.4))';
+    }}
+    onMouseUp={(e) => {
+      e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.35))';
+    }}
     onClick={() => {
     resetViewport();
     setViewportState(getViewport());
     }}
   >
     Reset Viewport
-  </EditorButton>
+  </button>
   <div>
     {viewportState.x.toFixed(1)}, {viewportState.y.toFixed(1)}, {(viewportState.scale * 100).toFixed(0)}%
   </div>
@@ -265,6 +284,8 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
   }
 
   viewportDebugContainer = document.createElement("div");
+  viewportDebugContainer.style.pointerEvents = "auto";
+  viewportDebugContainer.style.zIndex = "10000";
   context.rootElement.appendChild(viewportDebugContainer);
   viewportDebugRoot = createRoot(viewportDebugContainer);
   }

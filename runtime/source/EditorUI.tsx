@@ -5,18 +5,18 @@ import { RunStopButton } from "./core/editor/RunStopButton";
 import { SceneDataButton } from "./core/editor/SceneDataButton";
 import { UIVisibilityToggle } from "./core/editor/UIVisibilityToggle";
 import {
-  isEditorUIVisible,
-  subscribeToVisibilityChanges,
+    isEditorUIVisible,
+    subscribeToVisibilityChanges,
 } from "./core/editor/uiVisibility.ts";
 
 export function EditorUI() {
     const [visible, setVisible] = useState(isEditorUIVisible());
 
     useEffect(() => {
-      const unsubscribe = subscribeToVisibilityChanges(() => {
-        setVisible(isEditorUIVisible());
-      });
-      return unsubscribe;
+        const unsubscribe = subscribeToVisibilityChanges(() => {
+            setVisible(isEditorUIVisible());
+        });
+        return unsubscribe;
     }, []);
 
     return (

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useScene } from "./core/editor/useScene.tsx";
 import {
-  isGameUIVisible,
-  subscribeToVisibilityChanges,
+    isGameUIVisible,
+    subscribeToVisibilityChanges,
 } from "./core/editor/uiVisibility.ts";
 
 export function GameUI() {
@@ -11,14 +11,14 @@ export function GameUI() {
     const [visible, setVisible] = useState(isGameUIVisible());
 
     useEffect(() => {
-      const unsubscribe = subscribeToVisibilityChanges(() => {
-        setVisible(isGameUIVisible());
-      });
-      return unsubscribe;
+        const unsubscribe = subscribeToVisibilityChanges(() => {
+            setVisible(isGameUIVisible());
+        });
+        return unsubscribe;
     }, []);
 
     if (!visible) {
-      return null;
+        return null;
     }
 
     return (
