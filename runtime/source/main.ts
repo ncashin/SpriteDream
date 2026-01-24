@@ -56,18 +56,6 @@ export const PlayerComponentDefinition: PlayerComponent = defineComponent(
   }
 );
 
-// HMR support for Vite - transparent to end users
-if (import.meta.hot) {
-  import.meta.hot.accept(() => { })
-  import.meta.hot.on('vite:afterUpdate', () => {
-    initializeGame({
-      plugins,
-      initialScene,
-      main,
-    });
-  });
-}
-
 initializeGame({
   plugins,
   initialScene,
