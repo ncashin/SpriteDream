@@ -42,9 +42,9 @@ export const refreshSceneAtom = atom(null, (get, set) => {
  * - Provides reactive access to the raw scene data
  * - Handles cleanup on unmount
  * 
- * @returns Scene state and utilities
+ * @returns Scene data
  */
-export function useScene() {
+export function useScene(): any {
     const [sceneState, setSceneState] = useAtom(sceneStateAtom);
 
     useEffect(() => {
@@ -69,7 +69,7 @@ export function useScene() {
         };
     }, [setSceneState]);
 
-    return sceneState;
+    return sceneState.scene;
 }
 
 /**

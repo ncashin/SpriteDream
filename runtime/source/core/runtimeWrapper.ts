@@ -22,6 +22,7 @@ let gameUIContainer: HTMLDivElement | null = null;
 let GameUIComponent: ComponentType | null = null;
 
 const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
+const gameUIRootElement = document.querySelector<HTMLDivElement>("#gameUI")!;
 const editorRoot = document.querySelector<HTMLDivElement>("#editor")!;
 
 const notifyParent = (command: string, data?: Record<string, unknown>) => {
@@ -39,32 +40,19 @@ function initializeGameUI(GameUI?: ComponentType) {
     return;
   }
 
-  // Only render GameUI when NOT in editor mode
-  if (isEditorMode()) {
-    // Clear GameUI if we're in editor mode
-    if (gameUIRoot) {
-      gameUIRoot.unmount();
-      gameUIRoot = null;
-    }
-    if (gameUIContainer) {
-      gameUIContainer.remove();
-      gameUIContainer = null;
-    }
-    return;
-  }
-
   // Create container for GameUI if it doesn't exist
-  if (!gameUIContainer || gameUIContainer.parentElement !== gameRoot) {
+  // GameUI now renders in its own root (gameUI) even when in editor mode
+  if (!gameUIContainer || gameUIContainer.parentElement !== gameUIRootElement) {
     if (gameUIContainer) {
       gameUIContainer.remove();
     }
     gameUIContainer = document.createElement("div");
     gameUIContainer.className = "game-ui-container";
-    gameRoot.appendChild(gameUIContainer);
+    gameUIRootElement.appendChild(gameUIContainer);
     gameUIRoot = createRoot(gameUIContainer);
   }
 
-  // Render GameUI component
+  // Render GameUI component (always render, even when game is not running)
   if (gameUIRoot && GameUIComponent) {
     gameUIRoot.render(React.createElement(GameUIComponent));
   }
