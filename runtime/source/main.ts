@@ -65,10 +65,11 @@ function main({ ecs, input }: GameContext) {
     name: "player",
     callback: (_ecs, entity, _other, _overlapAmount, overlapNormal) => {
       const entityData = ecs.getEntity(entity);
-      if (!entityData.player) return;
+      if (!ecs.hasComponents(entityData, [PlayerComponentDefinition, VelocityComponentDefinition])) {
+        return;
+      }
 
-      const velocity = getComponent(_ecs, entity, VelocityComponentDefinition);
-      if (!velocity) return;
+      const velocity = getComponent(_ecs, entity, VelocityComponentDefinition)!;
 
       const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
       const isNormalPointingUp = overlapNormal[1] < 0;
@@ -88,9 +89,11 @@ function main({ ecs, input }: GameContext) {
   });
 
   addUpdateCallback((deltaTime: number) => {
-    const playerEntity = ecs.getEntity("player");
-    if (!playerEntity) return;
-
+    const playerEntityId = "player";
+    const playerEntity = ecs.getEntity(playerEntityId);
+    if (!ecs.hasComponents(playerEntity, [PlayerComponentDefinition, VelocityComponentDefinition])) {
+      return;
+    }
     const { speed, jumpStrength, gravity } = playerEntity.player;
 
     if (input.isKeyPressed("a")) {

@@ -173,7 +173,8 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     if (!componentDef) return;
 
     const newComponent = JSON.parse(JSON.stringify(componentDef.defaultComponent));
-    ecs.addComponent(entity, newComponent);
+    const entityProxy = ecs.getEntity(entity);
+    entityProxy[newComponent.type] = newComponent;
 
     // Immediately update the entity data to reflect the new component
     try {
@@ -190,7 +191,8 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const handleRemoveComponent = (component: Component) => {
     if (!entity || !ecs) return;
 
-    ecs.removeComponent(entity, component);
+    const entityProxy = ecs.getEntity(entity);
+    delete entityProxy[component.type];
 
     // Immediately update the entity data to reflect the removed component
     try {
@@ -276,9 +278,10 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       const currentData = ecs.getEntity(entity);
 
       // Remove deleted components
+      const entityProxy = ecs.getEntity(entity);
       for (const componentType of Object.keys(currentData)) {
         if (!parsedData[componentType]) {
-          ecs.removeComponent(entity, currentData[componentType]);
+          delete entityProxy[componentType];
         }
       }
 
@@ -296,10 +299,11 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
           }
         } else {
           // Add new component
-          ecs.addComponent(entity, {
+          const entityProxy = ecs.getEntity(entity);
+          entityProxy[updatedComponent.type || componentType] = {
             ...updatedComponent,
             type: updatedComponent.type || componentType,
-          } as Component);
+          } as Component;
         }
       }
 

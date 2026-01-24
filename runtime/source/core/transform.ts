@@ -1,5 +1,5 @@
 import type { ECSInstance, Entity } from "./ecs/ecs";
-import { getComponent, addComponent } from "./ecs/ecs";
+import { getComponent, getEntity } from "./ecs/ecs";
 import {
     TransformComponentDefinition,
     type TransformComponent,
@@ -127,7 +127,8 @@ export function setTransform(
             }
         }
     } else {
-        addComponent(ecs, entity, {
+        const entityProxy = getEntity(ecs, entity);
+        entityProxy.transform = {
             type: "transform",
             parent: transform.parent,
             x: transform.x ?? 0,
@@ -135,7 +136,7 @@ export function setTransform(
             rotation: transform.rotation ?? 0,
             scaleX: transform.scaleX ?? 1,
             scaleY: transform.scaleY ?? 1,
-        } as TransformComponent);
+        } as TransformComponent;
     }
 }
 

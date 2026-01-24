@@ -482,8 +482,9 @@ export function EntityListPanel() {
           ecs.createEntity(pasted.entityName);
           
           // Add all components
+          const entityProxy = ecs.getEntity(pasted.entityName);
           for (const component of Object.values(pasted.components)) {
-            ecs.addComponent(pasted.entityName, component);
+            entityProxy[component.type] = component;
           }
 
           // Position the entity at the mouse location
