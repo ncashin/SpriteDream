@@ -321,6 +321,24 @@ export function EntityListPanel() {
     };
   }, [ecs]);
 
+  // Auto-expand parent when selected
+  useEffect(() => {
+    if (!ecs || !selectedEntity) return;
+
+    const children = getChildren(ecs.ecsInstance, selectedEntity);
+    if (children.length > 0) {
+      setExpandedEntities((prev) => {
+        // Only expand if not already expanded (respects manual collapses)
+        if (prev.has(selectedEntity)) {
+          return prev;
+        }
+        const next = new Set(prev);
+        next.add(selectedEntity);
+        return next;
+      });
+    }
+  }, [selectedEntity, ecs]);
+
   // Focus rename input
   useEffect(() => {
     if (renamingEntity && renameInputRef.current) {
