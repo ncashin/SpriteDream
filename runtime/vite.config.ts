@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { gameIDEPlugin } from './vite-plugin-hmr';
+import { gameIDEPlugin } from './source/core/vite-plugin-hmr';
 
 export default defineConfig(({ mode }) => {
   // Check if we're building with editor enabled
