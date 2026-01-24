@@ -123,6 +123,7 @@ export type ColliderComponent = Component & {
   collisionEnabled: boolean;
   callbackName?: string;
   bodyName?: string;
+  propagateCollision?: boolean; // If true, propagate collisions to parent entities
   // Offset from entity position (in world space)
   offsetX?: number;
   offsetY?: number;
@@ -156,6 +157,9 @@ export const ColliderComponentDefinition: ColliderComponent = defineComponent(
       colliderName: {
         type: "dropdown",
         options: ["rectangle", "circle"],
+      },
+      propagateCollision: {
+        type: "boolean",
       },
     },
   }

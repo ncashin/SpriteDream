@@ -11,7 +11,7 @@ import {
 import {
   getCollisionCallback,
 } from "./collision/collisionCallbacks";
-import { getWorldPosition, getWorldTransform } from "./transform";
+import { getWorldPosition, getWorldTransform, getParents, moveEntityAndParents, setWorldPosition } from "./transform";
 
 export const getEntityPosition = (
   ecs: ECSInstance,
@@ -51,14 +51,14 @@ export const getCollisionPosition = (
 
   const offsetX = (collider.offsetX ?? 0) * worldTransform.scaleX;
   const offsetY = (collider.offsetY ?? 0) * worldTransform.scaleY;
-  
+
   // Apply rotation to offset if needed
   const rotationRad = (worldTransform.rotation * Math.PI) / 180;
   const cos = Math.cos(rotationRad);
   const sin = Math.sin(rotationRad);
   const rotatedOffsetX = offsetX * cos - offsetY * sin;
   const rotatedOffsetY = offsetX * sin + offsetY * cos;
-  
+
   return add(position, create(rotatedOffsetX, rotatedOffsetY));
 };
 
@@ -219,6 +219,26 @@ export const handleCollisionPair = (
       }
     }
 
+    // Trigger callbacks for all parents of entityA if propagateCollision is enabled
+    if (colliderA.propagateCollision) {
+      const parentsA = getParents(ecs, entityA);
+      for (const parentA of parentsA) {
+        const parentCollider = getEntityCollider(ecs, parentA);
+        if (parentCollider?.callbackName) {
+          const parentCallbackDef = getCollisionCallback(parentCollider.callbackName);
+          if (parentCallbackDef) {
+            parentCallbackDef.callback(
+              ecs,
+              parentA,
+              entityB,
+              minOverlap,
+              smallestNormal
+            );
+          }
+        }
+      }
+    }
+
     if (colliderB.callbackName) {
       const callbackDef = getCollisionCallback(colliderB.callbackName);
       if (callbackDef) {
@@ -229,6 +249,26 @@ export const handleCollisionPair = (
           minOverlap,
           scale(smallestNormal, -1)
         );
+      }
+    }
+
+    // Trigger callbacks for all parents of entityB if propagateCollision is enabled
+    if (colliderB.propagateCollision) {
+      const parentsB = getParents(ecs, entityB);
+      for (const parentB of parentsB) {
+        const parentCollider = getEntityCollider(ecs, parentB);
+        if (parentCollider?.callbackName) {
+          const parentCallbackDef = getCollisionCallback(parentCollider.callbackName);
+          if (parentCallbackDef) {
+            parentCallbackDef.callback(
+              ecs,
+              parentB,
+              entityA,
+              minOverlap,
+              scale(smallestNormal, -1)
+            );
+          }
+        }
       }
     }
   }
@@ -264,20 +304,52 @@ const defaultCollisionResolver: CollisionResolver = (
   if (colliderA.bodyType === "kinematic" && colliderB.bodyType === "static") {
     // Move A along normal to separate from B
     const correction = scale(n, overlapAmount);
-    transformA.x += correction[0];
-    transformA.y += correction[1];
+    if (colliderA.propagateCollision) {
+      // Move entityA and all its parents in world space
+      moveEntityAndParents(ecs, entityA, correction[0], correction[1]);
+    } else {
+      // Move only entityA (adjusts local position relative to parent)
+      const currentWorldPos = getWorldPosition(ecs, entityA);
+      if (currentWorldPos) {
+        setWorldPosition(ecs, entityA, currentWorldPos.x + correction[0], currentWorldPos.y + correction[1]);
+      }
+    }
   } else if (colliderA.bodyType === "static" && colliderB.bodyType === "kinematic") {
     // Move B opposite to normal (since normal is from A's perspective)
     const correction = scale(n, -overlapAmount);
-    transformB.x += correction[0];
-    transformB.y += correction[1];
+    if (colliderB.propagateCollision) {
+      // Move entityB and all its parents in world space
+      moveEntityAndParents(ecs, entityB, correction[0], correction[1]);
+    } else {
+      // Move only entityB (adjusts local position relative to parent)
+      const currentWorldPos = getWorldPosition(ecs, entityB);
+      if (currentWorldPos) {
+        setWorldPosition(ecs, entityB, currentWorldPos.x + correction[0], currentWorldPos.y + correction[1]);
+      }
+    }
   } else if (colliderA.bodyType === "kinematic" && colliderB.bodyType === "kinematic") {
     // Split separation between both kinematic bodies
     const halfCorrection = scale(n, overlapAmount / 2);
-    transformA.x += halfCorrection[0];
-    transformA.y += halfCorrection[1];
-    transformB.x -= halfCorrection[0];
-    transformB.y -= halfCorrection[1];
+    if (colliderA.propagateCollision) {
+      // Move entityA and all its parents in world space
+      moveEntityAndParents(ecs, entityA, halfCorrection[0], halfCorrection[1]);
+    } else {
+      // Move only entityA (adjusts local position relative to parent)
+      const currentWorldPosA = getWorldPosition(ecs, entityA);
+      if (currentWorldPosA) {
+        setWorldPosition(ecs, entityA, currentWorldPosA.x + halfCorrection[0], currentWorldPosA.y + halfCorrection[1]);
+      }
+    }
+    if (colliderB.propagateCollision) {
+      // Move entityB and all its parents in world space (opposite direction)
+      moveEntityAndParents(ecs, entityB, -halfCorrection[0], -halfCorrection[1]);
+    } else {
+      // Move only entityB (adjusts local position relative to parent)
+      const currentWorldPosB = getWorldPosition(ecs, entityB);
+      if (currentWorldPosB) {
+        setWorldPosition(ecs, entityB, currentWorldPosB.x - halfCorrection[0], currentWorldPosB.y - halfCorrection[1]);
+      }
+    }
   }
   // If both static, do nothing
 };
@@ -453,8 +525,8 @@ export const CIRCLE_COLLIDER: ColliderDefinition = {
 
     const worldTransform = getWorldTransform(ecs, entity);
     const baseRadius = collider.radius ?? 16;
-    const scale = worldTransform ? Math.max(worldTransform.scaleX, worldTransform.scaleY) : 1;
-    const radius = baseRadius * scale;
+    const scaleFactor = worldTransform ? Math.max(worldTransform.scaleX, worldTransform.scaleY) : 1;
+    const radius = baseRadius * scaleFactor;
     const direction = sub(point, position);
     if (length(direction) <= radius) {
       return point;

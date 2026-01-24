@@ -328,3 +328,46 @@ export function getChildren(
     return children;
 }
 
+export function getParents(
+    ecs: ECSInstance,
+    entity: Entity
+): Entity[] {
+    const parents: Entity[] = [];
+    let currentEntity: Entity | undefined = entity;
+
+    while (currentEntity) {
+        const transform: TransformComponent | undefined = getComponent(ecs, currentEntity, TransformComponentDefinition);
+        const parentId: Entity | undefined = transform?.parent;
+
+        if (!parentId) {
+            break;
+        }
+
+        parents.push(parentId);
+        currentEntity = parentId;
+    }
+
+    return parents;
+}
+
+export function moveEntityAndParents(
+    ecs: ECSInstance,
+    entity: Entity,
+    worldDeltaX: number,
+    worldDeltaY: number
+): void {
+    // Get all parents to find the root (top of hierarchy)
+    const parents = getParents(ecs, entity);
+
+    // Find the root parent (the one with no parent), or use the entity itself if it has no parent
+    const rootEntity = parents.length > 0 ? parents[parents.length - 1] : entity;
+
+    // Get the root's current world position
+    const rootWorldPos = getWorldPosition(ecs, rootEntity);
+    if (!rootWorldPos) return;
+
+    // Move the root entity by the world delta
+    // This will move the entire hierarchy since children are positioned relative to parents
+    setWorldPosition(ecs, rootEntity, rootWorldPos.x + worldDeltaX, rootWorldPos.y + worldDeltaY);
+}
+

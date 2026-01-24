@@ -79,7 +79,7 @@
           "rotation": 0,
           "scaleX": 1,
           "scaleY": 1,
-          "parent": null
+          "parent": "player"
         },
         "sprite": {
           "type": "sprite",
@@ -95,7 +95,7 @@
         "collider": {
           "type": "collider",
           "colliderName": "rectangle",
-          "bodyType": "static",
+          "bodyType": "kinematic",
           "collisionEnabled": true,
           "offsetX": 0,
           "offsetY": 0,
