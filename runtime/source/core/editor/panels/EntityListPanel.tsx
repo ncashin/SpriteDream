@@ -3,7 +3,7 @@ import type { Entity } from "../../ecs/ecs";
 import { useGameContext } from "../EditorContext";
 import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 import { CaretDown, CaretRight, Plus, PencilSimple, Trash } from "@phosphor-icons/react";
-import { getChildren } from "../../transform";
+import { getChildren, getParents } from "../../transform";
 import {
   DndContext,
   DragOverlay,
@@ -229,36 +229,36 @@ function DraggableEntityItem({
                 </button>
               </div>
             )}
-                          {hasChildren && (
-                            <button
-                              className="
+            {hasChildren && (
+              <button
+                className="
                                 bg-transparent border-none cursor-pointer p-0
                                 flex items-center justify-center
                                 transition-colors duration-100
                               "
-                              style={{
-                                color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.7))',
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.color = 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.color = 'var(--vscode-foreground, rgba(255, 255, 255, 0.7))';
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleExpand(entity, e);
-                              }}
-                              onMouseDown={(e) => e.stopPropagation()}
-                              title={isExpanded ? "Collapse" : "Expand"}
-                            >
-                              {isExpanded ? (
-                                <CaretDown size={12} weight="bold" />
-                              ) : (
-                                <CaretRight size={12} weight="bold" />
-                              )}
-                            </button>
-                          )}
+                style={{
+                  color: 'var(--vscode-foreground, rgba(255, 255, 255, 0.7))',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--vscode-foreground, rgba(255, 255, 255, 0.9))';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--vscode-foreground, rgba(255, 255, 255, 0.7))';
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand(entity, e);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                title={isExpanded ? "Collapse" : "Expand"}
+              >
+                {isExpanded ? (
+                  <CaretDown size={12} weight="bold" />
+                ) : (
+                  <CaretRight size={12} weight="bold" />
+                )}
+              </button>
+            )}
           </div>
         </>
       )}
@@ -329,33 +329,61 @@ export function EntityListPanel() {
 
     const previousEntity = previousSelectedEntityRef.current;
 
-    // Handle deselection: collapse previous entity if it was only temporarily expanded
+    // Handle deselection: collapse previous entity and its parents if they were only temporarily expanded
     if (previousEntity && previousEntity !== selectedEntity) {
       setExpandedEntities((prev) => {
-        // Only collapse if it wasn't manually expanded
+        const next = new Set(prev);
+        let changed = false;
+
+        // Collapse the previous entity if it wasn't manually expanded
         if (!manuallyExpandedEntities.has(previousEntity) && prev.has(previousEntity)) {
-          const next = new Set(prev);
           next.delete(previousEntity);
-          return next;
+          changed = true;
         }
-        return prev;
+
+        // Collapse all parents of the previous entity if they weren't manually expanded
+        // But keep them expanded if the newly selected entity is a descendant
+        const parents = getParents(ecs.ecsInstance, previousEntity);
+        for (const parent of parents) {
+          if (!manuallyExpandedEntities.has(parent) && prev.has(parent)) {
+            // Don't collapse if the newly selected entity is a descendant of this parent
+            const shouldKeepExpanded = selectedEntity && isDescendant(ecs, parent, selectedEntity);
+
+            if (!shouldKeepExpanded) {
+              next.delete(parent);
+              changed = true;
+            }
+          }
+        }
+
+        return changed ? next : prev;
       });
     }
 
-    // Handle selection: temporarily expand if it has children
+    // Handle selection: temporarily expand entity and all its parents
     if (selectedEntity) {
-      const children = getChildren(ecs.ecsInstance, selectedEntity);
-      if (children.length > 0) {
-        setExpandedEntities((prev) => {
-          // Only expand if not already expanded (respects manual expands)
-          if (prev.has(selectedEntity)) {
-            return prev;
-          }
-          const next = new Set(prev);
+      setExpandedEntities((prev) => {
+        const next = new Set(prev);
+        let changed = false;
+
+        // Expand the selected entity if it has children
+        const children = getChildren(ecs.ecsInstance, selectedEntity);
+        if (children.length > 0 && !prev.has(selectedEntity)) {
           next.add(selectedEntity);
-          return next;
-        });
-      }
+          changed = true;
+        }
+
+        // Expand all parent entities so the selected entity is visible
+        const parents = getParents(ecs.ecsInstance, selectedEntity);
+        for (const parent of parents) {
+          if (!prev.has(parent)) {
+            next.add(parent);
+            changed = true;
+          }
+        }
+
+        return changed ? next : prev;
+      });
     }
 
     // Update the ref for next time
@@ -605,7 +633,7 @@ export function EntityListPanel() {
       {/* Header */}
       <button
         className={`
-          flex items-center justify-between w-full min-h-5 px-1 pl-3 py-1
+          flex items-center justify-between w-full min-h-5 px-2 py-1
           text-xs cursor-pointer outline-none select-none
           transition-colors duration-100 bg-transparent
           ${isExpanded
@@ -680,40 +708,40 @@ export function EntityListPanel() {
                   backgroundColor: 'var(--vscode-list-inactiveSelectionBackground, rgba(0, 0, 0, 0.1))',
                 }}
               >
-              {entities.length === 0 ? (
-                <div
-                  className="flex items-center justify-center min-h-5 px-2 py-1 text-xs"
-                  style={{
-                    color: 'var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))',
-                  }}
-                >
-                  No entities
-                </div>
-              ) : (
-                getVisibleEntities().map((entity) => (
-                  <DraggableEntityItem
-                    key={entity}
-                    entity={entity}
-                    ecs={ecs}
-                    selectedEntity={selectedEntity}
-                    hoveredEntity={hoveredEntity}
-                    renamingEntity={renamingEntity}
-                    renameValue={renameValue}
-                    renameInputRef={renameInputRef}
-                    expandedEntities={expandedEntities}
-                    overId={overId}
-                    activeId={activeId}
-                    onSelect={(entity) => ecs.selectEntity(entity)}
-                    onHover={setHoveredEntity}
-                    onStartRename={handleStartRename}
-                    onRenameSubmit={handleRenameSubmit}
-                    onRenameKeyDown={handleRenameKeyDown}
-                    onRenameChange={setRenameValue}
-                    onDelete={handleDeleteEntity}
-                    onToggleExpand={toggleExpand}
-                  />
-                ))
-              )}
+                {entities.length === 0 ? (
+                  <div
+                    className="flex items-center justify-center min-h-5 px-2 py-1 text-xs"
+                    style={{
+                      color: 'var(--vscode-descriptionForeground, rgba(255, 255, 255, 0.6))',
+                    }}
+                  >
+                    No entities
+                  </div>
+                ) : (
+                  getVisibleEntities().map((entity) => (
+                    <DraggableEntityItem
+                      key={entity}
+                      entity={entity}
+                      ecs={ecs}
+                      selectedEntity={selectedEntity}
+                      hoveredEntity={hoveredEntity}
+                      renamingEntity={renamingEntity}
+                      renameValue={renameValue}
+                      renameInputRef={renameInputRef}
+                      expandedEntities={expandedEntities}
+                      overId={overId}
+                      activeId={activeId}
+                      onSelect={(entity) => ecs.selectEntity(entity)}
+                      onHover={setHoveredEntity}
+                      onStartRename={handleStartRename}
+                      onRenameSubmit={handleRenameSubmit}
+                      onRenameKeyDown={handleRenameKeyDown}
+                      onRenameChange={setRenameValue}
+                      onDelete={handleDeleteEntity}
+                      onToggleExpand={toggleExpand}
+                    />
+                  ))
+                )}
               </div>
             </DroppableContainer>
             <DragOverlay>
