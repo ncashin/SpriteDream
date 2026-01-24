@@ -44,7 +44,7 @@ export function collisionPlugin<
         VelocityComponentDefinition,
         ColliderComponentDefinition,
       ],
-      (entity, [transform, velocity, collider]) => {
+      (entity, [, velocity, collider]) => {
         if (collider.collisionEnabled) {
           // Velocity is in world space, so we need to apply it to world position
           // then convert back to local space

@@ -24,14 +24,13 @@ export function SearchableDropdown({
     const isParentDropdown = useMemo(() => options.length > 0 && options[0] === '', [options]);
     
     // Separate "No Parent" option from other options
-    const { noParentOption, regularOptions } = useMemo(() => {
+    const { regularOptions } = useMemo(() => {
         if (isParentDropdown) {
             return {
-                noParentOption: options[0],
                 regularOptions: options.slice(1)
             };
         }
-        return { noParentOption: null, regularOptions: options };
+        return { regularOptions: options };
     }, [options, isParentDropdown]);
 
     const filteredRegularOptions = regularOptions.filter((option) =>
@@ -170,10 +169,10 @@ export function SearchableDropdown({
                                     fontSize: "inherit",
                                     cursor: "pointer",
                                 }}
-                                onMouseEnter={(e) => {
+                                onMouseEnter={() => {
                                     // Keep transparent background on hover for "No Parent"
                                 }}
-                                onMouseLeave={(e) => {
+                                onMouseLeave={() => {
                                     // Keep transparent background
                                 }}
                             >
