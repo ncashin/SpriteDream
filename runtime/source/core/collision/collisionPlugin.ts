@@ -93,23 +93,21 @@ export function collisionPlugin<
           if (transform && collider && collider.collisionEnabled) {
             const worldPos = getWorldPosition(context.ecs.ecsInstance, entity);
             if (!worldPos) return;
-            
+
             const worldTransform = getWorldTransform(context.ecs.ecsInstance, entity);
             if (!worldTransform) return;
-            
+
             const width = collider.width ?? 32;
             const height = collider.height ?? 32;
-            const offsetX = collider.offsetX ?? 0;
-            const offsetY = collider.offsetY ?? 0;
-            
+
             // Apply scale to collider dimensions
             const scaledWidth = width * worldTransform.scaleX;
             const scaledHeight = height * worldTransform.scaleY;
-            
-            const left = worldPos.x + offsetX - scaledWidth / 2;
-            const right = worldPos.x + offsetX + scaledWidth / 2;
-            const top = worldPos.y + offsetY - scaledHeight / 2;
-            const bottom = worldPos.y + offsetY + scaledHeight / 2;
+
+            const left = worldPos.x - scaledWidth / 2;
+            const right = worldPos.x + scaledWidth / 2;
+            const top = worldPos.y - scaledHeight / 2;
+            const bottom = worldPos.y + scaledHeight / 2;
             if (
               worldX >= left &&
               worldX <= right &&

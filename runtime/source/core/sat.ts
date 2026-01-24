@@ -43,23 +43,10 @@ export const getCollisionPosition = (
   entity: Entity
 ): Vector | null => {
   const position = getEntityPosition(ecs, entity);
-  const collider = getEntityCollider(ecs, entity);
-  if (!position || !collider) return null;
+  if (!position) return null;
 
-  const worldTransform = getWorldTransform(ecs, entity);
-  if (!worldTransform) return position;
-
-  const offsetX = (collider.offsetX ?? 0) * worldTransform.scaleX;
-  const offsetY = (collider.offsetY ?? 0) * worldTransform.scaleY;
-
-  // Apply rotation to offset if needed
-  const rotationRad = (worldTransform.rotation * Math.PI) / 180;
-  const cos = Math.cos(rotationRad);
-  const sin = Math.sin(rotationRad);
-  const rotatedOffsetX = offsetX * cos - offsetY * sin;
-  const rotatedOffsetY = offsetX * sin + offsetY * cos;
-
-  return add(position, create(rotatedOffsetX, rotatedOffsetY));
+  // Transforms handle positioning, so collision position is just the entity's world position
+  return position;
 };
 
 export const getRectangleTopLeft = (

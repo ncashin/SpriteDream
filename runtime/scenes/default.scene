@@ -32,8 +32,6 @@
           "collisionEnabled": true,
           "bodyName": "platform",
           "propagateCollision": false,
-          "offsetX": 0,
-          "offsetY": 0,
           "width": 1000,
           "height": 300,
           "angle": 0
@@ -66,8 +64,6 @@
           "bodyType": "static",
           "collisionEnabled": true,
           "propagateCollision": false,
-          "offsetX": 0,
-          "offsetY": 0,
           "width": 200,
           "height": 20,
           "angle": 0
@@ -99,9 +95,7 @@
           "colliderName": "rectangle",
           "bodyType": "kinematic",
           "collisionEnabled": true,
-          "propagateCollision": false,
-          "offsetX": 0,
-          "offsetY": 0,
+          "propagateCollision": true,
           "width": 200,
           "height": 20,
           "angle": 0
@@ -142,8 +136,7 @@
           "bodyType": "kinematic",
           "collisionEnabled": true,
           "callbackName": "player",
-          "offsetX": 0,
-          "offsetY": 0,
+          "propagateCollision": false,
           "width": 32,
           "height": 32,
           "angle": 0

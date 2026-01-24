@@ -124,9 +124,6 @@ export type ColliderComponent = Component & {
   callbackName?: string;
   bodyName?: string;
   propagateCollision?: boolean; // If true, propagate collisions to parent entities
-  // Offset from entity position (in world space)
-  offsetX?: number;
-  offsetY?: number;
   // Rectangle collider properties
   width?: number;
   height?: number;
@@ -140,8 +137,7 @@ export const ColliderComponentDefinition: ColliderComponent = defineComponent(
     colliderName: "rectangle",
     bodyType: "static",
     collisionEnabled: true,
-    offsetX: 0,
-    offsetY: 0,
+    propagateCollision: false,
     width: 32,
     height: 32,
     angle: 0,

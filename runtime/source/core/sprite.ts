@@ -6,9 +6,10 @@ import {
   defineComponent,
 } from "./ecs/component";
 import { ecsPlugin } from "./scene/ecsAdapter";
-import { addDrawCallback } from "./gameloop";
+import { addDrawCallback, isUpdateEnabled } from "./gameloop";
 import { getViewport } from "./viewport/viewportPlugin";
 import { getWorldTransform, getWorldPosition } from "./transform";
+import { isEditorMode } from "./utils";
 // HitFlashComponent type definition
 export type HitFlashComponent = Component & {
   type: "hitFlash";
@@ -163,23 +164,26 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     context2D.scale(viewport.scale, viewport.scale);
     context2D.translate(-viewport.x, -viewport.y);
 
-    context2D.save();
-    context2D.strokeStyle = "#00ffff";
-    context2D.fillStyle = "#00ffff";
-    context2D.lineWidth = 1 / viewport.scale;
+    // Only draw origin in editor mode when game is not running
+    if (isEditorMode() && !isUpdateEnabled()) {
+      context2D.save();
+      context2D.strokeStyle = "#00ffff";
+      context2D.fillStyle = "#00ffff";
+      context2D.lineWidth = 1 / viewport.scale;
 
-    const size = 8;
-    const radius = size;
+      const size = 8;
+      const radius = size;
 
-    // Draw triangle pointing up
-    context2D.beginPath();
-    context2D.moveTo(0, -radius); // Top point
-    context2D.lineTo(-radius * 0.866, radius * 0.5); // Bottom left (cos(120°) * radius, sin(120°) * radius)
-    context2D.lineTo(radius * 0.866, radius * 0.5); // Bottom right (cos(60°) * radius, sin(60°) * radius)
-    context2D.closePath();
-    context2D.fill();
-    context2D.stroke();
-    context2D.restore();
+      // Draw triangle pointing up
+      context2D.beginPath();
+      context2D.moveTo(0, -radius); // Top point
+      context2D.lineTo(-radius * 0.866, radius * 0.5); // Bottom left (cos(120°) * radius, sin(120°) * radius)
+      context2D.lineTo(radius * 0.866, radius * 0.5); // Bottom right (cos(60°) * radius, sin(60°) * radius)
+      context2D.closePath();
+      context2D.fill();
+      context2D.stroke();
+      context2D.restore();
+    }
 
     context.ecs.runQuery(
       [TransformComponentDefinition, SpriteComponentDefinition],

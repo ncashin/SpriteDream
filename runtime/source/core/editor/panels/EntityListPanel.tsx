@@ -279,6 +279,8 @@ export function EntityListPanel() {
   const [activeId, setActiveId] = useState<Entity | null>(null);
   const [overId, setOverId] = useState<Entity | string | null>(null);
   const [expandedEntities, setExpandedEntities] = useState<Set<Entity>>(new Set());
+  const [manuallyExpandedEntities, setManuallyExpandedEntities] = useState<Set<Entity>>(new Set());
+  const previousSelectedEntityRef = useRef<Entity | null>(null);
 
   // Sync entities from ECS
   useEffect(() => {
@@ -321,23 +323,44 @@ export function EntityListPanel() {
     };
   }, [ecs]);
 
-  // Auto-expand parent when selected
+  // Auto-expand parent when selected, collapse when deselected
   useEffect(() => {
-    if (!ecs || !selectedEntity) return;
+    if (!ecs) return;
 
-    const children = getChildren(ecs.ecsInstance, selectedEntity);
-    if (children.length > 0) {
+    const previousEntity = previousSelectedEntityRef.current;
+
+    // Handle deselection: collapse previous entity if it was only temporarily expanded
+    if (previousEntity && previousEntity !== selectedEntity) {
       setExpandedEntities((prev) => {
-        // Only expand if not already expanded (respects manual collapses)
-        if (prev.has(selectedEntity)) {
-          return prev;
+        // Only collapse if it wasn't manually expanded
+        if (!manuallyExpandedEntities.has(previousEntity) && prev.has(previousEntity)) {
+          const next = new Set(prev);
+          next.delete(previousEntity);
+          return next;
         }
-        const next = new Set(prev);
-        next.add(selectedEntity);
-        return next;
+        return prev;
       });
     }
-  }, [selectedEntity, ecs]);
+
+    // Handle selection: temporarily expand if it has children
+    if (selectedEntity) {
+      const children = getChildren(ecs.ecsInstance, selectedEntity);
+      if (children.length > 0) {
+        setExpandedEntities((prev) => {
+          // Only expand if not already expanded (respects manual expands)
+          if (prev.has(selectedEntity)) {
+            return prev;
+          }
+          const next = new Set(prev);
+          next.add(selectedEntity);
+          return next;
+        });
+      }
+    }
+
+    // Update the ref for next time
+    previousSelectedEntityRef.current = selectedEntity;
+  }, [selectedEntity, ecs, manuallyExpandedEntities]);
 
   // Focus rename input
   useEffect(() => {
@@ -504,8 +527,20 @@ export function EntityListPanel() {
       const next = new Set(prev);
       if (next.has(entity)) {
         next.delete(entity);
+        // Remove from manually expanded if collapsing
+        setManuallyExpandedEntities((prevManual) => {
+          const nextManual = new Set(prevManual);
+          nextManual.delete(entity);
+          return nextManual;
+        });
       } else {
         next.add(entity);
+        // Mark as manually expanded
+        setManuallyExpandedEntities((prevManual) => {
+          const nextManual = new Set(prevManual);
+          nextManual.add(entity);
+          return nextManual;
+        });
       }
       return next;
     });
