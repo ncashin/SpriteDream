@@ -3,12 +3,7 @@ import "@vscode/codicons/dist/codicon.css";
 import { readFile } from "./fileUtilities";
 import { setSceneFile, updateSceneWithDiff } from "./scene/scene";
 import { initializeEditor, getEditorRoot } from "./editor/editorInitializer";
-import {
-  resetAllCallbacks,
-  setEditorUpdateEnabled,
-  setUpdateEnabled,
-  isUpdateEnabled,
-} from "./gameloop";
+import { resetAllCallbacks } from "./gameloop";
 import type { InitialGameContext } from "./gameContext";
 import { isEditorMode } from "./utils";
 
@@ -18,8 +13,6 @@ const isDev = import.meta.env?.DEV === true;
 const isInIframe = window.parent !== window;
 
 let mainFunction: MainFunction | null = null;
-let isInitialized = false;
-let hasSceneBeenLoaded = false;
 let editorInitialized = false;
 
 const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
@@ -34,26 +27,14 @@ const notifyParent = (command: string, data?: Record<string, unknown>) => {
 export function runGame(forceReset = false) {
   if (!mainFunction) return;
 
-  const isGameRunning = isUpdateEnabled();
-
   resetAllCallbacks();
 
-  if (isDev || isEditorMode()) {
-    if (!editorInitialized) {
-      initializeEditor();
-    }
-    if (!hasSceneBeenLoaded) {
-      setEditorUpdateEnabled(true);
-      setUpdateEnabled(false);
-      hasSceneBeenLoaded = true;
-    }
-  } else if (!isInitialized) {
-    setEditorUpdateEnabled(false);
-    setUpdateEnabled(true);
-    isInitialized = true;
+  if ((isDev || isEditorMode()) && !editorInitialized) {
+    initializeEditor();
+    editorInitialized = true;
   }
 
-  if (forceReset || !isGameRunning) {
+  if (forceReset) {
     gameRoot.innerHTML = "";
   }
 
@@ -117,10 +98,3 @@ export function defineMainFunction(fn: MainFunction) {
 
 window.addEventListener("message", handleMessage);
 notifyParent("runtimeReady");
-
-if (isDev || isEditorMode()) {
-  if (!editorInitialized) {
-    initializeEditor();
-    editorInitialized = true;
-  }
-}

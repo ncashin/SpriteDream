@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig(({ mode }) => {
   // Check if we're building with editor enabled
   const editorEnabled = mode === 'editor';
-  
+
   return {
     plugins: [react(), tailwindcss()],
     publicDir: 'assets',

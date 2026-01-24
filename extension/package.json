@@ -50,6 +50,10 @@
       {
         "command": "gameide.uploadGame",
         "title": "Upload Game to Website"
+      },
+      {
+        "command": "gameide.reloadViteServer",
+        "title": "Reload Vite Server"
       }
     ]
   },

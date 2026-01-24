@@ -8,6 +8,30 @@ import { uploadGame } from './upload';
 let viteProcess: any = null;
 let viteServerReady: Promise<void> | null = null;
 
+async function stopViteServer(): Promise<void> {
+    if (viteProcess) {
+        return new Promise<void>((resolve) => {
+            viteProcess.on('close', () => {
+                viteProcess = null;
+                viteServerReady = null;
+                resolve();
+            });
+            viteProcess.kill();
+            // Force kill after 2 seconds if it doesn't close gracefully
+            setTimeout(() => {
+                if (viteProcess) {
+                    viteProcess.kill('SIGKILL');
+                    viteProcess = null;
+                    viteServerReady = null;
+                }
+                resolve();
+            }, 2000);
+        });
+    }
+    viteServerReady = null;
+    return Promise.resolve();
+}
+
 async function startViteServer(context: vscode.ExtensionContext): Promise<void> {
     if (viteProcess) {
         return viteServerReady || Promise.resolve();
@@ -75,6 +99,17 @@ async function startViteServer(context: vscode.ExtensionContext): Promise<void> 
     });
 
     return viteServerReady;
+}
+
+async function reloadViteServer(context: vscode.ExtensionContext): Promise<void> {
+    vscode.window.showInformationMessage('Reloading Vite server...');
+    await stopViteServer();
+    try {
+        await startViteServer(context);
+        vscode.window.showInformationMessage('Vite server reloaded successfully');
+    } catch (error: any) {
+        vscode.window.showErrorMessage(`Failed to reload Vite server: ${error.message}`);
+    }
 }
 
 class SceneDocument implements vscode.CustomDocument {
@@ -639,6 +674,11 @@ export function activate(context: vscode.ExtensionContext) {
         uploadGame(context);
     });
     context.subscriptions.push(uploadCommand);
+
+    const reloadCommand = vscode.commands.registerCommand('gameide.reloadViteServer', () => {
+        reloadViteServer(context);
+    });
+    context.subscriptions.push(reloadCommand);
 }
 
 export function deactivate() {

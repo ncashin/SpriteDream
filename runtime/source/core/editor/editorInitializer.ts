@@ -5,7 +5,6 @@ import { setGameContext, type GameContextType } from "./EditorContext";
 
 let editorRoot: Root | null = null;
 let editorContainer: HTMLDivElement | null = null;
-let isInitialized = false;
 
 export function setEditorGameContext(context: GameContextType | null) {
   setGameContext(context);
@@ -23,9 +22,8 @@ export function initializeEditor() {
     editor.style.position = "relative";
   }
 
-  // Only reinitialize if not already initialized or if container was removed
-  if (!isInitialized || !editorContainer || editorContainer.parentElement !== editor) {
-    if (editorContainer && editorContainer.parentElement) {
+  if (!editorContainer || editorContainer.parentElement !== editor) {
+    if (editorContainer) {
       editorContainer.remove();
     }
     editor.innerHTML = "";
@@ -33,7 +31,6 @@ export function initializeEditor() {
     editorContainer.className = "editor-container";
     editor.appendChild(editorContainer);
     editorRoot = createRoot(editorContainer);
-    isInitialized = true;
   }
 
   renderEditor();

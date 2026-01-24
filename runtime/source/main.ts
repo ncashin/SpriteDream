@@ -5,7 +5,9 @@ import { inputPlugin } from "./core/input";
 import { viewportPlugin } from "./core/viewport/viewportPlugin";
 import { collisionPlugin } from "./core/collision/collisionPlugin";
 import { ecsEditorPlugin } from "./core/ecs/editor/ECSEditorPlugin";
-import { addUpdateCallback } from "./core/gameloop";
+import {
+  addUpdateCallback,
+} from "./core/gameloop";
 import type { Component } from "./core/ecs/ecs";
 import { getEntity } from "./core/ecs/ecs";
 import { defineComponent, VelocityComponentDefinition } from "./core/ecs/component";
@@ -53,6 +55,18 @@ export const PlayerComponentDefinition: PlayerComponent = defineComponent(
     description: "Player controlled entity",
   }
 );
+
+// HMR support for Vite - transparent to end users
+if (import.meta.hot) {
+  import.meta.hot.accept(() => { })
+  import.meta.hot.on('vite:afterUpdate', () => {
+    initializeGame({
+      plugins,
+      initialScene,
+      main,
+    });
+  });
+}
 
 initializeGame({
   plugins,
@@ -107,7 +121,7 @@ function main({ ecs, input }: GameContext) {
       }
     }
 
-    playerEntity.velocity.y -= gravity * deltaTime;
+    playerEntity.velocity.y += gravity * deltaTime;
 
     if (input.isKeyPressed(" ") && playerEntity.player.isGrounded) {
       playerEntity.velocity.y = -jumpStrength;

@@ -16,10 +16,6 @@ export function RunStopButton() {
     const [isRunning, setIsRunning] = useState(isUpdateEnabled());
     const runButtonRef = useRef<HTMLButtonElement>(null);
 
-    useEffect(() => {
-        setIsRunning(isUpdateEnabled());
-    }, []);
-
     const handleRunStop = async () => {
         const wasRunning = isUpdateEnabled();
 
