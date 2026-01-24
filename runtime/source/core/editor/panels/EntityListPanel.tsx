@@ -372,14 +372,15 @@ export function EntityListPanel() {
             const viewportState = getViewport();
             const canvas = (gameContext.canvas as HTMLCanvasElement) || document.querySelector("canvas") as HTMLCanvasElement | null;
             if (canvas) {
+              const rect = canvas.getBoundingClientRect();
               const worldPos = screenToWorld(
                 mousePos.x,
                 mousePos.y,
                 viewportState.x,
                 viewportState.y,
                 viewportState.scale,
-                canvas.width,
-                canvas.height
+                rect.width,
+                rect.height
               );
               setWorldPosition(ecs.ecsInstance, pasted.entityName, worldPos.x, worldPos.y);
             }

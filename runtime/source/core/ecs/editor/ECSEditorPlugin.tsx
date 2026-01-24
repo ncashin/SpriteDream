@@ -125,10 +125,11 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
 
   // Hover cursor
   if (!dragState.isDragging && !isMouseDown) {
+  const rect = canvas.getBoundingClientRect();
   const worldPos = screenToWorld(
     mousePos.x, mousePos.y,
     viewportState.x, viewportState.y, viewportState.scale,
-    canvas.width, canvas.height
+    rect.width, rect.height
   );
   canvas.style.cursor = checkClickProviders(context, worldPos.x, worldPos.y) ? "pointer" : "";
   }
@@ -151,10 +152,11 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
   }
 
   if (shouldHandleClick) {
+    const rect = canvas.getBoundingClientRect();
     const worldPos = screenToWorld(
     mousePos.x, mousePos.y,
     viewportState.x, viewportState.y, viewportState.scale,
-    canvas.width, canvas.height
+    rect.width, rect.height
     );
     const clickedEntity = checkClickProviders(context, worldPos.x, worldPos.y);
 

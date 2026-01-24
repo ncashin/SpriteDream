@@ -109,14 +109,15 @@ export function registerDragHandler(
           }
         }
 
+        const rect = canvas.getBoundingClientRect();
         const worldPos = screenToWorld(
           mousePos.x,
           mousePos.y,
           viewportState.x,
           viewportState.y,
           viewportState.scale,
-          canvas.width,
-          canvas.height
+          rect.width,
+          rect.height
         );
 
         for (const handlerWithContext of dragHandlers) {
