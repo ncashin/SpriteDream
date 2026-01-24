@@ -21,9 +21,27 @@ let gameUIRoot: Root | null = null;
 let gameUIContainer: HTMLDivElement | null = null;
 let GameUIComponent: ComponentType | null = null;
 
-const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
-const gameUIRootElement = document.querySelector<HTMLDivElement>("#gameUI")!;
-const editorRoot = document.querySelector<HTMLDivElement>("#editor")!;
+function getGameRoot(): HTMLDivElement {
+  const element = document.querySelector<HTMLDivElement>("#gameRoot");
+  if (!element) throw new Error("#gameRoot element not found");
+  return element;
+}
+
+function getGameUIRootElement(): HTMLDivElement {
+  const element = document.querySelector<HTMLDivElement>("#gameUI");
+  if (!element) throw new Error("#gameUI element not found");
+  return element;
+}
+
+function getEditorRootElement(): HTMLDivElement {
+  const element = document.querySelector<HTMLDivElement>("#editor");
+  if (!element) throw new Error("#editor element not found");
+  return element;
+}
+
+const gameRoot = getGameRoot();
+const gameUIRootElement = getGameUIRootElement();
+const editorRoot = getEditorRootElement();
 
 const notifyParent = (command: string, data?: Record<string, unknown>) => {
   if (isInIframe) {
@@ -52,15 +70,22 @@ function initializeGameUI(GameUI?: ComponentType) {
     gameUIRoot = createRoot(gameUIContainer);
   }
 
-  // Render GameUI component (always render, even when game is not running)
+  // Update pointer events based on editor mode
+  // In editor mode, GameUI should not capture pointer events
+  const inEditorMode = isEditorMode();
+  if (inEditorMode) {
+    gameUIContainer.classList.add("editor-mode");
+  } else {
+    gameUIContainer.classList.remove("editor-mode");
+  }
+
+  // Always re-render GameUI component to ensure it's up to date
   if (gameUIRoot && GameUIComponent) {
     gameUIRoot.render(React.createElement(GameUIComponent));
   }
 }
 
 export function runGame(EditorUI?: ComponentType, GameUI?: ComponentType, forceReset = false) {
-  if (!mainFunction) return;
-
   resetAllCallbacks();
 
   if ((isDev || isEditorMode()) && !editorInitialized) {
@@ -80,10 +105,12 @@ export function runGame(EditorUI?: ComponentType, GameUI?: ComponentType, forceR
     gameUIRoot = null;
   }
 
+  if (!mainFunction) return;
+
   try {
     mainFunction({
-      rootElement: gameRoot,
-      editorRootElement: editorRoot,
+      rootElement: getGameRoot(),
+      editorRootElement: getEditorRootElement(),
       editorRoot: getEditorRoot(),
     });
   } catch (error) {

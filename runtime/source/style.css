@@ -71,6 +71,14 @@ h1 {
   touch-action: auto;
 }
 
+/* Ensure EntityModal is above GameUI */
+#editor .editor-container [role="dialog"],
+#editor .editor-container .entity-modal {
+  pointer-events: auto !important;
+  z-index: 2000 !important;
+  position: relative;
+}
+
 #app {
   position: relative;
   width: 100vw;
@@ -84,6 +92,32 @@ h1 {
 #app canvas {
   pointer-events: auto;
   touch-action: none;
+}
+
+#gameUI {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 500;
+  pointer-events: none;
+}
+
+#gameUI .game-ui-container {
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+/* In editor mode, GameUI should not capture pointer events */
+#gameUI .game-ui-container.editor-mode {
+  pointer-events: none !important;
+}
+
+/* Ensure all children of GameUI container in editor mode also don't capture events */
+#gameUI .game-ui-container.editor-mode * {
+  pointer-events: none !important;
 }
 @media (prefers-color-scheme: light) {
   :root {

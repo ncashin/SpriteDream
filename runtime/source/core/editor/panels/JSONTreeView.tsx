@@ -905,19 +905,26 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '', ecs
   }
 
   return (
-  <div className={`json-tree-view ${className}`} style={{
-  display: 'flex',
-  flexDirection: 'column',
-  height: '100%',
-  backgroundColor: 'var(--vscode-editor-background, #1e1e1e)',
-  color: 'var(--vscode-editor-foreground, #cccccc)',
-  fontFamily: 'var(--vscode-font-family, "Consolas", "Courier New", monospace)',
-  fontSize: 'var(--vscode-editor-font-size, 13px)',
-  }}>
+  <div 
+    className={`json-tree-view ${className}`} 
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      minHeight: 0,
+      backgroundColor: 'var(--vscode-editor-background, #1e1e1e)',
+      color: 'var(--vscode-editor-foreground, #cccccc)',
+      fontFamily: 'var(--vscode-font-family, "Consolas", "Courier New", monospace)',
+      fontSize: 'var(--vscode-editor-font-size, 13px)',
+    }}
+    onClick={(e) => e.stopPropagation()}
+    onMouseDown={(e) => e.stopPropagation()}
+  >
 
   {/* Tree View */}
   <div style={{
     flex: 1,
+    minHeight: 0,
     overflow: 'auto',
     padding: '0',
     paddingTop: '8px',

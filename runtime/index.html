@@ -27,7 +27,6 @@
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 1;
     }
 
     #gameUI {
@@ -36,7 +35,21 @@
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 0.5;
+      pointer-events: none;
+    }
+
+    #gameUI .game-ui-container {
+      width: 100%;
+      height: 100%;
+      pointer-events: auto;
+    }
+
+    #gameUI .game-ui-container.editor-mode {
+      pointer-events: none !important;
+    }
+
+    #gameUI .game-ui-container.editor-mode * {
+      pointer-events: none !important;
     }
 
     #gameRoot {
