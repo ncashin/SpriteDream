@@ -107,18 +107,18 @@
       "player": {
         "transform": {
           "type": "transform",
-          "x": -120,
-          "y": -184,
+          "x": 0,
+          "y": 0,
           "rotation": 0,
           "scaleX": 1,
           "scaleY": 1,
-          "parent": "platform1"
+          "parent": null
         },
         "sprite": {
           "type": "sprite",
           "width": 32,
           "height": 32,
-          "color": "#ff0000",
+          "color": "#ffffff",
           "image": "/jeremy.svg"
         },
         "velocity": {
