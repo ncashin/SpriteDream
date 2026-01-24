@@ -11,6 +11,7 @@ import {
 import type { InitialGameContext, ContextExtension } from "../gameContext";
 import { TransformComponentDefinition } from "../ecs/component";
 import { setParent as setParentTransform } from "../transform";
+import { undoRedoManager } from "./undoRedo";
 
 type SceneECSData = {
   entities: Record<Entity, Record<ComponentTypeString, Component>>;
@@ -180,6 +181,15 @@ export function initializeSceneECS<T extends InitialGameContext>(
   });
 
   ecsInstance.entities = ecsData.entities || {};
+
+  // Register callback to update ECS instance after undo/redo
+  undoRedoManager.setECSUpdateCallback(() => {
+    // Update the ECS instance's entities reference to point to the restored scene data
+    ecsInstance.entities = ecsData.entities || {};
+    // Clear composed pools since entities have changed
+    ecsInstance.composedPools = {};
+    ecsInstance.associatedComposedPoolKeys = {};
+  });
 
   const ecs = curryECSInstance(ecsInstance);
 

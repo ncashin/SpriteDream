@@ -1,5 +1,6 @@
 import { writeFile, readFile } from "../fileUtilities";
 import { isDevelopment, isEditorMode } from "../utils";
+import { undoRedoManager } from "../editor/undoRedo";
 
 export type SceneData = Record<string, unknown>;
 
@@ -33,28 +34,69 @@ function deepClone<T>(obj: T): T {
 
 function createPersistentProxy<T extends Record<string, unknown>>(
   obj: T,
-  onSave: (sceneData: SceneData) => void
+  onSave: (sceneData: SceneData) => void,
+  path: string = ""
 ): T {
   if (!isObject(obj)) return obj;
 
   return new Proxy(obj, {
     set(target: T, property: string | symbol, value: unknown): boolean {
+      if (typeof property === "symbol" || property === "length") {
+        const newValue = isObject(value)
+          ? createPersistentProxy(value, onSave, path)
+          : value;
+        Reflect.set(target, property, newValue);
+        return true;
+      }
+
+      // Capture old value for diff
+      const oldValue = Reflect.get(target, property);
+      const currentPath = path ? `${path}.${property}` : property;
+
+      // Set new value
       const newValue = isObject(value)
-        ? createPersistentProxy(value, onSave)
+        ? createPersistentProxy(value, onSave, currentPath)
         : value;
       Reflect.set(target, property, newValue);
 
-      if (typeof property !== "symbol" && property !== "length") {
-        onSave(currentScene!);
+      // Record diff
+      if (oldValue !== undefined) {
+        // Property existed, this is a modification
+        undoRedoManager.recordDiff(
+          undoRedoManager.createDiff(currentPath, oldValue, newValue, "set")
+        );
+      } else {
+        // Property didn't exist, this is a new property
+        undoRedoManager.recordDiff(
+          undoRedoManager.createDiff(currentPath, undefined, newValue, "set")
+        );
       }
+
+      onSave(currentScene!);
       return true;
     },
 
     deleteProperty(target: T, property: string | symbol): boolean {
-      Reflect.deleteProperty(target, property);
-      if (typeof property !== "symbol") {
-        onSave(currentScene!);
+      if (typeof property === "symbol") {
+        Reflect.deleteProperty(target, property);
+        return true;
       }
+
+      // Capture old value for diff
+      const oldValue = Reflect.get(target, property);
+      const currentPath = path ? `${path}.${property}` : property;
+
+      // Delete property
+      Reflect.deleteProperty(target, property);
+
+      // Record diff
+      if (oldValue !== undefined) {
+        undoRedoManager.recordDiff(
+          undoRedoManager.createDiff(currentPath, oldValue, undefined, "delete")
+        );
+      }
+
+      onSave(currentScene!);
       return true;
     },
 
@@ -69,16 +111,33 @@ function createPersistentProxy<T extends Record<string, unknown>>(
         )
       ) {
         return (...args: unknown[]) => {
+          // For array mutations, we need to track the changes
+          // This is complex, so we'll just record that the array changed
           const result = (value as (...args: unknown[]) => unknown).apply(
             target,
             args
           );
+          
+          // Record a diff for the entire array (simplified approach)
+          const currentPath = path || "root";
+          const oldValue = deepClone(target);
+          // The array has been mutated, so we record the change
+          // Note: This is a simplified approach - ideally we'd track individual element changes
+          undoRedoManager.recordDiff(
+            undoRedoManager.createDiff(currentPath, oldValue, deepClone(target), "set")
+          );
+          
           onSave(currentScene!);
           return result;
         };
       }
 
-      return isObject(value) ? createPersistentProxy(value, onSave) : value;
+      if (isObject(value)) {
+        const currentPath = path ? `${path}.${String(property)}` : String(property);
+        return createPersistentProxy(value as Record<string, unknown>, onSave, currentPath) as T[Extract<keyof T, string>];
+      }
+
+      return value;
     },
   });
 }

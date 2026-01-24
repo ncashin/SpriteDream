@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import type { Entity } from "../../ecs/ecs";
-import { useGameContext } from "../EditorContext";
+import { useGameContext, startUndoAction, undo, redo, copyEntity, pasteEntity, hasClipboardData } from "../EditorContext";
 import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 import { CaretDown, CaretRight, Plus, PencilSimple, Trash } from "@phosphor-icons/react";
-import { getChildren, getParents } from "../../transform";
+import { getChildren, getParents, setWorldPosition } from "../../transform";
+import { getViewport } from "../../viewport/viewportPlugin";
 import {
   DndContext,
   DragOverlay,
@@ -16,6 +17,24 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+
+// Helper function to convert screen coordinates to world coordinates
+function screenToWorld(
+  screenX: number,
+  screenY: number,
+  viewportX: number,
+  viewportY: number,
+  viewportScale: number,
+  canvasWidth: number,
+  canvasHeight: number
+): { x: number; y: number } {
+  const centerX = canvasWidth / 2;
+  const centerY = canvasHeight / 2;
+  return {
+    x: (screenX - centerX) / viewportScale + viewportX,
+    y: (screenY - centerY) / viewportScale + viewportY,
+  };
+}
 
 // Helper function to check if an entity is a descendant
 function isDescendant(ecs: any, parent: Entity, child: Entity): boolean {
@@ -398,6 +417,85 @@ export function EntityListPanel() {
     }
   }, [renamingEntity]);
 
+  // Keyboard shortcuts for undo/redo and copy/paste
+  useEffect(() => {
+    if (!ecs) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for modifier keys (Ctrl on Windows/Linux, Cmd on Mac)
+      const isModifierPressed = e.ctrlKey || e.metaKey;
+      if (!isModifierPressed) return;
+
+      // Prevent default browser behavior
+      e.preventDefault();
+
+      // Undo: Ctrl+Z or Cmd+Z
+      if (e.key === 'z' && !e.shiftKey) {
+        undo();
+        return;
+      }
+
+      // Redo: Ctrl+Shift+Z or Cmd+Shift+Z (or Ctrl+Y / Cmd+Y)
+      if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
+        redo();
+        return;
+      }
+
+      // Copy: Ctrl+C or Cmd+C
+      if (e.key === 'c' && selectedEntity) {
+        const components = ecs.getEntity(selectedEntity);
+        copyEntity(selectedEntity, components);
+        return;
+      }
+
+      // Paste: Ctrl+V or Cmd+V
+      if (e.key === 'v' && hasClipboardData()) {
+        const allEntities = Object.keys(ecs.ecsInstance.entities);
+        const pasted = pasteEntity(allEntities);
+        if (pasted) {
+          // Start undo action to group all diffs from pasting
+          startUndoAction();
+
+          // Create the entity
+          ecs.createEntity(pasted.entityName);
+          
+          // Add all components
+          for (const component of Object.values(pasted.components)) {
+            ecs.addComponent(pasted.entityName, component);
+          }
+
+          // Position the entity at the mouse location
+          if (gameContext?.input) {
+            const mousePos = gameContext.input.getMousePosition();
+            const viewportState = getViewport();
+            const canvas = (gameContext.canvas as HTMLCanvasElement) || document.querySelector("canvas") as HTMLCanvasElement | null;
+            if (canvas) {
+              const worldPos = screenToWorld(
+                mousePos.x,
+                mousePos.y,
+                viewportState.x,
+                viewportState.y,
+                viewportState.scale,
+                canvas.width,
+                canvas.height
+              );
+              setWorldPosition(ecs.ecsInstance, pasted.entityName, worldPos.x, worldPos.y);
+            }
+          }
+
+          // Select the pasted entity
+          ecs.selectEntity(pasted.entityName);
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [ecs, selectedEntity]);
+
   if (!ecs) return null;
 
   const handleCreateEntity = () => {
@@ -410,12 +508,19 @@ export function EntityListPanel() {
       entityName = `newEntity${counter}`;
     }
 
+    // Start undo action to group all diffs from entity creation
+    startUndoAction();
+
     const newEntity = ecs.createEntity(entityName);
     ecs.selectEntity(newEntity);
   };
 
   const handleDeleteEntity = (entity: Entity, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Start undo action to group all diffs from entity deletion
+    startUndoAction();
+
     ecs.destroyEntity(entity);
     setHoveredEntity(null);
     // Remove from expanded set if it was there
@@ -439,6 +544,9 @@ export function EntityListPanel() {
 
     const newName = renameValue.trim();
     if (newName && newName !== renamingEntity) {
+      // Start undo action to group all diffs from entity rename
+      startUndoAction();
+
       const success = ecs.renameEntity(renamingEntity, newName);
       if (success) {
         // Update expanded set with new name

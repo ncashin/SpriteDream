@@ -1,5 +1,7 @@
 import { atom, useAtomValue, getDefaultStore } from "jotai";
 import type { Entity, EntityComponents } from "../ecs/ecs";
+import { undoRedoManager } from "./undoRedo";
+import { clipboardManager } from "./clipboard";
 
 // ============================================================================
 // Types
@@ -82,5 +84,53 @@ export function useEntityData(entity: Entity | null) {
 export function useIsEntityValid(entity: Entity | null) {
     const entities = useAtomValue(entitiesAtom);
     return entity !== null && entities.includes(entity);
+}
+
+// ============================================================================
+// Undo/Redo Functions
+// ============================================================================
+
+/** Start a new undo/redo action (groups multiple diffs together) */
+export function startUndoAction() {
+    undoRedoManager.startAction();
+}
+
+/** Undo the last action */
+export function undo() {
+    return undoRedoManager.undo();
+}
+
+/** Redo the last undone action */
+export function redo() {
+    return undoRedoManager.redo();
+}
+
+/** Check if undo is available */
+export function canUndo(): boolean {
+    return undoRedoManager.canUndo();
+}
+
+/** Check if redo is available */
+export function canRedo(): boolean {
+    return undoRedoManager.canRedo();
+}
+
+// ============================================================================
+// Clipboard Functions
+// ============================================================================
+
+/** Copy an entity to the clipboard */
+export function copyEntity(entityName: string, components: EntityComponents) {
+    clipboardManager.copy(entityName, components);
+}
+
+/** Paste an entity from the clipboard */
+export function pasteEntity(existingEntityNames: string[]) {
+    return clipboardManager.paste(existingEntityNames);
+}
+
+/** Check if clipboard has data */
+export function hasClipboardData(): boolean {
+    return clipboardManager.hasData();
 }
 

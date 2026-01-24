@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import type { Component, Entity } from "../../ecs/ecs";
-import { useGameContext } from "../EditorContext";
+import { useGameContext, startUndoAction } from "../EditorContext";
 import { addDrawCallback, removeDrawCallback } from "../../gameloop";
 import { componentRegistry } from "../../ecs/component";
 import { JSONTreeView } from "./JSONTreeView";
@@ -28,6 +28,8 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const removeComponentDropdownRef = useRef<HTMLDivElement>(null);
   const removeComponentButtonRef = useRef<HTMLButtonElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const undoDebounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasRecordedUndoRef = useRef(false);
 
   // Filter available components
   const availableComponents = useMemo(() => {
@@ -74,6 +76,15 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         );
       });
   }, [entity, ecs, entityData, removeComponentSearch]);
+
+  // Reset undo recording flag when entity changes
+  useEffect(() => {
+    hasRecordedUndoRef.current = false;
+    if (undoDebounceTimeoutRef.current) {
+      clearTimeout(undoDebounceTimeoutRef.current);
+      undoDebounceTimeoutRef.current = null;
+    }
+  }, [entity]);
 
   // Sync entity data from ECS
   useEffect(() => {
@@ -251,6 +262,17 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         return;
       }
 
+      // Start undo action on first change (debounced to group rapid changes)
+      if (!hasRecordedUndoRef.current) {
+        startUndoAction();
+        hasRecordedUndoRef.current = true;
+      }
+
+      // Clear any existing debounce timeout
+      if (undoDebounceTimeoutRef.current) {
+        clearTimeout(undoDebounceTimeoutRef.current);
+      }
+
       const currentData = ecs.getEntity(entity);
 
       // Remove deleted components
@@ -289,6 +311,11 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         // If we can't get updated data, use the provided JSON
         setEntityData(updatedJson);
       }
+
+      // Reset the undo recording flag after a delay (allows multiple rapid changes to be grouped)
+      undoDebounceTimeoutRef.current = setTimeout(() => {
+        hasRecordedUndoRef.current = false;
+      }, 1000);
     } catch (error) {
       console.error('Error updating entity from tree view:', error);
     }
