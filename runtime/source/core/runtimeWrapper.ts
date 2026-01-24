@@ -19,6 +19,8 @@ const isInIframe = window.parent !== window;
 let mainFunction: MainFunction | null = null;
 let isInitialized = false;
 let hasSceneBeenLoaded = false;
+let isHMRUpdate = false;
+let editorInitialized = false;
 
 const gameRoot = document.querySelector<HTMLDivElement>("#gameRoot")!;
 const editorRoot = document.querySelector<HTMLDivElement>("#editor")!;
@@ -32,28 +34,64 @@ const notifyParent = (command: string, data?: Record<string, unknown>) => {
 export function runGame() {
   if (!mainFunction) return;
 
+  // Always reset callbacks - the main function might have changed during HMR
+  // and we need to re-register callbacks. Scene state is preserved separately.
   resetAllCallbacks();
 
-  if (isDev || isEditorMode()) {
-    initializeEditor();
-    if (!hasSceneBeenLoaded) {
-      setEditorEnabled(true);
-      // Don't auto-start the game when editor is enabled - user should click Run
-      setUpdateEnabled(false);
-      hasSceneBeenLoaded = true;
+  // During HMR, preserve the running state - don't change updateEnabled/editorEnabled
+  if (!isHMRUpdate) {
+    if (isDev || isEditorMode()) {
+      initializeEditor();
+      if (!hasSceneBeenLoaded) {
+        setEditorEnabled(true);
+        // Don't auto-start the game when editor is enabled - user should click Run
+        setUpdateEnabled(false);
+        hasSceneBeenLoaded = true;
+      }
+    } else if (!isInitialized) {
+      setEditorEnabled(false);
+      setUpdateEnabled(true);
+      isInitialized = true;
     }
-  } else if (!isInitialized) {
-    setEditorEnabled(false);
-    setUpdateEnabled(true);
-    isInitialized = true;
+  } else {
+    // During HMR, just ensure editor is initialized if needed
+    if (isDev || isEditorMode()) {
+      initializeEditor();
+    }
   }
 
-  gameRoot.innerHTML = "";
-  mainFunction({
-    rootElement: gameRoot,
-    editorRootElement: editorRoot,
-    editorRoot: getEditorRoot(),
-  });
+  // During HMR, preserve existing canvas elements if possible
+  // Only clear if we're doing a full reinitialization (not HMR)
+  if (!isHMRUpdate) {
+    gameRoot.innerHTML = "";
+  } else {
+    // For HMR, try to preserve canvas elements
+    // Remove only non-canvas children to preserve rendering context
+    const children = Array.from(gameRoot.children);
+    for (const child of children) {
+      if (child.tagName !== "CANVAS") {
+        child.remove();
+      }
+    }
+  }
+
+  try {
+    mainFunction({
+      rootElement: gameRoot,
+      editorRootElement: editorRoot,
+      editorRoot: getEditorRoot(),
+    });
+  } catch (error) {
+    console.error("Error during game initialization:", error);
+    // If initialization fails during HMR, mark it as a full reinit next time
+    if (isHMRUpdate) {
+      isHMRUpdate = false;
+    }
+    throw error;
+  }
+
+  // Reset HMR flag after update
+  isHMRUpdate = false;
 }
 
 const handleMessage = async (event: MessageEvent) => {
@@ -107,15 +145,59 @@ window.addEventListener("message", handleMessage);
 notifyParent("runtimeReady");
 
 if (import.meta.hot) {
+  // Preserve scene data during HMR
+  // Note: import.meta.hot.data is automatically initialized by Vite
+
+  // Accept HMR updates for this module
+  import.meta.hot.accept((newModule) => {
+    // Module updated - preserve state and reinitialize only if needed
+    if (newModule) {
+      // Mark as HMR update to preserve DOM elements
+      isHMRUpdate = true;
+      // Re-run game with preserved scene data
+      runGame();
+    }
+  });
+
+  // Handle HMR updates from other modules
   import.meta.hot.on("vite:afterUpdate", () => {
-    runGame();
+    // Only re-run if main function is defined
+    if (mainFunction) {
+      // Mark as HMR update to preserve DOM elements
+      isHMRUpdate = true;
+      runGame();
+    }
   });
 
   import.meta.hot.on("vite:error", (error) => {
     console.error("HMR Error:", error);
   });
+
+  // Preserve state on dispose
+  import.meta.hot.dispose((data) => {
+    if (data) {
+      // Store state that should be preserved
+      data.hasSceneBeenLoaded = hasSceneBeenLoaded;
+      data.isInitialized = isInitialized;
+      data.editorInitialized = editorInitialized;
+    }
+    // Mark that next update is HMR
+    isHMRUpdate = true;
+  });
+
+  // Restore state on reload
+  const hotData = import.meta.hot.data;
+  if (hotData) {
+    hasSceneBeenLoaded = hotData.hasSceneBeenLoaded ?? false;
+    isInitialized = hotData.isInitialized ?? false;
+    editorInitialized = hotData.editorInitialized ?? false;
+  }
 }
 
 if (isDev || isEditorMode()) {
-  initializeEditor();
+  // Initialize editor only if not already initialized
+  if (!editorInitialized) {
+    initializeEditor();
+    editorInitialized = true;
+  }
 }

@@ -47,22 +47,22 @@ export function defineComponent<T extends Component>(
 
 export type TransformComponent = Component & {
   type: "transform";
+  parent?: string; // Entity ID of parent (for scene graph)
   x: number;
   y: number;
   rotation: number; // in degrees
   scaleX: number;
   scaleY: number;
-  parent?: string; // Entity ID of parent (for scene graph)
 };
 export const TransformComponentDefinition: TransformComponent = defineComponent(
   {
     type: "transform",
+    parent: undefined,
     x: 0,
     y: 0,
     rotation: 0,
     scaleX: 1,
     scaleY: 1,
-    parent: undefined,
   },
   {
     displayName: "Transform",

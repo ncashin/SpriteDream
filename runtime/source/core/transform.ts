@@ -129,12 +129,12 @@ export function setTransform(
     } else {
         addComponent(ecs, entity, {
             type: "transform",
+            parent: transform.parent,
             x: transform.x ?? 0,
             y: transform.y ?? 0,
             rotation: transform.rotation ?? 0,
             scaleX: transform.scaleX ?? 1,
             scaleY: transform.scaleY ?? 1,
-            parent: transform.parent,
         } as TransformComponent);
     }
 }

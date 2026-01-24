@@ -67,31 +67,11 @@ function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
   return canvas;
 }
 
-const imageCache = new Map<string, HTMLImageElement>();
-
 function normalizeAssetPath(src: string): string {
   if (src.startsWith('/') && !src.startsWith('//')) {
     return src.slice(1);
   }
   return src;
-}
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  const normalizedSrc = normalizeAssetPath(src);
-
-  if (imageCache.has(normalizedSrc)) {
-    return Promise.resolve(imageCache.get(normalizedSrc)!);
-  }
-
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      imageCache.set(normalizedSrc, img);
-      resolve(img);
-    };
-    img.onerror = reject;
-    img.src = normalizedSrc;
-  });
 }
 
 export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
@@ -153,6 +133,9 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
 
 
   addDrawCallback(() => {
+    // Safety check: ensure canvas and context are still valid
+    if (!canvas || !context2D) return;
+
     context2D.clearRect(0, 0, canvas.width, canvas.height);
 
     const viewport = getViewport();
@@ -222,8 +205,10 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
 
         if (sprite.image) {
           const normalizedImagePath = normalizeAssetPath(sprite.image);
-          const img = imageCache.get(normalizedImagePath);
-          if (img && img.complete) {
+          const img = new Image();
+          img.src = normalizedImagePath;
+
+          if (img.complete) {
             context2D.drawImage(
               img,
               worldPos.x - scaledWidth / 2,
@@ -250,11 +235,12 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
               scaledWidth,
               scaledHeight
             );
-            if (img === undefined) {
-              loadImage(sprite.image).catch((error) => {
-                console.warn(`Failed to load image: ${sprite.image}`, error);
-              });
-            }
+            img.onload = () => {
+              // Image will be drawn on next frame
+            };
+            img.onerror = () => {
+              console.warn(`Failed to load image: ${sprite.image}`);
+            };
           }
         } else {
           context2D.fillStyle = sprite.color;

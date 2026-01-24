@@ -178,12 +178,28 @@ function saveScene(filePath: string, sceneData: SceneData): void {
 }
 
 export function setScene(sceneData: SceneData | string): void {
-  const parsedData: SceneData =
-    typeof sceneData === "string" ? JSON.parse(sceneData) : sceneData;
-  const onSave = currentFilePath
-    ? (data: SceneData) => saveScene(currentFilePath!, data)
-    : () => { };
-  currentScene = createPersistentProxy(deepClone(parsedData), onSave);
+  try {
+    let parsedData: SceneData =
+      typeof sceneData === "string" ? JSON.parse(sceneData) : sceneData;
+
+    // Validate parsed data
+    if (typeof parsedData !== "object" || parsedData === null || Array.isArray(parsedData)) {
+      console.warn("Invalid scene data, using default scene");
+      parsedData = DEFAULT_SCENE;
+    }
+
+    const onSave = currentFilePath
+      ? (data: SceneData) => saveScene(currentFilePath!, data)
+      : () => { };
+    currentScene = createPersistentProxy(deepClone(parsedData), onSave);
+  } catch (error) {
+    console.error("Failed to set scene:", error);
+    // Fallback to default scene
+    const onSave = currentFilePath
+      ? (data: SceneData) => saveScene(currentFilePath!, data)
+      : () => { };
+    currentScene = createPersistentProxy(DEFAULT_SCENE, onSave);
+  }
 }
 
 export function hasScene(): boolean {
@@ -197,6 +213,16 @@ export function getScene(): SceneData {
       : () => { };
     currentScene = createPersistentProxy(DEFAULT_SCENE, onSave);
   }
+
+  // Validate scene structure to prevent corruption
+  if (typeof currentScene !== "object" || currentScene === null || Array.isArray(currentScene)) {
+    console.warn("Scene state corrupted, resetting to default");
+    const onSave = currentFilePath
+      ? (data: SceneData) => saveScene(currentFilePath!, data)
+      : () => { };
+    currentScene = createPersistentProxy(DEFAULT_SCENE, onSave);
+  }
+
   return currentScene;
 }
 
@@ -264,5 +290,74 @@ export async function setSceneFile(
     }
 
     setScene({});
+  }
+}
+
+// HMR: Preserve scene data across hot updates
+// Note: The snapshot is preserved but NOT restored during HMR.
+// The snapshot is only restored when the user clicks "Stop" in the editor.
+// During HMR, we preserve the current running scene state (currentScene),
+// not the snapshot, so the game continues running with its current state.
+if (import.meta.hot) {
+  // Preserve scene state on dispose
+  import.meta.hot.dispose((data) => {
+    try {
+      if (currentScene) {
+        data.currentScene = deepClone(currentScene);
+      }
+      if (currentFilePath) {
+        data.currentFilePath = currentFilePath;
+      }
+      if (sceneSnapshot) {
+        data.sceneSnapshot = deepClone(sceneSnapshot);
+      }
+      data.persistenceEnabled = persistenceEnabled;
+    } catch (error) {
+      console.error("Failed to preserve scene state during HMR:", error);
+      // Try to preserve at least the file path
+      if (currentFilePath) {
+        data.currentFilePath = currentFilePath;
+      }
+    }
+  });
+
+  // Restore scene state on reload
+  const hotData = import.meta.hot.data;
+  if (hotData) {
+    try {
+      // Restore currentScene (running state), not snapshot
+      if (hotData.currentScene) {
+        const onSave = hotData.currentFilePath
+          ? (sceneData: SceneData) => saveScene(hotData.currentFilePath, sceneData)
+          : () => { };
+        currentScene = createPersistentProxy(deepClone(hotData.currentScene), onSave);
+      } else if (hotData.currentFilePath) {
+        // If we have a file path but no scene data, ensure we have at least an empty scene
+        // This prevents plugins from failing during initialization
+        const onSave = (sceneData: SceneData) => saveScene(hotData.currentFilePath, sceneData);
+        currentScene = createPersistentProxy(DEFAULT_SCENE, onSave);
+      }
+
+      if (hotData.currentFilePath) {
+        currentFilePath = hotData.currentFilePath;
+      }
+
+      // Preserve snapshot but don't restore it - only restore on Stop button
+      if (hotData.sceneSnapshot) {
+        sceneSnapshot = deepClone(hotData.sceneSnapshot);
+      }
+
+      if (hotData.persistenceEnabled !== undefined) {
+        persistenceEnabled = hotData.persistenceEnabled;
+      }
+    } catch (error) {
+      console.error("Failed to restore scene state during HMR:", error);
+      // Fallback: ensure we have at least a valid scene structure
+      if (!currentScene && hotData.currentFilePath) {
+        const onSave = (sceneData: SceneData) => saveScene(hotData.currentFilePath, sceneData);
+        currentScene = createPersistentProxy(DEFAULT_SCENE, onSave);
+        currentFilePath = hotData.currentFilePath;
+      }
+    }
   }
 }
