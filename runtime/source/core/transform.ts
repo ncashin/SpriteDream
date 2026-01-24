@@ -371,3 +371,93 @@ export function moveEntityAndParents(
     setWorldPosition(ecs, rootEntity, rootWorldPos.x + worldDeltaX, rootWorldPos.y + worldDeltaY);
 }
 
+/**
+ * Converts a world space direction vector to local space for an entity.
+ * This recursively accounts for all parents in the hierarchy (parent, grandparent, etc.).
+ * @param ecs The ECS instance
+ * @param entity The entity whose local space to convert to
+ * @param worldDirX World space X component of the direction vector
+ * @param worldDirY World space Y component of the direction vector
+ * @returns The local space direction vector, or the original vector if entity has no parent
+ */
+export function worldDirectionToLocal(
+    ecs: ECSInstance,
+    entity: Entity,
+    worldDirX: number,
+    worldDirY: number
+): { x: number; y: number } {
+    const transform = getComponent(ecs, entity, TransformComponentDefinition);
+    const parentId = transform?.parent;
+
+    if (!parentId) {
+        // No parent - world space equals local space
+        return { x: worldDirX, y: worldDirY };
+    }
+
+    // Get the parent's world transform, which recursively includes all ancestors
+    const parentWorldTransform = getWorldTransform(ecs, parentId);
+    if (!parentWorldTransform) {
+        return { x: worldDirX, y: worldDirY };
+    }
+
+    // Rotate the direction vector by the inverse of the parent's world rotation
+    // (which includes all ancestor rotations)
+    const parentRotationRad = (parentWorldTransform.rotation * Math.PI) / 180;
+    const cos = Math.cos(parentRotationRad);
+    const sin = Math.sin(parentRotationRad);
+
+    // Inverse rotation: rotate by -angle
+    const localDirX = worldDirX * cos + worldDirY * sin;
+    const localDirY = -worldDirX * sin + worldDirY * cos;
+
+    // Scale the direction by the inverse of the parent's world scale
+    // (which includes all ancestor scales)
+    // Use average scale for direction vectors to maintain direction
+    const avgScale = (parentWorldTransform.scaleX + parentWorldTransform.scaleY) / 2;
+    if (avgScale === 0) {
+        return { x: localDirX, y: localDirY };
+    }
+
+    return {
+        x: localDirX / avgScale,
+        y: localDirY / avgScale,
+    };
+}
+
+/**
+ * Converts a world space distance to local space for an entity.
+ * This recursively accounts for all parents in the hierarchy (parent, grandparent, etc.).
+ * @param ecs The ECS instance
+ * @param entity The entity whose local space to convert to
+ * @param worldDistance World space distance
+ * @returns The local space distance, or the original distance if entity has no parent
+ */
+export function worldDistanceToLocal(
+    ecs: ECSInstance,
+    entity: Entity,
+    worldDistance: number
+): number {
+    const transform = getComponent(ecs, entity, TransformComponentDefinition);
+    const parentId = transform?.parent;
+
+    if (!parentId) {
+        // No parent - world space equals local space
+        return worldDistance;
+    }
+
+    // Get the parent's world transform, which recursively includes all ancestors
+    const parentWorldTransform = getWorldTransform(ecs, parentId);
+    if (!parentWorldTransform) {
+        return worldDistance;
+    }
+
+    // Use average scale to convert distance
+    // The parent's world scale includes all ancestor scales recursively
+    const avgScale = (parentWorldTransform.scaleX + parentWorldTransform.scaleY) / 2;
+    if (avgScale === 0) {
+        return worldDistance;
+    }
+
+    return worldDistance / avgScale;
+}
+

@@ -10,9 +10,10 @@ import {
   type ColliderComponent,
 } from "../ecs/component";
 import { addUpdateCallback, addEditorDrawCallback } from "../gameloop";
-import { updateCollisions, debugDrawColliders } from "../sat";
+import { updateCollisions, debugDrawColliders, pointColliderCollision } from "../sat";
+import { create } from "../vector";
 import { getViewport } from "../viewport/viewportPlugin";
-import { getWorldPosition, getWorldTransform, setWorldPosition } from "../transform";
+import { getTransform, setTransform } from "../transform";
 
 export function collisionPlugin<
   T extends RequirePlugin<[typeof ecsPlugin, typeof spritePlugin]>
@@ -46,13 +47,24 @@ export function collisionPlugin<
       ],
       (entity, [, velocity, collider]) => {
         if (collider.collisionEnabled) {
-          // Velocity is in world space, so we need to apply it to world position
-          // then convert back to local space
-          const currentWorldPos = getWorldPosition(context.ecs.ecsInstance, entity);
-          if (currentWorldPos) {
-            const newWorldX = currentWorldPos.x + velocity.x * deltaTime;
-            const newWorldY = currentWorldPos.y + velocity.y * deltaTime;
-            setWorldPosition(context.ecs.ecsInstance, entity, newWorldX, newWorldY);
+          // Velocity is in local space, so we need to rotate it by the entity's local rotation
+          // before applying it to local position
+          const localTransform = getTransform(context.ecs.ecsInstance, entity);
+          if (localTransform) {
+            // Get the entity's local rotation (in degrees)
+            const localRotation = localTransform.rotation ?? 0;
+            const rotationRad = (localRotation * Math.PI) / 180;
+            const cos = Math.cos(rotationRad);
+            const sin = Math.sin(rotationRad);
+
+            // Rotate the velocity vector by the entity's local rotation
+            const rotatedVelX = velocity.x * cos - velocity.y * sin;
+            const rotatedVelY = velocity.x * sin + velocity.y * cos;
+
+            // Apply the rotated velocity to local position
+            const newLocalX = localTransform.x + rotatedVelX * deltaTime;
+            const newLocalY = localTransform.y + rotatedVelY * deltaTime;
+            setTransform(context.ecs.ecsInstance, entity, { x: newLocalX, y: newLocalY });
           }
           collisionEntities.push(entity);
         }
@@ -91,29 +103,8 @@ export function collisionPlugin<
           if (clickedEntity) return;
           const [transform, collider] = components;
           if (transform && collider && collider.collisionEnabled) {
-            const worldPos = getWorldPosition(context.ecs.ecsInstance, entity);
-            if (!worldPos) return;
-
-            const worldTransform = getWorldTransform(context.ecs.ecsInstance, entity);
-            if (!worldTransform) return;
-
-            const width = collider.width ?? 32;
-            const height = collider.height ?? 32;
-
-            // Apply scale to collider dimensions
-            const scaledWidth = width * worldTransform.scaleX;
-            const scaledHeight = height * worldTransform.scaleY;
-
-            const left = worldPos.x - scaledWidth / 2;
-            const right = worldPos.x + scaledWidth / 2;
-            const top = worldPos.y - scaledHeight / 2;
-            const bottom = worldPos.y + scaledHeight / 2;
-            if (
-              worldX >= left &&
-              worldX <= right &&
-              worldY >= top &&
-              worldY <= bottom
-            ) {
+            const point = create(worldX, worldY);
+            if (pointColliderCollision(context.ecs.ecsInstance, point, entity)) {
               clickedEntity = entity;
             }
           }

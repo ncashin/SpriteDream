@@ -60,16 +60,6 @@ initializeGame({
   main,
 });
 
-// HMR: Accept updates to this module and preserve game state
-if (import.meta.hot) {
-  import.meta.hot.accept((newModule) => {
-    if (newModule) {
-      // Module updated - the game will be reinitialized by runtimeWrapper
-      // Scene data is preserved in scene.ts module
-    }
-  });
-}
-
 function main({ ecs, input }: GameContext) {
   registerCollisionCallback({
     name: "player",
