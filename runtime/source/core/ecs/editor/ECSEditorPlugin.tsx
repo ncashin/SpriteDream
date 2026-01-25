@@ -12,18 +12,18 @@ import { getWorldPosition, setWorldPosition } from "../../transform";
 function getClickProviders(context: any): ClickableEntityProvider[] {
   const providers: ClickableEntityProvider[] = [];
   for (const key in context) {
-  const value = context[key];
-  if (value && typeof value === "object" && typeof value.checkClick === "function") {
-  providers.push(value as ClickableEntityProvider);
-  }
+    const value = context[key];
+    if (value && typeof value === "object" && typeof value.checkClick === "function") {
+      providers.push(value as ClickableEntityProvider);
+    }
   }
   return providers;
 }
 
 function checkClickProviders(context: any, worldX: number, worldY: number): string | null {
   for (const provider of getClickProviders(context)) {
-  const entity = provider.checkClick(worldX, worldY);
-  if (entity) return entity;
+    const entity = provider.checkClick(worldX, worldY);
+    if (entity) return entity;
   }
   return null;
 }
@@ -40,8 +40,8 @@ function screenToWorld(
   const centerX = canvasWidth / 2;
   const centerY = canvasHeight / 2;
   return {
-  x: (screenX - centerX) / viewportScale + viewportX,
-  y: (screenY - centerY) / viewportScale + viewportY,
+    x: (screenX - centerX) / viewportScale + viewportX,
+    y: (screenY - centerY) / viewportScale + viewportY,
   };
 }
 
@@ -51,14 +51,14 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
   // Only initialize in dev mode or when editor mode is enabled
   const isDev = typeof import.meta !== "undefined" && import.meta.env?.DEV;
   if (!isDev && !isEditorMode()) {
-  return;
+    return;
   }
 
   // Register the game context with the editor
   setEditorGameContext(context);
 
   if (!("input" in context && "ecs" in context && "canvas" in context)) {
-  return;
+    return;
   }
 
   let entityDragStartWorldPosition: { x: number; y: number } | null = null;
@@ -67,45 +67,45 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
 
   // Entity drag handler
   registerDragHandler(
-  {
-  priority: 10,
-  canHandle: (worldX, worldY) => {
-    if (!isEditorUpdateEnabled()) return false;
-    return checkClickProviders(context, worldX, worldY) !== null;
-  },
-  onDragStart: (worldX, worldY) => {
-    hasDragged = true;
-    const clickedEntity = checkClickProviders(context, worldX, worldY);
-    if (clickedEntity) {
-    draggedEntity = clickedEntity;
-    // Store the world position at drag start (not local transform values)
-    const worldPos = getWorldPosition(context.ecs.ecsInstance, clickedEntity);
-    if (worldPos) {
-      entityDragStartWorldPosition = { x: worldPos.x, y: worldPos.y };
-    } else {
-      // Fallback: if no transform, use the click position
-      entityDragStartWorldPosition = { x: worldX, y: worldY };
-    }
-    }
-  },
-  onDrag: (worldDeltaX, worldDeltaY) => {
-    if (entityDragStartWorldPosition && draggedEntity) {
-    // Calculate new world position
-    const newWorldX = entityDragStartWorldPosition.x + worldDeltaX;
-    const newWorldY = entityDragStartWorldPosition.y + worldDeltaY;
-    
-    // Set world position (automatically converts to local space)
-    setWorldPosition(context.ecs.ecsInstance, draggedEntity, newWorldX, newWorldY);
-    }
-  },
-  onDragEnd: () => {
-    entityDragStartWorldPosition = null;
-    draggedEntity = null;
-    hasDragged = false;
-  },
-  cursor: "grabbing",
-  },
-  context
+    {
+      priority: 10,
+      canHandle: (worldX, worldY) => {
+        if (!isEditorUpdateEnabled()) return false;
+        return checkClickProviders(context, worldX, worldY) !== null;
+      },
+      onDragStart: (worldX, worldY) => {
+        hasDragged = true;
+        const clickedEntity = checkClickProviders(context, worldX, worldY);
+        if (clickedEntity) {
+          draggedEntity = clickedEntity;
+          // Store the world position at drag start (not local transform values)
+          const worldPos = getWorldPosition(context.ecs.ecsInstance, clickedEntity);
+          if (worldPos) {
+            entityDragStartWorldPosition = { x: worldPos.x, y: worldPos.y };
+          } else {
+            // Fallback: if no transform, use the click position
+            entityDragStartWorldPosition = { x: worldX, y: worldY };
+          }
+        }
+      },
+      onDrag: (worldDeltaX, worldDeltaY) => {
+        if (entityDragStartWorldPosition && draggedEntity) {
+          // Calculate new world position
+          const newWorldX = entityDragStartWorldPosition.x + worldDeltaX;
+          const newWorldY = entityDragStartWorldPosition.y + worldDeltaY;
+
+          // Set world position (automatically converts to local space)
+          setWorldPosition(context.ecs.ecsInstance, draggedEntity, newWorldX, newWorldY);
+        }
+      },
+      onDragEnd: () => {
+        entityDragStartWorldPosition = null;
+        draggedEntity = null;
+        hasDragged = false;
+      },
+      cursor: "grabbing",
+    },
+    context
   );
 
   // Click and hover handling
@@ -113,68 +113,62 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
   let previousMouseDown = false;
 
   addDrawCallback(() => {
-  if (!isEditorUpdateEnabled() || !canvas) return;
+    if (!isEditorUpdateEnabled() || !canvas) return;
 
-  const mousePos = context.input.getMousePosition();
-  const isMouseDown = context.input.isMouseButtonPressed("left");
-  const isMouseJustReleased = !isMouseDown && previousMouseDown;
-  const dragState = context.input.getDragState();
-  const viewportState = getViewport();
+    const mousePos = context.input.getMousePosition();
+    const isMouseDown = context.input.isMouseButtonPressed("left");
+    const isMouseJustReleased = !isMouseDown && previousMouseDown;
+    const dragState = context.input.getDragState();
+    const viewportState = getViewport();
 
-  previousMouseDown = isMouseDown;
+    previousMouseDown = isMouseDown;
 
-  // Hover cursor
-  if (!dragState.isDragging && !isMouseDown) {
-  const rect = canvas.getBoundingClientRect();
-  // Convert client coordinates to canvas-relative coordinates
-  const canvasX = mousePos.x - rect.left;
-  const canvasY = mousePos.y - rect.top;
-  const worldPos = screenToWorld(
-    canvasX, canvasY,
-    viewportState.x, viewportState.y, viewportState.scale,
-    rect.width, rect.height
-  );
-  canvas.style.cursor = checkClickProviders(context, worldPos.x, worldPos.y) ? "pointer" : "";
-  }
-
-  // Reset drag state on mouse down
-  if (isMouseDown && !previousMouseDown && !dragState.isDragging) {
-  hasDragged = false;
-  }
-
-  // Click handling (mouse up without drag)
-  if (isMouseJustReleased && !hasDragged && !dragState.isDragging) {
-  const editorRoot = document.querySelector("#editor");
-  let shouldHandleClick = true;
-
-  if (editorRoot) {
-    const elementAtPoint = document.elementFromPoint(mousePos.x, mousePos.y);
-    if (elementAtPoint && editorRoot.contains(elementAtPoint) && elementAtPoint !== editorRoot) {
-    shouldHandleClick = false;
+    // Hover cursor
+    if (!dragState.isDragging && !isMouseDown) {
+      const rect = canvas.getBoundingClientRect();
+      const worldPos = screenToWorld(
+        mousePos.x, mousePos.y,
+        viewportState.x, viewportState.y, viewportState.scale,
+        rect.width, rect.height
+      );
+      canvas.style.cursor = checkClickProviders(context, worldPos.x, worldPos.y) ? "pointer" : "";
     }
-  }
 
-  if (shouldHandleClick) {
-    const rect = canvas.getBoundingClientRect();
-    // Convert client coordinates to canvas-relative coordinates
-    const canvasX = mousePos.x - rect.left;
-    const canvasY = mousePos.y - rect.top;
-    const worldPos = screenToWorld(
-    canvasX, canvasY,
-    viewportState.x, viewportState.y, viewportState.scale,
-    rect.width, rect.height
-    );
-    const clickedEntity = checkClickProviders(context, worldPos.x, worldPos.y);
-
-    if (clickedEntity) {
-    context.ecs.selectEntity(clickedEntity);
-    } else {
-    context.ecs.clearSelection();
+    // Reset drag state on mouse down
+    if (isMouseDown && !previousMouseDown && !dragState.isDragging) {
+      hasDragged = false;
     }
-  }
 
-  hasDragged = false;
-  }
+    // Click handling (mouse up without drag)
+    if (isMouseJustReleased && !hasDragged && !dragState.isDragging) {
+      const editorRoot = document.querySelector("#editor");
+      let shouldHandleClick = true;
+
+      if (editorRoot) {
+        const elementAtPoint = document.elementFromPoint(mousePos.x, mousePos.y);
+        if (elementAtPoint && editorRoot.contains(elementAtPoint) && elementAtPoint !== editorRoot) {
+          shouldHandleClick = false;
+        }
+      }
+
+      if (shouldHandleClick) {
+        const rect = canvas.getBoundingClientRect();
+        const worldPos = screenToWorld(
+          mousePos.x, mousePos.y,
+          viewportState.x, viewportState.y, viewportState.scale,
+          rect.width, rect.height
+        );
+        const clickedEntity = checkClickProviders(context, worldPos.x, worldPos.y);
+
+        if (clickedEntity) {
+          context.ecs.selectEntity(clickedEntity);
+        } else {
+          context.ecs.clearSelection();
+        }
+      }
+
+      hasDragged = false;
+    }
   });
 }
 
