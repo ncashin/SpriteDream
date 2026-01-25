@@ -359,15 +359,30 @@ export const getComponent = <ComponentType extends Component>(
   return lookupComponent(instance, entity, COMPONENT_TYPE_DEF);
 };
 
-export const getEntity = (
+export function getEntity(
   instance: ECSInstance,
   entity: Entity,
-): Record<string, Component> => {
-  if (!instance.entities[entity]) {
-    return createEntityProxy(instance, entity);
+): Record<string, Component>;
+export function getEntity<const ComposedType extends Component[]>(
+  instance: ECSInstance,
+  entity: Entity,
+  COMPONENT_TYPE_DEFS: ComposedType,
+): Record<string, Component> | undefined;
+export function getEntity<const ComposedType extends Component[]>(
+  instance: ECSInstance,
+  entity: Entity,
+  COMPONENT_TYPE_DEFS?: ComposedType,
+): Record<string, Component> | undefined {
+  const entityProxy = createEntityProxy(instance, entity);
+
+  if (COMPONENT_TYPE_DEFS !== undefined) {
+    if (!hasComponents(entityProxy, COMPONENT_TYPE_DEFS)) {
+      return undefined;
+    }
   }
-  return createEntityProxy(instance, entity);
-};
+
+  return entityProxy;
+}
 
 export const queryEntities = <const ComposedType extends Component[]>(
   instance: ECSInstance,
@@ -467,8 +482,21 @@ export const curryECSInstance = (instance: ECSInstance) => ({
     COMPONENT_TYPE_DEF: ComponentType,
   ): ComponentType | undefined =>
     getComponent(instance, entity, COMPONENT_TYPE_DEF),
-  getEntity: (entity: Entity): any =>
-    getEntity(instance, entity),
+  getEntity: (<const ComposedType extends Component[]>(
+    entity: Entity,
+    COMPONENT_TYPE_DEFS?: ComposedType,
+  ): Record<string, Component> | undefined => {
+    if (COMPONENT_TYPE_DEFS !== undefined) {
+      return getEntity(instance, entity, COMPONENT_TYPE_DEFS);
+    }
+    return getEntity(instance, entity);
+  }) as {
+    (entity: Entity): Record<string, Component>;
+    <const ComposedType extends Component[]>(
+      entity: Entity,
+      COMPONENT_TYPE_DEFS: ComposedType,
+    ): Record<string, Component> | undefined;
+  },
   hasComponents: <const ComposedType extends Component[]>(
     entityData: Record<string, Component>,
     COMPONENT_TYPE_DEFS: ComposedType,
