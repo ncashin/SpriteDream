@@ -126,8 +126,11 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
   // Hover cursor
   if (!dragState.isDragging && !isMouseDown) {
   const rect = canvas.getBoundingClientRect();
+  // Convert client coordinates to canvas-relative coordinates
+  const canvasX = mousePos.x - rect.left;
+  const canvasY = mousePos.y - rect.top;
   const worldPos = screenToWorld(
-    mousePos.x, mousePos.y,
+    canvasX, canvasY,
     viewportState.x, viewportState.y, viewportState.scale,
     rect.width, rect.height
   );
@@ -153,8 +156,11 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
 
   if (shouldHandleClick) {
     const rect = canvas.getBoundingClientRect();
+    // Convert client coordinates to canvas-relative coordinates
+    const canvasX = mousePos.x - rect.left;
+    const canvasY = mousePos.y - rect.top;
     const worldPos = screenToWorld(
-    mousePos.x, mousePos.y,
+    canvasX, canvasY,
     viewportState.x, viewportState.y, viewportState.scale,
     rect.width, rect.height
     );

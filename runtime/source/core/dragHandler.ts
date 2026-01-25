@@ -110,9 +110,12 @@ export function registerDragHandler(
         }
 
         const rect = canvas.getBoundingClientRect();
+        // Convert client coordinates to canvas-relative coordinates
+        const canvasX = mousePos.x - rect.left;
+        const canvasY = mousePos.y - rect.top;
         const worldPos = screenToWorld(
-          mousePos.x,
-          mousePos.y,
+          canvasX,
+          canvasY,
           viewportState.x,
           viewportState.y,
           viewportState.scale,
@@ -124,15 +127,20 @@ export function registerDragHandler(
           if (handlerWithContext.handler.canHandle(worldPos.x, worldPos.y, handlerWithContext.context)) {
             activeHandler = handlerWithContext;
             dragStartWorldPos = worldPos;
-            dragStartScreenPos = { x: mousePos.x, y: mousePos.y };
+            dragStartScreenPos = { x: canvasX, y: canvasY };
             break;
           }
         }
       }
 
       if (activeHandler && isMouseDown && dragStartScreenPos) {
-        const dx = mousePos.x - dragStartScreenPos.x;
-        const dy = mousePos.y - dragStartScreenPos.y;
+        const rect = canvas.getBoundingClientRect();
+        // Convert client coordinates to canvas-relative coordinates
+        const canvasX = mousePos.x - rect.left;
+        const canvasY = mousePos.y - rect.top;
+
+        const dx = canvasX - dragStartScreenPos.x;
+        const dy = canvasY - dragStartScreenPos.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance > DRAG_THRESHOLD) {
@@ -145,11 +153,21 @@ export function registerDragHandler(
             );
           }
 
-          activeHandler.context.input.updateDrag(mousePos.x, mousePos.y);
-          const currentDragState = activeHandler.context.input.getDragState();
+          activeHandler.context.input.updateDrag(canvasX, canvasY);
 
-          const worldDeltaX = currentDragState.offsetX / viewportState.scale;
-          const worldDeltaY = currentDragState.offsetY / viewportState.scale;
+          // Calculate drag delta in world space for accuracy
+          const currentWorldPos = screenToWorld(
+            canvasX,
+            canvasY,
+            viewportState.x,
+            viewportState.y,
+            viewportState.scale,
+            rect.width,
+            rect.height
+          );
+
+          const worldDeltaX = currentWorldPos.x - dragStartWorldPos!.x;
+          const worldDeltaY = currentWorldPos.y - dragStartWorldPos!.y;
 
           activeHandler.handler.onDrag(worldDeltaX, worldDeltaY, activeHandler.context);
 

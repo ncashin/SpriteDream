@@ -135,11 +135,8 @@ const handleMessage = async (event: MessageEvent) => {
           return;
         }
 
-        const sceneChanged = await setSceneFile(path, fileContent);
-        // Only run game if scene actually changed
-        if (sceneChanged) {
-          runGame();
-        }
+        await setSceneFile(path, fileContent);
+        runGame();
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";

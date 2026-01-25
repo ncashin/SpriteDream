@@ -9,6 +9,7 @@ let currentFilePath: string | null = null;
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 let persistenceEnabled = true;
 let sceneSnapshot: SceneData | null = null;
+let isInitializing = false; // Flag to prevent undo recording during scene initialization
 
 const DEFAULT_SCENE: SceneData = {};
 const SAVE_DEBOUNCE_MS = 500;
@@ -21,20 +22,6 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
-}
-
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a == null || b == null) return a === b;
-  if (typeof a !== typeof b) return false;
-  if (typeof a !== "object") return a === b;
-  if (Array.isArray(a) !== Array.isArray(b)) return false;
-
-  try {
-    return JSON.stringify(a) === JSON.stringify(b);
-  } catch {
-    return false;
-  }
 }
 
 function mergeObjects<T extends Record<string, unknown>>(
@@ -106,20 +93,17 @@ function createPersistentProxy<T extends Record<string, unknown>>(
       Reflect.set(target, property, proxiedValue);
       const currentPath = path ? `${path}.${property}` : property;
 
-      // Only record diff if we're not currently applying diffs (undo/redo)
-      if (!undoRedoManager.isApplyingDiffs()) {
-        // Only persist if the value actually changed
-        if (!deepEqual(oldValue, proxiedValue)) {
-          undoRedoManager.recordDiff(
-            undoRedoManager.createDiff(
-              currentPath,
-              oldValue !== undefined ? oldValue : undefined,
-              proxiedValue,
-              "set"
-            )
-          );
-          onSave(currentScene!);
-        }
+      // Only record diff if we're not currently applying diffs (undo/redo) and not initializing
+      if (!undoRedoManager.isApplyingDiffs() && !isInitializing) {
+        undoRedoManager.recordDiff(
+          undoRedoManager.createDiff(
+            currentPath,
+            oldValue !== undefined ? oldValue : undefined,
+            proxiedValue,
+            "set"
+          )
+        );
+        onSave(currentScene!);
       }
       return true;
     },
@@ -133,8 +117,8 @@ function createPersistentProxy<T extends Record<string, unknown>>(
       Reflect.deleteProperty(target, property);
       const currentPath = path ? `${path}.${property}` : property;
 
-      // Only record diff if we're not currently applying diffs (undo/redo)
-      if (!undoRedoManager.isApplyingDiffs()) {
+      // Only record diff if we're not currently applying diffs (undo/redo) and not initializing
+      if (!undoRedoManager.isApplyingDiffs() && !isInitializing) {
         if (oldValue !== undefined) {
           undoRedoManager.recordDiff(
             undoRedoManager.createDiff(currentPath, oldValue, undefined, "delete")
@@ -282,10 +266,22 @@ export function saveSceneSnapshot() {
 
 export async function restoreSceneFromSnapshot(): Promise<void> {
   if (!sceneSnapshot) return;
-  const onSave = currentFilePath
-    ? (data: SceneData) => saveScene(currentFilePath!, data)
-    : () => { };
-  currentScene = createPersistentProxy(deepClone(sceneSnapshot), onSave);
+
+  // Prevent undo recording during snapshot restoration
+  const wasInitializing = isInitializing;
+  isInitializing = true;
+  try {
+    const onSave = currentFilePath
+      ? (data: SceneData) => saveScene(currentFilePath!, data)
+      : () => { };
+    currentScene = createPersistentProxy(deepClone(sceneSnapshot), onSave);
+  } finally {
+    // Use setTimeout to ensure any operations triggered by restoration
+    // (like ECS updates) are also covered by the initialization flag
+    setTimeout(() => {
+      isInitializing = wasInitializing;
+    }, 0);
+  }
 }
 
 export function patchScene(sceneData: SceneData | string): void {
@@ -319,7 +315,7 @@ export function patchScene(sceneData: SceneData | string): void {
 export async function setSceneFile(
   filePath: string,
   content?: string
-): Promise<boolean> {
+): Promise<void> {
   try {
     let sceneData: SceneData;
 
@@ -334,30 +330,40 @@ export async function setSceneFile(
     }
 
     const isReload = currentFilePath === filePath && hasScene();
-    const previousSceneJson = currentScene ? JSON.stringify(currentScene) : null;
+    const isNewFile = currentFilePath !== filePath;
     currentFilePath = filePath;
 
-    if (isReload) {
-      const merged = mergeWithCurrentScene(sceneData);
-      setScene(merged);
-      // Check if scene actually changed by comparing JSON
-      const newSceneJson = currentScene ? JSON.stringify(currentScene) : null;
-      const sceneChanged = previousSceneJson !== newSceneJson;
-      return sceneChanged;
+    // Clear undo history when loading a new file (not a reload)
+    if (isNewFile) {
+      undoRedoManager.clear();
     }
 
-    setScene(sceneData);
-    // New scene file, so it definitely changed
-    return true;
+    // Prevent undo recording during scene initialization
+    isInitializing = true;
+    try {
+      if (isReload) {
+        const merged = mergeWithCurrentScene(sceneData);
+        setScene(merged);
+      } else {
+        setScene(sceneData);
+      }
+    } finally {
+      // Allow undo recording after initialization completes
+      // Use setTimeout to ensure any start callbacks that run synchronously
+      // are also covered by the initialization flag
+      setTimeout(() => {
+        isInitializing = false;
+      }, 0);
+    }
   } catch (error) {
     console.error("Failed to load scene:", error);
     currentFilePath = filePath;
+    isInitializing = false;
 
     if (hasScene()) {
-      return false;
+      return;
     }
 
     setScene({});
-    return true;
   }
 }

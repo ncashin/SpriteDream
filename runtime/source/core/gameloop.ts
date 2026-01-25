@@ -1,6 +1,6 @@
 import { resetDragHandlerInitialization } from "./dragHandler";
 import { isEditorMode } from "./utils";
-import { checkAndRunStartCallbacks } from "./initialization";
+import { runStartCallbacks, runEditorStartCallbacks, clearStartCallbacks } from "./initialization";
 
 export type CallbackId = number;
 
@@ -52,11 +52,17 @@ export let drawEnabled = true;
 export let editorUpdateEnabled = true;
 
 export const setUpdateEnabled = (enabled: boolean) => {
-  const previousValue = updateEnabled;
+  const wasEnabled = updateEnabled;
   updateEnabled = enabled;
-  // Check if we should run start callbacks when state changes
-  if (previousValue !== enabled) {
-    checkAndRunStartCallbacks(enabled);
+  
+  // Run start callbacks when transitioning from disabled to enabled
+  if (!wasEnabled && enabled) {
+    runStartCallbacks();
+  }
+  
+  // Run editor start callbacks when transitioning from enabled to disabled
+  if (wasEnabled && !enabled) {
+    runEditorStartCallbacks();
   }
 };
 export const setDrawEnabled = (enabled: boolean) => {
@@ -102,6 +108,7 @@ export const resetAllCallbacks = (): void => {
   editorUpdateCallbacks.clear();
   nextCallbackId = 1;
   resetDragHandlerInitialization();
+  clearStartCallbacks();
 };
 
 let lastTime = performance.now();
