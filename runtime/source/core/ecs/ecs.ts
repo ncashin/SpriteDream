@@ -429,14 +429,21 @@ export function getEntity<const ComposedType extends Component[]>(
   entity: Entity,
   COMPONENT_TYPE_DEFS?: ComposedType,
 ): Record<string, Component> | undefined {
-  const entityProxy = createEntityProxy(instance, entity);
-
+  // If COMPONENT_TYPE_DEFS are provided, check if entity exists first
+  // Don't create entity reference if it doesn't exist
   if (COMPONENT_TYPE_DEFS !== undefined) {
+    if (!instance.entities[entity]) {
+      return undefined;
+    }
+    const entityProxy = createEntityProxy(instance, entity);
     if (!hasComponents(entityProxy, COMPONENT_TYPE_DEFS)) {
       return undefined;
     }
+    return entityProxy;
   }
 
+  // If COMPONENT_TYPE_DEFS are not provided, create entity if it doesn't exist
+  const entityProxy = createEntityProxy(instance, entity);
   return entityProxy;
 }
 

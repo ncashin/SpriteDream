@@ -35,7 +35,8 @@
           "width": 1000,
           "height": 300,
           "angle": 0
-        }
+        },
+        "__isProxiedEntityComponents": true
       },
       "platform1": {
         "transform": {
@@ -67,7 +68,8 @@
           "width": 200,
           "height": 20,
           "angle": 0
-        }
+        },
+        "__isProxiedEntityComponents": true
       },
       "platform2": {
         "transform": {
@@ -99,48 +101,8 @@
           "width": 200,
           "height": 20,
           "angle": 0
-        }
-      },
-      "player": {
-        "transform": {
-          "type": "transform",
-          "parent": null,
-          "x": 0,
-          "y": -100,
-          "rotation": 0,
-          "scaleX": 1,
-          "scaleY": 1
         },
-        "sprite": {
-          "type": "sprite",
-          "width": 32,
-          "height": 32,
-          "color": "#ffffff",
-          "image": "/jeremy.svg"
-        },
-        "velocity": {
-          "type": "velocity",
-          "x": 0,
-          "y": 0
-        },
-        "player": {
-          "type": "player",
-          "speed": 250,
-          "gravity": 1800,
-          "jumpStrength": 750,
-          "isGrounded": false
-        },
-        "collider": {
-          "type": "collider",
-          "colliderName": "rectangle",
-          "bodyType": "kinematic",
-          "collisionEnabled": true,
-          "callbackName": "player",
-          "propagateCollision": false,
-          "width": 32,
-          "height": 32,
-          "angle": 0
-        }
+        "__isProxiedEntityComponents": true
       }
     }
   }

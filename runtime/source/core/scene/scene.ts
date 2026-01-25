@@ -146,6 +146,25 @@ function createPersistentProxy<T extends Record<string, unknown>>(
   });
 }
 
+function applyDiffRecursive(
+  target: SceneData,
+  diff: SceneData
+): void {
+  for (const key in diff) {
+    const diffValue = diff[key];
+    const targetValue = target[key];
+
+    if (isObject(diffValue) && isObject(targetValue)) {
+      applyDiffRecursive(targetValue as SceneData, diffValue as SceneData);
+    } else if (isObject(diffValue)) {
+      target[key] = {};
+      applyDiffRecursive(target[key] as SceneData, diffValue as SceneData);
+    } else {
+      target[key] = diffValue;
+    }
+  }
+}
+
 function applyDiffToScene(diff: SceneData, skipSave: boolean = false): void {
   if (!currentScene) {
     setScene(diff);
@@ -158,25 +177,6 @@ function applyDiffToScene(diff: SceneData, skipSave: boolean = false): void {
   const wasPersistenceEnabled = persistenceEnabled;
   if (skipSave) {
     persistenceEnabled = false;
-  }
-
-  function applyDiffRecursive(
-    target: SceneData,
-    diff: SceneData
-  ): void {
-    for (const key in diff) {
-      const diffValue = diff[key];
-      const targetValue = target[key];
-
-      if (isObject(diffValue) && isObject(targetValue)) {
-        applyDiffRecursive(targetValue as SceneData, diffValue as SceneData);
-      } else if (isObject(diffValue)) {
-        target[key] = {};
-        applyDiffRecursive(target[key] as SceneData, diffValue as SceneData);
-      } else {
-        target[key] = diffValue;
-      }
-    }
   }
 
   applyDiffRecursive(currentScene, diff);
@@ -269,6 +269,41 @@ export async function restoreSceneFromSnapshot(): Promise<void> {
     ? (data: SceneData) => saveScene(currentFilePath!, data)
     : () => { };
   currentScene = createPersistentProxy(deepClone(sceneSnapshot), onSave);
+}
+
+export function patchScene(sceneData: SceneData | string): void {
+  let data: SceneData;
+
+  if (typeof sceneData === "string") {
+    try {
+      data = JSON.parse(sceneData);
+    } catch {
+      console.warn("Invalid scene JSON, skipping patch");
+      return;
+    }
+  } else {
+    data = sceneData;
+  }
+
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    console.warn("Invalid scene data for patch, skipping");
+    return;
+  }
+
+  if (!currentScene) {
+    // If no scene exists, just set it normally
+    setScene(data);
+    return;
+  }
+
+  // Apply the patch directly to the current scene using applyDiffRecursive
+  // This maintains the object reference and proxy structure
+  applyDiffRecursive(currentScene, data);
+
+  // Update snapshot if it exists
+  if (sceneSnapshot) {
+    applyDiffRecursive(sceneSnapshot, data);
+  }
 }
 
 export async function setSceneFile(

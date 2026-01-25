@@ -13,8 +13,12 @@ import { getEntity } from "./core/ecs/ecs";
 import { defineComponent, VelocityComponentDefinition } from "./core/ecs/component";
 import { registerCollisionCallback } from "./core/collision/collisionCallbacks";
 import initialScene from "../scenes/default.scene?raw";
+import playerScene from "../scenes/player.scene?raw";
+
 import { EditorUI } from "./EditorUI";
 import { GameUI } from "./GameUI";
+import { addStartCallback } from "./core/initialization";
+import { patchScene } from "./core/scene/scene";
 
 export {
   getViewport,
@@ -67,6 +71,10 @@ initializeGame({
 });
 
 function main({ ecs, input }: GameContext) {
+
+  addStartCallback(() => {
+    patchScene(playerScene);
+  })
   registerCollisionCallback({
     name: "player",
     callback: (_ecs, entity, _other, _overlapAmount, overlapNormal) => {
