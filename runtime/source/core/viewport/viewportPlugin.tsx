@@ -29,6 +29,37 @@ let targetWorldHeight: number | null = null;
 
 export const getViewport = (): Viewport => ({ ...viewport });
 
+/**
+ * Converts screen coordinates (canvas-relative) to world space coordinates.
+ * @param screenX - X coordinate in screen space (canvas-relative)
+ * @param screenY - Y coordinate in screen space (canvas-relative)
+ * @param canvasWidth - Optional canvas width. If not provided, will be retrieved automatically.
+ * @param canvasHeight - Optional canvas height. If not provided, will be retrieved automatically.
+ * @returns World space coordinates { x, y }
+ */
+export const screenToWorld = (
+  screenX: number,
+  screenY: number,
+  canvasWidth?: number,
+  canvasHeight?: number
+): { x: number; y: number } => {
+  let width = canvasWidth;
+  let height = canvasHeight;
+
+  if (width === undefined || height === undefined) {
+    const size = getCanvasDisplaySize();
+    width = width ?? size.width;
+    height = height ?? size.height;
+  }
+
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const worldX = (screenX - centerX) / viewport.scale + viewport.x;
+  const worldY = (screenY - centerY) / viewport.scale + viewport.y;
+
+  return { x: worldX, y: worldY };
+};
+
 export const setViewport = (x: number, y: number): void => {
   viewport.x = x;
   viewport.y = y;
