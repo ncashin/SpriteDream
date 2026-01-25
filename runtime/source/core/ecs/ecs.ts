@@ -13,6 +13,7 @@ export type ECSInstance = {
 
   selectedEntity: Entity | null;
 
+  createEntityCallback?: (entity: Entity) => void;
   addComponentCallback?: (entity: Entity, component: Component) => void;
   removeComponentCallback?: (
     entity: Entity,
@@ -42,6 +43,7 @@ export type SetParentHandler = (
 ) => void;
 
 export type ECSInstanceCreateInfo = {
+  createEntityCallback?: (entity: Entity) => void;
   addComponentCallback?: (entity: Entity, component: Component) => void;
   removeComponentCallback?: (
     entity: Entity,
@@ -70,8 +72,16 @@ export const createEntity = (instance: ECSInstance, name: string): Entity => {
     throw new Error('Entity name is required and must be a non-empty string');
   }
 
+  // Check if entity is new before calling getEntity (which may create it)
+  const wasNew = !instance.entities[name];
+
   // Ensure entity exists in the instance
   const entityProxy = getEntity(instance, name);
+
+  // Trigger createEntity callback if this is a new entity
+  if (wasNew && instance.createEntityCallback) {
+    instance.createEntityCallback(name);
+  }
 
   // Add default component if configured and not already present
   if (instance.defaultComponent && !entityProxy[instance.defaultComponent.type]) {

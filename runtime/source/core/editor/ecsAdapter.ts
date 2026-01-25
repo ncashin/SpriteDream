@@ -155,6 +155,11 @@ export function initializeSceneECS<T extends InitialGameContext>(
     componentProxyHandler,
     defaultComponent: TransformComponentDefinition,
     setParentHandler: setParentTransform,
+    createEntityCallback: (entity: Entity) => {
+      if (!originalEntities[entity]) {
+        originalEntities[entity] = {};
+      }
+    },
     addComponentCallback: (entity: Entity, component: Component) => {
       if (!originalEntities[entity]) {
         originalEntities[entity] = {};
