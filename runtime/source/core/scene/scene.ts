@@ -291,19 +291,12 @@ export function patchScene(sceneData: SceneData | string): void {
   }
 
   if (!currentScene) {
-    // If no scene exists, just set it normally
     setScene(data);
     return;
   }
 
-  // Apply the patch directly to the current scene using applyDiffRecursive
-  // This maintains the object reference and proxy structure
-  applyDiffRecursive(currentScene, data);
 
-  // Update snapshot if it exists
-  if (sceneSnapshot) {
-    applyDiffRecursive(sceneSnapshot, data);
-  }
+  applyDiffRecursive(currentScene, data);
 }
 
 export async function setSceneFile(

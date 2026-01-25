@@ -6,7 +6,7 @@ export type CallbackId = number;
 const updateCallbacks: Record<CallbackId, (deltaTime: number) => void> = {};
 const drawCallbacks: Record<CallbackId, () => void> = {};
 const editorDrawCallbacks: Record<CallbackId, () => void> = {};
-const editorCallbacks: Record<CallbackId, () => void> = {};
+const editorUpdateCallbacks: Record<CallbackId, () => void> = {};
 
 let nextCallbackId = 1;
 
@@ -78,15 +78,15 @@ export const removeEditorDrawCallback = (id: CallbackId): boolean => {
 export const addEditorUpdateCallback = (callback: () => void): CallbackId => {
   if (isEditorMode()) {
     const id = nextCallbackId++;
-    editorCallbacks[id] = callback;
+    editorUpdateCallbacks[id] = callback;
     return id;
   }
   return -1;
 };
 
 export const removeEditorCallback = (id: CallbackId): boolean => {
-  if (id in editorCallbacks) {
-    delete editorCallbacks[id];
+  if (id in editorUpdateCallbacks) {
+    delete editorUpdateCallbacks[id];
     return true;
   }
   return false;
@@ -105,8 +105,8 @@ export const resetAllCallbacks = (): void => {
     delete editorDrawCallbacks[id];
   }
 
-  for (const id in editorCallbacks) {
-    delete editorCallbacks[id];
+  for (const id in editorUpdateCallbacks) {
+    delete editorUpdateCallbacks[id];
   }
 
   nextCallbackId = 1;
@@ -149,7 +149,7 @@ const gameloop = (currentTime: number) => {
     }
   }
   if (editorUpdateEnabled) {
-    for (const callback of Object.values(editorCallbacks)) {
+    for (const callback of Object.values(editorUpdateCallbacks)) {
       callback();
     }
   }
