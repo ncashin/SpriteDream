@@ -1,21 +1,63 @@
 import { resetDragHandlerInitialization } from "./dragHandler";
 import { isEditorMode } from "./utils";
+import { checkAndRunStartCallbacks } from "./initialization";
 
 export type CallbackId = number;
 
-const updateCallbacks: Record<CallbackId, (deltaTime: number) => void> = {};
-const drawCallbacks: Record<CallbackId, () => void> = {};
-const editorDrawCallbacks: Record<CallbackId, () => void> = {};
-const editorUpdateCallbacks: Record<CallbackId, () => void> = {};
+// Generic callback manager helper
+function createCallbackManager<T extends (...args: any[]) => void>(
+  requireEditorMode: boolean = false
+) {
+  const callbacks: Record<CallbackId, T> = {};
+
+  const add = (callback: T): CallbackId => {
+    if (requireEditorMode && !isEditorMode()) {
+      return -1;
+    }
+    const id = nextCallbackId++;
+    callbacks[id] = callback;
+    return id;
+  };
+
+  const remove = (id: CallbackId): boolean => {
+    if (id in callbacks) {
+      delete callbacks[id];
+      return true;
+    }
+    return false;
+  };
+
+  const clear = (): void => {
+    for (const id in callbacks) {
+      delete callbacks[id];
+    }
+  };
+
+  const getAll = (): T[] => {
+    return Object.values(callbacks);
+  };
+
+  return { add, remove, clear, getAll };
+}
 
 let nextCallbackId = 1;
+
+const updateCallbacks = createCallbackManager<(deltaTime: number) => void>();
+const drawCallbacks = createCallbackManager<() => void>();
+const editorDrawCallbacks = createCallbackManager<() => void>(true);
+const editorUpdateCallbacks = createCallbackManager<() => void>(true);
 
 export let updateEnabled = false;
 export let drawEnabled = true;
 export let editorUpdateEnabled = true;
 
 export const setUpdateEnabled = (enabled: boolean) => {
+  const previousValue = updateEnabled;
   updateEnabled = enabled;
+  // Check if we should run start callbacks when state changes
+  if (previousValue !== enabled) {
+    checkAndRunStartCallbacks(enabled);
+  }
 };
 export const setDrawEnabled = (enabled: boolean) => {
   drawEnabled = enabled;
@@ -30,87 +72,35 @@ export const isEditorUpdateEnabled = () => editorUpdateEnabled;
 
 export const addUpdateCallback = (
   callback: (deltaTime: number) => void
-): CallbackId => {
-  const id = nextCallbackId++;
-  updateCallbacks[id] = callback;
-  return id;
-};
+): CallbackId => updateCallbacks.add(callback);
 
-export const removeUpdateCallback = (id: CallbackId): boolean => {
-  if (id in updateCallbacks) {
-    delete updateCallbacks[id];
-    return true;
-  }
-  return false;
-};
+export const removeUpdateCallback = (id: CallbackId): boolean =>
+  updateCallbacks.remove(id);
 
-export const addDrawCallback = (callback: () => void): CallbackId => {
-  const id = nextCallbackId++;
-  drawCallbacks[id] = callback;
-  return id;
-};
+export const addDrawCallback = (callback: () => void): CallbackId =>
+  drawCallbacks.add(callback);
 
-export const removeDrawCallback = (id: CallbackId): boolean => {
-  if (id in drawCallbacks) {
-    delete drawCallbacks[id];
-    return true;
-  }
-  return false;
-};
+export const removeDrawCallback = (id: CallbackId): boolean =>
+  drawCallbacks.remove(id);
 
-export const addEditorDrawCallback = (callback: () => void): CallbackId => {
-  if (isEditorMode()) {
-    const id = nextCallbackId++;
-    editorDrawCallbacks[id] = callback;
-    return id;
-  }
-  return -1;
-};
+export const addEditorDrawCallback = (callback: () => void): CallbackId =>
+  editorDrawCallbacks.add(callback);
 
-export const removeEditorDrawCallback = (id: CallbackId): boolean => {
-  if (id in editorDrawCallbacks) {
-    delete editorDrawCallbacks[id];
-    return true;
-  }
-  return false;
-};
+export const removeEditorDrawCallback = (id: CallbackId): boolean =>
+  editorDrawCallbacks.remove(id);
 
-export const addEditorUpdateCallback = (callback: () => void): CallbackId => {
-  if (isEditorMode()) {
-    const id = nextCallbackId++;
-    editorUpdateCallbacks[id] = callback;
-    return id;
-  }
-  return -1;
-};
+export const addEditorUpdateCallback = (callback: () => void): CallbackId =>
+  editorUpdateCallbacks.add(callback);
 
-export const removeEditorCallback = (id: CallbackId): boolean => {
-  if (id in editorUpdateCallbacks) {
-    delete editorUpdateCallbacks[id];
-    return true;
-  }
-  return false;
-};
+export const removeEditorCallback = (id: CallbackId): boolean =>
+  editorUpdateCallbacks.remove(id);
 
 export const resetAllCallbacks = (): void => {
-  for (const id in updateCallbacks) {
-    delete updateCallbacks[id];
-  }
-
-  for (const id in drawCallbacks) {
-    delete drawCallbacks[id];
-  }
-
-  for (const id in editorDrawCallbacks) {
-    delete editorDrawCallbacks[id];
-  }
-
-  for (const id in editorUpdateCallbacks) {
-    delete editorUpdateCallbacks[id];
-  }
-
+  updateCallbacks.clear();
+  drawCallbacks.clear();
+  editorDrawCallbacks.clear();
+  editorUpdateCallbacks.clear();
   nextCallbackId = 1;
-
   resetDragHandlerInitialization();
 };
 
@@ -133,23 +123,23 @@ const gameloop = (currentTime: number) => {
   }
 
   if (updateEnabled && isPageVisible) {
-    for (const callback of Object.values(updateCallbacks)) {
+    for (const callback of updateCallbacks.getAll()) {
       callback(deltaTime);
     }
   }
 
   if (drawEnabled) {
-    for (const callback of Object.values(drawCallbacks)) {
+    for (const callback of drawCallbacks.getAll()) {
       callback();
     }
     if (editorUpdateEnabled) {
-      for (const callback of Object.values(editorDrawCallbacks)) {
+      for (const callback of editorDrawCallbacks.getAll()) {
         callback();
       }
     }
   }
   if (editorUpdateEnabled) {
-    for (const callback of Object.values(editorUpdateCallbacks)) {
+    for (const callback of editorUpdateCallbacks.getAll()) {
       callback();
     }
   }
@@ -159,12 +149,7 @@ const gameloop = (currentTime: number) => {
 };
 
 document.addEventListener("visibilitychange", () => {
-  const now = performance.now();
-  if (document.hidden) {
-    lastTime = now;
-  } else {
-    lastTime = now;
-  }
+  lastTime = performance.now();
 });
 
 requestAnimationFrame(gameloop);

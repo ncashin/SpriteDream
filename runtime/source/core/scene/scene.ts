@@ -23,6 +23,20 @@ function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
 
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return a === b;
+  if (typeof a !== typeof b) return false;
+  if (typeof a !== "object") return a === b;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
+}
+
 function mergeObjects<T extends Record<string, unknown>>(
   existing: T,
   incoming: Partial<T>
@@ -94,15 +108,18 @@ function createPersistentProxy<T extends Record<string, unknown>>(
 
       // Only record diff if we're not currently applying diffs (undo/redo)
       if (!undoRedoManager.isApplyingDiffs()) {
-        undoRedoManager.recordDiff(
-          undoRedoManager.createDiff(
-            currentPath,
-            oldValue !== undefined ? oldValue : undefined,
-            proxiedValue,
-            "set"
-          )
-        );
-        onSave(currentScene!);
+        // Only persist if the value actually changed
+        if (!deepEqual(oldValue, proxiedValue)) {
+          undoRedoManager.recordDiff(
+            undoRedoManager.createDiff(
+              currentPath,
+              oldValue !== undefined ? oldValue : undefined,
+              proxiedValue,
+              "set"
+            )
+          );
+          onSave(currentScene!);
+        }
       }
       return true;
     },
@@ -302,7 +319,7 @@ export function patchScene(sceneData: SceneData | string): void {
 export async function setSceneFile(
   filePath: string,
   content?: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     let sceneData: SceneData;
 
@@ -317,23 +334,30 @@ export async function setSceneFile(
     }
 
     const isReload = currentFilePath === filePath && hasScene();
+    const previousSceneJson = currentScene ? JSON.stringify(currentScene) : null;
     currentFilePath = filePath;
 
     if (isReload) {
       const merged = mergeWithCurrentScene(sceneData);
       setScene(merged);
-      return;
+      // Check if scene actually changed by comparing JSON
+      const newSceneJson = currentScene ? JSON.stringify(currentScene) : null;
+      const sceneChanged = previousSceneJson !== newSceneJson;
+      return sceneChanged;
     }
 
     setScene(sceneData);
+    // New scene file, so it definitely changed
+    return true;
   } catch (error) {
     console.error("Failed to load scene:", error);
     currentFilePath = filePath;
 
     if (hasScene()) {
-      return;
+      return false;
     }
 
     setScene({});
+    return true;
   }
 }

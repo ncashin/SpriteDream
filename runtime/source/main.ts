@@ -71,10 +71,10 @@ initializeGame({
 });
 
 function main({ ecs, input }: GameContext) {
-
   addStartCallback(() => {
     patchScene(playerScene);
   })
+  
   registerCollisionCallback({
     name: "player",
     callback: (_ecs, entity, _other, _overlapAmount, overlapNormal) => {

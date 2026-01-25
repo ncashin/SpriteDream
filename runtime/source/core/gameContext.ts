@@ -2,6 +2,7 @@ import type { Root } from "react-dom/client";
 import type { ComponentType } from "react";
 import { defineMainFunction, runGame } from "./runtimeWrapper";
 import { setScene, hasScene } from "./scene/scene";
+import type { curryECSInstance } from "./ecs/ecs";
 
 export type InitialGameContext = {
   rootElement: HTMLElement;
@@ -27,7 +28,7 @@ export type AccumulatePluginResults<
 
 export type RequirePlugin<T extends readonly Plugin<any, any>[]> =
   AccumulatePluginResults<T> & {
-    ecs: ReturnType<typeof import("./ecs/ecs").curryECSInstance>;
+    ecs: ReturnType<typeof curryECSInstance>;
   };
 
 export type GameConfig<T extends readonly Plugin<any, any>[]> = {
@@ -41,7 +42,6 @@ export type GameConfig<T extends readonly Plugin<any, any>[]> = {
 function createGameContext<T extends readonly Plugin<any, any>[]>(
   initialContext: InitialGameContext,
   plugins: T,
-  initialScene: string
 ): AccumulatePluginResults<T> {
   return (plugins as unknown as Plugin<any, any>[]).reduce(
     (context, plugin) => plugin(context),
@@ -61,7 +61,7 @@ export function initializeGame<T extends readonly Plugin<any, any>[]>({
   }
 
   defineMainFunction((initialContext: InitialGameContext) => {
-    const gameContext = createGameContext(initialContext, plugins, initialScene);
+    const gameContext = createGameContext(initialContext, plugins);
     main?.(gameContext);
   });
 
