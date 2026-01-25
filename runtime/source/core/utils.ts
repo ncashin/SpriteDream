@@ -24,6 +24,3 @@ export const isEditorMode = (): boolean => {
 
   return isBuildTimeEditorEnabled || isRuntimeEditorModeEnabled || isDevelopment;
 };
-
-// Legacy alias for backwards compatibility
-export const isEditorModeEnabled = isEditorMode;

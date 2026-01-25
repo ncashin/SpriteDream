@@ -6,10 +6,7 @@ import { isEditorUpdateEnabled } from "../gameloop";
 import { isEditorMode } from "../utils";
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
-import {
-  isEditorUIVisible,
-  subscribeToVisibilityChanges,
-} from "../editor/uiVisibility.ts";
+import { useUIVisibilityStore } from "../editor/uiVisibility.ts";
 
 export type Viewport = {
   x: number;
@@ -152,7 +149,7 @@ const updateViewportForResize = (): void => {
 
 function ViewportDebugUI() {
   const [viewportState, setViewportState] = React.useState(getViewport());
-  const [editorUIVisible, setEditorUIVisible] = React.useState(isEditorUIVisible());
+  const editorUIVisible = useUIVisibilityStore((state) => state.editorUIVisible);
   const animationFrameRef = React.useRef<number>();
 
   React.useEffect(() => {
@@ -166,13 +163,6 @@ function ViewportDebugUI() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, []);
-
-  React.useEffect(() => {
-    const unsubscribe = subscribeToVisibilityChanges(() => {
-      setEditorUIVisible(isEditorUIVisible());
-    });
-    return unsubscribe;
   }, []);
 
   if (!editorUIVisible) {

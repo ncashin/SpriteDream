@@ -3,7 +3,6 @@ import { getEntity } from "./ecs/ecs";
 import {
     TransformComponentDefinition,
     type TransformComponent,
-    PositionComponentDefinition,
 } from "./ecs/component";
 
 export type Transform = {
@@ -26,17 +25,6 @@ export function getTransform(
             rotation: transform.rotation ?? 0,
             scaleX: transform.scaleX ?? 1,
             scaleY: transform.scaleY ?? 1,
-        };
-    }
-
-    const position = getEntity(ecs, entity)[PositionComponentDefinition.type] as typeof PositionComponentDefinition | undefined;
-    if (position) {
-        return {
-            x: position.x,
-            y: position.y,
-            rotation: 0,
-            scaleX: 1,
-            scaleY: 1,
         };
     }
 

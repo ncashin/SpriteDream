@@ -1,23 +1,10 @@
-import { useState, useEffect } from "react";
-import {
-    isGameUIVisible,
-    isEditorUIVisible,
-    setGameUIVisible,
-    setEditorUIVisible,
-    subscribeToVisibilityChanges,
-} from "./uiVisibility.ts";
+import { useUIVisibilityStore } from "./uiVisibility.ts";
 
 export function UIVisibilityToggle() {
-    const [gameUIVisible, setGameUIVisibleState] = useState(isGameUIVisible());
-    const [editorUIVisible, setEditorUIVisibleState] = useState(isEditorUIVisible());
-
-    useEffect(() => {
-        const unsubscribe = subscribeToVisibilityChanges(() => {
-            setGameUIVisibleState(isGameUIVisible());
-            setEditorUIVisibleState(isEditorUIVisible());
-        });
-        return unsubscribe;
-    }, []);
+    const gameUIVisible = useUIVisibilityStore((state) => state.gameUIVisible);
+    const editorUIVisible = useUIVisibilityStore((state) => state.editorUIVisible);
+    const setGameUIVisible = useUIVisibilityStore((state) => state.setGameUIVisible);
+    const setEditorUIVisible = useUIVisibilityStore((state) => state.setEditorUIVisible);
 
     return (
         <div

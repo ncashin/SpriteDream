@@ -27,9 +27,9 @@ export function defineComponent<T extends Component>(
   }
 ): T {
   const type = component.type;
-  // Deep clone component, ensuring transform.parent is preserved as null if undefined
+
   const cloned = JSON.parse(JSON.stringify(component));
-  // Ensure transform.parent field is always present in defaultComponent
+
   if (type === 'transform' && cloned && typeof cloned === 'object') {
     if (!('parent' in cloned) || cloned.parent === undefined) {
       cloned.parent = null;
@@ -78,24 +78,6 @@ export const TransformComponentDefinition: TransformComponent = defineComponent(
         type: "number",
       },
     },
-  }
-);
-
-// Legacy PositionComponent for backward compatibility during migration
-export type PositionComponent = Component & {
-  type: "position";
-  x: number;
-  y: number;
-};
-export const PositionComponentDefinition: PositionComponent = defineComponent(
-  {
-    type: "position",
-    x: 0,
-    y: 0,
-  },
-  {
-    displayName: "Position",
-    description: "Entity position in 2D space (deprecated - use transform)",
   }
 );
 
