@@ -97,7 +97,7 @@ function DraggableEntityItem({
   onToggleExpand: (entity: Entity, e: React.MouseEvent) => void;
 }) {
   const gameContext = useGameContext();
-  const ecs = gameContext?.ecs as any;
+  const ecs = gameContext?.ecs;
   const selectedEntity = useSelectedEntity();
 
   const { attributes, listeners, setNodeRef, transform: dragTransform, isDragging } = useDraggable({
@@ -235,7 +235,7 @@ function DraggableEntityItem({
 
 export function EntityListPanel() {
   const gameContext = useGameContext();
-  const ecs = gameContext?.ecs as any;
+  const ecs = gameContext?.ecs;
 
   useECS();
 

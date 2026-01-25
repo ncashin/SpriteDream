@@ -7,6 +7,7 @@ import {
   type ComponentProxyHandler,
   type ComponentTypeString,
   curryECSInstance,
+  type CurriedECSWithScene,
 } from "../ecs/ecs";
 import type { InitialGameContext, ContextExtension } from "../gameContext";
 import { TransformComponentDefinition } from "../ecs/component";
@@ -191,16 +192,13 @@ export function initializeSceneECS<T extends InitialGameContext>(
     },
   });
 
-  // Register callback to update ECS instance after undo/redo
   undoRedoManager.setECSUpdateCallback(() => {
-    // Update the ECS instance's entities reference to point to the restored scene data
-    // Note: originalEntities and ecsData.entities are the same reference
-    if ((ecs as any).updateSceneEntities) {
-      (ecs as any).updateSceneEntities(originalEntities);
-    } else {
-      ecs.ecsInstance.entities = originalEntities;
-      invalidateComposedPools(ecs.ecsInstance);
+    if ('updateSceneEntities' in ecs) {
+      (ecs as CurriedECSWithScene).updateSceneEntities(originalEntities);
+      return;
     }
+    ecs.ecsInstance.entities = originalEntities;
+    invalidateComposedPools(ecs.ecsInstance);
   });
 
   return {

@@ -4,7 +4,7 @@ import { EntityModal } from "./EntityModal";
 
 export function EntityModalContainer() {
   const gameContext = useGameContext();
-  const ecs = gameContext?.ecs as any;
+  const ecs = gameContext?.ecs;
 
   useECS();
   const entities = useSceneEntities();

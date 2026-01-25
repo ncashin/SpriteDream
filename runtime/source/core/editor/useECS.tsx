@@ -29,7 +29,7 @@ export function useECS(): EntityState {
     });
 
     const gameContext = useGameContext();
-    const ecs = gameContext?.ecs as any;
+    const ecs = gameContext?.ecs;
 
     useEffect(() => {
         if (!ecs) {

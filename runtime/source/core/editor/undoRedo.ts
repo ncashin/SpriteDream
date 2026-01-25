@@ -229,6 +229,13 @@ class UndoRedoManager {
             historyLength: this.history.length,
         };
     }
+
+    /**
+     * Check if diffs are currently being applied (to prevent recording during undo/redo)
+     */
+    isApplyingDiffs(): boolean {
+        return this.isApplyingDiff;
+    }
 }
 
 // Singleton instance

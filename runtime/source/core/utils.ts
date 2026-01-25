@@ -17,10 +17,10 @@ export const isEditorMode = (): boolean => {
     (import.meta.env.VITE_EDITOR_ENABLED === true ||
       import.meta.env.VITE_EDITOR_ENABLED === "true");
 
-  // Check for runtime editor mode (set via window.__EDITOR_MODE_ENABLED__)
   const isRuntimeEditorModeEnabled =
     typeof window !== "undefined" &&
-    (window as any).__EDITOR_MODE_ENABLED__ === true;
+    '__EDITOR_MODE_ENABLED__' in window &&
+    (window as { __EDITOR_MODE_ENABLED__?: boolean }).__EDITOR_MODE_ENABLED__ === true;
 
   return isBuildTimeEditorEnabled || isRuntimeEditorModeEnabled || isDevelopment;
 };

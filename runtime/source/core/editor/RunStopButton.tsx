@@ -24,9 +24,8 @@ export function RunStopButton() {
 
     const wasRunning = isUpdateEnabled();
 
-    // Get the game context to access ECS
     const gameContext = getDefaultStore().get(gameContextAtom);
-    const ecs = gameContext?.ecs as any;
+    const ecs = gameContext?.ecs;
 
     // Save the selected entity before snapshot operations
     const selectedEntity = ecs?.getSelectedEntity?.() ?? null;

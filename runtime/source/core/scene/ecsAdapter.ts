@@ -6,6 +6,7 @@ import {
   type ComponentProxyHandler,
   type ComponentTypeString,
   curryECSInstance,
+  type CurriedECSWithScene,
 } from "../ecs/ecs";
 import type { InitialGameContext, ContextExtension } from "../gameContext";
 import { TransformComponentDefinition } from "../ecs/component";
@@ -130,6 +131,49 @@ export function ecsPlugin<T extends InitialGameContext>(
       }
     },
   });
+
+  // Create a proxy for scene.ecs that updates ECS when entities change
+  const proxiedSceneECS = new Proxy(ecsData, {
+    set: (target, property, value) => {
+      if (property === "entities" && typeof value === "object" && value !== null && !Array.isArray(value)) {
+        // When entities are replaced, update the ECS
+        const result = Reflect.set(target, property, value);
+        if (ecs && 'updateSceneEntities' in ecs) {
+          (ecs as CurriedECSWithScene).updateSceneEntities(value as Record<Entity, Record<ComponentTypeString, Component>>);
+        }
+        return result;
+      }
+      return Reflect.set(target, property, value);
+    },
+    get: (target, property) => {
+      const value = Reflect.get(target, property);
+      // Proxy the entities object to track changes
+      if (property === "entities" && value && typeof value === "object" && !Array.isArray(value)) {
+        return new Proxy(value as Record<Entity, Record<ComponentTypeString, Component>>, {
+          set: (entitiesTarget, entityKey, entityValue) => {
+            const result = Reflect.set(entitiesTarget, entityKey, entityValue);
+            // Update ECS when entities are added/modified
+            if (ecs && 'updateSceneEntities' in ecs) {
+              (ecs as CurriedECSWithScene).updateSceneEntities(entitiesTarget);
+            }
+            return result;
+          },
+          deleteProperty: (entitiesTarget, entityKey) => {
+            const result = Reflect.deleteProperty(entitiesTarget, entityKey);
+            // Update ECS when entities are deleted
+            if (ecs && 'updateSceneEntities' in ecs) {
+              (ecs as CurriedECSWithScene).updateSceneEntities(entitiesTarget);
+            }
+            return result;
+          },
+        });
+      }
+      return value;
+    },
+  });
+
+  // Replace scene.ecs with the proxy
+  scene.ecs = proxiedSceneECS as SceneECSData;
 
   const extendedContext = {
     ...context,

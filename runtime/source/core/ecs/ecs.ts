@@ -43,6 +43,7 @@ export type SetParentHandler = (
 ) => void;
 
 export type ECSInstanceCreateInfo = {
+  entities?: Record<Entity, EntityComponents>;
   createEntityCallback?: (entity: Entity) => void;
   addComponentCallback?: (entity: Entity, component: Component) => void;
   removeComponentCallback?: (
@@ -56,34 +57,102 @@ export type ECSInstanceCreateInfo = {
   setParentHandler?: SetParentHandler;
 };
 
+export const invalidateComposedPools = (instance: ECSInstance) => {
+  instance.composedPools = {};
+  instance.associatedComposedPoolKeys = {};
+};
+
+const createSceneEntitiesProxy = (
+  sceneEntities: Record<Entity, EntityComponents>,
+  instance: ECSInstance,
+): Record<Entity, EntityComponents> => {
+  return new Proxy(sceneEntities, {
+    set: (target, property, value) => {
+      if (typeof property !== "string") {
+        return Reflect.set(target, property, value);
+      }
+      const wasNew = !(property in target);
+      const result = Reflect.set(target, property, value);
+      if (wasNew || (value && typeof value === "object" && !Array.isArray(value))) {
+        invalidateComposedPools(instance);
+      }
+      return result;
+    },
+    deleteProperty: (target, property) => {
+      if (typeof property !== "string") {
+        return Reflect.deleteProperty(target, property);
+      }
+      const hadProperty = property in target;
+      const result = Reflect.deleteProperty(target, property);
+      if (hadProperty && result) {
+        invalidateComposedPools(instance);
+      }
+      return result;
+    },
+    get: (target, property) => {
+      const value = Reflect.get(target, property);
+      if (typeof property !== "string" || !value || typeof value !== "object" || Array.isArray(value)) {
+        return value;
+      }
+      return new Proxy(value as EntityComponents, {
+        set: (entityTarget, componentType, componentValue) => {
+          if (typeof componentType !== "string") {
+            return Reflect.set(entityTarget, componentType, componentValue);
+          }
+          const wasNew = !(componentType in entityTarget);
+          const result = Reflect.set(entityTarget, componentType, componentValue);
+          if (wasNew || (componentValue && typeof componentValue === "object")) {
+            invalidateComposedPools(instance);
+          }
+          return result;
+        },
+        deleteProperty: (entityTarget, componentType) => {
+          if (typeof componentType !== "string") {
+            return Reflect.deleteProperty(entityTarget, componentType);
+          }
+          const result = Reflect.deleteProperty(entityTarget, componentType);
+          invalidateComposedPools(instance);
+          return result;
+        },
+      });
+    },
+  });
+};
+
 export const createECSInstance = (
   ecsInstanceCreateInfo: ECSInstanceCreateInfo,
-): ECSInstance => ({
-  entities: {},
-  composedPools: {},
-  associatedComposedPoolKeys: {},
-  selectedEntity: null,
+): ECSInstance => {
+  const { entities: providedEntities, ...rest } = ecsInstanceCreateInfo;
+  const baseEntities = providedEntities || {};
 
-  ...ecsInstanceCreateInfo,
-});
+  const instance: ECSInstance = {
+    entities: {},
+    composedPools: {},
+    associatedComposedPoolKeys: {},
+    selectedEntity: null,
+    ...rest,
+  };
+
+  // If entities are provided, proxy them to sync changes with ECS state
+  if (providedEntities) {
+    instance.entities = createSceneEntitiesProxy(baseEntities, instance);
+  }
+
+  return instance;
+};
 
 export const createEntity = (instance: ECSInstance, name: string): Entity => {
   if (!name || typeof name !== 'string' || name.trim() === '') {
     throw new Error('Entity name is required and must be a non-empty string');
   }
 
-  // Check if entity is new before calling getEntity (which may create it)
   const wasNew = !instance.entities[name];
-
-  // Ensure entity exists in the instance
   const entityProxy = getEntity(instance, name);
 
-  // Trigger createEntity callback if this is a new entity
   if (wasNew && instance.createEntityCallback) {
     instance.createEntityCallback(name);
   }
 
-  // Add default component if configured and not already present
   if (instance.defaultComponent && !entityProxy[instance.defaultComponent.type]) {
     const defaultComponent = structuredClone(instance.defaultComponent);
     entityProxy[instance.defaultComponent.type] = defaultComponent;
@@ -105,9 +174,8 @@ export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
 
   delete instance.entities[entity];
 
-  if (instance.destroyEntityCallback) {
-    instance.destroyEntityCallback(entity);
-  }
+  if (!instance.destroyEntityCallback) return;
+  instance.destroyEntityCallback(entity);
 };
 
 export const renameEntity = (
@@ -115,7 +183,6 @@ export const renameEntity = (
   oldEntity: Entity,
   newEntity: Entity,
 ): boolean => {
-
   instance.entities[newEntity] = instance.entities[oldEntity];
   delete instance.entities[oldEntity];
 
@@ -165,9 +232,9 @@ const createComponentReference = <ComponentType extends Component>(
   const existingComponent = entityComponents[COMPONENT_TYPE_DEF.type];
   if (existingComponent) {
     Object.assign(existingComponent, COMPONENT_TYPE_DEF);
-  } else {
-    entityComponents[COMPONENT_TYPE_DEF.type] = structuredClone(COMPONENT_TYPE_DEF);
+    return;
   }
+  entityComponents[COMPONENT_TYPE_DEF.type] = structuredClone(COMPONENT_TYPE_DEF);
 };
 
 const updateComposedPoolsForComponent = (
@@ -186,14 +253,12 @@ const updateComposedPoolsForComponent = (
       if (component === undefined) continue;
       composedComponents.push(component);
     }
-    if (composedComponents.length === parsedKeyComponentTypes.length) {
-      if (!instance.composedPools[keyToUpdate]) {
-        instance.composedPools[keyToUpdate] = [];
-      }
-      if (!instance.composedPools[keyToUpdate].includes(entity)) {
-        instance.composedPools[keyToUpdate].push(entity);
-      }
+    if (composedComponents.length !== parsedKeyComponentTypes.length) continue;
+    if (!instance.composedPools[keyToUpdate]) {
+      instance.composedPools[keyToUpdate] = [];
     }
+    if (instance.composedPools[keyToUpdate].includes(entity)) continue;
+    instance.composedPools[keyToUpdate].push(entity);
   }
 };
 
@@ -204,12 +269,10 @@ const removeFromComposedPools = (
 ) => {
   const componentDef = { type: componentType };
   for (const keyToUpdate of lookupAssociatedComposedPoolKeys(instance, componentDef)) {
-    if (instance.composedPools[keyToUpdate]) {
-      const index = instance.composedPools[keyToUpdate].indexOf(entity);
-      if (index !== -1) {
-        instance.composedPools[keyToUpdate].splice(index, 1);
-      }
-    }
+    if (!instance.composedPools[keyToUpdate]) continue;
+    const index = instance.composedPools[keyToUpdate].indexOf(entity);
+    if (index === -1) continue;
+    instance.composedPools[keyToUpdate].splice(index, 1);
   }
 };
 
@@ -226,10 +289,10 @@ const createEntityProxy = (
       }
 
       const component = target[property];
-      if (component && instance.componentProxyHandler) {
-        return createComponentProxy(instance, entity, component);
+      if (!component || !instance.componentProxyHandler) {
+        return component;
       }
-      return component;
+      return createComponentProxy(instance, entity, component);
     },
 
     set: (target, property, value) => {
@@ -242,18 +305,14 @@ const createEntityProxy = (
         return false;
       }
 
-      // Ensure the component type matches the property
       if (component.type !== property) {
         return false;
       }
 
       const wasNew = !target[property];
       createComponentReference(instance, entity, component);
-
-      // Update composed pools
       updateComposedPoolsForComponent(instance, entity, component.type);
 
-      // Trigger addComponent callback if this is a new component
       if (wasNew && instance.addComponentCallback) {
         const addedComponent = lookupComponent(instance, entity, component);
         if (addedComponent) {
@@ -274,15 +333,12 @@ const createEntityProxy = (
         return false;
       }
 
-      // Remove from composed pools
       removeFromComposedPools(instance, entity, property);
 
-      // Trigger removeComponent callback
       if (instance.removeComponentCallback) {
         instance.removeComponentCallback(entity, component);
       }
 
-      // Delete the component
       delete target[property];
       return true;
     },
@@ -298,7 +354,6 @@ const createEntityProxy = (
     getOwnPropertyDescriptor: (target, property) => {
       const descriptor = Reflect.getOwnPropertyDescriptor(target, property);
       if (descriptor) {
-        // Ensure properties are enumerable and configurable for destructuring
         return {
           ...descriptor,
           enumerable: true,
@@ -314,10 +369,11 @@ const lookupAssociatedComposedPoolKeys = <ComponentType extends Component>(
   COMPONENT_TYPE_DEF: ComponentType,
 ) => {
   if (
-    instance.associatedComposedPoolKeys[COMPONENT_TYPE_DEF.type] === undefined
+    instance.associatedComposedPoolKeys[COMPONENT_TYPE_DEF.type] !== undefined
   ) {
-    instance.associatedComposedPoolKeys[COMPONENT_TYPE_DEF.type] = [];
+    return instance.associatedComposedPoolKeys[COMPONENT_TYPE_DEF.type];
   }
+  instance.associatedComposedPoolKeys[COMPONENT_TYPE_DEF.type] = [];
   return instance.associatedComposedPoolKeys[COMPONENT_TYPE_DEF.type];
 };
 
@@ -353,10 +409,10 @@ export const getComponent = <ComponentType extends Component>(
   entity: Entity,
   COMPONENT_TYPE_DEF: ComponentType,
 ): ComponentType | undefined => {
-  if (instance.componentProxyHandler !== undefined) {
-    return createComponentProxy(instance, entity, COMPONENT_TYPE_DEF);
+  if (instance.componentProxyHandler === undefined) {
+    return lookupComponent(instance, entity, COMPONENT_TYPE_DEF);
   }
-  return lookupComponent(instance, entity, COMPONENT_TYPE_DEF);
+  return createComponentProxy(instance, entity, COMPONENT_TYPE_DEF);
 };
 
 export function getEntity(
@@ -417,9 +473,8 @@ export const queryEntities = <const ComposedType extends Component[]>(
       }
     }
 
-    if (hasAllComponents) {
-      poolEntities.push(entityID);
-    }
+    if (!hasAllComponents) continue;
+    poolEntities.push(entityID);
   }
 
   instance.composedPools[combination] = poolEntities;
@@ -523,9 +578,8 @@ export const setParent = (
   entity: Entity,
   parentId: Entity | null,
 ): void => {
-  if (instance.setParentHandler) {
-    instance.setParentHandler(instance, entity, parentId);
-  }
+  if (!instance.setParentHandler) return;
+  instance.setParentHandler(instance, entity, parentId);
 };
 
 
@@ -546,100 +600,25 @@ export const hasComponents = <const ComposedType extends Component[]>(
   return true;
 };
 
-export const invalidateComposedPools = (instance: ECSInstance) => {
-  instance.composedPools = {};
-  instance.associatedComposedPoolKeys = {};
-};
-
-const createSceneEntitiesProxy = (
-  sceneEntities: Record<Entity, EntityComponents>,
-  instance: ECSInstance,
-): Record<Entity, EntityComponents> => {
-  return new Proxy(sceneEntities, {
-    set: (target, property, value) => {
-      if (typeof property === "string") {
-        const wasNew = !(property in target);
-        const result = Reflect.set(target, property, value);
-        // Always invalidate pools when entities are added or modified
-        // This ensures restored entities are properly included in pools
-        if (wasNew || (value && typeof value === "object" && !Array.isArray(value))) {
-          invalidateComposedPools(instance);
-        }
-        return result;
-      }
-      return Reflect.set(target, property, value);
-    },
-    deleteProperty: (target, property) => {
-      if (typeof property === "string") {
-        const hadProperty = property in target;
-        const result = Reflect.deleteProperty(target, property);
-        // Always invalidate pools when entities are deleted
-        if (hadProperty && result) {
-          invalidateComposedPools(instance);
-        }
-        return result;
-      }
-      return Reflect.deleteProperty(target, property);
-    },
-    get: (target, property) => {
-      const value = Reflect.get(target, property);
-      if (typeof property === "string" && value && typeof value === "object" && !Array.isArray(value)) {
-        // Proxy entity components to invalidate pools when components are added/removed
-        return new Proxy(value as EntityComponents, {
-          set: (entityTarget, componentType, componentValue) => {
-            if (typeof componentType === "string") {
-              const wasNew = !(componentType in entityTarget);
-              const result = Reflect.set(entityTarget, componentType, componentValue);
-              // Always invalidate pools when components are added or modified
-              if (wasNew || (componentValue && typeof componentValue === "object")) {
-                invalidateComposedPools(instance);
-              }
-              return result;
-            }
-            return Reflect.set(entityTarget, componentType, componentValue);
-          },
-          deleteProperty: (entityTarget, componentType) => {
-            if (typeof componentType === "string") {
-              const result = Reflect.deleteProperty(entityTarget, componentType);
-              // Always invalidate pools when components are removed
-              invalidateComposedPools(instance);
-              return result;
-            }
-            return Reflect.deleteProperty(entityTarget, componentType);
-          },
-        });
-      }
-      return value;
-    },
-  });
+export type CurriedECSWithScene = ReturnType<typeof curryECSInstance> & {
+  _originalEntities: Record<Entity, EntityComponents>;
+  updateSceneEntities: (newEntities: Record<Entity, EntityComponents>) => void;
 };
 
 export const currySceneECSData = (
   sceneEntities: Record<Entity, EntityComponents>,
   ecsInstanceCreateInfo?: ECSInstanceCreateInfo,
-) => {
+): CurriedECSWithScene => {
   const ecsInstance = createECSInstance(ecsInstanceCreateInfo ?? {});
-  // Store direct reference to original entities for callbacks
   const originalEntities = sceneEntities;
   ecsInstance.entities = createSceneEntitiesProxy(sceneEntities, ecsInstance);
-  const curried = curryECSInstance(ecsInstance);
+  const curried = curryECSInstance(ecsInstance) as CurriedECSWithScene;
 
-  // Store original entities reference for callbacks that need direct access
-  (curried as any)._originalEntities = originalEntities;
-
-  // Expose a method to update entities reference (for undo/redo scenarios)
-  (curried as any).updateSceneEntities = (newEntities: Record<Entity, EntityComponents>) => {
-    (curried as any)._originalEntities = newEntities;
-
-    // Update the entities reference to point to the new scene data
-    // This ensures the ECS instance always reflects scene data
+  curried._originalEntities = originalEntities;
+  curried.updateSceneEntities = (newEntities: Record<Entity, EntityComponents>) => {
+    curried._originalEntities = newEntities;
     ecsInstance.entities = createSceneEntitiesProxy(newEntities, ecsInstance);
-
-    // Invalidate pools so they'll be rebuilt on next query
-    // This ensures restored entities are properly included in pools
     invalidateComposedPools(ecsInstance);
-
-    // Also clear selected entity if it no longer exists
     if (ecsInstance.selectedEntity && !newEntities[ecsInstance.selectedEntity]) {
       ecsInstance.selectedEntity = null;
     }

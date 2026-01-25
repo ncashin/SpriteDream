@@ -15,7 +15,7 @@ interface EntityModalProps {
 
 export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const gameContext = useGameContext();
-  const ecs = gameContext?.ecs as any;
+  const ecs = gameContext?.ecs;
   const entityData = useEntityData(entity);
   const [entityDataJson, setEntityDataJson] = useState("");
   const [showAddComponent, setShowAddComponent] = useState(false);

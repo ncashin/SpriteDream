@@ -12,15 +12,6 @@ let sceneSnapshot: SceneData | null = null;
 
 const DEFAULT_SCENE: SceneData = {};
 const SAVE_DEBOUNCE_MS = 500;
-const ARRAY_MUTATION_METHODS = [
-  "push",
-  "pop",
-  "shift",
-  "unshift",
-  "splice",
-  "sort",
-  "reverse",
-] as const;
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return (
@@ -32,117 +23,10 @@ function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
 
-function createPersistentProxy<T extends Record<string, unknown>>(
-  obj: T,
-  onSave: (sceneData: SceneData) => void,
-  path: string = ""
+function mergeObjects<T extends Record<string, unknown>>(
+  existing: T,
+  incoming: Partial<T>
 ): T {
-  if (!isObject(obj)) return obj;
-
-  return new Proxy(obj, {
-    set(target: T, property: string | symbol, value: unknown): boolean {
-      if (typeof property === "symbol" || property === "length") {
-        const newValue = isObject(value)
-          ? createPersistentProxy(value, onSave, path)
-          : value;
-        Reflect.set(target, property, newValue);
-        return true;
-      }
-
-      // Capture old value for diff
-      const oldValue = Reflect.get(target, property);
-      const currentPath = path ? `${path}.${property}` : property;
-
-      // Set new value
-      const newValue = isObject(value)
-        ? createPersistentProxy(value, onSave, currentPath)
-        : value;
-      Reflect.set(target, property, newValue);
-
-      // Record diff
-      if (oldValue !== undefined) {
-        // Property existed, this is a modification
-        undoRedoManager.recordDiff(
-          undoRedoManager.createDiff(currentPath, oldValue, newValue, "set")
-        );
-      } else {
-        // Property didn't exist, this is a new property
-        undoRedoManager.recordDiff(
-          undoRedoManager.createDiff(currentPath, undefined, newValue, "set")
-        );
-      }
-
-      onSave(currentScene!);
-      return true;
-    },
-
-    deleteProperty(target: T, property: string | symbol): boolean {
-      if (typeof property === "symbol") {
-        Reflect.deleteProperty(target, property);
-        return true;
-      }
-
-      // Capture old value for diff
-      const oldValue = Reflect.get(target, property);
-      const currentPath = path ? `${path}.${property}` : property;
-
-      // Delete property
-      Reflect.deleteProperty(target, property);
-
-      // Record diff
-      if (oldValue !== undefined) {
-        undoRedoManager.recordDiff(
-          undoRedoManager.createDiff(currentPath, oldValue, undefined, "delete")
-        );
-      }
-
-      onSave(currentScene!);
-      return true;
-    },
-
-    get(target: T, property: string | symbol): unknown {
-      const value = Reflect.get(target, property);
-
-      if (
-        Array.isArray(target) &&
-        typeof property === "string" &&
-        ARRAY_MUTATION_METHODS.includes(
-          property as (typeof ARRAY_MUTATION_METHODS)[number]
-        )
-      ) {
-        return (...args: unknown[]) => {
-          // For array mutations, we need to track the changes
-          // This is complex, so we'll just record that the array changed
-          const result = (value as (...args: unknown[]) => unknown).apply(
-            target,
-            args
-          );
-
-          // Record a diff for the entire array (simplified approach)
-          const currentPath = path || "root";
-          const oldValue = deepClone(target);
-          // The array has been mutated, so we record the change
-          // Note: This is a simplified approach - ideally we'd track individual element changes
-          undoRedoManager.recordDiff(
-            undoRedoManager.createDiff(currentPath, oldValue, deepClone(target), "set")
-          );
-
-          onSave(currentScene!);
-          return result;
-        };
-      }
-
-      if (isObject(value)) {
-        const currentPath = path ? `${path}.${String(property)}` : String(property);
-        return createPersistentProxy(value as Record<string, unknown>, onSave, currentPath) as T[Extract<keyof T, string>];
-      }
-
-      return value;
-    },
-  });
-}
-
-function mergeObjects(existing: SceneData, incoming: SceneData): SceneData {
   const merged = deepClone(existing);
 
   for (const key in incoming) {
@@ -150,9 +34,12 @@ function mergeObjects(existing: SceneData, incoming: SceneData): SceneData {
     const existingValue = merged[key];
 
     if (isObject(incomingValue) && isObject(existingValue)) {
-      merged[key] = mergeObjects(existingValue, incomingValue);
+      merged[key] = mergeObjects(
+        existingValue as Record<string, unknown>,
+        incomingValue as Record<string, unknown>
+      ) as T[Extract<keyof T, string>];
     } else {
-      merged[key] = deepClone(incomingValue);
+      merged[key] = deepClone(incomingValue) as T[Extract<keyof T, string>];
     }
   }
 
@@ -165,16 +52,98 @@ function mergeObjects(existing: SceneData, incoming: SceneData): SceneData {
   return merged;
 }
 
-function mergeSceneData(
-  existing: SceneData | null,
-  incoming: SceneData
-): SceneData {
+function mergeSceneData<T extends Record<string, unknown>>(
+  existing: T | null,
+  incoming: T
+): T {
   if (!existing) return deepClone(incoming);
   return mergeObjects(existing, incoming);
 }
 
 export function mergeWithCurrentScene(incoming: SceneData): SceneData {
   return mergeSceneData(currentScene, incoming);
+}
+
+function createPersistentProxy<T extends Record<string, unknown>>(
+  obj: T,
+  onSave: (sceneData: SceneData) => void,
+  path: string = ""
+): T {
+  if (!isObject(obj)) return obj;
+  return new Proxy(obj, {
+    set(target: T, property: string | symbol, value: unknown): boolean {
+      if (typeof property === "symbol") {
+        Reflect.set(target, property, value);
+        return true;
+      }
+      const oldValue = Reflect.get(target, property);
+
+      // If the value is an object, wrap it in a proxy before setting
+      let proxiedValue = value;
+      if (isObject(value)) {
+        const currentPath = path ? `${path}.${property}` : property;
+        proxiedValue = createPersistentProxy(
+          value as Record<string, unknown>,
+          onSave,
+          currentPath
+        ) as unknown;
+      }
+
+      Reflect.set(target, property, proxiedValue);
+      const currentPath = path ? `${path}.${property}` : property;
+
+      // Only record diff if we're not currently applying diffs (undo/redo)
+      if (!undoRedoManager.isApplyingDiffs()) {
+        undoRedoManager.recordDiff(
+          undoRedoManager.createDiff(
+            currentPath,
+            oldValue !== undefined ? oldValue : undefined,
+            proxiedValue,
+            "set"
+          )
+        );
+        onSave(currentScene!);
+      }
+      return true;
+    },
+
+    deleteProperty(target: T, property: string | symbol): boolean {
+      if (typeof property === "symbol") {
+        Reflect.deleteProperty(target, property);
+        return true;
+      }
+      const oldValue = Reflect.get(target, property);
+      Reflect.deleteProperty(target, property);
+      const currentPath = path ? `${path}.${property}` : property;
+
+      // Only record diff if we're not currently applying diffs (undo/redo)
+      if (!undoRedoManager.isApplyingDiffs()) {
+        if (oldValue !== undefined) {
+          undoRedoManager.recordDiff(
+            undoRedoManager.createDiff(currentPath, oldValue, undefined, "delete")
+          );
+        }
+        onSave(currentScene!);
+      }
+      return true;
+    },
+
+    get(target: T, property: string | symbol): unknown {
+      const value = Reflect.get(target, property);
+
+      // If the value is an object, return a proxied version
+      if (isObject(value)) {
+        const currentPath = path ? `${path}.${String(property)}` : String(property);
+        return createPersistentProxy(
+          value as Record<string, unknown>,
+          onSave,
+          currentPath
+        );
+      }
+
+      return value;
+    },
+  });
 }
 
 function applyDiffToScene(diff: SceneData, skipSave: boolean = false): void {
@@ -191,31 +160,32 @@ function applyDiffToScene(diff: SceneData, skipSave: boolean = false): void {
     persistenceEnabled = false;
   }
 
-  try {
-    function applyDiffRecursive(
-      target: SceneData,
-      diff: SceneData
-    ): void {
-      for (const key in diff) {
-        const diffValue = diff[key];
-        const targetValue = target[key];
+  function applyDiffRecursive(
+    target: SceneData,
+    diff: SceneData
+  ): void {
+    for (const key in diff) {
+      const diffValue = diff[key];
+      const targetValue = target[key];
 
-        if (isObject(diffValue) && isObject(targetValue)) {
-          applyDiffRecursive(targetValue as SceneData, diffValue as SceneData);
-        } else {
-          target[key] = deepClone(diffValue);
-        }
+      if (isObject(diffValue) && isObject(targetValue)) {
+        applyDiffRecursive(targetValue as SceneData, diffValue as SceneData);
+      } else if (isObject(diffValue)) {
+        target[key] = {};
+        applyDiffRecursive(target[key] as SceneData, diffValue as SceneData);
+      } else {
+        target[key] = diffValue;
       }
     }
-
-    applyDiffRecursive(currentScene, diff);
-
-    if (sceneSnapshot) {
-      applyDiffRecursive(sceneSnapshot, diff);
-    }
-  } finally {
-    persistenceEnabled = wasPersistenceEnabled;
   }
+
+  applyDiffRecursive(currentScene, diff);
+
+  if (sceneSnapshot) {
+    applyDiffRecursive(sceneSnapshot, diff);
+  }
+
+  persistenceEnabled = wasPersistenceEnabled;
 }
 
 export function updateSceneWithDiff(diff: SceneData): void {
@@ -237,28 +207,25 @@ function saveScene(filePath: string, sceneData: SceneData): void {
 }
 
 export function setScene(sceneData: SceneData | string): void {
-  try {
-    let parsedData: SceneData =
-      typeof sceneData === "string" ? JSON.parse(sceneData) : sceneData;
+  let data: SceneData;
 
-    // Validate parsed data
-    if (typeof parsedData !== "object" || parsedData === null || Array.isArray(parsedData)) {
-      console.warn("Invalid scene data, using default scene");
-      parsedData = DEFAULT_SCENE;
+  if (typeof sceneData === "string") {
+    try {
+      data = JSON.parse(sceneData);
+    } catch {
+      console.warn("Invalid scene JSON, using default scene");
+      data = DEFAULT_SCENE;
     }
-
-    const onSave = currentFilePath
-      ? (data: SceneData) => saveScene(currentFilePath!, data)
-      : () => { };
-    currentScene = createPersistentProxy(deepClone(parsedData), onSave);
-  } catch (error) {
-    console.error("Failed to set scene:", error);
-    // Fallback to default scene
-    const onSave = currentFilePath
-      ? (data: SceneData) => saveScene(currentFilePath!, data)
-      : () => { };
-    currentScene = createPersistentProxy(DEFAULT_SCENE, onSave);
+  } else {
+    data = sceneData || DEFAULT_SCENE;
   }
+
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    data = DEFAULT_SCENE;
+  }
+
+  const onSave = currentFilePath ? (d: SceneData) => saveScene(currentFilePath!, d) : () => { };
+  currentScene = createPersistentProxy(deepClone(data), onSave);
 }
 
 export function hasScene(): boolean {
