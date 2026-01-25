@@ -5,6 +5,7 @@ import {
   type Entity,
   type ComponentProxyHandler,
   type ComponentTypeString,
+  curryECSInstance,
 } from "../ecs/ecs";
 import type { InitialGameContext, ContextExtension } from "../gameContext";
 import { TransformComponentDefinition } from "../ecs/component";
