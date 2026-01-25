@@ -382,6 +382,12 @@ class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> 
         this.updateWebview(document, webviewPanel);
 
         webviewPanel.webview.onDidReceiveMessage(async (message) => {
+            if (message.command === 'save') {
+                // Trigger save for the current document
+                await vscode.commands.executeCommand('workbench.action.files.save');
+                return;
+            }
+            
             if (message.type && message.requestId) {
                 const requestId = message.requestId;
                 

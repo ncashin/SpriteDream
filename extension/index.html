@@ -43,6 +43,9 @@
                     if (pendingScene) {
                         sendSceneToRuntime(pendingScene);
                     }
+                } else if (message.command === 'save') {
+                    // Forward save command to VS Code extension
+                    vscode.postMessage({ command: 'save' });
                 } else if (message.type && message.requestId) {
                     pendingFileRequests.set(message.requestId, message.type);
                     vscode.postMessage(message);

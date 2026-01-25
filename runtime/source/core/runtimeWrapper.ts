@@ -166,4 +166,16 @@ export function defineMainFunction(fn: MainFunction) {
 }
 
 window.addEventListener("message", handleMessage);
+
+// Listen for Cmd+S / Ctrl+S to trigger save
+if (isInIframe) {
+  window.addEventListener("keydown", (e: KeyboardEvent) => {
+    // Check for Cmd+S (Mac) or Ctrl+S (Windows/Linux)
+    if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+      e.preventDefault();
+      notifyParent("save");
+    }
+  });
+}
+
 notifyParent("runtimeReady");
