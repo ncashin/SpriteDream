@@ -73,7 +73,10 @@ const createSceneEntitiesProxy = (
       }
       const wasNew = !(property in target);
       const result = Reflect.set(target, property, value);
-      if (wasNew || (value && typeof value === "object" && !Array.isArray(value))) {
+      // Only invalidate if replacing an existing entity with a different one
+      // Don't invalidate when creating a new empty entity - that will be handled
+      // when components are added via the nested proxy
+      if (!wasNew && value && typeof value === "object" && !Array.isArray(value)) {
         invalidateComposedPools(instance);
       }
       return result;
@@ -99,17 +102,17 @@ const createSceneEntitiesProxy = (
           if (typeof componentType !== "string") {
             return Reflect.set(entityTarget, componentType, componentValue);
           }
-          const wasNew = !(componentType in entityTarget);
+          // Don't invalidate composed pools here - the createEntityProxy setter
+          // will handle incremental updates via updateComposedPoolsForComponent
+          // Skip invalidation - let the ECS API handle pool updates incrementally
           const result = Reflect.set(entityTarget, componentType, componentValue);
-          if (wasNew || (componentValue && typeof componentValue === "object")) {
-            invalidateComposedPools(instance);
-          }
           return result;
         },
         deleteProperty: (entityTarget, componentType) => {
           if (typeof componentType !== "string") {
             return Reflect.deleteProperty(entityTarget, componentType);
           }
+          // Component removal should invalidate since we need to remove from pools
           const result = Reflect.deleteProperty(entityTarget, componentType);
           invalidateComposedPools(instance);
           return result;
