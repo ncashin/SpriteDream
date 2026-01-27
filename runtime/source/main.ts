@@ -17,7 +17,7 @@ import playerScene from "../scenes/player.scene?raw";
 
 import { EditorUI } from "./EditorUI";
 import { GameUI } from "./GameUI";
-import { addStartCallback } from "./core/initialization";
+import { addEditorStartCallback, addStartCallback } from "./core/initialization";
 import { patchScene } from "./core/scene/scene";
 
 export {
@@ -62,6 +62,19 @@ export const PlayerComponentDefinition: PlayerComponent = defineComponent(
   }
 );
 
+export const SceneEntity = defineComponent(
+  {
+    type: "player",
+    sceneFile: "",
+  },
+  {
+    displayName: "Scene Entity",
+    description: "It do Scene Entity Things",
+  }
+);
+
+
+
 initializeGame({
   plugins,
   initialScene,
@@ -71,9 +84,10 @@ initializeGame({
 });
 
 function main({ ecs, input }: GameContext) {
-  addStartCallback(() => {
+
+  addEditorStartCallback(() => {
     patchScene(playerScene);
-  })
+  });
 
   addUpdateCallback((deltaTime: number) => {
     const playerEntityId = "player";
