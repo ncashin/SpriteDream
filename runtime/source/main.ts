@@ -84,11 +84,6 @@ initializeGame({
 });
 
 function main({ ecs, input }: GameContext) {
-
-  addEditorStartCallback(() => {
-    patchScene(playerScene);
-  });
-
   addUpdateCallback((deltaTime: number) => {
     const playerEntityId = "player";
     const playerEntity = ecs.getEntity(playerEntityId, [PlayerComponentDefinition, VelocityComponentDefinition]);
