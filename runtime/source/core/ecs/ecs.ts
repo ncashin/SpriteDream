@@ -415,33 +415,38 @@ export const getComponent = <ComponentType extends Component>(
   return createComponentProxy(instance, entity, COMPONENT_TYPE_DEF);
 };
 
+type EntityWithComponents<ComposedType extends readonly Component[]> = Record<string, Component> & {
+  [K in ComposedType[number]as K['type']]: K;
+};
+
+type UnknownExtraProps = { [k: string]: unknown };
+
 export function getEntity(
   instance: ECSInstance,
   entity: Entity,
 ): Record<string, Component>;
-export function getEntity<const ComposedType extends Component[]>(
+export function getEntity<const ComposedType extends readonly Component[]>(
   instance: ECSInstance,
   entity: Entity,
   COMPONENT_TYPE_DEFS: ComposedType,
-): Record<string, Component> | undefined;
-export function getEntity<const ComposedType extends Component[]>(
+): (EntityWithComponents<ComposedType> & UnknownExtraProps) | undefined;
+export function getEntity<const ComposedType extends readonly Component[]>(
   instance: ECSInstance,
   entity: Entity,
   COMPONENT_TYPE_DEFS?: ComposedType,
-): Record<string, Component> | undefined {
+): Record<string, Component> | (EntityWithComponents<ComposedType> & UnknownExtraProps) | undefined {
   if (COMPONENT_TYPE_DEFS !== undefined) {
     if (!instance.entities[entity]) {
       return undefined;
     }
-    const entityProxy = createEntityProxy(instance, entity);
-    if (!hasComponents(entityProxy, COMPONENT_TYPE_DEFS)) {
+    const entityProxy = createEntityProxy(instance, entity) as EntityWithComponents<ComposedType> & UnknownExtraProps;
+    if (!hasComponents(entityProxy, COMPONENT_TYPE_DEFS as unknown as Component[])) {
       return undefined;
     }
     return entityProxy;
   }
 
-  const entityProxy = createEntityProxy(instance, entity);
-  return entityProxy;
+  return createEntityProxy(instance, entity);
 }
 
 export const queryEntities = <const ComposedType extends Component[]>(
@@ -541,20 +546,23 @@ export const curryECSInstance = (instance: ECSInstance) => ({
     COMPONENT_TYPE_DEF: ComponentType,
   ): ComponentType | undefined =>
     getComponent(instance, entity, COMPONENT_TYPE_DEF),
-  getEntity: (<const ComposedType extends Component[]>(
+  getEntity: (<const ComposedType extends readonly Component[]>(
     entity: Entity,
     COMPONENT_TYPE_DEFS?: ComposedType,
-  ): Record<string, Component> | undefined => {
+  ):
+    | (EntityWithComponents<ComposedType> & UnknownExtraProps)
+    | Record<string, Component>
+    | undefined => {
     if (COMPONENT_TYPE_DEFS !== undefined) {
-      return getEntity(instance, entity, COMPONENT_TYPE_DEFS);
+      return getEntity(instance, entity, COMPONENT_TYPE_DEFS) as EntityWithComponents<ComposedType> & UnknownExtraProps;
     }
     return getEntity(instance, entity);
   }) as {
     (entity: Entity): Record<string, Component>;
-    <const ComposedType extends Component[]>(
+    <const ComposedType extends readonly Component[]>(
       entity: Entity,
       COMPONENT_TYPE_DEFS: ComposedType,
-    ): Record<string, Component> | undefined;
+    ): (EntityWithComponents<ComposedType> & UnknownExtraProps) | undefined;
   },
   hasComponents: <const ComposedType extends Component[]>(
     entityData: Record<string, Component>,
@@ -584,11 +592,6 @@ export const setParent = (
 ): void => {
   if (!instance.setParentHandler) return;
   instance.setParentHandler(instance, entity, parentId);
-};
-
-
-type EntityWithComponents<ComposedType extends Component[]> = Record<string, Component> & {
-  [K in ComposedType[number]as K['type']]: K;
 };
 
 export const hasComponents = <const ComposedType extends Component[]>(

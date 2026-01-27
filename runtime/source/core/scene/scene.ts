@@ -276,8 +276,6 @@ export async function restoreSceneFromSnapshot(): Promise<void> {
       : () => { };
     currentScene = createPersistentProxy(deepClone(sceneSnapshot), onSave);
   } finally {
-    // Use setTimeout to ensure any operations triggered by restoration
-    // (like ECS updates) are also covered by the initialization flag
     setTimeout(() => {
       isInitializing = wasInitializing;
     }, 0);

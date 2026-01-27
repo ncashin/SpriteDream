@@ -74,33 +74,6 @@ function main({ ecs, input }: GameContext) {
   addStartCallback(() => {
     patchScene(playerScene);
   })
-  
-  registerCollisionCallback({
-    name: "player",
-    callback: (_ecs, entity, _other, _overlapAmount, overlapNormal) => {
-      const entityData = ecs.getEntity(entity);
-      if (!ecs.hasComponents(entityData, [PlayerComponentDefinition, VelocityComponentDefinition])) {
-        return;
-      }
-
-      const velocity = getEntity(_ecs, entity)[VelocityComponentDefinition.type] as typeof VelocityComponentDefinition;
-
-      const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
-      const isNormalPointingUp = overlapNormal[1] < 0;
-      const isNormalPointingDown = overlapNormal[1] > 0;
-      const isLandingOnTop = isVerticalCollision && isNormalPointingUp;
-      const isHittingHead = isVerticalCollision && isNormalPointingDown;
-
-      if (velocity.y > 0 && isLandingOnTop) {
-        velocity.y = 0;
-        entityData.player.isGrounded = true;
-      }
-
-      if (velocity.y < 0 && isHittingHead) {
-        velocity.y = 0;
-      }
-    },
-  });
 
   addUpdateCallback((deltaTime: number) => {
     const playerEntityId = "player";
@@ -128,4 +101,33 @@ function main({ ecs, input }: GameContext) {
       playerEntity.player.isGrounded = false;
     }
   });
+
+  registerCollisionCallback({
+    name: "player",
+    callback: (_ecs, entity, _other, _overlapAmount, overlapNormal) => {
+      const entityData = ecs.getEntity(entity);
+      if (!ecs.hasComponents(entityData, [PlayerComponentDefinition, VelocityComponentDefinition])) {
+        return;
+      }
+
+      const velocity = getEntity(_ecs, entity)[VelocityComponentDefinition.type] as typeof VelocityComponentDefinition;
+
+      const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
+      const isNormalPointingUp = overlapNormal[1] < 0;
+      const isNormalPointingDown = overlapNormal[1] > 0;
+      const isLandingOnTop = isVerticalCollision && isNormalPointingUp;
+      const isHittingHead = isVerticalCollision && isNormalPointingDown;
+
+      if (velocity.y > 0 && isLandingOnTop) {
+        velocity.y = 0;
+        entityData.player.isGrounded = true;
+      }
+
+      if (velocity.y < 0 && isHittingHead) {
+        velocity.y = 0;
+      }
+    },
+  });
 }
+
+

@@ -1,10 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { gameIDEPlugin } from './source/core/vite-plugin-hmr';
+import { gameIDEPlugin } from './source/core/viteHMRPlugin';
 
 export default defineConfig(({ mode }) => {
-  // Check if we're building with editor enabled
   const editorEnabled = mode === 'editor';
 
   return {
@@ -17,9 +16,6 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 7777,
       strictPort: true,
-      watch: {
-        ignored: ['**/scenes/**'],
-      },
     },
     build: {
       minify: 'terser',
