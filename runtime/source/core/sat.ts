@@ -12,16 +12,6 @@ import {
   getCollisionCallback,
 } from "./collision/collisionCallbacks";
 import { getWorldPosition, getWorldTransform, getParents, moveEntityAndParents, getTransform, setTransform, worldDirectionToLocal, worldDistanceToLocal } from "./transform";
-import { quadtree, type Quadtree } from "d3-quadtree";
-
-// Entity data stored in quadtree
-type QuadtreeEntity = {
-  entity: Entity;
-  x: number;
-  y: number;
-  halfWidth: number;
-  halfHeight: number;
-};
 
 export const getEntityPosition = (
   ecs: ECSInstance,
@@ -142,51 +132,31 @@ export const handleCollisionPair = (
   // Use custom resolver if set, otherwise use default
   const resolver = customResolver || defaultCollisionResolver;
 
-  const normalsA = colliderDefA.getNormals(ecs, entityA, entityB);
-  const normalsB = colliderDefB.getNormals(ecs, entityB, entityA);
-
-  // Deduplicate normals to avoid redundant checks (especially for rectangle-rectangle)
-  const normals: Vector[] = [];
-  const normalSet = new Set<string>();
-
-  for (const normal of normalsA) {
-    const key = `${normal[0].toFixed(6)},${normal[1].toFixed(6)}`;
-    if (!normalSet.has(key)) {
-      normals.push(normal);
-      normalSet.add(key);
-    }
-  }
-
-  for (const normal of normalsB) {
-    const key = `${normal[0].toFixed(6)},${normal[1].toFixed(6)}`;
-    if (!normalSet.has(key)) {
-      normals.push(normal);
-      normalSet.add(key);
-    }
-  }
+  const normals = [
+    ...colliderDefA.getNormals(ecs, entityA, entityB),
+    ...colliderDefB.getNormals(ecs, entityB, entityA),
+  ];
 
   let minOverlap = Infinity;
   let smallestNormal: Vector | null = null;
 
   for (const normal of normals) {
-    // Check if normal is already normalized (length ≈ 1) to avoid unnecessary normalization
-    const lenSq = normal[0] * normal[0] + normal[1] * normal[1];
-    const n = Math.abs(lenSq - 1.0) < 0.0001 ? normal : normalize(normal);
+    const n = normalize(normal);
 
     const projA = colliderDefA.calculateProjection(ecs, entityA, n);
     const projB = colliderDefB.calculateProjection(ecs, entityB, n);
 
-    // Early exit: if projections don't overlap, shapes are separated
-    if (projA.max < projB.min || projB.max < projA.min) {
+    // Calculate overlap: positive means shapes overlap
+    const overlapA = projB.max - projA.min; // How much A overlaps B (A needs to move along +n)
+    const overlapB = projA.max - projB.min; // How much B overlaps A (A needs to move along -n)
+
+    // If there's no overlap along this axis, shapes are separated (but check other axes)
+    if (overlapA <= 0 || overlapB <= 0) {
       // Found a separating axis - shapes don't collide
       minOverlap = 0;
       smallestNormal = null;
       break;
     }
-
-    // Calculate overlap: positive means shapes overlap
-    const overlapA = projB.max - projA.min; // How much A overlaps B (A needs to move along +n)
-    const overlapB = projA.max - projB.min; // How much B overlaps A (A needs to move along -n)
 
     // Choose the smaller overlap (minimum translation distance)
     // Determine which direction A should move to separate
@@ -508,131 +478,14 @@ const defaultCollisionResolver: CollisionResolver = (
   // If both static, do nothing
 };
 
-// Get entity bounding box for quadtree
-const getEntityBounds = (
-  ecs: ECSInstance,
-  entity: Entity
-): { x: number; y: number; halfWidth: number; halfHeight: number } | null => {
-  const position = getCollisionPosition(ecs, entity);
-  const collider = getEntityCollider(ecs, entity);
-  if (!position || !collider) return null;
-
-  const worldTransform = getWorldTransform(ecs, entity);
-
-  // Calculate bounding box based on collider type
-  let halfWidth: number;
-  let halfHeight: number;
-
-  if (collider.colliderName === "circle") {
-    const baseRadius = collider.radius ?? 16;
-    const scaleFactor = worldTransform ? Math.max(worldTransform.scaleX, worldTransform.scaleY) : 1;
-    const radius = baseRadius * scaleFactor;
-    halfWidth = radius;
-    halfHeight = radius;
-  } else {
-    // Rectangle or default
-    const width = (collider.width ?? 32) * (worldTransform?.scaleX ?? 1);
-    const height = (collider.height ?? 32) * (worldTransform?.scaleY ?? 1);
-
-    // For rotated rectangles, compute AABB
-    const colliderAngle = (collider.angle ?? 0) * Math.PI / 180;
-    const transformAngle = worldTransform ? (worldTransform.rotation * Math.PI) / 180 : 0;
-    const totalAngle = colliderAngle + transformAngle;
-
-    const cos = Math.abs(Math.cos(totalAngle));
-    const sin = Math.abs(Math.sin(totalAngle));
-
-    // AABB half-dimensions for rotated rectangle
-    halfWidth = (width * cos + height * sin) / 2;
-    halfHeight = (width * sin + height * cos) / 2;
-  }
-
-  return { x: position[0], y: position[1], halfWidth, halfHeight };
-};
-
-// Check if two AABBs overlap
-const aabbOverlap = (a: QuadtreeEntity, b: QuadtreeEntity): boolean => {
-  return Math.abs(a.x - b.x) <= a.halfWidth + b.halfWidth &&
-    Math.abs(a.y - b.y) <= a.halfHeight + b.halfHeight;
-};
-
 export const updateCollisions = (ecs: ECSInstance, entities: Entity[]) => {
-  if (entities.length < 10) {
-    // For small numbers of entities, brute force is faster due to quadtree overhead
-    for (let i = 0; i < entities.length; i++) {
-      for (let j = i + 1; j < entities.length; j++) {
-        handleCollisionPair(ecs, entities[i], entities[j]);
-      }
+  for (let i = 0; i < entities.length; i++) {
+    const entityA = entities[i];
+
+    for (let j = i + 1; j < entities.length; j++) {
+      const entityB = entities[j];
+      handleCollisionPair(ecs, entityA, entityB);
     }
-    return;
-  }
-
-  // Build quadtree with entity bounds
-  const quadtreeEntities: QuadtreeEntity[] = [];
-  for (const entity of entities) {
-    const bounds = getEntityBounds(ecs, entity);
-    if (bounds) {
-      quadtreeEntities.push({
-        entity,
-        x: bounds.x,
-        y: bounds.y,
-        halfWidth: bounds.halfWidth,
-        halfHeight: bounds.halfHeight,
-      });
-    }
-  }
-
-  const tree: Quadtree<QuadtreeEntity> = quadtree<QuadtreeEntity>()
-    .x(d => d.x)
-    .y(d => d.y)
-    .addAll(quadtreeEntities);
-
-  // Track checked pairs to avoid duplicates
-  const checkedPairs = new Set<string>();
-
-  // For each entity, query the quadtree for potential collisions
-  for (const entityData of quadtreeEntities) {
-    // Define search bounds (AABB of current entity)
-    const searchMinX = entityData.x - entityData.halfWidth;
-    const searchMinY = entityData.y - entityData.halfHeight;
-    const searchMaxX = entityData.x + entityData.halfWidth;
-    const searchMaxY = entityData.y + entityData.halfHeight;
-
-    // Visit nodes in the quadtree
-    tree.visit((node, x1, y1, x2, y2) => {
-      // If this is a leaf node with data
-      if (!node.length) {
-        let current: typeof node | undefined = node;
-        do {
-          const candidate = current.data;
-          if (candidate && candidate.entity !== entityData.entity) {
-            // Create a canonical pair key to avoid duplicate checks
-            const pairKey = entityData.entity < candidate.entity
-              ? `${entityData.entity}:${candidate.entity}`
-              : `${candidate.entity}:${entityData.entity}`;
-
-            if (!checkedPairs.has(pairKey)) {
-              // Check AABB overlap before SAT
-              if (aabbOverlap(entityData, candidate)) {
-                checkedPairs.add(pairKey);
-                handleCollisionPair(ecs, entityData.entity, candidate.entity);
-              }
-            }
-          }
-          current = current.next;
-        } while (current);
-      }
-
-      // Return true to skip this subtree if it doesn't overlap with our search bounds
-      // Check if any part of the node bounds could overlap with entity's AABB
-      // We need to account for the maximum possible collider size in the subtree
-      // For simplicity, we expand the search by checking if node bounds intersect with expanded entity bounds
-      const maxColliderSize = 200; // Conservative estimate for max collider size
-      return x1 > searchMaxX + maxColliderSize ||
-        x2 < searchMinX - maxColliderSize ||
-        y1 > searchMaxY + maxColliderSize ||
-        y2 < searchMinY - maxColliderSize;
-    });
   }
 };
 
@@ -720,28 +573,28 @@ export const RECTANGLE_COLLIDER: ColliderDefinition = {
     const hw = width / 2;
     const hh = height / 2;
 
-    // Optimize: Calculate projection directly without computing all corners
-    // Project the local axes onto the normal, then use half-widths/half-heights
+    const localCorners = [
+      create(-hw, -hh),
+      create(hw, -hh),
+      create(hw, hh),
+      create(-hw, hh),
+    ];
+
     const cos = Math.cos(totalAngle);
     const sin = Math.sin(totalAngle);
 
-    // Local axes rotated to world space
-    const localAxisX = create(cos, sin);
-    const localAxisY = create(-sin, cos);
+    const corners = localCorners.map((localCorner) => {
+      const worldCorner = create(
+        localCorner[0] * cos - localCorner[1] * sin,
+        localCorner[0] * sin + localCorner[1] * cos
+      );
+      return add(center, worldCorner);
+    });
 
-    // Project local axes onto the normal
-    const projX = Math.abs(dot(localAxisX, normal));
-    const projY = Math.abs(dot(localAxisY, normal));
-
-    // Projection extent = half-width * projection of X axis + half-height * projection of Y axis
-    const extent = hw * projX + hh * projY;
-
-    // Center projection
-    const centerProj = dot(center, normal);
-
+    const projections = corners.map((corner) => dot(corner, normal));
     return {
-      min: centerProj - extent,
-      max: centerProj + extent,
+      min: Math.min(...projections),
+      max: Math.max(...projections),
     };
   },
 
@@ -873,14 +726,10 @@ export const pointColliderCollision = (
   const normals = colliderDef.getNormals(ecs, entity, dummyEntity);
 
   for (const normal of normals) {
-    // Check if normal is already normalized (length ≈ 1) to avoid unnecessary normalization
-    const lenSq = normal[0] * normal[0] + normal[1] * normal[1];
-    const n = Math.abs(lenSq - 1.0) < 0.0001 ? normal : normalize(normal);
-
+    const n = normalize(normal);
     const colliderProj = colliderDef.calculateProjection(ecs, entity, n);
     const pointProj = dot(point, n);
 
-    // Early exit: if point is outside projection range, no collision
     if (pointProj < colliderProj.min || pointProj > colliderProj.max) {
       return false;
     }

@@ -6,10 +6,8 @@ For creating entities be careful do it minimally ensure component creation is in
 
 Don't change files in the core module
 
-correct fireball shooting code looks like: 
-
+Some good projectile code is as follows:
 """
-// Handle fireball shooting on mouse click
     const mouseLeftPressed = input.isMouseButtonPressed("left");
     const mouseClicked = mouseLeftPressed && !previousMouseLeft;
     previousMouseLeft = mouseLeftPressed;
@@ -42,3 +40,7 @@ correct fireball shooting code looks like:
       }
     }
 """
+
+don't be afraid to use circle colliders
+
+Add ttl to projectiles to avoid expensive overhead
