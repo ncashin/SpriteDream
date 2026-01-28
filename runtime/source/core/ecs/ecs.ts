@@ -163,6 +163,56 @@ export const createEntity = (instance: ECSInstance, name: string): Entity => {
 
   return name;
 };
+
+export const composeEntity = (
+  instance: ECSInstance,
+  name: string,
+  components: Component[],
+): Entity => {
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    throw new Error('Entity name is required and must be a non-empty string');
+  }
+
+  const wasNew = !instance.entities[name];
+  const entityComponents = ensureEntity(instance, name);
+
+  // Create entity callback
+  if (wasNew && instance.createEntityCallback) {
+    instance.createEntityCallback(name);
+  }
+
+  // Add default component if needed
+  if (instance.defaultComponent && !entityComponents[instance.defaultComponent.type]) {
+    entityComponents[instance.defaultComponent.type] = structuredClone(instance.defaultComponent);
+  }
+
+  // Add all components efficiently
+  for (const component of components) {
+    if (!component || typeof component !== 'object' || !component.type) {
+      continue;
+    }
+
+    const componentType = component.type;
+    const wasComponentNew = !entityComponents[componentType];
+
+    // Clone the component directly (faster than JSON.parse/stringify)
+    entityComponents[componentType] = structuredClone(component);
+
+    // Update composed pools
+    updateComposedPoolsForComponent(instance, name, componentType);
+
+    // Component callback
+    if (wasComponentNew && instance.addComponentCallback) {
+      const addedComponent = lookupComponent(instance, name, component);
+      if (addedComponent) {
+        instance.addComponentCallback(name, addedComponent);
+      }
+    }
+  }
+
+  return name;
+};
+
 export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
   if (instance.selectedEntity === entity) {
     instance.selectedEntity = null;
@@ -540,6 +590,8 @@ export const curryECSInstance = (instance: ECSInstance) => ({
   ecsInstance: instance,
 
   createEntity: (name: string): Entity => createEntity(instance, name),
+  composeEntity: (name: string, components: Component[]): Entity =>
+    composeEntity(instance, name, components),
   destroyEntity: (entity: Entity) => destroyEntity(instance, entity),
   renameEntity: (oldEntity: Entity, newEntity: Entity): boolean =>
     renameEntity(instance, oldEntity, newEntity),
