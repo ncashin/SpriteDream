@@ -6,7 +6,7 @@ For creating entities be careful do it minimally ensure component creation is in
 
 Don't change files in the core module
 
-Some good projectile code is as follows:
+Example Code:
 """
     const mouseLeftPressed = input.isMouseButtonPressed("left");
     const mouseClicked = mouseLeftPressed && !previousMouseLeft;
@@ -43,4 +43,8 @@ Some good projectile code is as follows:
 
 don't be afraid to use circle colliders
 
-Add ttl to projectiles to avoid expensive overhead
+Read documentation when applicable
+
+Define components at the top level
+
+Make absolutely minimal diffs in order to change entities in a scene file. Scene files changed unecessarily make things awkward for an end user.
