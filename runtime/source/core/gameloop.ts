@@ -7,45 +7,28 @@ export type CallbackId = number;
 function createCallbackManager<T extends (...args: any[]) => void>(
   requireEditorMode: boolean = false
 ) {
-  const callbacks: T[] = [];
-  const idToIndex = new Map<CallbackId, number>();
-  const freeIndices: number[] = [];
+  let callbacks: Record<CallbackId, T> = {};
 
   const add = (callback: T): CallbackId => {
     if (requireEditorMode && !isEditorMode()) {
       return -1;
     }
     const id = nextCallbackId++;
-    let index: number;
-    if (freeIndices.length > 0) {
-      index = freeIndices.pop()!;
-      callbacks[index] = callback;
-    } else {
-      index = callbacks.length;
-      callbacks.push(callback);
-    }
-    idToIndex.set(id, index);
+    callbacks[id] = callback;
     return id;
   };
 
   const remove = (id: CallbackId): boolean => {
-    const index = idToIndex.get(id);
-    if (index === undefined) {
-      return false;
-    }
-    (callbacks as (T | null)[])[index] = null;
-    freeIndices.push(index);
-    idToIndex.delete(id);
+    if (!(id in callbacks)) return false;
+    delete callbacks[id];
     return true;
   };
 
   const clear = (): void => {
-    callbacks.length = 0;
-    idToIndex.clear();
-    freeIndices.length = 0;
+    callbacks = {};
   };
 
-  const getArray = (): (T | null)[] => callbacks as (T | null)[];
+  const getArray = (): T[] => Object.values(callbacks);
 
   return { add, remove, clear, getArray };
 }
@@ -65,12 +48,10 @@ export const setUpdateEnabled = (enabled: boolean) => {
   const wasEnabled = updateEnabled;
   updateEnabled = enabled;
 
-  // Run start callbacks when transitioning from disabled to enabled
   if (!wasEnabled && enabled) {
     runStartCallbacks();
   }
 
-  // Run editor start callbacks when transitioning from enabled to disabled
   if (wasEnabled && !enabled) {
     runEditorStartCallbacks();
   }
@@ -140,32 +121,24 @@ const gameloop = (currentTime: number) => {
   }
 
   if (updateEnabled && isPageVisible) {
-    const arr = updateCallbacks.getArray();
-    for (let i = 0; i < arr.length; i++) {
-      const callback = arr[i];
-      if (callback !== null) callback(deltaTime);
+    for (const callback of updateCallbacks.getArray()) {
+      callback(deltaTime);
     }
   }
 
   if (drawEnabled) {
-    const drawArr = drawCallbacks.getArray();
-    for (let i = 0; i < drawArr.length; i++) {
-      const callback = drawArr[i];
-      if (callback !== null) callback();
+    for (const callback of drawCallbacks.getArray()) {
+      callback();
     }
     if (editorUpdateEnabled) {
-      const editorDrawArr = editorDrawCallbacks.getArray();
-      for (let i = 0; i < editorDrawArr.length; i++) {
-        const callback = editorDrawArr[i];
-        if (callback !== null) callback();
+      for (const callback of editorDrawCallbacks.getArray()) {
+        callback();
       }
     }
   }
   if (editorUpdateEnabled) {
-    const editorUpdateArr = editorUpdateCallbacks.getArray();
-    for (let i = 0; i < editorUpdateArr.length; i++) {
-      const callback = editorUpdateArr[i];
-      if (callback !== null) callback();
+    for (const callback of editorUpdateCallbacks.getArray()) {
+      callback();
     }
   }
 

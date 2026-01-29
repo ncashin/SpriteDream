@@ -78,9 +78,6 @@ const createSceneEntitiesProxy = (
       }
       const wasNew = !(property in target);
       const result = Reflect.set(target, property, value);
-      // Only invalidate if replacing an existing entity with a different one
-      // Don't invalidate when creating a new empty entity - that will be handled
-      // when components are added via the nested proxy
       if (!wasNew && value && typeof value === "object" && !Array.isArray(value)) {
         invalidateComposedPools(instance);
       }
