@@ -6,8 +6,6 @@ import {
   TransformComponentDefinition,
   ColliderComponentDefinition,
   VelocityComponentDefinition,
-  type TransformComponent,
-  type ColliderComponent,
 } from "../ecs/component";
 import { addUpdateCallback, addEditorDrawCallback } from "../gameloop";
 import { updateCollisions, debugDrawColliders, pointColliderCollision } from "../sat";
@@ -22,11 +20,7 @@ export function collisionPlugin<
     const entities: Entity[] = [];
     context.ecs.runQuery(
       [TransformComponentDefinition, ColliderComponentDefinition],
-      (entity, components) => {
-        const [, collider] = components as [
-          TransformComponent,
-          ColliderComponent
-        ];
+      (entity, { collider }) => {
         if (collider.collisionEnabled) {
           entities.push(entity);
         }
@@ -45,23 +39,18 @@ export function collisionPlugin<
         VelocityComponentDefinition,
         ColliderComponentDefinition,
       ],
-      (entity, [, velocity, collider]) => {
+      (entity, { velocity, collider }) => {
         if (collider.collisionEnabled) {
-          // Velocity is in local space, so we need to rotate it by the entity's local rotation
-          // before applying it to local position
           const localTransform = getTransform(context.ecs.ecsInstance, entity);
           if (localTransform) {
-            // Get the entity's local rotation (in degrees)
             const localRotation = localTransform.rotation ?? 0;
             const rotationRad = (localRotation * Math.PI) / 180;
             const cos = Math.cos(rotationRad);
             const sin = Math.sin(rotationRad);
 
-            // Rotate the velocity vector by the entity's local rotation
             const rotatedVelX = velocity.x * cos - velocity.y * sin;
             const rotatedVelY = velocity.x * sin + velocity.y * cos;
 
-            // Apply the rotated velocity to local position
             const newLocalX = localTransform.x + rotatedVelX * deltaTime;
             const newLocalY = localTransform.y + rotatedVelY * deltaTime;
             setTransform(context.ecs.ecsInstance, entity, { x: newLocalX, y: newLocalY });
@@ -111,9 +100,8 @@ export function collisionPlugin<
 
       context.ecs.runQuery(
         [TransformComponentDefinition, ColliderComponentDefinition],
-        (entity: Entity, components: [TransformComponent, ColliderComponent]) => {
+        (entity, { transform, collider }) => {
           if (clickedEntity) return;
-          const [transform, collider] = components;
           if (transform && collider && collider.collisionEnabled) {
             const point = create(worldX, worldY);
             if (pointColliderCollision(context.ecs.ecsInstance, point, entity)) {

@@ -65,10 +65,31 @@ export function mergeWithCurrentScene(incoming: SceneData): SceneData {
   return mergeSceneData(currentScene, incoming);
 }
 
+const proxyCache = new WeakMap<object, WeakMap<object, object>>();
+
+function getCachedProxy<T extends Record<string, unknown>>(
+  parent: object,
+  target: T,
+  factory: () => T
+): T {
+  let parentCache = proxyCache.get(parent);
+  if (!parentCache) {
+    parentCache = new WeakMap();
+    proxyCache.set(parent, parentCache);
+  }
+  let cached = parentCache.get(target) as T | undefined;
+  if (!cached) {
+    cached = factory();
+    parentCache.set(target, cached);
+  }
+  return cached;
+}
+
 function createPersistentProxy<T extends Record<string, unknown>>(
   obj: T,
   onSave: (sceneData: SceneData) => void,
-  path: string = ""
+  path: string = "",
+  root: object = obj
 ): T {
   if (!isObject(obj)) return obj;
   return new Proxy(obj, {
@@ -79,14 +100,18 @@ function createPersistentProxy<T extends Record<string, unknown>>(
       }
       const oldValue = Reflect.get(target, property);
 
-      // If the value is an object, wrap it in a proxy before setting
       let proxiedValue = value;
       if (isObject(value)) {
         const currentPath = path ? `${path}.${property}` : property;
+        const parentCache = proxyCache.get(root);
+        if (parentCache) {
+          parentCache.delete(value as object);
+        }
         proxiedValue = createPersistentProxy(
           value as Record<string, unknown>,
           onSave,
-          currentPath
+          currentPath,
+          root
         ) as unknown;
       }
 
@@ -114,6 +139,14 @@ function createPersistentProxy<T extends Record<string, unknown>>(
         return true;
       }
       const oldValue = Reflect.get(target, property);
+
+      if (isObject(oldValue)) {
+        const parentCache = proxyCache.get(root);
+        if (parentCache) {
+          parentCache.delete(oldValue as object);
+        }
+      }
+
       Reflect.deleteProperty(target, property);
       const currentPath = path ? `${path}.${property}` : property;
 
@@ -132,13 +165,15 @@ function createPersistentProxy<T extends Record<string, unknown>>(
     get(target: T, property: string | symbol): unknown {
       const value = Reflect.get(target, property);
 
-      // If the value is an object, return a proxied version
       if (isObject(value)) {
         const currentPath = path ? `${path}.${String(property)}` : String(property);
-        return createPersistentProxy(
-          value as Record<string, unknown>,
-          onSave,
-          currentPath
+        return getCachedProxy(root, value as Record<string, unknown>, () =>
+          createPersistentProxy(
+            value as Record<string, unknown>,
+            onSave,
+            currentPath,
+            root
+          )
         );
       }
 

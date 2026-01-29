@@ -1,8 +1,7 @@
 import type { ContextExtension, RequirePlugin } from "./gameContext";
-import type { Component, Entity, ClickableEntityProvider } from "./ecs/ecs";
+import type { Component, ClickableEntityProvider } from "./ecs/ecs";
 import {
   TransformComponentDefinition,
-  type TransformComponent,
   defineComponent,
 } from "./ecs/component";
 import { ecsPlugin } from "./scene/ecsAdapter";
@@ -173,9 +172,8 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
 
       context.ecs.runQuery(
         [TransformComponentDefinition, SpriteComponentDefinition],
-        (entity: Entity, components: [TransformComponent, SpriteComponent]) => {
+        (entity, { transform, sprite }) => {
           if (clickedEntity) return;
-          const [transform, sprite] = components;
           if (transform && sprite && typeof sprite.width === "number") {
             const worldPos = getWorldPosition(context.ecs.ecsInstance, entity);
             if (!worldPos) return;
@@ -183,7 +181,6 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
             const worldTransform = getWorldTransform(context.ecs.ecsInstance, entity);
             if (!worldTransform) return;
 
-            // Account for scale
             const scaledWidth = sprite.width * worldTransform.scaleX;
             const scaledHeight = sprite.height * worldTransform.scaleY;
 
@@ -256,23 +253,19 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
 
     context.ecs.runQuery(
       [TransformComponentDefinition, SpriteComponentDefinition],
-      (entity: Entity, components: [TransformComponent, SpriteComponent]) => {
-        const [, sprite] = components;
+      (entity, { sprite, hitFlash }) => {
         const worldTransform = getWorldTransform(context.ecs.ecsInstance, entity);
         if (!worldTransform) return;
 
         const worldPos = getWorldPosition(context.ecs.ecsInstance, entity);
         if (!worldPos) return;
 
-        const entityComponents = context.ecs.getEntity(entity);
-        const hitFlash = entityComponents.hitFlash as
-          | HitFlashComponent
-          | undefined;
+        const typedHitFlash = hitFlash as HitFlashComponent | undefined;
 
         const isFlashing =
-          hitFlash && hitFlash.flashTime < hitFlash.maxFlashTime;
+          typedHitFlash && typedHitFlash.flashTime < typedHitFlash.maxFlashTime;
         const flashIntensity = isFlashing
-          ? 1 - hitFlash!.flashTime / hitFlash!.maxFlashTime
+          ? 1 - typedHitFlash!.flashTime / typedHitFlash!.maxFlashTime
           : 0;
 
         const rotationRad = (worldTransform.rotation * Math.PI) / 180;

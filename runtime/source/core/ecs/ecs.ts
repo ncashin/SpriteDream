@@ -25,6 +25,9 @@ export type ECSInstance = {
   componentProxyHandler?: ComponentProxyHandler;
   defaultComponent?: Component;
   setParentHandler?: SetParentHandler;
+
+  componentProxyCache: Map<Entity, Map<ComponentTypeString, Component>>;
+  entityProxyCache: Map<Entity, Record<string, Component>>;
 };
 
 export type ComponentProxyHandler = {
@@ -60,6 +63,8 @@ export type ECSInstanceCreateInfo = {
 export const invalidateComposedPools = (instance: ECSInstance) => {
   instance.composedPools = {};
   instance.associatedComposedPoolKeys = {};
+  instance.componentProxyCache.clear();
+  instance.entityProxyCache.clear();
 };
 
 const createSceneEntitiesProxy = (
@@ -133,6 +138,8 @@ export const createECSInstance = (
     composedPools: {},
     associatedComposedPoolKeys: {},
     selectedEntity: null,
+    componentProxyCache: new Map(),
+    entityProxyCache: new Map(),
     ...rest,
   };
 
@@ -175,6 +182,9 @@ export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
     }
   }
 
+  instance.componentProxyCache.delete(entity);
+  instance.entityProxyCache.delete(entity);
+
   delete instance.entities[entity];
 
   if (!instance.destroyEntityCallback) return;
@@ -195,6 +205,13 @@ export const renameEntity = (
       composedPool[index] = newEntity;
     }
   }
+
+  const componentCache = instance.componentProxyCache.get(oldEntity);
+  if (componentCache) {
+    instance.componentProxyCache.set(newEntity, componentCache);
+    instance.componentProxyCache.delete(oldEntity);
+  }
+  instance.entityProxyCache.delete(oldEntity);
 
   if (instance.selectedEntity === oldEntity) {
     instance.selectedEntity = newEntity;
@@ -283,9 +300,12 @@ const createEntityProxy = (
   instance: ECSInstance,
   entity: Entity,
 ): Record<string, Component> => {
+  const cached = instance.entityProxyCache.get(entity);
+  if (cached) return cached;
+
   const entityComponents = ensureEntity(instance, entity);
 
-  return new Proxy(entityComponents, {
+  const proxy = new Proxy(entityComponents, {
     get: (target, property) => {
       if (typeof property !== "string") {
         return Reflect.get(target, property);
@@ -366,6 +386,9 @@ const createEntityProxy = (
       return descriptor;
     },
   });
+
+  instance.entityProxyCache.set(entity, proxy);
+  return proxy;
 };
 const lookupAssociatedComposedPoolKeys = <ComponentType extends Component>(
   instance: ECSInstance,
@@ -387,7 +410,14 @@ export const createComponentProxy = <ComponentType extends Component>(
 ) => {
   const component = lookupComponent(instance, entity, COMPONENT_TYPE_DEF);
   if (!component) return undefined;
-  return new Proxy(component, {
+
+  let entityCache = instance.componentProxyCache.get(entity);
+  if (entityCache) {
+    const cached = entityCache.get(COMPONENT_TYPE_DEF.type);
+    if (cached) return cached as ComponentType;
+  }
+
+  const proxy = new Proxy(component, {
     set: (target, property, newValue, _receiver) => {
       if (typeof property !== "string") {
         throw new Error("property is not a string");
@@ -405,6 +435,14 @@ export const createComponentProxy = <ComponentType extends Component>(
       );
     },
   });
+
+  if (!entityCache) {
+    entityCache = new Map();
+    instance.componentProxyCache.set(entity, entityCache);
+  }
+  entityCache.set(COMPONENT_TYPE_DEF.type, proxy);
+
+  return proxy;
 };
 
 export const getComponent = <ComponentType extends Component>(
@@ -496,28 +534,14 @@ export const queryEntities = <const ComposedType extends Component[]>(
 export const runQuery = <const ComposedType extends Component[]>(
   instance: ECSInstance,
   COMPONENT_TYPE_DEFS: ComposedType,
-  lambda: (entity: Entity, components: ComposedType) => void,
+  lambda: (entity: Entity, data: EntityWithComponents<ComposedType>) => void,
 ) => {
   const entities = queryEntities(instance, COMPONENT_TYPE_DEFS);
-  const components: Component[] = [];
 
-  for (const entity of entities) {
-    components.length = 0;
-    for (const COMPONENT_TYPE_DEF of COMPONENT_TYPE_DEFS) {
-      const component = lookupComponent(instance, entity, COMPONENT_TYPE_DEF);
-      if (component) {
-        components.push(component);
-      }
-    }
-
-    if (instance.componentProxyHandler) {
-      const componentProxies = components.map((component) =>
-        createComponentProxy(instance, entity, component),
-      ) as ComposedType;
-      lambda(entity, componentProxies);
-    } else {
-      lambda(entity, components as unknown as ComposedType);
-    }
+  for (let i = 0; i < entities.length; i++) {
+    const entity = entities[i];
+    const entityProxy = createEntityProxy(instance, entity) as EntityWithComponents<ComposedType>;
+    lambda(entity, entityProxy);
   }
 };
 
@@ -577,7 +601,7 @@ export const curryECSInstance = (instance: ECSInstance) => ({
 
   runQuery: <const ComposedType extends Component[]>(
     COMPONENT_TYPE_DEFS: ComposedType,
-    lambda: (entity: Entity, components: ComposedType) => void,
+    lambda: (entity: Entity, data: EntityWithComponents<ComposedType>) => void,
   ) => runQuery(instance, COMPONENT_TYPE_DEFS, lambda),
 
   selectEntity: (entity: Entity | null) => selectEntity(instance, entity),
