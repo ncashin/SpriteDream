@@ -44,7 +44,6 @@ export function initializeSceneECS<T extends InitialGameContext>(
     scene.ecs = ecsData;
   }
 
-  // Store reference to original entities for callbacks
   const originalEntities = ecsData.entities || {};
 
   const componentProxyHandler: ComponentProxyHandler = {
@@ -96,7 +95,6 @@ export function initializeSceneECS<T extends InitialGameContext>(
       }
     },
     destroyEntityCallback: (entity: Entity) => {
-      // Delete directly from original entities reference to ensure it persists
       if (originalEntities[entity]) {
         delete originalEntities[entity];
       }
@@ -114,8 +112,9 @@ export function initializeSceneECS<T extends InitialGameContext>(
       (ecs as CurriedECSWithScene).updateSceneEntities(originalEntities);
       return;
     }
-    ecs.ecsInstance.entities = originalEntities;
-    invalidateComposedPools(ecs.ecsInstance);
+    const ecsInstance = (ecs as ReturnType<typeof curryECSInstance>).ecsInstance;
+    ecsInstance.entities = originalEntities;
+    invalidateComposedPools(ecsInstance);
   });
 
   return {

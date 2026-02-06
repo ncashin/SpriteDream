@@ -100,6 +100,8 @@ function DraggableEntityItem({
   const ecs = gameContext?.ecs;
   const selectedEntity = useSelectedEntity();
 
+  if (!ecs) return null;
+
   const { attributes, listeners, setNodeRef, transform: dragTransform, isDragging } = useDraggable({
     id: entity,
   });

@@ -144,6 +144,23 @@
           "height": 32,
           "angle": 0
         }
+      },
+      "staff": {
+        "transform": {
+          "type": "transform",
+          "parent": "player",
+          "x": 16,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "sprite": {
+          "type": "sprite",
+          "width": 16,
+          "height": 32,
+          "image": "/staff.png"
+        }
       }
     }
   }

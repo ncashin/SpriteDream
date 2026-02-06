@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import type { Component, Entity } from "../../ecs/ecs";
+import type { curryECSInstance } from "../../ecs/ecs";
 import { useGameContext, startUndoAction } from "../useGameContext.tsx";
 import { useEntityData } from "../useECS.tsx";
 import { componentRegistry } from "../../ecs/component";
@@ -15,7 +16,7 @@ interface EntityModalProps {
 
 export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const gameContext = useGameContext();
-  const ecs = gameContext?.ecs;
+  const ecs = (gameContext?.ecs as ReturnType<typeof curryECSInstance> | undefined);
   const entityData = useEntityData(entity);
   const [entityDataJson, setEntityDataJson] = useState("");
   const [showAddComponent, setShowAddComponent] = useState(false);

@@ -1,4 +1,4 @@
-import type { Entity, EntityComponents } from "../ecs/ecs";
+import type { EntityComponents } from "../ecs/ecs";
 
 export type ClipboardData = {
   entityName: string;

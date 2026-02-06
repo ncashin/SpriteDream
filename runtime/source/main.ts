@@ -10,8 +10,11 @@ import {
 } from "./core/gameloop";
 import type { Component } from "./core/ecs/ecs";
 import { getEntity } from "./core/ecs/ecs";
-import { defineComponent, VelocityComponentDefinition } from "./core/ecs/component";
+import { defineComponent, VelocityComponentDefinition, TransformComponentDefinition, ColliderComponentDefinition } from "./core/ecs/component";
+import { SpriteComponentDefinition } from "./core/sprite";
 import { registerCollisionCallback } from "./core/collision/collisionCallbacks";
+import { screenToWorld } from "./core/viewport/viewportPlugin";
+import { getWorldPosition } from "./core/transform";
 import initialScene from "../scenes/default.scene?raw";
 
 import { EditorUI } from "./EditorUI";
@@ -81,6 +84,9 @@ initializeGame({
 });
 
 function main({ ecs, input }: GameContext) {
+  let previousMouseLeft = false;
+  let fireballCounter = 0;
+
   addUpdateCallback((deltaTime: number) => {
     const playerEntityId = "player";
     const playerEntity = ecs.getEntity(playerEntityId, [PlayerComponentDefinition, VelocityComponentDefinition]);
@@ -105,6 +111,37 @@ function main({ ecs, input }: GameContext) {
     if (input.isKeyPressed(" ") && playerEntity.player.isGrounded) {
       playerEntity.velocity.y = -jumpStrength;
       playerEntity.player.isGrounded = false;
+    }
+
+    const mouseLeftPressed = input.isMouseButtonPressed("left");
+    const mouseClicked = mouseLeftPressed && !previousMouseLeft;
+    previousMouseLeft = mouseLeftPressed;
+
+    if (mouseClicked) {
+      const mousePos = input.getMousePosition();
+      const worldPos = screenToWorld(mousePos.x, mousePos.y);
+      const playerWorldPos = getWorldPosition(ecs.ecsInstance, playerEntityId);
+
+      if (playerWorldPos) {
+        const dx = worldPos.x - playerWorldPos.x;
+        const dy = worldPos.y - playerWorldPos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > 0) {
+          const fireballSpeed = 500;
+          const velocityX = (dx / distance) * fireballSpeed;
+          const velocityY = (dy / distance) * fireballSpeed;
+
+          const fireballId = `fireball_${fireballCounter++}`;
+          ecs.createEntity(fireballId);
+          const fireballEntity = ecs.getEntity(fireballId);
+
+          fireballEntity[TransformComponentDefinition.type] = { ...TransformComponentDefinition, x: playerWorldPos.x, y: playerWorldPos.y };
+          fireballEntity[SpriteComponentDefinition.type] = { ...SpriteComponentDefinition, width: 24, height: 24, image: "/fireball.png" };
+          fireballEntity[VelocityComponentDefinition.type] = { ...VelocityComponentDefinition, x: velocityX, y: velocityY };
+          fireballEntity[ColliderComponentDefinition.type] = { ...ColliderComponentDefinition, colliderName: "circle", bodyType: "kinematic", radius: 12, collisionEnabled: true };
+        }
+      }
     }
   });
 

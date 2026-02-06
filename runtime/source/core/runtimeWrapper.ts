@@ -41,7 +41,6 @@ function getEditorRootElement(): HTMLDivElement {
 
 const gameRoot = getGameRoot();
 const gameUIRootElement = getGameUIRootElement();
-const editorRoot = getEditorRootElement();
 
 const notifyParent = (command: string, data?: Record<string, unknown>) => {
   if (isInIframe) {

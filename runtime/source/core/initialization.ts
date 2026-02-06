@@ -1,5 +1,4 @@
-import { isEditorUpdateEnabled, isUpdateEnabled } from './gameloop';
-import { isEditorMode } from './utils';
+import { isUpdateEnabled } from './gameloop';
 
 const startCallbacks: (() => void)[] = [];
 const editorStartCallbacks: (() => void)[] = [];

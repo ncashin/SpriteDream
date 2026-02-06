@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Entity, EntityComponents } from "../ecs/ecs";
+import type { curryECSInstance } from "../ecs/ecs";
 import { addDrawCallback, removeDrawCallback } from "../gameloop";
 import { useGameContext } from "./useGameContext.tsx";
 
@@ -29,7 +30,7 @@ export function useECS(): EntityState {
     });
 
     const gameContext = useGameContext();
-    const ecs = gameContext?.ecs;
+    const ecs = (gameContext?.ecs as ReturnType<typeof curryECSInstance> | undefined);
 
     useEffect(() => {
         if (!ecs) {
@@ -49,7 +50,8 @@ export function useECS(): EntityState {
 
             const entityComponents: Record<Entity, EntityComponents> = {};
             for (const entity of allEntities) {
-                entityComponents[entity] = ecs.getEntity(entity) ?? {};
+                const entityData = ecs.getEntity(entity);
+                entityComponents[entity] = entityData ?? {};
             }
 
             // Always update every frame to trigger rerenders
