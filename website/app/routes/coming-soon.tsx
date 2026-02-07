@@ -18,7 +18,7 @@ export default function ComingSoon() {
     return (
         <main className="min-h-screen bg-[var(--color-bg-void)] grid-bg text-white">
             <div className="spotlight fixed inset-0 pointer-events-none" />
-            <div className="relative z-10 flex min-h-screen items-start justify-center pr-10 pl-0 pt-28 pb-16 sm:items-center sm:py-16 sm:px-10">
+            <div className="relative z-10 flex min-h-screen items-start justify-center pr-10 pl-10 pt-28 pb-16 sm:items-center sm:py-16 sm:px-10">
                 <div className="w-full max-w-3xl">
                     <div className="">
                     <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">
@@ -51,7 +51,7 @@ export default function ComingSoon() {
                         <button
                             type="submit"
                             disabled={isSubmitDisabled}
-                            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-[var(--color-bg-elevated)] px-4 text-sm font-semibold text-white shadow-[0_0_26px_rgba(90,110,255,0.22)] transition-all hover:border-[var(--color-accent)] hover:shadow-[0_0_36px_rgba(90,110,255,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/70 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none sm:w-auto"
+                            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-[#1e1e23] bg-[#121216] px-4 text-sm font-semibold text-white/90 transition-all hover:bg-[#1e1e23] hover:border-[#37373b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/70 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                         >
                             Notify me
                         </button>
