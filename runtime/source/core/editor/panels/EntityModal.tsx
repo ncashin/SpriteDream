@@ -292,7 +292,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       tabIndex={-1}
     >
       <div
-        className="flex items-center justify-between min-h-5 px-1 py-1 text-xs border-b select-none rounded-t-sm text-[var(--vscode-foreground,rgba(255,255,255,0.9))] border-b-[var(--vscode-panel-border,rgba(128,128,128,0.2))]"
+        className="flex items-center justify-between min-h-5 px-2 py-1 text-xs border-b select-none rounded-t-sm text-[var(--vscode-foreground,rgba(255,255,255,0.9))] border-b-[var(--vscode-panel-border,rgba(128,128,128,0.2))]"
       >
         {isRenaming ? (
           <form
@@ -399,7 +399,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
                 autoFocus={true}
               />
             </div>
-            <div className="flex-1 overflow-auto">
+            <div className="editor-scrollbar flex-1 overflow-auto">
               {availableComponents.length === 0 ? (
                 <div
                   className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-center text-[var(--vscode-descriptionForeground,rgba(255,255,255,0.6))]"
@@ -440,7 +440,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
                 autoFocus={true}
               />
             </div>
-            <div className="flex-1 overflow-auto">
+            <div className="editor-scrollbar flex-1 overflow-auto">
               {currentComponents.length === 0 ? (
                 <div
                   className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-center text-[var(--vscode-descriptionForeground,rgba(255,255,255,0.6))]"

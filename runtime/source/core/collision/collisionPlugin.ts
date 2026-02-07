@@ -4,14 +4,21 @@ import { spritePlugin } from "../sprite";
 import type { Entity, ClickableEntityProvider } from "../ecs/ecs";
 import {
   TransformComponentDefinition,
-  ColliderComponentDefinition,
   VelocityComponentDefinition,
 } from "../ecs/component";
+import { ColliderComponentDefinition } from "./components/colliderComponent";
+import { CollisionBodyComponentDefinition } from "./components/collisionBodyComponent";
 import { addUpdateCallback, addEditorDrawCallback } from "../gameloop";
-import { updateCollisions, debugDrawColliders, pointColliderCollision } from "../sat";
+import {
+  updateCollisions,
+  pointColliderCollision,
+  getColliderWorldPosition,
+  getEntityCollisionColliders,
+  getEntityVelocity,
+} from "./sat";
 import { create } from "../vector";
-import { getViewport } from "../viewport/viewportPlugin";
-import { getTransform, setTransform } from "../transform";
+import { getTransform, setTransform, getWorldTransform } from "../transform";
+import { Graphics } from "pixi.js";
 
 export function collisionPlugin<
   T extends RequirePlugin<[typeof ecsPlugin, typeof spritePlugin]>
@@ -19,9 +26,11 @@ export function collisionPlugin<
   const getCollisionEntities = (): Entity[] => {
     const entities: Entity[] = [];
     context.ecs.runQuery(
-      [TransformComponentDefinition, ColliderComponentDefinition],
-      (entity, { collider }) => {
-        if (collider.collisionEnabled) {
+      [TransformComponentDefinition, ColliderComponentDefinition, CollisionBodyComponentDefinition],
+      (entity) => {
+        const entityColliders = getEntityCollisionColliders(context.ecs.ecsInstance, entity);
+        const hasEnabledCollider = entityColliders.some(({ body }) => body.collisionEnabled);
+        if (hasEnabledCollider) {
           entities.push(entity);
         }
       }
@@ -38,9 +47,12 @@ export function collisionPlugin<
         TransformComponentDefinition,
         VelocityComponentDefinition,
         ColliderComponentDefinition,
+        CollisionBodyComponentDefinition,
       ],
-      (entity, { velocity, collider }) => {
-        if (collider.collisionEnabled) {
+      (entity, { velocity }) => {
+        const entityColliders = getEntityCollisionColliders(context.ecs.ecsInstance, entity);
+        const hasEnabledCollider = entityColliders.some(({ body }) => body.collisionEnabled);
+        if (hasEnabledCollider) {
           const localTransform = getTransform(context.ecs.ecsInstance, entity);
           if (localTransform) {
             const localRotation = localTransform.rotation ?? 0;
@@ -65,33 +77,81 @@ export function collisionPlugin<
     }
   });
 
+  const colliderGraphicsByEntity = new Map<string, Graphics>();
+
+  const getOrCreateColliderGraphics = (key: string): Graphics => {
+    const existing = colliderGraphicsByEntity.get(key);
+    if (existing) return existing;
+    const graphics = new Graphics();
+    colliderGraphicsByEntity.set(key, graphics);
+    context.pixiOverlay.addChild(graphics);
+    return graphics;
+  };
+
   addEditorDrawCallback(() => {
-    if (!context.canvas || !context.context2D) return;
+    if (!context.pixiOverlay || !context.pixiApp || !context.canvas) return;
 
     const entities = getCollisionEntities();
     if (entities.length === 0) return;
 
-    const viewport = getViewport();
-    const { context2D } = context;
+    const seenKeys = new Set<string>();
 
-    // Enable anti-aliasing for smooth rendering
-    context2D.imageSmoothingEnabled = true;
-    context2D.imageSmoothingQuality = "high";
+    for (const entity of entities) {
+      const entityColliders = getEntityCollisionColliders(context.ecs.ecsInstance, entity);
+      for (let index = 0; index < entityColliders.length; index++) {
+        const { body, collider } = entityColliders[index];
+        if (!body.collisionEnabled) continue;
 
-    // Use display dimensions (canvas internal resolution is separate)
-    const displayWidth = window.innerWidth;
-    const displayHeight = window.innerHeight;
+        const center = getColliderWorldPosition(context.ecs.ecsInstance, entity, collider);
+        if (!center) continue;
 
-    // Apply DPR transform for high-resolution rendering (same as sprite plugin)
-    const dpr = window.devicePixelRatio || 1;
-    context2D.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const key = `${entity}:${index}`;
+        const graphics = getOrCreateColliderGraphics(key);
+        graphics.clear();
+        graphics.visible = true;
+        seenKeys.add(key);
 
-    context2D.save();
-    context2D.translate(displayWidth / 2, displayHeight / 2);
-    context2D.scale(viewport.scale, viewport.scale);
-    context2D.translate(-viewport.x, -viewport.y);
-    debugDrawColliders(context.ecs.ecsInstance, entities, context2D);
-    context2D.restore();
+        if (collider.colliderName === "rectangle") {
+          const worldTransform = getWorldTransform(context.ecs.ecsInstance, entity);
+          const width = (collider.width ?? 32) * (worldTransform?.scaleX ?? 1);
+          const height = (collider.height ?? 32) * (worldTransform?.scaleY ?? 1);
+          const colliderAngle = (collider.angle ?? 0) * Math.PI / 180;
+          const transformAngle = worldTransform ? (worldTransform.rotation * Math.PI) / 180 : 0;
+          const totalAngle = colliderAngle + transformAngle;
+
+          graphics.position.set(center[0], center[1]);
+          graphics.rotation = totalAngle;
+          graphics.rect(-width / 2, -height / 2, width, height).stroke({
+            color: 0xff0000,
+            width: 2,
+          });
+        } else if (collider.colliderName === "circle") {
+          const worldTransform = getWorldTransform(context.ecs.ecsInstance, entity);
+          const baseRadius = collider.radius ?? 16;
+          const scale = worldTransform ? Math.max(worldTransform.scaleX, worldTransform.scaleY) : 1;
+          const radius = baseRadius * scale;
+          const velocity = getEntityVelocity(context.ecs.ecsInstance, entity);
+
+          graphics.position.set(center[0], center[1]);
+          graphics.rotation = 0;
+          graphics.circle(0, 0, radius).stroke({ color: 0xff0000, width: 2 });
+
+          if (velocity) {
+            const scaleFactor = 0.1;
+            graphics.moveTo(0, 0);
+            graphics.lineTo(velocity[0] * scaleFactor, velocity[1] * scaleFactor);
+            graphics.stroke({ color: 0x00ff00, width: 2 });
+          }
+        }
+      }
+    }
+
+    for (const [entity, graphics] of colliderGraphicsByEntity.entries()) {
+      if (seenKeys.has(entity)) continue;
+      context.pixiOverlay.removeChild(graphics);
+      graphics.destroy();
+      colliderGraphicsByEntity.delete(entity);
+    }
   });
 
   const colliderClickProvider: ClickableEntityProvider = {
@@ -99,10 +159,10 @@ export function collisionPlugin<
       let clickedEntity: string | null = null;
 
       context.ecs.runQuery(
-        [TransformComponentDefinition, ColliderComponentDefinition],
-        (entity, { transform, collider }) => {
+        [TransformComponentDefinition, ColliderComponentDefinition, CollisionBodyComponentDefinition],
+        (entity, { transform, collisionBody }) => {
           if (clickedEntity) return;
-          if (transform && collider && collider.collisionEnabled) {
+          if (transform && collisionBody && collisionBody.collisionEnabled) {
             const point = create(worldX, worldY);
             if (pointColliderCollision(context.ecs.ecsInstance, point, entity)) {
               clickedEntity = entity;

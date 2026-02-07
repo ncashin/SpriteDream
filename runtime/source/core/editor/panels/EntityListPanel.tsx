@@ -633,7 +633,7 @@ export function EntityListPanel() {
             onDragCancel={handleDragCancel}
           >
             <DroppableContainer overId={overId}>
-              <div className="overflow-auto p-0 pb-1 h-[120px] rounded-b-sm bg-[var(--vscode-list-inactiveSelectionBackground,rgba(0,0,0,0.1))]">
+              <div className="editor-scrollbar overflow-auto p-0 pb-1 h-[120px] rounded-b-sm bg-[var(--vscode-list-inactiveSelectionBackground,rgba(0,0,0,0.1))]">
                 {entities.length === 0 ? (
                   <div className="flex items-center justify-center min-h-5 px-2 py-1 text-xs text-[var(--vscode-descriptionForeground,rgba(255,255,255,0.6))]">
                     No entities

@@ -1,7 +1,7 @@
 import "../style.css";
 import "@vscode/codicons/dist/codicon.css";
 import { readFile } from "./fileUtilities";
-import { setSceneFile, updateSceneWithDiff } from "./scene/scene";
+import { flushSceneSave, setSceneFile, updateSceneWithDiff } from "./scene/scene";
 import { initializeEditor, getEditorRoot } from "./editor/editorInitializer";
 import { resetAllCallbacks } from "./gameloop";
 import type { InitialGameContext } from "./gameContext";
@@ -170,7 +170,10 @@ if (isInIframe) {
   window.addEventListener("keydown", (e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "s") {
       e.preventDefault();
-      notifyParent("save");
+      e.stopPropagation();
+      void flushSceneSave().finally(() => {
+        notifyParent("save");
+      });
     }
   });
 }

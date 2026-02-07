@@ -1,14 +1,12 @@
 import type { ContextExtension, RequirePlugin } from "./gameContext";
 import type { Component, ClickableEntityProvider } from "./ecs/ecs";
-import {
-  TransformComponentDefinition,
-  defineComponent,
-} from "./ecs/component";
+import { TransformComponentDefinition, defineComponent } from "./ecs/component";
 import { ecsPlugin } from "./scene/ecsAdapter";
 import { addDrawCallback, isUpdateEnabled } from "./gameloop";
 import { getViewport } from "./viewport/viewportPlugin";
 import { getWorldTransform, getWorldPosition } from "./transform";
 import { isEditorMode } from "./utils";
+import { Application, Assets, Container, Graphics, Sprite, Texture } from "pixi.js";
 
 export type HitFlashComponent = Component & {
   type: "hitFlash";
@@ -46,95 +44,105 @@ export const SpriteComponentDefinition: SpriteComponent = defineComponent(
   }
 );
 
-let resizeHandler: (() => void) | null = null;
-
-const imageCache = new Map<string, HTMLImageElement>();
-const imageLoadPromises = new Map<string, Promise<HTMLImageElement>>();
-
-function getImage(path: string): HTMLImageElement | null {
-  const normalizedPath = normalizeAssetPath(path);
-
-  const cached = imageCache.get(normalizedPath);
-  if (cached && cached.complete) {
-    return cached;
-  }
-
-  if (imageLoadPromises.has(normalizedPath)) {
-    return null;
-  }
-
-  const img = new Image();
-  const loadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
-    img.onload = () => {
-      imageCache.set(normalizedPath, img);
-      imageLoadPromises.delete(normalizedPath);
-      resolve(img);
-    };
-    img.onerror = () => {
-      console.warn(`Failed to load image: ${path}`);
-      imageLoadPromises.delete(normalizedPath);
-      reject(new Error(`Failed to load image: ${path}`));
-    };
-    img.src = normalizedPath;
-  });
-
-  imageLoadPromises.set(normalizedPath, loadPromise);
-
-  if (img.complete) {
-    imageCache.set(normalizedPath, img);
-    imageLoadPromises.delete(normalizedPath);
-    return img;
-  }
-
-  return null;
-}
-
-function updateCanvasResolution(canvas: HTMLCanvasElement): void {
-  const dpr = window.devicePixelRatio || 1;
-  const displayWidth = window.innerWidth;
-  const displayHeight = window.innerHeight;
-
-  canvas.width = displayWidth * dpr;
-  canvas.height = displayHeight * dpr;
-
-  canvas.style.width = `${displayWidth}px`;
-  canvas.style.height = `${displayHeight}px`;
-}
-
-function initializeCanvas(parent: HTMLElement): HTMLCanvasElement {
-  let canvas = parent.querySelector("canvas") as HTMLCanvasElement | null;
-
-  if (!canvas) {
-    canvas = document.createElement("canvas");
-    canvas.style.display = "block";
-    canvas.style.margin = "0";
-    canvas.style.padding = "0";
-    canvas.style.pointerEvents = "auto";
-    canvas.style.touchAction = "none";
-
-    updateCanvasResolution(canvas);
-
-    if (resizeHandler) {
-      window.removeEventListener("resize", resizeHandler);
-    }
-    resizeHandler = () => {
-      updateCanvasResolution(canvas!);
-    };
-    window.addEventListener("resize", resizeHandler);
-
-    parent.appendChild(canvas);
-  } else {
-    updateCanvasResolution(canvas);
-  }
-
-  return canvas;
-}
+type SpriteRecord = {
+  container: Container;
+  base: Sprite;
+  flashOverlay: Sprite;
+  kind: "image" | "color";
+  imageSrc?: string;
+  width: number;
+  height: number;
+  color: string;
+};
 
 function normalizeAssetPath(src: string): string {
-  if (src.startsWith('/') && !src.startsWith('//')) {
+  if (src.startsWith("/") && !src.startsWith("//")) {
     return src.slice(1);
   }
   return src;
+}
+
+const textureCache = new Map<string, Texture>();
+const textureLoadPromises = new Map<string, Promise<Texture>>();
+
+function loadTexture(path: string): Promise<Texture> {
+  const normalizedPath = normalizeAssetPath(path);
+  const cached = textureCache.get(normalizedPath);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
+
+  const existingPromise = textureLoadPromises.get(normalizedPath);
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  const promise = Assets.load(normalizedPath)
+    .then((texture) => {
+      textureCache.set(normalizedPath, texture);
+      textureLoadPromises.delete(normalizedPath);
+      return texture;
+    })
+    .catch((error) => {
+      textureLoadPromises.delete(normalizedPath);
+      throw error;
+    });
+
+  textureLoadPromises.set(normalizedPath, promise);
+  return promise;
+}
+
+function setSpriteTexture(sprite: Sprite, path: string): void {
+  const normalizedPath = normalizeAssetPath(path);
+  const cached = textureCache.get(normalizedPath);
+  if (cached) {
+    sprite.texture = cached;
+    return;
+  }
+
+  sprite.texture = Texture.EMPTY;
+  void loadTexture(normalizedPath)
+    .then((texture) => {
+      sprite.texture = texture;
+    })
+    .catch((error) => {
+      console.warn(`Failed to load texture: ${path}`, error);
+    });
+}
+
+function getDisplaySize(app: Application): { width: number; height: number } {
+  return {
+    width: app.screen.width,
+    height: app.screen.height,
+  };
+}
+
+function drawRectStroked(
+  graphics: Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: number,
+  lineWidth: number,
+  alpha = 1
+): void {
+  graphics.rect(x, y, width, height).stroke({ color, width: lineWidth, alpha });
+}
+
+function drawTriangle(
+  graphics: Graphics,
+  size: number,
+  color: number,
+  lineWidth: number
+): void {
+  const radius = size;
+  graphics.moveTo(0, -radius);
+  graphics.lineTo(-radius * 0.866, radius * 0.5);
+  graphics.lineTo(radius * 0.866, radius * 0.5);
+  graphics.closePath();
+  graphics.fill({ color });
+  graphics.stroke({ color, width: lineWidth });
 }
 
 export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
@@ -142,20 +150,23 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
 ): ContextExtension<
   T,
   {
-    canvas: HTMLCanvasElement;
-    context2D: CanvasRenderingContext2D;
+    canvas: HTMLCanvasElement | null;
+    pixiApp: Application;
+    pixiWorld: Container;
+    pixiOverlay: Container;
     spriteClickProvider: ClickableEntityProvider;
   }
 > {
-  const canvas = initializeCanvas(context.rootElement);
-  const context2D = canvas.getContext("2d");
+  let canvas: HTMLCanvasElement | null = null;
+  let isPixiReady = false;
 
-  if (!context2D) {
-    throw new Error("Failed to get 2D rendering context from canvas");
-  }
+  const app = new Application();
+  const worldContainer = new Container();
+  const overlayContainer = new Container();
 
-  context2D.imageSmoothingEnabled = true;
-  context2D.imageSmoothingQuality = "high";
+  const spriteRecords = new Map<string, SpriteRecord>();
+  const selectionGraphics = new Graphics();
+  const originGraphics = new Graphics();
 
   const spriteClickProvider: ClickableEntityProvider = {
     checkClick: (worldX: number, worldY: number): string | null => {
@@ -195,47 +206,177 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     },
   };
 
+  const prepareCanvas = () => {
+    if (!canvas) return;
+    canvas.style.display = "block";
+    canvas.style.margin = "0";
+    canvas.style.padding = "0";
+    canvas.style.pointerEvents = "auto";
+    canvas.style.touchAction = "none";
+  };
+
+  const createBaseDisplay = (sprite: SpriteComponent): SpriteRecord => {
+    const container = new Container();
+    let base: Sprite;
+    let kind: SpriteRecord["kind"] = "color";
+    let imageSrc: string | undefined;
+
+    if (sprite.image) {
+      const imageSprite = new Sprite(Texture.EMPTY);
+      imageSprite.anchor.set(0.5);
+      imageSprite.width = sprite.width;
+      imageSprite.height = sprite.height;
+      setSpriteTexture(imageSprite, sprite.image);
+      base = imageSprite;
+      kind = "image";
+      imageSrc = sprite.image;
+    } else {
+      const colorSprite = new Sprite(Texture.WHITE);
+      colorSprite.anchor.set(0.5);
+      colorSprite.width = sprite.width;
+      colorSprite.height = sprite.height;
+      colorSprite.tint = Number.parseInt(sprite.color.replace("#", ""), 16);
+      base = colorSprite;
+      kind = "color";
+    }
+
+    const flashOverlay = new Sprite(Texture.WHITE);
+    flashOverlay.anchor.set(0.5);
+    flashOverlay.width = sprite.width;
+    flashOverlay.height = sprite.height;
+    flashOverlay.tint = 0xffffff;
+    flashOverlay.alpha = 0;
+    flashOverlay.visible = false;
+
+    container.addChild(base);
+    container.addChild(flashOverlay);
+
+    return {
+      container,
+      base,
+      flashOverlay,
+      kind,
+      imageSrc,
+      width: sprite.width,
+      height: sprite.height,
+      color: sprite.color,
+    };
+  };
+
+  const updateBaseDisplay = (record: SpriteRecord, sprite: SpriteComponent) => {
+    const needsTypeSwap =
+      (sprite.image && record.kind !== "image") ||
+      (!sprite.image && record.kind !== "color");
+
+    if (needsTypeSwap) {
+      record.container.removeChild(record.base);
+      record.base.destroy();
+      const newRecord = createBaseDisplay(sprite);
+      record.base = newRecord.base;
+      record.kind = newRecord.kind;
+      record.imageSrc = newRecord.imageSrc;
+      record.width = newRecord.width;
+      record.height = newRecord.height;
+      record.color = newRecord.color;
+      record.container.addChildAt(record.base, 0);
+    }
+
+    if (record.kind === "image" && sprite.image) {
+      if (record.imageSrc !== sprite.image) {
+        setSpriteTexture(record.base as Sprite, sprite.image);
+        record.imageSrc = sprite.image;
+      }
+      if (record.width !== sprite.width || record.height !== sprite.height) {
+        const imageSprite = record.base as Sprite;
+        imageSprite.width = sprite.width;
+        imageSprite.height = sprite.height;
+      }
+    } else if (record.kind === "color") {
+      const colorSprite = record.base as Sprite;
+      if (record.color !== sprite.color) {
+        colorSprite.tint = Number.parseInt(sprite.color.replace("#", ""), 16);
+      }
+      if (record.width !== sprite.width || record.height !== sprite.height) {
+        colorSprite.width = sprite.width;
+        colorSprite.height = sprite.height;
+      }
+    }
+
+    if (record.width !== sprite.width || record.height !== sprite.height) {
+      record.flashOverlay.width = sprite.width;
+      record.flashOverlay.height = sprite.height;
+    }
+
+    record.width = sprite.width;
+    record.height = sprite.height;
+    record.color = sprite.color;
+  };
+
+  const extendedContext = {
+    ...context,
+    canvas: null as HTMLCanvasElement | null,
+    pixiApp: app,
+    pixiWorld: worldContainer,
+    pixiOverlay: overlayContainer,
+    spriteClickProvider,
+  };
+
+  const existingCanvas = context.rootElement.querySelector("canvas");
+  if (existingCanvas) {
+    canvas = existingCanvas as HTMLCanvasElement;
+  } else {
+    canvas = document.createElement("canvas");
+    context.rootElement.appendChild(canvas);
+  }
+  prepareCanvas();
+  extendedContext.canvas = canvas;
+
+  void app
+    .init({
+      canvas,
+      resizeTo: context.rootElement,
+      antialias: false,
+      backgroundAlpha: 0,
+      resolution: window.devicePixelRatio || 1,
+      autoDensity: true,
+      powerPreference: "high-performance",
+    })
+    .then(() => {
+      app.stage.addChild(worldContainer);
+      app.stage.addChild(overlayContainer);
+      overlayContainer.addChild(selectionGraphics);
+      overlayContainer.addChild(originGraphics);
+
+      app.ticker.stop();
+      isPixiReady = true;
+    })
+    .catch((error) => {
+      console.error("Failed to initialize PixiJS:", error);
+    });
 
   addDrawCallback(() => {
-    if (!canvas || !context2D) return;
-
-    context2D.imageSmoothingEnabled = true;
-    context2D.imageSmoothingQuality = "high";
-
-    const dpr = window.devicePixelRatio || 1;
-    context2D.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    const displayWidth = window.innerWidth;
-    const displayHeight = window.innerHeight;
-    context2D.clearRect(0, 0, displayWidth, displayHeight);
+    if (!isPixiReady) return;
 
     const viewport = getViewport();
+    const { width: displayWidth, height: displayHeight } = getDisplaySize(app);
+    const worldOffsetX = displayWidth / 2 - viewport.x * viewport.scale;
+    const worldOffsetY = displayHeight / 2 - viewport.y * viewport.scale;
+
+    worldContainer.position.set(worldOffsetX, worldOffsetY);
+    worldContainer.scale.set(viewport.scale);
+    overlayContainer.position.set(worldOffsetX, worldOffsetY);
+    overlayContainer.scale.set(viewport.scale);
+
+    originGraphics.clear();
+    if (isEditorMode() && !isUpdateEnabled()) {
+      drawTriangle(originGraphics, 8, 0x00ffff, 1 / viewport.scale);
+    }
+
+    selectionGraphics.clear();
+
     const selectedEntity = context.ecs.getSelectedEntity();
 
-    context2D.save();
-
-    context2D.translate(displayWidth / 2, displayHeight / 2);
-    context2D.scale(viewport.scale, viewport.scale);
-    context2D.translate(-viewport.x, -viewport.y);
-
-    if (isEditorMode() && !isUpdateEnabled()) {
-      context2D.save();
-      context2D.strokeStyle = "#00ffff";
-      context2D.fillStyle = "#00ffff";
-      context2D.lineWidth = 1 / viewport.scale;
-
-      const size = 8;
-      const radius = size;
-
-      context2D.beginPath();
-      context2D.moveTo(0, -radius);
-      context2D.lineTo(-radius * 0.866, radius * 0.5);
-      context2D.lineTo(radius * 0.866, radius * 0.5);
-      context2D.closePath();
-      context2D.fill();
-      context2D.stroke();
-      context2D.restore();
-    }
+    const seenEntities = new Set<string>();
 
     context.ecs.runQuery(
       [TransformComponentDefinition, SpriteComponentDefinition],
@@ -247,107 +388,61 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
         if (!worldPos) return;
 
         const typedHitFlash = hitFlash as HitFlashComponent | undefined;
-
         const isFlashing =
           typedHitFlash && typedHitFlash.flashTime < typedHitFlash.maxFlashTime;
         const flashIntensity = isFlashing
           ? 1 - typedHitFlash!.flashTime / typedHitFlash!.maxFlashTime
           : 0;
 
-        const rotationRad = (worldTransform.rotation * Math.PI) / 180;
-        const isSelected = selectedEntity === entity;
-
-        const scaledWidth = sprite.width * worldTransform.scaleX;
-        const scaledHeight = sprite.height * worldTransform.scaleY;
-
-        context2D.save();
-        if (rotationRad !== 0) {
-          context2D.translate(worldPos.x, worldPos.y);
-          context2D.rotate(rotationRad);
-          context2D.translate(-worldPos.x, -worldPos.y);
-        }
-
-        if (sprite.image) {
-          const img = getImage(sprite.image);
-
-          if (img) {
-            context2D.drawImage(
-              img,
-              worldPos.x - scaledWidth / 2,
-              worldPos.y - scaledHeight / 2,
-              scaledWidth,
-              scaledHeight
-            );
-            if (isFlashing) {
-              context2D.save();
-              context2D.globalCompositeOperation = "source-atop";
-              context2D.globalAlpha = flashIntensity * 0.7;
-              context2D.fillStyle = "#ffffff";
-              context2D.fillRect(
-                worldPos.x - scaledWidth / 2,
-                worldPos.y - scaledHeight / 2,
-                scaledWidth,
-                scaledHeight
-              );
-              context2D.restore();
-            }
-          } else {
-            context2D.fillStyle = sprite.color;
-            context2D.fillRect(
-              worldPos.x - scaledWidth / 2,
-              worldPos.y - scaledHeight / 2,
-              scaledWidth,
-              scaledHeight
-            );
-          }
+        let record = spriteRecords.get(entity);
+        if (!record) {
+          record = createBaseDisplay(sprite);
+          spriteRecords.set(entity, record);
+          worldContainer.addChild(record.container);
         } else {
-          context2D.fillStyle = sprite.color;
-          context2D.fillRect(
-            worldPos.x - scaledWidth / 2,
-            worldPos.y - scaledHeight / 2,
-            scaledWidth,
-            scaledHeight
-          );
-          if (isFlashing) {
-            context2D.save();
-            context2D.globalAlpha = flashIntensity * 0.7;
-            context2D.fillStyle = "#ffffff";
-            context2D.fillRect(
-              worldPos.x - scaledWidth / 2,
-              worldPos.y - scaledHeight / 2,
-              scaledWidth,
-              scaledHeight
-            );
-            context2D.restore();
-          }
+          updateBaseDisplay(record, sprite);
         }
 
-        if (isSelected) {
-          context2D.save();
-          context2D.strokeStyle = "#00ffff";
-          context2D.lineWidth = 2 / viewport.scale;
+        record.container.position.set(worldPos.x, worldPos.y);
+        record.container.rotation = (worldTransform.rotation * Math.PI) / 180;
+        record.container.scale.set(worldTransform.scaleX, worldTransform.scaleY);
 
+        if (isFlashing) {
+          record.flashOverlay.visible = true;
+          record.flashOverlay.alpha = flashIntensity * 0.7;
+        } else {
+          record.flashOverlay.visible = false;
+          record.flashOverlay.alpha = 0;
+        }
+
+        if (selectedEntity === entity) {
+          const scaledWidth = sprite.width * worldTransform.scaleX;
+          const scaledHeight = sprite.height * worldTransform.scaleY;
           const padding = 2 / viewport.scale;
-          const left = worldPos.x - scaledWidth / 2 - padding;
-          const top = worldPos.y - scaledHeight / 2 - padding;
-          const right = worldPos.x + scaledWidth / 2 + padding;
-          const bottom = worldPos.y + scaledHeight / 2 + padding;
-
-          context2D.strokeRect(left, top, right - left, bottom - top);
-          context2D.restore();
+          drawRectStroked(
+            selectionGraphics,
+            worldPos.x - scaledWidth / 2 - padding,
+            worldPos.y - scaledHeight / 2 - padding,
+            scaledWidth + padding * 2,
+            scaledHeight + padding * 2,
+            0x00ffff,
+            2 / viewport.scale
+          );
         }
 
-        context2D.restore();
+        seenEntities.add(entity);
       }
     );
 
-    context2D.restore();
+    for (const [entity, record] of spriteRecords.entries()) {
+      if (seenEntities.has(entity)) continue;
+      worldContainer.removeChild(record.container);
+      record.container.destroy({ children: true });
+      spriteRecords.delete(entity);
+    }
+
+    app.renderer.render(app.stage);
   });
 
-  return {
-    ...context,
-    canvas,
-    context2D,
-    spriteClickProvider,
-  };
+  return extendedContext;
 }

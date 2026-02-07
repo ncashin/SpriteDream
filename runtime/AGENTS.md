@@ -4,8 +4,6 @@ Try and cobble things together using existing components for example a Projectil
 
 For creating entities be careful do it minimally ensure component creation is in line with component type definitions
 
-Don't change files in the core module
-
 Example Code:
 """
     const mouseLeftPressed = input.isMouseButtonPressed("left");
@@ -48,3 +46,5 @@ Read documentation when applicable
 Define components at the top level
 
 Make absolutely minimal diffs in order to change entities in a scene file. Scene files changed unecessarily make things awkward for an end user.
+
+Expose core/plugin APIs through the GameContext

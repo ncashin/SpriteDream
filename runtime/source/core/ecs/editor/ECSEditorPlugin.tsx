@@ -9,6 +9,20 @@ import { setEditorGameContext } from "../../editor/editorInitializer";
 import { isEditorMode } from "../../utils";
 import { getWorldPosition, setWorldPosition } from "../../transform";
 
+type SelectionStorageWindow = Window & {
+  __natstackSelectedEntity?: string | null;
+};
+
+function getPersistedSelectedEntity(): string | null {
+  if (typeof window === "undefined") return null;
+  return (window as SelectionStorageWindow).__natstackSelectedEntity ?? null;
+}
+
+function setPersistedSelectedEntity(entity: string | null): void {
+  if (typeof window === "undefined") return;
+  (window as SelectionStorageWindow).__natstackSelectedEntity = entity;
+}
+
 function getClickProviders(context: any): ClickableEntityProvider[] {
   const providers: ClickableEntityProvider[] = [];
   for (const key in context) {
@@ -56,6 +70,13 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
 
   // Register the game context with the editor
   setEditorGameContext(context);
+
+  const persistedSelection = getPersistedSelectedEntity();
+  if (persistedSelection && context.ecs.ecsInstance.entities[persistedSelection]) {
+    context.ecs.selectEntity(persistedSelection);
+  } else if (persistedSelection) {
+    setPersistedSelectedEntity(null);
+  }
 
   if (!("input" in context && "ecs" in context && "canvas" in context)) {
     return;
@@ -111,9 +132,16 @@ function initializeECSEditor<T extends RequirePlugin<[typeof ecsPlugin, typeof i
   // Click and hover handling
   const canvas = context.canvas as HTMLCanvasElement;
   let previousMouseDown = false;
+  let previousSelectedEntity: string | null = context.ecs.getSelectedEntity();
 
   addDrawCallback(() => {
     if (!isEditorUpdateEnabled() || !canvas) return;
+
+    const selectedEntity = context.ecs.getSelectedEntity();
+    if (selectedEntity !== previousSelectedEntity) {
+      previousSelectedEntity = selectedEntity;
+      setPersistedSelectedEntity(selectedEntity);
+    }
 
     const mousePos = context.input.getMousePosition();
     const isMouseDown = context.input.isMouseButtonPressed("left");

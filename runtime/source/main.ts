@@ -10,7 +10,9 @@ import {
 } from "./core/gameloop";
 import type { Component } from "./core/ecs/ecs";
 import { getEntity } from "./core/ecs/ecs";
-import { defineComponent, VelocityComponentDefinition, TransformComponentDefinition, ColliderComponentDefinition } from "./core/ecs/component";
+import { defineComponent, VelocityComponentDefinition, TransformComponentDefinition } from "./core/ecs/component";
+import { ColliderComponentDefinition } from "./core/collision/components/colliderComponent";
+import { CollisionBodyComponentDefinition } from "./core/collision/components/collisionBodyComponent";
 import { SpriteComponentDefinition } from "./core/sprite";
 import { registerCollisionCallback } from "./core/collision/collisionCallbacks";
 import { screenToWorld } from "./core/viewport/viewportPlugin";
@@ -139,7 +141,16 @@ function main({ ecs, input }: GameContext) {
           fireballEntity[TransformComponentDefinition.type] = { ...TransformComponentDefinition, x: playerWorldPos.x, y: playerWorldPos.y };
           fireballEntity[SpriteComponentDefinition.type] = { ...SpriteComponentDefinition, width: 24, height: 24, image: "/fireball.png" };
           fireballEntity[VelocityComponentDefinition.type] = { ...VelocityComponentDefinition, x: velocityX, y: velocityY };
-          fireballEntity[ColliderComponentDefinition.type] = { ...ColliderComponentDefinition, colliderName: "circle", bodyType: "kinematic", radius: 12, collisionEnabled: true };
+          fireballEntity[CollisionBodyComponentDefinition.type] = {
+            ...CollisionBodyComponentDefinition,
+            bodyType: "kinematic",
+            collisionEnabled: true,
+          };
+          fireballEntity[ColliderComponentDefinition.type] = {
+            ...ColliderComponentDefinition,
+            colliderName: "circle",
+            radius: 12,
+          };
         }
       }
     }

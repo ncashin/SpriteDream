@@ -10,6 +10,7 @@ let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 let persistenceEnabled = true;
 let sceneSnapshot: SceneData | null = null;
 let isInitializing = false;
+let lastSavedContent: string | null = null;
 
 const SAVE_DEBOUNCE_MS = 500;
 
@@ -81,12 +82,20 @@ function createProxy<T extends Record<string, unknown>>(
   });
 }
 
+async function writeSceneFile(): Promise<void> {
+  if (!currentFilePath || !persistenceEnabled || !currentScene) return;
+  const content = JSON.stringify(currentScene, null, 2);
+  if (lastSavedContent === content) return;
+  await writeFile(currentFilePath, content);
+  lastSavedContent = content;
+}
+
 function saveScene(): void {
   if (!currentFilePath || !persistenceEnabled || !currentScene) return;
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(async () => {
     try {
-      await writeFile(currentFilePath!, JSON.stringify(currentScene, null, 2));
+      await writeSceneFile();
     } catch (error) {
       console.error("Failed to save scene:", error);
     }
@@ -171,6 +180,19 @@ export function updateSceneWithDiff(diff: SceneData): void {
   });
 }
 
+export async function flushSceneSave(): Promise<void> {
+  if (!currentFilePath || !persistenceEnabled || !currentScene) return;
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+  }
+  try {
+    await writeSceneFile();
+  } catch (error) {
+    console.error("Failed to flush scene save:", error);
+  }
+}
+
 export function mergeWithCurrentScene(incoming: SceneData): SceneData {
   if (!currentScene) return deepClone(incoming);
 
@@ -206,7 +228,9 @@ export async function setSceneFile(filePath: string, content?: string): Promise<
     if (isNewFile) undoRedoManager.clear();
 
     isInitializing = true;
-    setScene(isReload ? mergeWithCurrentScene(sceneData) : sceneData);
+    const nextSceneData = isReload ? mergeWithCurrentScene(sceneData) : sceneData;
+    setScene(nextSceneData);
+    lastSavedContent = JSON.stringify(nextSceneData, null, 2);
     setTimeout(() => { isInitializing = false; }, 0);
   } catch (error) {
     console.error("Failed to load scene:", error);

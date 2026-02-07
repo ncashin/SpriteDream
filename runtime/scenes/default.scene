@@ -25,13 +25,16 @@
         "platform": {
           "type": "platform"
         },
-        "collider": {
-          "type": "collider",
-          "colliderName": "rectangle",
+        "collisionBody": {
+          "type": "collisionBody",
           "bodyType": "static",
           "collisionEnabled": true,
           "bodyName": "platform",
-          "propagateCollision": false,
+          "propagateCollision": false
+        },
+        "collider": {
+          "type": "collider",
+          "colliderName": "rectangle",
           "width": 1000,
           "height": 300,
           "angle": 0
@@ -59,12 +62,16 @@
           "x": 0,
           "y": 0
         },
+        "collisionBody": {
+          "type": "collisionBody",
+          "bodyType": "kinematic",
+          "collisionEnabled": true,
+          "callbackName": "player",
+          "propagateCollision": false
+        },
         "collider": {
           "type": "collider",
           "colliderName": "rectangle",
-          "bodyType": "static",
-          "collisionEnabled": true,
-          "propagateCollision": false,
           "width": 200,
           "height": 20,
           "angle": 0
@@ -92,12 +99,15 @@
           "x": 0,
           "y": 0
         },
+        "collisionBody": {
+          "type": "collisionBody",
+          "bodyType": "static",
+          "collisionEnabled": true,
+          "propagateCollision": true
+        },
         "collider": {
           "type": "collider",
           "colliderName": "rectangle",
-          "bodyType": "static",
-          "collisionEnabled": true,
-          "propagateCollision": true,
           "width": 200,
           "height": 20,
           "angle": 0
@@ -108,8 +118,8 @@
         "transform": {
           "type": "transform",
           "parent": null,
-          "x": 0,
-          "y": -100,
+          "x": 22.454416510922385,
+          "y": -101.36977843712891,
           "rotation": 0,
           "scaleX": 1,
           "scaleY": 1
@@ -133,13 +143,15 @@
           "jumpStrength": 750,
           "isGrounded": false
         },
+        "collisionBody": {
+          "type": "collisionBody",
+          "bodyType": "static",
+          "collisionEnabled": true,
+          "propagateCollision": false
+        },
         "collider": {
           "type": "collider",
           "colliderName": "rectangle",
-          "bodyType": "kinematic",
-          "collisionEnabled": true,
-          "callbackName": "player",
-          "propagateCollision": false,
           "width": 32,
           "height": 32,
           "angle": 0
@@ -157,7 +169,7 @@
         },
         "sprite": {
           "type": "sprite",
-          "width": 16,
+          "width": 32,
           "height": 32,
           "image": "/staff.png"
         }

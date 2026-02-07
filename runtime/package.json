@@ -30,6 +30,7 @@
     "d3-quadtree": "^3.0.1",
     "jotai": "^2.16.2",
     "monaco-editor": "^0.55.1",
+    "pixi.js": "^8.16.0",
     "prosemirror-state": "^1.4.3",
     "prosemirror-view": "^1.34.0",
     "react": "^18.2.0",
