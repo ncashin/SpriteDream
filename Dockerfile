@@ -1,9 +1,11 @@
 FROM node:20-alpine AS development-dependencies-env
+RUN apk add --no-cache python3 make g++
 COPY website /app
 WORKDIR /app
 RUN npm ci
 
 FROM node:20-alpine AS production-dependencies-env
+RUN apk add --no-cache python3 make g++
 COPY website/package.json website/package-lock.json /app/
 WORKDIR /app
 RUN npm ci --omit=dev
