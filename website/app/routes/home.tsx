@@ -138,7 +138,6 @@ function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines
   const [activeTab, setActiveTab] = useState<TabId>("main.scene");
   const [highlightedLines, setHighlightedLines] = useState<Set<number>>(new Set());
   const runtimeIframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [engineRunning, setEngineRunning] = useState(true);
   const [runtimeReady, setRuntimeReady] = useState(false);
 
   const postRuntimeCommand = (command: string, data?: Record<string, unknown>) => {
@@ -161,8 +160,8 @@ function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines
 
   useEffect(() => {
     if (!runtimeReady) return;
-    postRuntimeCommand("setRunning", { running: engineRunning });
-  }, [engineRunning, runtimeReady]);
+    postRuntimeCommand("setRunning", { running: true });
+  }, [runtimeReady]);
 
   const toggleLineHighlight = (lineNum: number) => {
     setHighlightedLines(prev => {
@@ -225,17 +224,6 @@ function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines
             </div>
           ) : (
             <div className="relative w-full h-full">
-              <div className="absolute top-3 right-3 z-20">
-                <button
-                  type="button"
-                  onClick={() => setEngineRunning((prev) => !prev)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-full border border-white/10 bg-black/40 text-white/80 hover:bg-black/60 transition-colors"
-                  aria-pressed={engineRunning}
-                >
-                  <span className={`inline-flex w-2 h-2 rounded-full ${engineRunning ? "bg-emerald-400" : "bg-amber-400"}`} />
-                  {engineRunning ? "Engine running" : "Engine paused"}
-                </button>
-              </div>
               <iframe
                 src="/api/runtime/"
                 className="w-full h-full border-0"
@@ -398,7 +386,7 @@ export default function Home() {
               </SidebarSection>
 
               <SidebarSection title="Made to work with the tools you love">
-                <div className="w-full min-w-0 pl-0.5">
+                <div className="w-full min-w-0 pl-0.5 pt-0.5">
                   <div className="inline-flex w-fit max-w-full">
                     <ul className="flex flex-row flex-wrap justify-start gap-6 list-none w-fit max-w-full">
                       {TOOLS.map((tool) => (
