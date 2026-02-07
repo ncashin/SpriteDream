@@ -248,7 +248,6 @@ function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines
                   postRuntimeCommand("ping");
                 }}
               />
-              <div className="absolute inset-0 pointer-events-none z-10 bg-gradient-to-br from-[var(--color-accent)]/5 to-[var(--color-ember)]/5" />
               {highlightedLines.size > 0 && (
                 <div className="absolute inset-0 pointer-events-none z-20">
                   {Array.from(highlightedLines).map((lineNum) => {
@@ -292,8 +291,8 @@ interface SidebarSectionProps {
 
 function SidebarSection({ title, children }: SidebarSectionProps) {
   return (
-    <div className="sidebar-section space-y-3">
-      <h3 className="text-sm font-bold text-white/90 uppercase tracking-wider mb-3">{title}</h3>
+    <div className="sidebar-section space-y-5">
+      <h3 className="text-sm font-bold text-white/90 uppercase tracking-wider mb-4">{title}</h3>
       {children}
     </div>
   );
@@ -306,9 +305,9 @@ interface FeatureItemProps {
 
 function FeatureItem({ title, description }: FeatureItemProps) {
   return (
-    <div className="sidebar-item space-y-1">
+    <div className="sidebar-item space-y-2">
       <span className="text-base font-semibold text-white block leading-tight">{title}</span>
-      <p className="text-sm font-medium text-white/50 leading-relaxed">{description}</p>
+      <p className="text-base font-medium text-white/50 leading-relaxed">{description}</p>
     </div>
   );
 }

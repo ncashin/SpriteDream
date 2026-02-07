@@ -18,14 +18,14 @@ export default function ComingSoon() {
     return (
         <main className="min-h-screen bg-[var(--color-bg-void)] grid-bg text-white">
             <div className="spotlight fixed inset-0 pointer-events-none" />
-            <div className="relative z-10 flex min-h-screen items-start justify-center px-6 pt-28 pb-16 sm:items-center sm:py-16">
+            <div className="relative z-10 flex min-h-screen items-start justify-center pr-10 pl-0 pt-28 pb-16 sm:items-center sm:py-16 sm:px-10">
                 <div className="w-full max-w-3xl">
                     <div className="">
-                    <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-6xl">
+                    <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">
                             <span className="block text-white">
                                 GameIDE is coming soon
                             </span>
-                            <span className="pt-2 pl-1 block text-2xl font-medium text-white/70 sm:text-3xl">
+                            <span className="pt-2 pl-1 block text-lg font-medium text-white/70 sm:text-2xl">
                             Join the waitlist for early access
                             </span>
                         </h1>

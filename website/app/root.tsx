@@ -95,10 +95,12 @@ function Topbar() {
           {/* Mobile menu button */}
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="sm:hidden p-1.5 rounded text-white/50 hover:text-white/80 transition-colors"
+            className={`sm:hidden p-1.5 rounded transition-colors ${
+              isMenuOpen ? "text-white/80 bg-white/5" : "text-white/50 hover:text-white/80"
+            }`}
             aria-label="Toggle menu"
           >
-            <i className={`codicon ${isMenuOpen ? 'codicon-close' : 'codicon-menu'} w-5 h-5`} />
+            <i className="codicon codicon-menu w-5 h-5" />
           </button>
         </div>
       </div>
@@ -106,7 +108,7 @@ function Topbar() {
       {/* Mobile menu */}
       {isMenuOpen && (
         <div className="sm:hidden absolute top-10 left-0 right-0 bg-[var(--color-bg-void)]/95 backdrop-blur-md border-b border-white/[0.02]">
-          <nav className="flex flex-col p-4 gap-1">
+          <nav className="flex flex-col py-4 pl-4 pr-2 gap-1">
             <Link
               to="/"
               onClick={() => setIsMenuOpen(false)}
