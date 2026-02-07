@@ -321,20 +321,21 @@ interface ToolLinkProps {
 
 function ToolLink({ href, icon, alt, label }: ToolLinkProps) {
   const isSvg = icon.endsWith('.svg');
+  const isClaude = label === "Claude Code";
   return (
     <li>
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-2.5 group cursor-pointer py-1.5 -mx-1.5 px-1.5 rounded-lg transition-colors hover:bg-white/5"
+        className="flex flex-col items-center justify-center gap-1 group cursor-pointer p-0"
       >
         <img
           src={icon}
           alt={alt}
-          className={`w-5 h-5 ${isSvg ? '' : 'rounded-sm'} brightness-110 flex-shrink-0`}
+          className={`w-10 h-10 aspect-square object-contain ${isSvg ? '' : 'rounded-sm'} brightness-110 flex-shrink-0 transition-transform duration-200 group-hover:scale-105 ${isClaude ? 'bg-[#f5f0e6] p-1 rounded' : ''}`}
         />
-        <span className="text-base font-medium text-white group-hover:text-white transition-colors">{label}</span>
+        <span className="text-xs font-medium text-white/70 group-hover:text-white transition-colors">{label}</span>
       </a>
     </li>
   );
@@ -343,6 +344,7 @@ function ToolLink({ href, icon, alt, label }: ToolLinkProps) {
 const TOOLS = [
   { href: "https://cursor.sh", icon: "/cursor.png", alt: "Cursor", label: "Cursor" },
   { href: "https://claude.ai", icon: "/claude.png", alt: "Claude Code", label: "Claude Code" },
+  { href: "https://openai.com/codex", icon: "/codex.png", alt: "Codex", label: "Codex" },
   { href: "https://opencode.ai", icon: "/opencode.svg", alt: "OpenCode", label: "OpenCode" },
 ] as const;
 
@@ -357,7 +359,7 @@ export default function Home() {
         <div className="flex gap-8 items-start w-full h-full">
           <div className="sidebar flex flex-col justify-between pb-14 h-max">
             <div className="space-y-7 max-w-full">
-              <div className="flex flex-row h-min gap-3.5 w-full min-w-0 items-center">
+              <div className="inline-flex flex-row h-min gap-3.5 w-fit max-w-full min-w-0 items-center">
                 <img
                   src="/logo.svg"
                   alt="GameIDE Logo"
@@ -396,11 +398,15 @@ export default function Home() {
               </SidebarSection>
 
               <SidebarSection title="Made to work with the tools you love">
-                <ul className="flex flex-col list-none">
-                  {TOOLS.map((tool) => (
-                    <ToolLink key={tool.href} {...tool} />
-                  ))}
-                </ul>
+                <div className="w-full min-w-0 pl-0.5">
+                  <div className="inline-flex w-fit max-w-full">
+                    <ul className="flex flex-row flex-wrap justify-start gap-6 list-none w-fit max-w-full">
+                      {TOOLS.map((tool) => (
+                        <ToolLink key={tool.href} {...tool} />
+                      ))}
+                    </ul>
+                  </div>
+                </div>
               </SidebarSection>
             </div>
 
