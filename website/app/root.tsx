@@ -181,36 +181,59 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
+  let title = "Oops!";
+  let headline = "Something went wrong.";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
-      error.status === 404
-        ? "The requested page could not be found."
-        : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
+    const routeErrorDetails =
+      typeof error.data === "string"
+        ? error.data
+        : error.data && typeof error.data === "object" && "message" in error.data
+          ? String(error.data.message)
+          : undefined;
+
+    title = error.status === 404 ? "404" : `${error.status}`;
+    headline = error.status === 404 ? "Page not found." : "Request failed.";
+    details = routeErrorDetails || error.statusText || details;
+  } else if (error && error instanceof Error) {
+    details = error.message || details;
+    stack = import.meta.env.DEV ? error.stack : undefined;
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6">
-      <div className="text-center">
-        <h1 className="text-8xl font-black text-gradient mb-4">{message}</h1>
-        <p className="text-xl text-white/50 mb-8">{details}</p>
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--color-accent)] hover:bg-[var(--color-accent-dim)] text-black font-semibold rounded-lg btn-lift transition-all"
-        >
-          Go Home
-        </Link>
+    <main className="min-h-screen bg-[var(--color-bg-void)] grid-bg text-white">
+      <div className="spotlight fixed inset-0 pointer-events-none" />
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-16">
+        <div className="w-full max-w-3xl text-center">
+          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">
+            <span className="block text-white">{title}</span>
+            <span className="pt-2 pl-1 block text-lg font-medium text-white/70 sm:text-2xl">
+              {headline}
+            </span>
+          </h1>
+
+          <div className="mt-8 rounded-2xl border border-white/10 bg-[var(--color-bg-elevated)] px-5 py-4 text-left shadow-[0_0_26px_rgba(90,110,255,0.22)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
+              Error Details
+            </p>
+            <p className="mt-2 text-base text-white/70 break-words">{details}</p>
+          </div>
+
+          <div className="mt-8 flex items-center justify-center">
+            <Link
+              to="/"
+              className="inline-flex h-12 items-center justify-center rounded-2xl border border-[#1e1e23] bg-[#121216] px-6 text-sm font-semibold text-white/90 transition-all hover:bg-[#1e1e23] hover:border-[#37373b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/70"
+            >
+              Go Home
+            </Link>
+          </div>
+        </div>
       </div>
       {stack && (
-        <pre className="w-full max-w-4xl p-6 overflow-x-auto mt-12 bg-[var(--color-bg-elevated)] rounded-xl border border-white/5">
-          <code className="text-sm text-white/60 font-mono">{stack}</code>
+        <pre className="relative z-10 w-full max-w-4xl mx-auto px-6 pb-16 overflow-x-auto">
+          <code className="text-xs text-white/50 font-mono">{stack}</code>
         </pre>
       )}
     </main>

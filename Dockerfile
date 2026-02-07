@@ -13,7 +13,7 @@ RUN npm ci --omit=dev
 FROM node:20-alpine AS runtime-build-env
 COPY runtime /app/runtime
 WORKDIR /app/runtime
-RUN npm ci && npm run build
+RUN npm ci && npm run build:editor
 
 FROM node:20-alpine AS build-env
 COPY website /app/
