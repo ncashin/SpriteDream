@@ -248,8 +248,9 @@ function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines
                   postRuntimeCommand("ping");
                 }}
               />
+              <div className="absolute inset-0 pointer-events-none z-10 bg-gradient-to-br from-[var(--color-accent)]/5 to-[var(--color-ember)]/5" />
               {highlightedLines.size > 0 && (
-                <div className="absolute inset-0 pointer-events-none z-10">
+                <div className="absolute inset-0 pointer-events-none z-20">
                   {Array.from(highlightedLines).map((lineNum) => {
                     const lineIndex = mainTsLines.findIndex(l => l.num === lineNum);
                     if (lineIndex === -1) return null;
@@ -307,7 +308,7 @@ function FeatureItem({ title, description }: FeatureItemProps) {
   return (
     <div className="sidebar-item space-y-1">
       <span className="text-base font-semibold text-white block leading-tight">{title}</span>
-      <p className="text-sm font-normal text-white/50 leading-relaxed">{description}</p>
+      <p className="text-sm font-medium text-white/50 leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -365,7 +366,7 @@ export default function Home() {
                 />
                 <div className="flex flex-col items-start w-full min-w-0">
                   <h1 className="text-3xl font-bold tracking-tight text-white leading-tight">GameIDE</h1>
-                  <p className="text-base font-medium text-white/60 mt-1 leading-relaxed">The Engine that works where you do</p>
+                  <p className="text-lg font-medium text-white/60 mt-1 leading-relaxed">The Engine that works where you do</p>
                 </div>
               </div>
 
@@ -405,10 +406,8 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col gap-2.5 pt-6 sidebar-divider">
-              <a
-                href="https://marketplace.visualstudio.com/items?itemName=gameide.gameide"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                to="/coming-soon"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 hover:border-white/20 transition-all"
                 aria-label="Download Extension"
               >
@@ -416,9 +415,9 @@ export default function Home() {
                   <path d="M23.15 2.587L18.21.21a1.494 1.494 0 0 0-1.705.29l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74L3.899 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448v10.896z" />
                 </svg>
                 Download Extension
-              </a>
+              </Link>
               <Link
-                to="/explore"
+                to="/coming-soon"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 hover:border-white/20 transition-all"
                 aria-label="Play Games"
               >
