@@ -191,6 +191,8 @@ function TreeNodeComponent({
   const [isHovered, setIsHovered] = useState(false);
   const [isEditingKey, setIsEditingKey] = useState(false);
   const [editKeyValue, setEditKeyValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const keyInputRef = useRef<HTMLInputElement>(null);
   const isExpanded = expandedPaths.has(node.path);
   const hasChildren = node.children && node.children.length > 0;
   const typeColor = getTypeColor(node.type);
@@ -473,6 +475,7 @@ function TreeNodeComponent({
                       ref={keyInputRef}
                       type="text"
                       value={editKeyValue}
+                      size={Math.max(1, editKeyValue.length)}
                       onChange={(e) => setEditKeyValue(e.target.value)}
                       onKeyDown={handleKeyEditKeyDown}
                       onBlur={handleKeyEditBlur}
@@ -485,7 +488,7 @@ function TreeNodeComponent({
                         padding: '1px 4px',
                         borderRadius: '2px',
                         fontFamily: 'inherit',
-                        minWidth: '60px',
+                        width: 'auto',
                       }}
                     />
                   ) : (
@@ -631,9 +634,6 @@ function TreeNodeComponent({
     );
   }
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const keyInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -740,6 +740,7 @@ function TreeNodeComponent({
                       ref={keyInputRef}
                       type="text"
                       value={editKeyValue}
+                      size={Math.max(1, editKeyValue.length)}
                       onChange={(e) => setEditKeyValue(e.target.value)}
                       onKeyDown={handleKeyEditKeyDown}
                       onBlur={handleKeyEditBlur}
@@ -752,7 +753,7 @@ function TreeNodeComponent({
                         padding: '1px 4px',
                         borderRadius: '2px',
                         fontFamily: 'inherit',
-                        minWidth: '60px',
+                        width: 'auto',
                       }}
                     />
                   ) : (
@@ -963,6 +964,7 @@ function TreeNodeComponent({
                         ref={keyInputRef}
                         type="text"
                         value={editKeyValue}
+                        size={Math.max(1, editKeyValue.length)}
                         onChange={(e) => setEditKeyValue(e.target.value)}
                         onKeyDown={handleKeyEditKeyDown}
                         onBlur={handleKeyEditBlur}
@@ -975,7 +977,7 @@ function TreeNodeComponent({
                           padding: '1px 4px',
                           borderRadius: '2px',
                           fontFamily: 'inherit',
-                          minWidth: '60px',
+                          width: 'auto',
                         }}
                       />
                     ) : (
