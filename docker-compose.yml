@@ -4,7 +4,7 @@ services:
   website:
     build:
       context: .
-      dockerfile: website/Dockerfile
+      dockerfile: Dockerfile
     container_name: natstack-website
     ports:
       - "3000:3000"
