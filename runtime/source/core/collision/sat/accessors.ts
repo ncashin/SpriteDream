@@ -11,7 +11,6 @@ import {
     CollisionBodyComponentDefinition,
     type CollisionBodyComponent,
 } from "../components/collisionBodyComponent";
-import type { CollisionBody } from "../components/collisionBody";
 import type { ColliderShape } from "../components/colliderShape";
 import {
     getWorldPosition,
@@ -39,7 +38,7 @@ export const getEntityVelocity = (
 };
 
 export type CollisionColliderEntry = {
-    body: CollisionBody;
+    body: CollisionBodyComponent;
     collider: ColliderShape;
 };
 
@@ -96,32 +95,11 @@ export const getEntityCollisionBody = (
 ): CollisionBodyComponent | null => {
     const override = bodyOverrideByEntity.get(entity);
     if (override) return override;
-    const body = getEntity(ecs, entity)[CollisionBodyComponentDefinition.type] as
+    return (
+        getEntity(ecs, entity)[CollisionBodyComponentDefinition.type] as
         | CollisionBodyComponent
-        | undefined;
-    if (body) return body;
-
-    const collider = getEntity(ecs, entity)[ColliderComponentDefinition.type] as
-        | (ColliderComponent & Partial<CollisionBodyComponent>)
-        | undefined;
-    if (!collider) return null;
-
-    const hasLegacyBody =
-        collider.bodyType != null ||
-        collider.collisionEnabled != null ||
-        collider.callbackName != null ||
-        collider.bodyName != null ||
-        collider.propagateCollision != null;
-    if (!hasLegacyBody) return null;
-
-    return {
-        type: "collisionBody",
-        bodyName: collider.bodyName,
-        bodyType: collider.bodyType ?? "static",
-        collisionEnabled: collider.collisionEnabled ?? true,
-        callbackName: collider.callbackName,
-        propagateCollision: collider.propagateCollision ?? false,
-    };
+        | undefined
+    ) ?? null;
 };
 
 const normalizeColliderShape = (
@@ -136,34 +114,13 @@ const normalizeColliderShape = (
     offsetY: shape?.offsetY,
 });
 
-const normalizeCollisionBody = (
-    body?: Partial<CollisionBodyComponent>
-): CollisionBody => ({
-    bodyName: body?.bodyName,
-    bodyType: body?.bodyType ?? "static",
-    collisionEnabled: body?.collisionEnabled ?? true,
-    callbackName: body?.callbackName,
-    propagateCollision: body?.propagateCollision ?? false,
-});
-
 export const getEntityCollisionBodies = (
     ecs: ECSInstance,
     entity: Entity
-): CollisionBody[] => {
+): CollisionBodyComponent[] => {
     const body = getEntityCollisionBody(ecs, entity);
-    if (body) return [normalizeCollisionBody(body)];
-
-    const collider = getEntityCollider(ecs, entity);
-    if (!collider) return [];
-
-    const legacyBody = normalizeCollisionBody({
-        bodyType: (collider as CollisionBodyComponent).bodyType,
-        collisionEnabled: (collider as CollisionBodyComponent).collisionEnabled,
-        callbackName: (collider as CollisionBodyComponent).callbackName,
-        bodyName: (collider as CollisionBodyComponent).bodyName,
-        propagateCollision: (collider as CollisionBodyComponent).propagateCollision,
-    });
-    return [legacyBody];
+    if (body) return [body];
+    return [];
 };
 
 export const getEntityCollisionColliders = (
@@ -182,7 +139,7 @@ export const getEntityCollisionColliders = (
 };
 
 export const buildColliderOverride = (
-    _body: CollisionBody,
+    _body: CollisionBodyComponent,
     collider: ColliderShape
 ): ColliderComponent => ({
     type: "collider",
@@ -195,13 +152,15 @@ export const buildColliderOverride = (
     offsetY: collider.offsetY,
 });
 
-export const buildBodyOverride = (body: CollisionBody): CollisionBodyComponent => ({
+export const buildBodyOverride = (body: CollisionBodyComponent): CollisionBodyComponent => ({
     type: "collisionBody",
     bodyName: body.bodyName,
     bodyType: body.bodyType ?? "static",
     collisionEnabled: body.collisionEnabled ?? true,
     callbackName: body.callbackName,
     propagateCollision: body.propagateCollision ?? false,
+    collisionLayer: body.collisionLayer ?? 1,
+    collisionMask: body.collisionMask ?? 0xffffffff,
 });
 
 export const getCollisionPosition = (

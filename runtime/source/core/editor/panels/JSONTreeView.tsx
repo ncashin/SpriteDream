@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { Plus, Trash, X, Check } from '@phosphor-icons/react';
 import { componentRegistry, type PropertyInputType } from '../../ecs/component';
 import { SearchableDropdown } from './SearchableDropdown';
 import { FileInput } from './FileInput';
@@ -134,6 +135,9 @@ interface TreeNodeComponentProps {
   onToggleExpand: (path: string) => void;
   onNodeClick?: (path: string, value: JSONValue) => void;
   onValueChange?: (path: string, newValue: JSONValue) => void;
+  onAddChild?: (path: string, key: string | null, value: JSONValue) => void;
+  onRemoveNode?: (path: string) => void;
+  onRenameKey?: (path: string, newKey: string) => void;
   rootData: any;
   isInGridContainer?: boolean;
   ecs?: ECSInstance;
@@ -171,6 +175,9 @@ function TreeNodeComponent({
   onToggleExpand,
   onNodeClick,
   onValueChange,
+  onAddChild,
+  onRemoveNode,
+  onRenameKey,
   rootData,
   isInGridContainer = false,
   ecs,
@@ -178,6 +185,12 @@ function TreeNodeComponent({
 }: TreeNodeComponentProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
+  const [isAddingChild, setIsAddingChild] = useState(false);
+  const [newChildKey, setNewChildKey] = useState('');
+  const [newChildValue, setNewChildValue] = useState('');
+  const [isHovered, setIsHovered] = useState(false);
+  const [isEditingKey, setIsEditingKey] = useState(false);
+  const [editKeyValue, setEditKeyValue] = useState('');
   const isExpanded = expandedPaths.has(node.path);
   const hasChildren = node.children && node.children.length > 0;
   const typeColor = getTypeColor(node.type);
@@ -185,6 +198,10 @@ function TreeNodeComponent({
   const isObjectOrArray = node.type === 'object' || node.type === 'array';
   const isTypeField = node.key === 'type';
   const isEditable = !isObjectOrArray && node.key !== 'root' && !isTypeField;
+  const isArrayIndex = /^\d+$/.test(node.key);
+  const isKeyEditable = node.key !== 'root' && !isTypeField && !isArrayIndex && !!onRenameKey;
+  const canAddChild = isObjectOrArray && node.key !== 'root' && !!onAddChild;
+  const canRemoveNode = node.key !== 'root' && !isTypeField && !!onRemoveNode;
   const isTransformParent = node.path === 'root.transform.parent' ||
     node.path === 'transform.parent' ||
     node.path.endsWith('.transform.parent');
@@ -236,6 +253,89 @@ function TreeNodeComponent({
       }
     }
     onNodeClick?.(node.path, node.value);
+  };
+
+  const handleStartEditKey = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isKeyEditable) return;
+    setIsEditingKey(true);
+    setEditKeyValue(node.key);
+  };
+
+  const handleKeyEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const nextKey = editKeyValue.trim();
+      if (!nextKey || nextKey === 'type' || nextKey === node.key) {
+        setIsEditingKey(false);
+        return;
+      }
+      onRenameKey?.(node.path, nextKey);
+      setIsEditingKey(false);
+    } else if (e.key === 'Escape') {
+      setIsEditingKey(false);
+      setEditKeyValue(node.key);
+    }
+  };
+
+  const handleKeyEditBlur = () => {
+    if (!isEditingKey) return;
+    const nextKey = editKeyValue.trim();
+    if (!nextKey || nextKey === 'type' || nextKey === node.key) {
+      setIsEditingKey(false);
+      setEditKeyValue(node.key);
+      return;
+    }
+    onRenameKey?.(node.path, nextKey);
+    setIsEditingKey(false);
+  };
+
+  const parseInputValue = (rawValue: string): JSONValue => {
+    const trimmed = rawValue.trim();
+    if (trimmed === '') return '';
+    if (trimmed === 'null') return null;
+    if (trimmed === 'true') return true;
+    if (trimmed === 'false') return false;
+    const asNumber = Number(trimmed);
+    if (!Number.isNaN(asNumber) && trimmed !== '') return asNumber;
+    try {
+      return JSON.parse(trimmed) as JSONValue;
+    } catch {
+      return trimmed;
+    }
+  };
+
+  const handleStartAddChild = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsAddingChild(true);
+    setNewChildKey('');
+    setNewChildValue('');
+  };
+
+  const handleRemoveNode = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onRemoveNode?.(node.path);
+  };
+
+  const handleConfirmAddChild = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onAddChild) return;
+    if (node.type === 'object') {
+      const key = newChildKey.trim();
+      if (!key || key === 'type') return;
+      onAddChild(node.path, key, parseInputValue(newChildValue));
+    }
+    if (node.type === 'array') {
+      onAddChild(node.path, null, parseInputValue(newChildValue));
+    }
+    setIsAddingChild(false);
+    setNewChildKey('');
+    setNewChildValue('');
+  };
+
+  const handleCancelAddChild = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsAddingChild(false);
   };
 
   const handleValueChange = (newValue: JSONValue) => {
@@ -342,39 +442,166 @@ function TreeNodeComponent({
           }}
           onClick={handleRowClick}
           onMouseEnter={(e) => {
+            setIsHovered(true);
             e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05))';
           }}
           onMouseLeave={(e) => {
+            setIsHovered(false);
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', width: '100%' }}>
-            {hasChildren && (
-              <span style={{
-                transform: isExpanded ? 'rotate(90deg)' : 'none',
-                transition: 'transform 0.1s',
-                display: 'inline-block',
-                fontSize: '10px',
-                color: 'var(--vscode-editor-foreground, #cccccc)',
-                width: '12px',
-                textAlign: 'center',
-                flexShrink: 0,
-              }}>
-                ▶
-              </span>
-            )}
-            <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit' }}>
-              {node.key !== 'root' && (
-                <span style={{ fontWeight: 500 }}>{node.key}</span>
+          <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {hasChildren && (
+                <span style={{
+                  transform: isExpanded ? 'rotate(90deg)' : 'none',
+                  transition: 'transform 0.1s',
+                  display: 'inline-block',
+                  fontSize: '10px',
+                  color: 'var(--vscode-editor-foreground, #cccccc)',
+                  width: '12px',
+                  textAlign: 'center',
+                  flexShrink: 0,
+                }}>
+                  ▶
+                </span>
               )}
-            </span>
-            {!isObjectOrArray && (
-              <span style={{ color: typeColor, fontSize: 'inherit' }}>
-                {formatValue(node.value, node.type)}
+              <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit' }}>
+                {node.key !== 'root' && (
+                  isEditingKey ? (
+                    <input
+                      ref={keyInputRef}
+                      type="text"
+                      value={editKeyValue}
+                      onChange={(e) => setEditKeyValue(e.target.value)}
+                      onKeyDown={handleKeyEditKeyDown}
+                      onBlur={handleKeyEditBlur}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: '1px solid rgba(128, 128, 128, 0.35)',
+                        color: 'var(--vscode-editor-foreground, #cccccc)',
+                        fontSize: 'inherit',
+                        padding: '1px 4px',
+                        borderRadius: '2px',
+                        fontFamily: 'inherit',
+                        minWidth: '60px',
+                      }}
+                    />
+                  ) : (
+                    <span
+                      style={{ fontWeight: 500, cursor: isKeyEditable ? 'text' : 'default' }}
+                      onClick={handleStartEditKey}
+                    >
+                      {node.key}
+                    </span>
+                  )
+                )}
               </span>
+              {!isObjectOrArray && (
+                <span style={{ color: typeColor, fontSize: 'inherit' }}>
+                  {formatValue(node.value, node.type)}
+                </span>
+              )}
+            </div>
+            {(canAddChild || canRemoveNode) && (
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '4px',
+                  opacity: isHovered ? 1 : 0,
+                  pointerEvents: isHovered ? 'auto' : 'none',
+                  transition: 'opacity 0.1s',
+                }}
+              >
+                {canAddChild && (
+                  <button
+                    type="button"
+                    onClick={handleStartAddChild}
+                    className="bg-transparent border-none cursor-pointer p-0 rounded-md flex items-center justify-center transition-colors duration-100 text-[var(--vscode-foreground,rgba(255,255,255,0.9))] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.1))]"
+                    title="Add child"
+                  >
+                    <Plus size={12} weight="bold" />
+                  </button>
+                )}
+                {canRemoveNode && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveNode}
+                    className="bg-transparent border-none cursor-pointer p-0 rounded-md flex items-center justify-center transition-colors duration-100 text-[var(--vscode-errorForeground,#f48771)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.1))]"
+                    title="Remove node"
+                  >
+                    <Trash size={12} weight="bold" />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
+        {isAddingChild && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              paddingLeft: `${indent + 16}px`,
+              padding: '2px 2px 4px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {node.type === 'object' && (
+              <input
+                type="text"
+                value={newChildKey}
+                onChange={(e) => setNewChildKey(e.target.value)}
+                placeholder="key"
+                style={{
+                  backgroundColor: 'transparent',
+                  border: '1px solid rgba(128, 128, 128, 0.35)',
+                  color: 'var(--vscode-editor-foreground, #cccccc)',
+                  fontSize: 'inherit',
+                  padding: '1px 4px',
+                  borderRadius: '2px',
+                  width: '120px',
+                  fontFamily: 'inherit',
+                }}
+              />
+            )}
+            <input
+              type="text"
+              value={newChildValue}
+              onChange={(e) => setNewChildValue(e.target.value)}
+              placeholder="value (JSON)"
+              style={{
+                backgroundColor: 'transparent',
+                border: '1px solid rgba(128, 128, 128, 0.35)',
+                color: 'var(--vscode-editor-foreground, #cccccc)',
+                fontSize: 'inherit',
+                padding: '1px 4px',
+                borderRadius: '2px',
+                flex: 1,
+                minWidth: '120px',
+                fontFamily: 'inherit',
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleConfirmAddChild}
+              className="bg-transparent border-none cursor-pointer p-0 rounded-md flex items-center justify-center transition-colors duration-100 text-[var(--vscode-foreground,rgba(255,255,255,0.9))] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.1))]"
+              title="Add"
+            >
+              <Check size={12} weight="bold" />
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelAddChild}
+              className="bg-transparent border-none cursor-pointer p-0 rounded-md flex items-center justify-center transition-colors duration-100 text-[var(--vscode-foreground,rgba(255,255,255,0.9))] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.1))]"
+              title="Cancel"
+            >
+              <X size={12} weight="bold" />
+            </button>
+          </div>
+        )}
         {hasChildren && isExpanded && node.children && (
           <div style={{
             display: 'grid',
@@ -389,6 +616,9 @@ function TreeNodeComponent({
                 onToggleExpand={onToggleExpand}
                 onNodeClick={onNodeClick}
                 onValueChange={onValueChange}
+                onAddChild={onAddChild}
+                onRemoveNode={onRemoveNode}
+                onRenameKey={onRenameKey}
                 rootData={rootData}
                 isInGridContainer={true}
                 ecs={ecs}
@@ -402,6 +632,7 @@ function TreeNodeComponent({
   }
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const keyInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -409,6 +640,13 @@ function TreeNodeComponent({
       inputRef.current.select();
     }
   }, [isEditing]);
+
+  useEffect(() => {
+    if (isEditingKey && keyInputRef.current) {
+      keyInputRef.current.focus();
+      keyInputRef.current.select();
+    }
+  }, [isEditingKey]);
 
 
   const rowId = `row-${node.path}`;
@@ -429,6 +667,7 @@ function TreeNodeComponent({
             }}
             onClick={handleRowClick}
             onMouseEnter={(e) => {
+              setIsHovered(true);
               const rowId = e.currentTarget.getAttribute('data-row-id');
               if (rowId) {
                 const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
@@ -438,6 +677,7 @@ function TreeNodeComponent({
               }
             }}
             onMouseLeave={(e) => {
+              setIsHovered(false);
               const rowId = e.currentTarget.getAttribute('data-row-id');
               if (rowId) {
                 const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
@@ -472,6 +712,7 @@ function TreeNodeComponent({
             }}
             onClick={handleRowClick}
             onMouseEnter={(e) => {
+              setIsHovered(true);
               const rowId = e.currentTarget.getAttribute('data-row-id');
               if (rowId) {
                 const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
@@ -481,6 +722,7 @@ function TreeNodeComponent({
               }
             }}
             onMouseLeave={(e) => {
+              setIsHovered(false);
               const rowId = e.currentTarget.getAttribute('data-row-id');
               if (rowId) {
                 const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
@@ -493,9 +735,34 @@ function TreeNodeComponent({
             <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
               {node.key !== 'root' && (
                 <>
-                  <span style={{
-                    fontWeight: 500
-                  }}>{node.key}</span>
+                  {isEditingKey ? (
+                    <input
+                      ref={keyInputRef}
+                      type="text"
+                      value={editKeyValue}
+                      onChange={(e) => setEditKeyValue(e.target.value)}
+                      onKeyDown={handleKeyEditKeyDown}
+                      onBlur={handleKeyEditBlur}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: '1px solid rgba(128, 128, 128, 0.35)',
+                        color: 'var(--vscode-editor-foreground, #cccccc)',
+                        fontSize: 'inherit',
+                        padding: '1px 4px',
+                        borderRadius: '2px',
+                        fontFamily: 'inherit',
+                        minWidth: '60px',
+                      }}
+                    />
+                  ) : (
+                    <span
+                      style={{ fontWeight: 500, cursor: isKeyEditable ? 'text' : 'default' }}
+                      onClick={handleStartEditKey}
+                    >
+                      {node.key}
+                    </span>
+                  )}
                   <span style={{ color: 'var(--vscode-descriptionForeground, #808080)', margin: '0 2px' }}>:</span>
                 </>
               )}
@@ -510,9 +777,12 @@ function TreeNodeComponent({
               alignItems: 'center',
               backgroundColor: 'transparent',
               cursor: isEditable ? 'pointer' : 'default',
+              width: '100%',
+              justifyContent: 'space-between',
             }}
             onClick={handleRowClick}
             onMouseEnter={(e) => {
+              setIsHovered(true);
               const rowId = e.currentTarget.getAttribute('data-row-id');
               if (rowId) {
                 const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
@@ -522,6 +792,7 @@ function TreeNodeComponent({
               }
             }}
             onMouseLeave={(e) => {
+              setIsHovered(false);
               const rowId = e.currentTarget.getAttribute('data-row-id');
               if (rowId) {
                 const cells = document.querySelectorAll(`[data-row-id="${rowId}"]`);
@@ -618,6 +889,21 @@ function TreeNodeComponent({
                 )}
               </>
             )}
+            {canRemoveNode && (
+              <button
+                type="button"
+                onClick={handleRemoveNode}
+                className="bg-transparent border-none cursor-pointer p-0 rounded-md flex items-center justify-center transition-colors duration-100 text-[var(--vscode-errorForeground,#f48771)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.1))]"
+                style={{
+                  opacity: isHovered ? 1 : 0,
+                  pointerEvents: isHovered ? 'auto' : 'none',
+                  transition: 'opacity 0.1s',
+                }}
+                title="Remove node"
+              >
+                <Trash size={12} weight="bold" />
+              </button>
+            )}
           </div>
         </>
       ) : (
@@ -633,9 +919,11 @@ function TreeNodeComponent({
           }}
           onClick={handleRowClick}
           onMouseEnter={(e) => {
+            setIsHovered(true);
             e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05))';
           }}
           onMouseLeave={(e) => {
+            setIsHovered(false);
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
@@ -670,9 +958,34 @@ function TreeNodeComponent({
               <span style={{ color: 'var(--vscode-editor-foreground, #cccccc)', fontSize: 'inherit', display: 'inline-block', whiteSpace: 'nowrap' }}>
                 {node.key !== 'root' && (
                   <>
-                    <span style={{
-                      fontWeight: 500
-                    }}>{node.key}</span>
+                    {isEditingKey ? (
+                      <input
+                        ref={keyInputRef}
+                        type="text"
+                        value={editKeyValue}
+                        onChange={(e) => setEditKeyValue(e.target.value)}
+                        onKeyDown={handleKeyEditKeyDown}
+                        onBlur={handleKeyEditBlur}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: '1px solid rgba(128, 128, 128, 0.35)',
+                          color: 'var(--vscode-editor-foreground, #cccccc)',
+                          fontSize: 'inherit',
+                          padding: '1px 4px',
+                          borderRadius: '2px',
+                          fontFamily: 'inherit',
+                          minWidth: '60px',
+                        }}
+                      />
+                    ) : (
+                      <span
+                        style={{ fontWeight: 500, cursor: isKeyEditable ? 'text' : 'default' }}
+                        onClick={handleStartEditKey}
+                      >
+                        {node.key}
+                      </span>
+                    )}
                     <span style={{ color: 'var(--vscode-descriptionForeground, #808080)', margin: '0 2px' }}>:</span>
                   </>
                 )}
@@ -684,6 +997,8 @@ function TreeNodeComponent({
               flex: '0 0 auto',
               display: 'flex',
               alignItems: 'center',
+              width: '100%',
+              justifyContent: 'space-between',
             }}>
               {isTransformParent && ecs && entity ? (
                 <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
@@ -769,6 +1084,21 @@ function TreeNodeComponent({
                   )}
                 </>
               )}
+              {canRemoveNode && (
+                <button
+                  type="button"
+                  onClick={handleRemoveNode}
+                  className="bg-transparent border-none cursor-pointer p-0 rounded-md flex items-center justify-center transition-colors duration-100 text-[var(--vscode-errorForeground,#f48771)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.1))]"
+                  style={{
+                    opacity: isHovered ? 1 : 0,
+                    pointerEvents: isHovered ? 'auto' : 'none',
+                    transition: 'opacity 0.1s',
+                  }}
+                  title="Remove node"
+                >
+                  <Trash size={12} weight="bold" />
+                </button>
+              )}
             </div>
           </>
         </div>
@@ -787,6 +1117,9 @@ function TreeNodeComponent({
               onToggleExpand={onToggleExpand}
               onNodeClick={onNodeClick}
               onValueChange={onValueChange}
+              onAddChild={onAddChild}
+              onRemoveNode={onRemoveNode}
+              onRenameKey={onRenameKey}
               rootData={rootData}
               isInGridContainer={true}
               ecs={ecs}
@@ -891,6 +1224,128 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '', ecs
     }
   }, [localData, onChange]);
 
+  const renameKeyAtPath = useCallback((path: string, newKey: string) => {
+    try {
+      const pathParts = path.split('.').filter(p => p !== 'root');
+      if (pathParts.length === 0) return;
+      const oldKey = pathParts[pathParts.length - 1];
+      const parentParts = pathParts.slice(0, -1);
+      const data = JSON.parse(localData);
+
+      const getTarget = (obj: any, parts: string[]): any => {
+        if (parts.length === 0) return obj;
+        const [first, ...rest] = parts;
+        const arrayIndex = /^\d+$/.test(first) ? parseInt(first, 10) : -1;
+        if (Array.isArray(obj) && arrayIndex >= 0 && arrayIndex < obj.length) {
+          return getTarget(obj[arrayIndex], rest);
+        }
+        if (typeof obj === 'object' && obj !== null && obj[first] !== undefined) {
+          return getTarget(obj[first], rest);
+        }
+        return null;
+      };
+
+      const parent = getTarget(data, parentParts);
+      if (!parent || typeof parent !== 'object' || Array.isArray(parent)) {
+        return;
+      }
+      if (Object.prototype.hasOwnProperty.call(parent, newKey)) {
+        console.warn(`Property "${newKey}" already exists at ${parentParts.join('.')}`);
+        return;
+      }
+      const value = parent[oldKey];
+      delete parent[oldKey];
+      parent[newKey] = value;
+
+      const updatedJson = JSON.stringify(data, null, 2);
+      setLocalData(updatedJson);
+      onChange?.(updatedJson);
+    } catch (error) {
+      console.error('Error renaming key:', error);
+    }
+  }, [localData, onChange]);
+
+  const addChildAtPath = useCallback((path: string, key: string | null, value: JSONValue) => {
+    try {
+      const pathParts = path.split('.').filter(p => p !== 'root');
+      const data = JSON.parse(localData);
+
+      const getTarget = (obj: any, parts: string[]): any => {
+        if (parts.length === 0) return obj;
+        const [first, ...rest] = parts;
+        const arrayIndex = /^\d+$/.test(first) ? parseInt(first, 10) : -1;
+        if (Array.isArray(obj) && arrayIndex >= 0 && arrayIndex < obj.length) {
+          return getTarget(obj[arrayIndex], rest);
+        }
+        if (typeof obj === 'object' && obj !== null && obj[first] !== undefined) {
+          return getTarget(obj[first], rest);
+        }
+        return null;
+      };
+
+      const target = getTarget(data, pathParts);
+      if (!target) {
+        console.warn(`Path ${path} does not exist in the data structure`);
+        return;
+      }
+
+      if (Array.isArray(target)) {
+        target.push(value);
+      } else if (typeof target === 'object') {
+        if (!key) return;
+        if (Object.prototype.hasOwnProperty.call(target, key)) {
+          console.warn(`Property "${key}" already exists at ${path}`);
+          return;
+        }
+        target[key] = value;
+      }
+
+      const updatedJson = JSON.stringify(data, null, 2);
+      setLocalData(updatedJson);
+      onChange?.(updatedJson);
+      setExpandedPaths(prev => new Set(prev).add(path));
+    } catch (error) {
+      console.error('Error adding child:', error);
+    }
+  }, [localData, onChange]);
+
+  const removeNodeAtPath = useCallback((path: string) => {
+    try {
+      const pathParts = path.split('.').filter(p => p !== 'root');
+      if (pathParts.length === 0) return;
+      const data = JSON.parse(localData);
+
+      const removeFromTarget = (obj: any, parts: string[]): void => {
+        if (parts.length === 1) {
+          const key = parts[0];
+          const arrayIndex = /^\d+$/.test(key) ? parseInt(key, 10) : -1;
+          if (Array.isArray(obj) && arrayIndex >= 0 && arrayIndex < obj.length) {
+            obj.splice(arrayIndex, 1);
+          } else if (typeof obj === 'object' && obj !== null) {
+            delete obj[key];
+          }
+          return;
+        }
+        const [first, ...rest] = parts;
+        const arrayIndex = /^\d+$/.test(first) ? parseInt(first, 10) : -1;
+        if (Array.isArray(obj) && arrayIndex >= 0 && arrayIndex < obj.length) {
+          removeFromTarget(obj[arrayIndex], rest);
+        } else if (typeof obj === 'object' && obj !== null && obj[first] !== undefined) {
+          removeFromTarget(obj[first], rest);
+        } else {
+          console.warn(`Path ${path} does not exist in the data structure`);
+        }
+      };
+
+      removeFromTarget(data, pathParts);
+      const updatedJson = JSON.stringify(data, null, 2);
+      setLocalData(updatedJson);
+      onChange?.(updatedJson);
+    } catch (error) {
+      console.error('Error removing node:', error);
+    }
+  }, [localData, onChange]);
+
 
   if (!tree) {
     return (
@@ -949,6 +1404,9 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '', ecs
                   onToggleExpand={toggleExpand}
                   onNodeClick={onNodeSelect}
                   onValueChange={updateValueAtPath}
+                  onAddChild={addChildAtPath}
+                  onRemoveNode={removeNodeAtPath}
+                  onRenameKey={renameKeyAtPath}
                   rootData={rootData}
                   ecs={ecs}
                   entity={entity}

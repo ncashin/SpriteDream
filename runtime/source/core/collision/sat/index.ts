@@ -48,12 +48,22 @@ export const getCollisionResolver = (): CollisionResolver | null => {
     return customResolver;
 };
 
+const shouldCollideWithMasks = (
+    bodyA: { collisionLayer?: number; collisionMask?: number },
+    bodyB: { collisionLayer?: number; collisionMask?: number }
+): boolean => {
+    const layerA = (bodyA.collisionLayer ?? 1) >>> 0;
+    const maskA = (bodyA.collisionMask ?? 0xffffffff) >>> 0;
+    const layerB = (bodyB.collisionLayer ?? 1) >>> 0;
+    const maskB = (bodyB.collisionMask ?? 0xffffffff) >>> 0;
+    return (maskA & layerB) !== 0 && (maskB & layerA) !== 0;
+};
+
 export const handleCollisionPair = (
     ecs: ECSInstance,
     entityA: Entity,
     entityB: Entity
 ) => {
-    // Prevent entities from colliding with themselves
     if (entityA === entityB) return;
 
     const collidersA = getEntityCollisionColliders(ecs, entityA);
@@ -65,6 +75,7 @@ export const handleCollisionPair = (
         if (!colliderA.body.collisionEnabled) continue;
         for (const colliderB of collidersB) {
             if (!colliderB.body.collisionEnabled) continue;
+            if (!shouldCollideWithMasks(colliderA.body, colliderB.body)) continue;
             const overrideA = buildColliderOverride(colliderA.body, colliderA.collider);
             const overrideB = buildColliderOverride(colliderB.body, colliderB.collider);
             const bodyOverrideA = buildBodyOverride(colliderA.body);
@@ -85,7 +96,6 @@ const handleCollisionPairSingle = (
     entityA: Entity,
     entityB: Entity
 ) => {
-    // Prevent entities from colliding with themselves
     if (entityA === entityB) return;
 
     const colliderA = getEntityCollider(ecs, entityA);
@@ -95,6 +105,7 @@ const handleCollisionPairSingle = (
 
     if (!colliderA || !colliderB || !bodyA || !bodyB) return;
     if (!bodyA.collisionEnabled || !bodyB.collisionEnabled) return;
+    if (!shouldCollideWithMasks(bodyA, bodyB)) return;
 
     const colliderNameA = colliderA.colliderName ?? "rectangle";
     const colliderNameB = colliderB.colliderName ?? "rectangle";
@@ -108,7 +119,6 @@ const handleCollisionPairSingle = (
         return;
     }
 
-    // Use custom resolver if set, otherwise use default
     const resolver = customResolver || defaultCollisionResolver;
 
     const normals = [
@@ -125,29 +135,29 @@ const handleCollisionPairSingle = (
         const projA = colliderDefA.calculateProjection(ecs, entityA, n);
         const projB = colliderDefB.calculateProjection(ecs, entityB, n);
 
-        // Calculate overlap: positive means shapes overlap
-        const overlapA = projB.max - projA.min; // How much A overlaps B (A needs to move along +n)
-        const overlapB = projA.max - projB.min; // How much B overlaps A (A needs to move along -n)
 
-        // If there's no overlap along this axis, shapes are separated (but check other axes)
+        const overlapA = projB.max - projA.min;
+        const overlapB = projA.max - projB.min;
+
+
         if (overlapA <= 0 || overlapB <= 0) {
-            // Found a separating axis - shapes don't collide
+
             minOverlap = 0;
             smallestNormal = null;
             break;
         }
 
-        // Choose the smaller overlap (minimum translation distance)
-        // Determine which direction A should move to separate
+
+
         let currentOverlap: number;
         let currentNormal: Vector;
 
         if (overlapA < overlapB) {
-            // A overlaps B less, so move A along +n
+
             currentOverlap = overlapA;
             currentNormal = n;
         } else {
-            // B overlaps A less, so move A along -n (or equivalently, reverse normal)
+
             currentOverlap = overlapB;
             currentNormal = scale(n, -1);
         }
@@ -159,8 +169,8 @@ const handleCollisionPairSingle = (
     }
 
     if (smallestNormal && minOverlap > 0 && minOverlap < Infinity) {
-        // overlapAmount is positive and represents how much to move along the normal
-        // The normal represents the direction entityA should move to separate from entityB
+
+
         resolver(
             ecs,
             entityA,
@@ -169,14 +179,14 @@ const handleCollisionPairSingle = (
             smallestNormal
         );
 
-        // Trigger collision callbacks
-        // Convert normals to local space for each entity's callback
-        // For entityA's callback: pass the normal in entityA's local space (direction A should move)
-        // For entityB's callback: pass reversed normal in entityB's local space (direction B should move, which is opposite)
+
+
+
+
         if (bodyA.callbackName) {
             const callbackDef = getCollisionCallback(bodyA.callbackName);
             if (callbackDef) {
-                // Convert from world space to parent's local space, then rotate by entity's own rotation
+
                 let localNormalA = worldDirectionToLocal(ecs, entityA, smallestNormal[0], smallestNormal[1]);
                 const localTransformA = getTransform(ecs, entityA);
                 if (localTransformA) {
@@ -199,7 +209,7 @@ const handleCollisionPairSingle = (
             }
         }
 
-        // Trigger callbacks for all parents of entityA if propagateCollision is enabled
+
         if (bodyA.propagateCollision) {
             const parentsA = getParents(ecs, entityA);
             for (const parentA of parentsA) {
@@ -207,7 +217,7 @@ const handleCollisionPairSingle = (
                 if (parentBody?.callbackName) {
                     const parentCallbackDef = getCollisionCallback(parentBody.callbackName);
                     if (parentCallbackDef) {
-                        // Convert from world space to parent's local space, then rotate by entity's own rotation
+
                         let localNormalParentA = worldDirectionToLocal(ecs, parentA, smallestNormal[0], smallestNormal[1]);
                         const localTransformParentA = getTransform(ecs, parentA);
                         if (localTransformParentA) {
@@ -236,7 +246,7 @@ const handleCollisionPairSingle = (
             const callbackDef = getCollisionCallback(bodyB.callbackName);
             if (callbackDef) {
                 const reversedNormal = scale(smallestNormal, -1);
-                // Convert from world space to parent's local space, then rotate by entity's own rotation
+
                 let localNormalB = worldDirectionToLocal(ecs, entityB, reversedNormal[0], reversedNormal[1]);
                 const localTransformB = getTransform(ecs, entityB);
                 if (localTransformB) {
@@ -259,7 +269,7 @@ const handleCollisionPairSingle = (
             }
         }
 
-        // Trigger callbacks for all parents of entityB if propagateCollision is enabled
+
         if (bodyB.propagateCollision) {
             const parentsB = getParents(ecs, entityB);
             for (const parentB of parentsB) {
@@ -268,7 +278,7 @@ const handleCollisionPairSingle = (
                     const parentCallbackDef = getCollisionCallback(parentBody.callbackName);
                     if (parentCallbackDef) {
                         const reversedNormal = scale(smallestNormal, -1);
-                        // Convert from world space to parent's local space, then rotate by entity's own rotation
+
                         let localNormalParentB = worldDirectionToLocal(ecs, parentB, reversedNormal[0], reversedNormal[1]);
                         const localTransformParentB = getTransform(ecs, parentB);
                         if (localTransformParentB) {
@@ -316,19 +326,19 @@ const defaultCollisionResolver: CollisionResolver = (
 
     if (!transformA || !transformB) return;
 
-    // Normal represents the direction entityA should move to separate from entityB (in world space)
-    // overlapAmount is always positive and represents separation distance (in world space)
+
+
     const n = normalize(overlapNormal);
 
-    // Default behavior based on body types
-    // Always separate kinematic bodies from static bodies fully
+
+
     if (bodyA.bodyType === "kinematic" && bodyB.bodyType === "static") {
-        // Convert normal and overlap to local space for entityA
-        // First convert from world space to parent's local space, then rotate by entity's own rotation
+
+
         let localNormal = worldDirectionToLocal(ecs, entityA, n[0], n[1]);
         const localTransformA = getTransform(ecs, entityA);
         if (localTransformA) {
-            // Rotate the normal by the entity's own local rotation
+
             const localRotation = localTransformA.rotation ?? 0;
             const rotationRad = (localRotation * Math.PI) / 180;
             const cos = Math.cos(rotationRad);
@@ -342,10 +352,10 @@ const defaultCollisionResolver: CollisionResolver = (
         const localCorrectionY = localNormal.y * localOverlap;
 
         if (bodyA.propagateCollision) {
-            // Move entityA and all its parents in world space
+
             moveEntityAndParents(ecs, entityA, n[0] * overlapAmount, n[1] * overlapAmount);
         } else {
-            // Move only entityA in local space
+
             const localTransform = getTransform(ecs, entityA);
             if (localTransform) {
                 setTransform(ecs, entityA, {
@@ -355,13 +365,13 @@ const defaultCollisionResolver: CollisionResolver = (
             }
         }
     } else if (bodyA.bodyType === "static" && bodyB.bodyType === "kinematic") {
-        // Move B opposite to normal (since normal is from A's perspective)
-        // Convert normal and overlap to local space for entityB
-        // First convert from world space to parent's local space, then rotate by entity's own rotation
+
+
+
         let localNormal = worldDirectionToLocal(ecs, entityB, -n[0], -n[1]);
         const localTransformB = getTransform(ecs, entityB);
         if (localTransformB) {
-            // Rotate the normal by the entity's own local rotation
+
             const localRotation = localTransformB.rotation ?? 0;
             const rotationRad = (localRotation * Math.PI) / 180;
             const cos = Math.cos(rotationRad);
@@ -375,10 +385,10 @@ const defaultCollisionResolver: CollisionResolver = (
         const localCorrectionY = localNormal.y * localOverlap;
 
         if (bodyB.propagateCollision) {
-            // Move entityB and all its parents in world space
+
             moveEntityAndParents(ecs, entityB, -n[0] * overlapAmount, -n[1] * overlapAmount);
         } else {
-            // Move only entityB in local space
+
             const localTransform = getTransform(ecs, entityB);
             if (localTransform) {
                 setTransform(ecs, entityB, {
@@ -388,15 +398,15 @@ const defaultCollisionResolver: CollisionResolver = (
             }
         }
     } else if (bodyA.bodyType === "kinematic" && bodyB.bodyType === "kinematic") {
-        // Split separation between both kinematic bodies
+
         const halfOverlap = overlapAmount / 2;
 
-        // Convert normal and half overlap to local space for entityA
-        // First convert from world space to parent's local space, then rotate by entity's own rotation
+
+
         let localNormalA = worldDirectionToLocal(ecs, entityA, n[0], n[1]);
         const localTransformA = getTransform(ecs, entityA);
         if (localTransformA) {
-            // Rotate the normal by the entity's own local rotation
+
             const localRotation = localTransformA.rotation ?? 0;
             const rotationRad = (localRotation * Math.PI) / 180;
             const cos = Math.cos(rotationRad);
@@ -409,12 +419,12 @@ const defaultCollisionResolver: CollisionResolver = (
         const localCorrectionAX = localNormalA.x * localOverlapA;
         const localCorrectionAY = localNormalA.y * localOverlapA;
 
-        // Convert normal and half overlap to local space for entityB (opposite direction)
-        // First convert from world space to parent's local space, then rotate by entity's own rotation
+
+
         let localNormalB = worldDirectionToLocal(ecs, entityB, -n[0], -n[1]);
         const localTransformB = getTransform(ecs, entityB);
         if (localTransformB) {
-            // Rotate the normal by the entity's own local rotation
+
             const localRotation = localTransformB.rotation ?? 0;
             const rotationRad = (localRotation * Math.PI) / 180;
             const cos = Math.cos(rotationRad);
@@ -428,10 +438,10 @@ const defaultCollisionResolver: CollisionResolver = (
         const localCorrectionBY = localNormalB.y * localOverlapB;
 
         if (bodyA.propagateCollision) {
-            // Move entityA and all its parents in world space
+
             moveEntityAndParents(ecs, entityA, n[0] * halfOverlap, n[1] * halfOverlap);
         } else {
-            // Move only entityA in local space
+
             const localTransform = getTransform(ecs, entityA);
             if (localTransform) {
                 setTransform(ecs, entityA, {
@@ -441,10 +451,10 @@ const defaultCollisionResolver: CollisionResolver = (
             }
         }
         if (bodyB.propagateCollision) {
-            // Move entityB and all its parents in world space (opposite direction)
+
             moveEntityAndParents(ecs, entityB, -n[0] * halfOverlap, -n[1] * halfOverlap);
         } else {
-            // Move only entityB in local space
+
             const localTransform = getTransform(ecs, entityB);
             if (localTransform) {
                 setTransform(ecs, entityB, {
@@ -454,7 +464,7 @@ const defaultCollisionResolver: CollisionResolver = (
             }
         }
     }
-    // If both static, do nothing
+
 };
 
 const MIN_BROADPHASE_ENTITIES = 32;

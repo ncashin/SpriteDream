@@ -7,7 +7,9 @@ export type CollisionBodyComponent = Component & {
     bodyType: "static" | "kinematic";
     collisionEnabled: boolean;
     callbackName?: string;
-    propagateCollision?: boolean; // If true, propagate collisions to parent entities
+    propagateCollision?: boolean;
+    collisionLayer?: number;
+    collisionMask?: number;
 };
 
 export const CollisionBodyComponentDefinition: CollisionBodyComponent = defineComponent(
@@ -16,6 +18,8 @@ export const CollisionBodyComponentDefinition: CollisionBodyComponent = defineCo
         bodyType: "static",
         collisionEnabled: true,
         propagateCollision: false,
+        collisionLayer: 1,
+        collisionMask: 0xffffffff,
     },
     {
         displayName: "Collision Body",
@@ -30,6 +34,12 @@ export const CollisionBodyComponentDefinition: CollisionBodyComponent = defineCo
             },
             propagateCollision: {
                 type: "boolean",
+            },
+            collisionLayer: {
+                type: "number",
+            },
+            collisionMask: {
+                type: "number",
             },
         },
     }

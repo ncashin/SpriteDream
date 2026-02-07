@@ -292,7 +292,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
       tabIndex={-1}
     >
       <div
-        className="flex items-center justify-between min-h-5 px-2 py-1 text-xs border-b select-none rounded-t-sm text-[var(--vscode-foreground,rgba(255,255,255,0.9))] border-b-[var(--vscode-panel-border,rgba(128,128,128,0.2))]"
+        className="flex items-center justify-between min-h-5 pl-2 pr-1 py-1 text-xs border-b select-none rounded-t-sm text-[var(--vscode-foreground,rgba(255,255,255,0.9))] border-b-[var(--vscode-panel-border,rgba(128,128,128,0.2))]"
       >
         {isRenaming ? (
           <form

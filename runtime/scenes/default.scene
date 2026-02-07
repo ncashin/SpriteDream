@@ -64,9 +64,9 @@
         },
         "collisionBody": {
           "type": "collisionBody",
-          "bodyType": "kinematic",
+          "bodyType": "static",
           "collisionEnabled": true,
-          "callbackName": "player",
+          "callbackName": "",
           "propagateCollision": false
         },
         "collider": {
@@ -75,8 +75,7 @@
           "width": 200,
           "height": 20,
           "angle": 0
-        },
-        "__isProxiedEntityComponents": true
+        }
       },
       "platform2": {
         "transform": {
@@ -115,15 +114,6 @@
         "__isProxiedEntityComponents": true
       },
       "player": {
-        "transform": {
-          "type": "transform",
-          "parent": null,
-          "x": 22.454416510922385,
-          "y": -101.36977843712891,
-          "rotation": 0,
-          "scaleX": 1,
-          "scaleY": 1
-        },
         "sprite": {
           "type": "sprite",
           "width": 32,
@@ -145,7 +135,7 @@
         },
         "collisionBody": {
           "type": "collisionBody",
-          "bodyType": "static",
+          "bodyType": "kinematic",
           "collisionEnabled": true,
           "propagateCollision": false
         },
@@ -155,6 +145,16 @@
           "width": 32,
           "height": 32,
           "angle": 0
+        },
+        "transform": {
+          "type": "transform",
+          "parent": null,
+          "x": 22.454416510922385,
+          "y": -101.36977843712891,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "asdfasdf": "asdfasdfasdf"
         }
       },
       "staff": {
