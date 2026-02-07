@@ -3,7 +3,7 @@ import "@vscode/codicons/dist/codicon.css";
 import { readFile } from "./fileUtilities";
 import { flushSceneSave, setSceneFile, updateSceneWithDiff } from "./scene/scene";
 import { initializeEditor, getEditorRoot } from "./editor/editorInitializer";
-import { resetAllCallbacks } from "./gameloop";
+import { resetAllCallbacks, setEditorUpdateEnabled, setUpdateEnabled } from "./gameloop";
 import type { InitialGameContext } from "./gameContext";
 import { isEditorMode } from "./utils";
 import type { ComponentType } from "react";
@@ -119,7 +119,7 @@ export function runGame(EditorUI?: ComponentType, GameUI?: ComponentType, forceR
 }
 
 const handleMessage = async (event: MessageEvent) => {
-  const { command, path, content, diff } = event.data;
+  const { command, path, content, diff, running } = event.data;
 
   switch (command) {
     case "openScene":
@@ -156,6 +156,14 @@ const handleMessage = async (event: MessageEvent) => {
 
     case "ping":
       notifyParent("runtimeReady");
+      break;
+    case "setRunning":
+      if (typeof running !== "boolean") break;
+      setUpdateEnabled(running);
+      if (isEditorMode()) {
+        setEditorUpdateEnabled(!running);
+      }
+      notifyParent("runtimeRunningState", { running });
       break;
   }
 };

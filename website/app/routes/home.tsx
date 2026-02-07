@@ -1,6 +1,6 @@
 import type { Route } from "./+types/home";
 import { Link, useLoaderData } from "react-router";
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Play, PlayIcon } from "@phosphor-icons/react";
 import { db, games } from "../db";
 import { asc } from "drizzle-orm";
@@ -137,6 +137,32 @@ function TabIcon({ icon }: { icon: Tab["icon"] }) {
 function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines: CodeLine[] }) {
   const [activeTab, setActiveTab] = useState<TabId>("main.scene");
   const [highlightedLines, setHighlightedLines] = useState<Set<number>>(new Set());
+  const runtimeIframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [engineRunning, setEngineRunning] = useState(true);
+  const [runtimeReady, setRuntimeReady] = useState(false);
+
+  const postRuntimeCommand = (command: string, data?: Record<string, unknown>) => {
+    const targetWindow = runtimeIframeRef.current?.contentWindow;
+    if (!targetWindow) return;
+    targetWindow.postMessage({ command, ...data }, "*");
+  };
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.source !== runtimeIframeRef.current?.contentWindow) return;
+      if (event.data?.command === "runtimeReady") {
+        setRuntimeReady(true);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  useEffect(() => {
+    if (!runtimeReady) return;
+    postRuntimeCommand("setRunning", { running: engineRunning });
+  }, [engineRunning, runtimeReady]);
 
   const toggleLineHighlight = (lineNum: number) => {
     setHighlightedLines(prev => {
@@ -199,12 +225,28 @@ function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines
             </div>
           ) : (
             <div className="relative w-full h-full">
+              <div className="absolute top-3 right-3 z-20">
+                <button
+                  type="button"
+                  onClick={() => setEngineRunning((prev) => !prev)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-full border border-white/10 bg-black/40 text-white/80 hover:bg-black/60 transition-colors"
+                  aria-pressed={engineRunning}
+                >
+                  <span className={`inline-flex w-2 h-2 rounded-full ${engineRunning ? "bg-emerald-400" : "bg-amber-400"}`} />
+                  {engineRunning ? "Engine running" : "Engine paused"}
+                </button>
+              </div>
               <iframe
                 src="/api/runtime/"
                 className="w-full h-full border-0"
                 title="GameIDE Runtime"
                 allow="fullscreen"
                 allowFullScreen
+                ref={runtimeIframeRef}
+                onLoad={() => {
+                  setRuntimeReady(false);
+                  postRuntimeCommand("ping");
+                }}
               />
               {highlightedLines.size > 0 && (
                 <div className="absolute inset-0 pointer-events-none z-10">
