@@ -35,8 +35,13 @@
           "propagateCollision": false,
           "collisionLayer": 2,
           "collideWith": 4
+        },
+        "fireball": {
+          "type": "fireball",
+          "timeToLive": 2
         }
-      }
+      },
+      "": {}
     }
   }
 }

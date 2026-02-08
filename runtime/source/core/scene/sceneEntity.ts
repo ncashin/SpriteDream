@@ -14,7 +14,6 @@ export type SceneEntityComponent = Component & {
 
 export type SceneEntityRootComponent = Component & {
     type: "sceneEntityRoot";
-    sceneName: string;
 };
 
 export const SceneEntityComponentDefinition: SceneEntityComponent = defineComponent(
@@ -37,16 +36,10 @@ export const SceneEntityComponentDefinition: SceneEntityComponent = defineCompon
 export const SceneEntityRootComponentDefinition: SceneEntityRootComponent = defineComponent(
     {
         type: "sceneEntityRoot",
-        sceneName: "",
     },
     {
         displayName: "Scene Entity Root",
         description: "Root entity created from a scene entity instance",
-        propertyInputTypes: {
-            sceneName: {
-                type: "text",
-            },
-        },
     }
 );
 
@@ -165,7 +158,6 @@ function instantiateSceneEntityId(
     if (!rootEntityProxy[SceneEntityRootComponentDefinition.type]) {
         rootEntityProxy[SceneEntityRootComponentDefinition.type] = {
             ...SceneEntityRootComponentDefinition,
-            sceneName: typeof sceneDataOrName === "string" ? sceneDataOrName : "",
         };
     }
 

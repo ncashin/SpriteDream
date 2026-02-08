@@ -45,7 +45,8 @@ export function useECS(): EntityState {
         }
 
         const syncEntityState = () => {
-            const allEntities = Object.keys(ecs.ecsInstance.entities) as Entity[];
+            const allEntities = (Object.keys(ecs.ecsInstance.entities) as Entity[])
+                .filter((entity) => ecs.ecsInstance.entities[entity] !== undefined && ecs.ecsInstance.entities[entity] !== null);
             const selectedEntity = ecs.getSelectedEntity() ?? null;
 
             const entityComponents: Record<Entity, EntityComponents> = {};

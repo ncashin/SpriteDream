@@ -575,14 +575,14 @@ export function EntityListPanel() {
   };
 
   const getVisibleEntities = (): Entity[] => {
-    const allEntities = Object.keys(ecs.ecsInstance.entities);
+    const allEntities = entities;
     const result: Entity[] = [];
     const visited = new Set<Entity>();
 
     const rootEntities = allEntities.filter((entity) => {
       const components = ecs.ecsInstance.entities[entity];
       const transform = components?.transform;
-      return !transform || !transform.parent;
+      return components && (!transform || !transform.parent);
     });
 
     const addEntity = (entity: Entity) => {

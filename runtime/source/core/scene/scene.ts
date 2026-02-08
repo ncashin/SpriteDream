@@ -26,7 +26,9 @@ function applyDiff(target: SceneData, diff: SceneData): void {
   for (const key in diff) {
     const diffVal = diff[key];
     const targetVal = target[key];
-    if (isObject(diffVal) && isObject(targetVal)) {
+    if (diffVal === undefined) {
+      delete target[key];
+    } else if (isObject(diffVal) && isObject(targetVal)) {
       applyDiff(targetVal, diffVal);
     } else if (isObject(diffVal)) {
       target[key] = {};
