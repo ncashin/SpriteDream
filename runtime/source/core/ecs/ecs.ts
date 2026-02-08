@@ -1,4 +1,5 @@
 export type Entity = string;
+export type EntityLike = Entity | Record<string, Component>;
 export type ComponentTypeString = string;
 export type Component = { type: ComponentTypeString } & Record<string, unknown>;
 export type EntityComponents = Record<ComponentTypeString, Component>;
@@ -170,25 +171,53 @@ export const createEntity = (
 
   return entityProxy;
 };
-export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
-  if (instance.selectedEntity === entity) {
+const resolveEntityId = (
+  instance: ECSInstance,
+  entity: EntityLike,
+): Entity | null => {
+  if (typeof entity === "string") {
+    return entity;
+  }
+
+  for (const [entityId, proxy] of instance.entityProxyCache.entries()) {
+    if (proxy === entity) {
+      return entityId;
+    }
+  }
+
+  for (const [entityId, components] of Object.entries(instance.entities)) {
+    if (components === entity) {
+      return entityId;
+    }
+  }
+
+  return null;
+};
+
+export const destroyEntity = (instance: ECSInstance, entity: EntityLike) => {
+  const entityId = resolveEntityId(instance, entity);
+  if (!entityId) {
+    return;
+  }
+
+  if (instance.selectedEntity === entityId) {
     instance.selectedEntity = null;
   }
 
   for (const composedPool of Object.values(instance.composedPools)) {
-    const index = composedPool.indexOf(entity);
+    const index = composedPool.indexOf(entityId);
     if (index !== -1) {
       composedPool.splice(index, 1);
     }
   }
 
-  instance.componentProxyCache.delete(entity);
-  instance.entityProxyCache.delete(entity);
+  instance.componentProxyCache.delete(entityId);
+  instance.entityProxyCache.delete(entityId);
 
-  delete instance.entities[entity];
+  delete instance.entities[entityId];
 
   if (!instance.destroyEntityCallback) return;
-  instance.destroyEntityCallback(entity);
+  instance.destroyEntityCallback(entityId);
 };
 
 export const renameEntity = (
@@ -581,7 +610,7 @@ export const curryECSInstance = (instance: ECSInstance) => ({
 
   createEntity: (name: string): Record<string, Component> =>
     createEntity(instance, name),
-  destroyEntity: (entity: Entity) => destroyEntity(instance, entity),
+  destroyEntity: (entity: EntityLike) => destroyEntity(instance, entity),
   renameEntity: (oldEntity: Entity, newEntity: Entity): boolean =>
     renameEntity(instance, oldEntity, newEntity),
 

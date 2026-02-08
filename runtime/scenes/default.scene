@@ -139,7 +139,7 @@
           "bodyType": "kinematic",
           "collisionEnabled": true,
           "propagateCollision": false,
-          "collisionCallback": "Player Collision Callback"
+          "collisionCallback": "Player"
         },
         "collider": {
           "type": "collider",
