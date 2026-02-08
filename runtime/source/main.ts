@@ -13,6 +13,7 @@ import {
 import { type Component } from "./core/ecs/ecs";
 import { defineComponent, VelocityComponentDefinition, TransformComponentDefinition } from "./core/ecs/component";
 import { registerCollisionCallback } from "./core/collision/collisionCallbacks";
+import { defineCollisionLayers } from "./core/collision/collisionLayers";
 import { screenToWorld } from "./core/viewport/viewportPlugin";
 import { loadScene } from "./core/scene/loadScene";
 
@@ -81,8 +82,7 @@ initializeGame({
   GameUI,
 });
 
-function main({ ecs, input, sceneGraph, collision }: GameContext) {
-  collision.defineLayers(["Player", "Projectile", "World"]);
+function main({ ecs, input, sceneGraph }: GameContext) {
   const playerEntityId = "player";
 
   let timeSinceLastShot = 0;
@@ -182,6 +182,8 @@ function main({ ecs, input, sceneGraph, collision }: GameContext) {
       }
     });
   });
+
+  defineCollisionLayers(["Player", "Projectile", "World"]);
 
   registerCollisionCallback({
     name: "Player",

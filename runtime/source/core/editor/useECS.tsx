@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { Entity, EntityComponents } from "../ecs/ecs";
 import type { curryECSInstance } from "../ecs/ecs";
-import { addDrawCallback, removeDrawCallback } from "../gameloop";
+import { addDrawCallback, removeDrawCallback, addEditorUpdateCallback, removeEditorCallback } from "../gameloop";
 import { useGameContext } from "./useGameContext.tsx";
 
 export interface EntityState {
@@ -63,14 +63,31 @@ export function useECS(): EntityState {
             }));
         };
 
+        // Coalesce duplicate callbacks within the same tick (draw + editor update).
+        let syncScheduled = false;
+        const scheduleSync = () => {
+            if (syncScheduled) return;
+            syncScheduled = true;
+            queueMicrotask(() => {
+                syncScheduled = false;
+                syncEntityState();
+            });
+        };
+
         // Initial sync
         syncEntityState();
 
-        // Subscribe to draw callbacks for continuous sync every frame
-        const callbackId = addDrawCallback(syncEntityState);
+        // Subscribe to draw callbacks for continuous sync every frame.
+        // Also subscribe to editor update callbacks to keep editor UI in sync
+        // even when draw callbacks are disabled.
+        const drawCallbackId = addDrawCallback(scheduleSync);
+        const editorCallbackId = addEditorUpdateCallback(scheduleSync);
 
         return () => {
-            removeDrawCallback(callbackId);
+            removeDrawCallback(drawCallbackId);
+            if (editorCallbackId !== -1) {
+                removeEditorCallback(editorCallbackId);
+            }
         };
     }, [ecs]);
 

@@ -19,17 +19,13 @@ import {
 import { create } from "../vector";
 import { getTransform, setTransform, getWorldTransform } from "../transform";
 import { Graphics } from "pixi.js";
-import {
-  defineCollisionLayers,
-  getCollisionLayers,
-} from "./collisionLayers";
+import { getCollisionLayers } from "./collisionLayers";
 
 export function collisionPlugin<
   T extends RequirePlugin<[typeof ecsPlugin, typeof spritePlugin]>
 >(context: T): ContextExtension<T, {
   colliderClickProvider: ClickableEntityProvider;
   collision: {
-    defineLayers: typeof defineCollisionLayers;
     getLayers: typeof getCollisionLayers;
   };
 }> {
@@ -189,7 +185,6 @@ export function collisionPlugin<
     ...context,
     colliderClickProvider,
     collision: {
-      defineLayers: defineCollisionLayers,
       getLayers: getCollisionLayers,
     },
   };
