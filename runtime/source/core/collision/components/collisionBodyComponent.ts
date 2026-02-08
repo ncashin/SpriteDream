@@ -1,12 +1,16 @@
 import type { Component } from "../../ecs/ecs";
 import { defineComponent } from "../../ecs/component";
+import { collisionCallbackRegistry } from "../collisionCallbacks";
+
+const getCollisionCallbackOptions = () =>
+    Object.keys(collisionCallbackRegistry).sort();
 
 export type CollisionBodyComponent = Component & {
     type: "collisionBody";
     bodyName?: string;
     bodyType: "static" | "kinematic";
     collisionEnabled: boolean;
-    callbackName?: string;
+    collisionCallback?: string;
     propagateCollision?: boolean;
     collisionLayer?: number;
     collisionMask?: number;
@@ -28,6 +32,10 @@ export const CollisionBodyComponentDefinition: CollisionBodyComponent = defineCo
             bodyType: {
                 type: "dropdown",
                 options: ["static", "kinematic"],
+            },
+            collisionCallback: {
+                type: "dropdown",
+                options: getCollisionCallbackOptions,
             },
             collisionEnabled: {
                 type: "boolean",

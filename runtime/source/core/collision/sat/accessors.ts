@@ -157,7 +157,7 @@ export const buildBodyOverride = (body: CollisionBodyComponent): CollisionBodyCo
     bodyName: body.bodyName,
     bodyType: body.bodyType ?? "static",
     collisionEnabled: body.collisionEnabled ?? true,
-    callbackName: body.callbackName,
+    collisionCallback: body.collisionCallback,
     propagateCollision: body.propagateCollision ?? false,
     collisionLayer: body.collisionLayer ?? 1,
     collisionMask: body.collisionMask ?? 0xffffffff,

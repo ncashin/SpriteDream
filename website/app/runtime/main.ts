@@ -5,17 +5,18 @@ import { inputPlugin } from "./core/input";
 import { viewportPlugin } from "./core/viewport/viewportPlugin";
 import { collisionPlugin } from "./core/collision/collisionPlugin";
 import { ecsEditorPlugin } from "./core/ecs/editor/ECSEditorPlugin";
-import { sceneGraphPlugin } from "./core/sceneGraph/sceneGraphPlugin";
 import {
   addUpdateCallback,
 } from "./core/gameloop";
 import type { Component } from "./core/ecs/ecs";
+import { getEntity } from "./core/ecs/ecs";
 import { defineComponent, VelocityComponentDefinition, TransformComponentDefinition } from "./core/ecs/component";
 import { ColliderComponentDefinition } from "./core/collision/components/colliderComponent";
 import { CollisionBodyComponentDefinition } from "./core/collision/components/collisionBodyComponent";
 import { SpriteComponentDefinition } from "./core/sprite";
 import { registerCollisionCallback } from "./core/collision/collisionCallbacks";
 import { screenToWorld } from "./core/viewport/viewportPlugin";
+import { getWorldPosition } from "./core/transform";
 import initialScene from "../scenes/default.scene?raw";
 
 import { EditorUI } from "./EditorUI";
@@ -30,6 +31,16 @@ export {
   zoomViewport,
 } from "./core/viewport/viewportPlugin";
 
+const plugins = [
+  inputPlugin,
+  viewportPlugin,
+  ecsPlugin,
+  spritePlugin,
+  collisionPlugin,
+  ecsEditorPlugin,
+] as const;
+
+type GameContext = AccumulatePluginResults<typeof plugins>;
 
 export type PlayerComponent = Component & {
   type: "player";
@@ -66,19 +77,6 @@ export const SceneEntity = defineComponent(
 
 
 
-
-const plugins = [
-  inputPlugin,
-  viewportPlugin,
-  ecsPlugin,
-  sceneGraphPlugin,
-  spritePlugin,
-  collisionPlugin,
-  ecsEditorPlugin,
-] as const;
-
-type GameContext = AccumulatePluginResults<typeof plugins>;
-
 initializeGame({
   plugins,
   initialScene,
@@ -87,7 +85,7 @@ initializeGame({
   GameUI,
 });
 
-function main({ ecs, input, sceneGraph }: GameContext) {
+function main({ ecs, input }: GameContext) {
   let previousMouseLeft = false;
   let fireballCounter = 0;
 
@@ -116,71 +114,57 @@ function main({ ecs, input, sceneGraph }: GameContext) {
       playerEntity.velocity.y = -jumpStrength;
       playerEntity.player.isGrounded = false;
     }
-  });
 
-  addUpdateCallback(() => {
     const mouseLeftPressed = input.isMouseButtonPressed("left");
     const mouseClicked = mouseLeftPressed && !previousMouseLeft;
     previousMouseLeft = mouseLeftPressed;
-    if (!mouseClicked) {
-      return;
+
+    if (mouseClicked) {
+      const mousePos = input.getMousePosition();
+      const worldPos = screenToWorld(mousePos.x, mousePos.y);
+      const playerWorldPos = getWorldPosition(ecs.ecsInstance, playerEntityId);
+
+      if (playerWorldPos) {
+        const dx = worldPos.x - playerWorldPos.x;
+        const dy = worldPos.y - playerWorldPos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > 0) {
+          const fireballSpeed = 500;
+          const velocityX = (dx / distance) * fireballSpeed;
+          const velocityY = (dy / distance) * fireballSpeed;
+
+          const fireballId = `fireball_${fireballCounter++}`;
+          ecs.createEntity(fireballId);
+          const fireballEntity = ecs.getEntity(fireballId);
+
+          fireballEntity[TransformComponentDefinition.type] = { ...TransformComponentDefinition, x: playerWorldPos.x, y: playerWorldPos.y };
+          fireballEntity[SpriteComponentDefinition.type] = { ...SpriteComponentDefinition, width: 24, height: 24, image: "/fireball.png" };
+          fireballEntity[VelocityComponentDefinition.type] = { ...VelocityComponentDefinition, x: velocityX, y: velocityY };
+          fireballEntity[CollisionBodyComponentDefinition.type] = {
+            ...CollisionBodyComponentDefinition,
+            bodyType: "kinematic",
+            collisionEnabled: true,
+          };
+          fireballEntity[ColliderComponentDefinition.type] = {
+            ...ColliderComponentDefinition,
+            colliderName: "circle",
+            radius: 12,
+          };
+        }
+      }
     }
-
-    const playerEntity = ecs.getEntity("player");
-    if (!playerEntity) {
-      return;
-    }
-
-    const mousePos = input.getMousePosition();
-    const worldPos = screenToWorld(mousePos.x, mousePos.y);
-    const playerWorldPos = sceneGraph.getWorldPosition(playerEntity);
-    if (!playerWorldPos) {
-      return;
-    }
-
-    const dx = worldPos.x - playerWorldPos.x;
-    const dy = worldPos.y - playerWorldPos.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    if (distance <= 0) {
-      return;
-    }
-
-    const fireballSpeed = 500;
-    const velocityX = (dx / distance) * fireballSpeed;
-    const velocityY = (dy / distance) * fireballSpeed;
-
-    const fireballId = `fireball_${fireballCounter++}`;
-    const fireballEntity = ecs.createEntity(fireballId);
-
-    ecs.addComponent(fireballEntity, TransformComponentDefinition, {
-      x: playerWorldPos.x,
-      y: playerWorldPos.y,
-    });
-    ecs.addComponent(fireballEntity, SpriteComponentDefinition, {
-      width: 24,
-      height: 24,
-      image: "/fireball.png",
-    });
-    ecs.addComponent(fireballEntity, VelocityComponentDefinition, {
-      x: velocityX,
-      y: velocityY,
-    });
-    ecs.addComponent(fireballEntity, CollisionBodyComponentDefinition, {
-      bodyType: "kinematic",
-      collisionEnabled: true,
-    });
-    ecs.addComponent(fireballEntity, ColliderComponentDefinition, {
-      colliderName: "circle",
-      radius: 12,
-    });
   });
 
   registerCollisionCallback({
-    name: "Player Collision Callback",
-    callback: ({ entity, overlapNormal }) => {
-      if (!ecs.hasComponents(entity, [PlayerComponentDefinition, VelocityComponentDefinition])) {
+    name: "player",
+    callback: (_ecs, entity, _other, _overlapAmount, overlapNormal) => {
+      const entityData = ecs.getEntity(entity);
+      if (!ecs.hasComponents(entityData, [PlayerComponentDefinition, VelocityComponentDefinition])) {
         return;
       }
+
+      const velocity = getEntity(_ecs, entity)[VelocityComponentDefinition.type] as typeof VelocityComponentDefinition;
 
       const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
       const isNormalPointingUp = overlapNormal[1] < 0;
@@ -188,16 +172,18 @@ function main({ ecs, input, sceneGraph }: GameContext) {
       const isLandingOnTop = isVerticalCollision && isNormalPointingUp;
       const isHittingHead = isVerticalCollision && isNormalPointingDown;
 
-      if (entity.velocity.y > 0 && isLandingOnTop) {
-        entity.velocity.y = 0;
-        entity.player.isGrounded = true;
+      if (velocity.y > 0 && isLandingOnTop) {
+        velocity.y = 0;
+        entityData.player.isGrounded = true;
       }
 
-      if (entity.velocity.y < 0 && isHittingHead) {
-        entity.velocity.y = 0;
+      if (velocity.y < 0 && isHittingHead) {
+        velocity.y = 0;
       }
     },
   });
 }
+
+
 
 

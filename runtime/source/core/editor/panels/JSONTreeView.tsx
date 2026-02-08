@@ -214,6 +214,13 @@ function TreeNodeComponent({
     return getPropertyInputType(node.path);
   }, [node.path, isEditable]);
 
+  const dropdownOptions = useMemo(() => {
+    if (customInputType?.type !== 'dropdown') return [];
+    return typeof customInputType.options === 'function'
+      ? customInputType.options()
+      : customInputType.options;
+  }, [customInputType]);
+
   // Get available entities for parent selection (excluding self and descendants)
   const availableParentEntities = useMemo(() => {
     if (!isTransformParent || !ecs || !entity) return [];
@@ -816,7 +823,7 @@ function TreeNodeComponent({
               <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
                 <SearchableDropdown
                   value={String(node.value || '')}
-                  options={customInputType.options}
+                  options={dropdownOptions}
                   onChange={(value) => handleValueChange(value)}
                 />
               </div>
@@ -1015,7 +1022,7 @@ function TreeNodeComponent({
                 <div onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
                   <SearchableDropdown
                     value={String(node.value || '')}
-                    options={customInputType.options}
+                    options={dropdownOptions}
                     onChange={(value) => handleValueChange(value)}
                   />
                 </div>

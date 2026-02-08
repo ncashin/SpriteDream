@@ -1,4 +1,5 @@
 import type { Route } from "./+types/games.$id";
+import { useEffect, useRef, useState } from "react";
 import { useLoaderData, Link } from "react-router";
 import { db, games } from "../db";
 import { eq } from "drizzle-orm";
@@ -44,18 +45,50 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 export default function GameDetails() {
   const { game } = useLoaderData<typeof loader>();
+  const [iframeVisible, setIframeVisible] = useState(false);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const minRevealDelayMs = 350;
+
+  useEffect(() => {
+    setIframeVisible(false);
+    if (revealTimerRef.current) {
+      clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = null;
+    }
+  }, [game.id]);
+
+  useEffect(() => {
+    return () => {
+      if (revealTimerRef.current) {
+        clearTimeout(revealTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
-    <div className="fixed inset-0 top-10">
+    <div className="fixed inset-0 top-10 bg-[var(--color-bg-base)]">
       {/* Fullscreen game iframe */}
       <iframe
         src={`/api/games/${game.id}/bundle`}
-        className="absolute inset-0 w-full h-full border-0"
+        className={`absolute inset-0 w-full h-full border-0 transition-opacity duration-300 ${iframeVisible ? "opacity-100" : "opacity-0"}`}
         title={game.name}
         allow="fullscreen"
         allowFullScreen
-        style={{ display: 'block' }}
+        style={{ display: "block", backgroundColor: "var(--color-bg-base)" }}
+        onLoad={() => {
+          if (revealTimerRef.current) {
+            clearTimeout(revealTimerRef.current);
+          }
+          revealTimerRef.current = setTimeout(() => {
+            setIframeVisible(true);
+          }, minRevealDelayMs);
+        }}
       />
+      {!iframeVisible && (
+        <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-white/60 bg-[var(--color-bg-base)]">
+          Loading game…
+        </div>
+      )}
 
       {/* Info overlay - upper left */}
       <div className="absolute top-4 left-6 pointer-events-none">

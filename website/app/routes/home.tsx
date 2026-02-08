@@ -4,9 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Play, PlayIcon } from "@phosphor-icons/react";
 import { db, games } from "../db";
 import { asc } from "drizzle-orm";
-import { readFileSync } from "fs";
-import { join } from "path";
 import React from "react";
+import runtimeMainTsSource from "../runtime/main.ts?raw";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -15,64 +14,172 @@ export function meta({ }: Route.MetaArgs) {
   ];
 }
 
-function parseTypeScriptCode(code: string): CodeLine[] {
-  const lines = code.split('\n');
-  const keywords = ['import', 'export', 'from', 'function', 'const', 'let', 'var', 'if', 'else', 'return', 'class', 'extends', 'type', 'interface', 'as', 'async', 'await'];
-  const types = ['string', 'number', 'boolean', 'void', 'null', 'undefined'];
-  
-  const result: CodeLine[] = [];
-  
-  for (let index = 0; index < lines.length; index++) {
-    const line = lines[index];
-    const lineNum = index + 1;
-    
-    if (!line.trim()) {
-      result.push({ num: lineNum, content: '' });
-      continue;
+export const links: Route.LinksFunction = () => [
+  { rel: "preload", href: "/api/runtime/", as: "document" },
+];
+
+const CODE_KEYWORDS = [
+  "import",
+  "export",
+  "from",
+  "function",
+  "const",
+  "let",
+  "var",
+  "if",
+  "else",
+  "return",
+  "class",
+  "extends",
+  "type",
+  "interface",
+  "as",
+  "async",
+  "await",
+];
+
+const CODE_TYPES = ["string", "number", "boolean", "void", "null", "undefined"];
+
+type CodeToken = {
+  text: string;
+  className?: string;
+};
+
+function tokenizePlainText(text: string): CodeToken[] {
+  const keywordPattern = CODE_KEYWORDS.join("|");
+  const typePattern = CODE_TYPES.join("|");
+  const tokenRegex = new RegExp(
+    `\\b(${keywordPattern})\\b|\\b(${typePattern})\\b|\\b(\\d+)\\b`,
+    "g"
+  );
+  const tokens: CodeToken[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = tokenRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      tokens.push({ text: text.slice(lastIndex, match.index) });
     }
-    
-    // Simple regex-based syntax highlighting
-    let highlighted = line;
-    
-    // Highlight strings
-    highlighted = highlighted.replace(/(["'`])(?:(?=(\\?))\2.)*?\1/g, (match) => {
-      return `<span class="text-[#ce9178]">${match}</span>`;
-    });
-    
-    // Highlight comments
-    highlighted = highlighted.replace(/\/\/.*$/gm, (match) => {
-      return `<span class="text-[#6a9955]">${match}</span>`;
-    });
-    
-    // Highlight keywords
-    keywords.forEach(keyword => {
-      const regex = new RegExp(`\\b${keyword}\\b`, 'g');
-      highlighted = highlighted.replace(regex, (match) => {
-        return `<span class="text-[#c586c0]">${match}</span>`;
+    if (match[1]) {
+      tokens.push({ text: match[1], className: "text-[#c586c0]" });
+    } else if (match[2]) {
+      tokens.push({ text: match[2], className: "text-[#4ec9b0]" });
+    } else if (match[3]) {
+      tokens.push({ text: match[3], className: "text-[#b5cea8]" });
+    }
+    lastIndex = tokenRegex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    tokens.push({ text: text.slice(lastIndex) });
+  }
+
+  return tokens;
+}
+
+function tokenizeWithBaseColor(text: string, baseClassName: string): CodeToken[] {
+  const keywordPattern = CODE_KEYWORDS.join("|");
+  const typePattern = CODE_TYPES.join("|");
+  const tokenRegex = new RegExp(
+    `\\b(${keywordPattern})\\b|\\b(${typePattern})\\b|\\b(\\d+)\\b`,
+    "g"
+  );
+  const tokens: CodeToken[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = tokenRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      tokens.push({
+        text: text.slice(lastIndex, match.index),
+        className: baseClassName,
       });
-    });
-    
-    // Highlight types
-    types.forEach(type => {
-      const regex = new RegExp(`\\b${type}\\b`, 'g');
-      highlighted = highlighted.replace(regex, (match) => {
-        return `<span class="text-[#4ec9b0]">${match}</span>`;
-      });
-    });
-    
-    // Highlight numbers
-    highlighted = highlighted.replace(/\b\d+\b/g, (match) => {
-      return `<span class="text-[#b5cea8]">${match}</span>`;
-    });
-    
-    result.push({
-      num: lineNum,
-      content: '',
-      html: highlighted,
+    }
+    if (match[1]) {
+      tokens.push({ text: match[1], className: "text-[#c586c0]" });
+    } else if (match[2]) {
+      tokens.push({ text: match[2], className: "text-[#4ec9b0]" });
+    } else if (match[3]) {
+      tokens.push({ text: match[3], className: "text-[#b5cea8]" });
+    }
+    lastIndex = tokenRegex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    tokens.push({
+      text: text.slice(lastIndex),
+      className: baseClassName,
     });
   }
-  
-  return result as CodeLine[];
+
+  return tokens;
+}
+
+function tokenizeLine(line: string): CodeToken[] {
+  if (!line) return [{ text: "" }];
+
+  const tokens: CodeToken[] = [];
+  let current = "";
+  let inString: "'" | '"' | "`" | null = null;
+  let isEscaped = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (inString) {
+      current += char;
+      if (char === "\\" && !isEscaped) {
+        isEscaped = true;
+        continue;
+      }
+      if (char === inString && !isEscaped) {
+        tokens.push({ text: current, className: "text-[#ce9178]" });
+        current = "";
+        inString = null;
+      }
+      isEscaped = false;
+      continue;
+    }
+
+    if (char === "/" && nextChar === "/") {
+      if (current) {
+        tokens.push(...tokenizePlainText(current));
+        current = "";
+      }
+      tokens.push(...tokenizeWithBaseColor(line.slice(i), "text-[#6a9955]"));
+      return tokens;
+    }
+
+    if (char === "'" || char === '"' || char === "`") {
+      if (current) {
+        tokens.push(...tokenizePlainText(current));
+        current = "";
+      }
+      inString = char;
+      current = char;
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current) {
+    if (inString) {
+      tokens.push(...tokenizeWithBaseColor(current, "text-[#ce9178]"));
+    } else {
+      tokens.push(...tokenizePlainText(current));
+    }
+  }
+
+  return tokens;
+}
+
+function parseTypeScriptCode(code: string): CodeLine[] {
+  return code.split("\n").map((line, index) => ({
+    num: index + 1,
+    tokens: tokenizeLine(line),
+  }));
 }
 
 export async function loader({ }: Route.LoaderArgs) {
@@ -84,20 +191,7 @@ export async function loader({ }: Route.LoaderArgs) {
     .orderBy(asc(games.createdAt))
     .limit(1);
 
-  // Read the actual main.ts file
-  let mainTsLines: CodeLine[] = [];
-  
-  try {
-    const runtimeSourcePath = process.env.NODE_ENV === 'production'
-      ? join(process.cwd(), 'runtime', 'source', 'main.ts')
-      : join(process.cwd(), '..', 'runtime', 'source', 'main.ts');
-    
-    const mainTsContent = readFileSync(runtimeSourcePath, 'utf-8');
-    mainTsLines = parseTypeScriptCode(mainTsContent) as CodeLine[];
-  } catch (error) {
-    console.error('Failed to read main.ts:', error);
-    // Fallback to empty
-  }
+  const mainTsLines = parseTypeScriptCode(runtimeMainTsSource) as CodeLine[];
 
   return {
     gameId: firstGame?.id || null,
@@ -115,8 +209,8 @@ interface Tab {
 
 interface CodeLine {
   num: number;
-  content: React.ReactNode | string;
-  html?: string; // For syntax highlighted HTML
+  content?: React.ReactNode | string;
+  tokens?: CodeToken[];
 }
 
 const TABS: Tab[] = [
@@ -138,7 +232,13 @@ function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines
   const [activeTab, setActiveTab] = useState<TabId>("main.scene");
   const [highlightedLines, setHighlightedLines] = useState<Set<number>>(new Set());
   const runtimeIframeRef = useRef<HTMLIFrameElement | null>(null);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [runtimeReady, setRuntimeReady] = useState(false);
+  const [runtimeVisible, setRuntimeVisible] = useState(false);
+  const isSceneActive = activeTab === "main.scene";
+  const isMainTsActive = activeTab === "main.ts";
+  const isRuntimeVisible = isSceneActive && runtimeVisible;
+  const runtimeRevealDelayMs = 350;
 
   const postRuntimeCommand = (command: string, data?: Record<string, unknown>) => {
     const targetWindow = runtimeIframeRef.current?.contentWindow;
@@ -160,8 +260,24 @@ function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines
 
   useEffect(() => {
     if (!runtimeReady) return;
-    postRuntimeCommand("setRunning", { running: true });
+    // Default to editor-ready (not running) so editor interactions work.
+    postRuntimeCommand("setRunning", { running: false });
+
+    if (revealTimerRef.current) {
+      clearTimeout(revealTimerRef.current);
+    }
+    revealTimerRef.current = setTimeout(() => {
+      setRuntimeVisible(true);
+    }, runtimeRevealDelayMs);
   }, [runtimeReady]);
+
+  useEffect(() => {
+    return () => {
+      if (revealTimerRef.current) {
+        clearTimeout(revealTimerRef.current);
+      }
+    };
+  }, []);
 
   const toggleLineHighlight = (lineNum: number) => {
     setHighlightedLines(prev => {
@@ -199,73 +315,98 @@ function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines
         <div className="absolute -top-8 -right-8 w-32 h-32 bg-[var(--color-accent)]/15 rounded-full blur-[60px] pointer-events-none" />
         <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-[var(--color-ember)]/12 rounded-full blur-[80px] pointer-events-none" />
 
-        <div className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden">
-          {activeTab === "main.ts" ? (
-            <div className="pt-5 pl-1 font-mono text-sm leading-relaxed h-full overflow-x-auto">
-              {mainTsLines.map((line, i) => {
-                const isHighlighted = highlightedLines.has(line.num);
-                return (
-                  <div 
-                    key={i} 
-                    onClick={() => toggleLineHighlight(line.num)}
-                    className={`flex items-center gap-4 hover:bg-white/[0.03] -mx-2 px-2 rounded min-w-0 cursor-pointer transition-colors ${
-                      isHighlighted ? "bg-[var(--color-accent)]/20 border-l-2 border-[var(--color-accent)]" : ""
-                    }`}
-                  >
-                    <span className="text-white/25 w-6 text-right text-xs select-none flex-shrink-0">{line.num}</span>
-                    {line.html ? (
-                      <span className="text-[#d4d4d4] min-w-0 whitespace-pre" dangerouslySetInnerHTML={{ __html: line.html }} />
-                    ) : (
-                      <span className="text-[#d4d4d4] min-w-0 whitespace-pre">{line.content || <>&nbsp;</>}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="relative w-full h-full">
-              <iframe
-                src="/api/runtime/"
-                className="w-full h-full border-0"
-                title="GameIDE Runtime"
-                allow="fullscreen"
-                allowFullScreen
-                ref={runtimeIframeRef}
-                onLoad={() => {
-                  setRuntimeReady(false);
-                  postRuntimeCommand("ping");
-                }}
-              />
-              {highlightedLines.size > 0 && (
-                <div className="absolute inset-0 pointer-events-none z-20">
-                  {Array.from(highlightedLines).map((lineNum) => {
-                    const lineIndex = mainTsLines.findIndex(l => l.num === lineNum);
-                    if (lineIndex === -1) return null;
-                    
-                    // Calculate position based on line number (approximate)
-                    const lineHeight = 24; // Approximate line height in pixels
-                    const topOffset = 20; // Padding top
-                    const yPosition = topOffset + (lineIndex * lineHeight);
-                    
-                    return (
-                      <div
-                        key={lineNum}
-                        className="absolute left-0 right-0 border-l-4 border-[var(--color-accent)] bg-[var(--color-accent)]/10"
-                        style={{
-                          top: `${yPosition}px`,
-                          height: `${lineHeight}px`,
-                        }}
-                      >
-                        <div className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-mono text-[var(--color-accent)] bg-[var(--color-bg-base)] px-1.5 py-0.5 rounded border border-[var(--color-accent)]/30">
-                          Line {lineNum}
-                        </div>
-                      </div>
-                    );
-                  })}
+        <div className="relative z-10 flex-1 min-h-0 overflow-hidden">
+          <div
+            className={`absolute inset-0 z-10 h-full pt-5 pl-1 font-mono text-sm leading-6 overflow-y-auto overflow-x-auto overscroll-contain transition-opacity duration-200 ${
+              isMainTsActive ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+            aria-hidden={!isMainTsActive}
+          >
+            {mainTsLines.map((line, i) => {
+              const isHighlighted = highlightedLines.has(line.num);
+              return (
+                <div 
+                  key={i} 
+                  onClick={() => toggleLineHighlight(line.num)}
+                  className={`flex items-center gap-4 hover:bg-white/[0.03] -mx-2 px-2 rounded min-w-0 cursor-pointer transition-colors leading-6 ${
+                    isHighlighted ? "bg-[var(--color-accent)]/20 border-l-2 border-[var(--color-accent)]" : ""
+                  }`}
+                >
+                  <span className="text-white/25 w-6 text-right text-xs select-none flex-shrink-0">{line.num}</span>
+                  <span className="text-[#d4d4d4] min-w-0 whitespace-pre">
+                    {line.tokens
+                      ? line.tokens.map((token, tokenIndex) => (
+                        <span key={tokenIndex} className={token.className}>
+                          {token.text}
+                        </span>
+                      ))
+                      : line.content || <>&nbsp;</>}
+                  </span>
                 </div>
-              )}
-            </div>
-          )}
+              );
+            })}
+          </div>
+
+          <div className="absolute inset-0 z-0">
+            <iframe
+              src="/api/runtime/"
+              className={`w-full h-full border-0 transition-opacity duration-300 ${
+                isRuntimeVisible ? "opacity-100" : "opacity-0"
+              } ${isSceneActive ? "pointer-events-auto" : "pointer-events-none"}`}
+              title="GameIDE Runtime"
+              allow="fullscreen"
+              allowFullScreen
+              loading="eager"
+              style={{ backgroundColor: "var(--color-bg-base)" }}
+              ref={runtimeIframeRef}
+              onLoad={() => {
+                setRuntimeReady(false);
+                setRuntimeVisible(false);
+                if (revealTimerRef.current) {
+                  clearTimeout(revealTimerRef.current);
+                }
+                postRuntimeCommand("ping");
+              }}
+            />
+            {!runtimeVisible && (
+              <div
+                className={`absolute inset-0 flex items-center justify-center text-xs font-mono text-white/60 bg-[var(--color-bg-base)] transition-opacity duration-200 ${
+                  isSceneActive ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+                aria-hidden={!isSceneActive}
+              >
+                Loading runtime…
+              </div>
+            )}
+            {highlightedLines.size > 0 && (
+              <div className="absolute inset-0 pointer-events-none z-20">
+                {Array.from(highlightedLines).map((lineNum) => {
+                  const lineIndex = mainTsLines.findIndex(l => l.num === lineNum);
+                  if (lineIndex === -1) return null;
+                  
+                  // Calculate position based on line number (approximate)
+                  const lineHeight = 24; // Approximate line height in pixels
+                  const topOffset = 20; // Padding top
+                  const yPosition = topOffset + (lineIndex * lineHeight);
+                  
+                  return (
+                    <div
+                      key={lineNum}
+                      className="absolute left-0 right-0 border-l-4 border-[var(--color-accent)] bg-[var(--color-accent)]/10"
+                      style={{
+                        top: `${yPosition}px`,
+                        height: `${lineHeight}px`,
+                      }}
+                    >
+                      <div className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-mono text-[var(--color-accent)] bg-[var(--color-bg-base)] px-1.5 py-0.5 rounded border border-[var(--color-accent)]/30">
+                        Line {lineNum}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

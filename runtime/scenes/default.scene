@@ -67,7 +67,8 @@
           "bodyType": "static",
           "collisionEnabled": true,
           "callbackName": "",
-          "propagateCollision": false
+          "propagateCollision": false,
+          "collisionCallback": ""
         },
         "collider": {
           "type": "collider",
@@ -137,8 +138,8 @@
           "type": "collisionBody",
           "bodyType": "kinematic",
           "collisionEnabled": true,
-          "callbackName": "player",
-          "propagateCollision": false
+          "propagateCollision": false,
+          "collisionCallback": "Player Collision Callback"
         },
         "collider": {
           "type": "collider",
@@ -150,12 +151,11 @@
         "transform": {
           "type": "transform",
           "parent": null,
-          "x": 22.454416510922385,
-          "y": -101.36977843712891,
+          "x": 0,
+          "y": -100,
           "rotation": 0,
           "scaleX": 1,
-          "scaleY": 1,
-          "asdfasdf": "asdfasdfasdf"
+          "scaleY": 1
         }
       },
       "staff": {

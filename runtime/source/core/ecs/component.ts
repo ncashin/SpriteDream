@@ -1,7 +1,7 @@
 import type { Component } from "./ecs";
 
 export type PropertyInputType =
-  | { type: "dropdown"; options: string[] }
+  | { type: "dropdown"; options: string[] | (() => string[]) }
   | { type: "file"; accept?: string; directory?: string }
   | { type: "color" }
   | { type: "text" }

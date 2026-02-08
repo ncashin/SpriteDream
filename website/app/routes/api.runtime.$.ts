@@ -57,34 +57,13 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const fileData = readFileSync(fullPath);
   const mimeType = getMimeType(filePath);
   
-  // If serving HTML, inject base tag and editor mode script
+  // If serving HTML, inject base tag for proper path resolution
   if (mimeType === 'text/html') {
     const htmlContent = fileData.toString('utf-8');
     let modifiedHtml = htmlContent;
     
     // Base path should point to the runtime route
     const basePath = `/api/runtime/`;
-    
-    // Rewrite absolute asset paths to use the base path
-    // Match src="/assets/..." and href="/assets/..." patterns
-    modifiedHtml = modifiedHtml.replace(
-      /(src|href)=["']\/(assets\/[^"']+)["']/g,
-      (match, attr, assetPath) => {
-        return `${attr}="${basePath}${assetPath}"`;
-      }
-    );
-    
-    // Also rewrite other absolute paths that might be assets (like /vite.svg)
-    modifiedHtml = modifiedHtml.replace(
-      /(src|href)=["']\/([^"']+\.(js|css|svg|png|jpg|jpeg|gif|woff|woff2|ttf|eot|ico|webp))["']/g,
-      (match, attr, assetPath) => {
-        // Only rewrite if it's not already using the base path
-        if (!assetPath.startsWith('api/runtime/')) {
-          return `${attr}="${basePath}${assetPath}"`;
-        }
-        return match;
-      }
-    );
     
     // Always remove any existing base tags first
     const baseTagRegex = /<base\s+[^>]*>/gi;
@@ -98,21 +77,6 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       modifiedHtml = modifiedHtml.replace(/<head\s+[^>]*>/, (match) => `${match}\n  ${baseTag}`);
     } else {
       modifiedHtml = `${baseTag}\n${modifiedHtml}`;
-    }
-    
-    // Inject script to enable editor mode
-    const editorModeScript = `
-  <script>
-    // Enable editor mode for website
-    window.__EDITOR_MODE_ENABLED__ = true;
-  </script>`;
-    
-    if (modifiedHtml.includes('</head>')) {
-      modifiedHtml = modifiedHtml.replace('</head>', `${editorModeScript}\n</head>`);
-    } else if (modifiedHtml.includes('</body>')) {
-      modifiedHtml = modifiedHtml.replace('</body>', `${editorModeScript}\n</body>`);
-    } else {
-      modifiedHtml = `${modifiedHtml}${editorModeScript}`;
     }
     
     return new Response(modifiedHtml, {

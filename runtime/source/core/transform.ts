@@ -1,4 +1,4 @@
-import type { ECSInstance, Entity } from "./ecs/ecs";
+import type { ECSInstance, Entity, EntityComponents } from "./ecs/ecs";
 import { getEntity } from "./ecs/ecs";
 import {
     TransformComponentDefinition,
@@ -16,11 +16,17 @@ export type Transform = {
 const DEG_TO_RAD = Math.PI / 180;
 const TRANSFORM_TYPE = TransformComponentDefinition.type;
 
-function getTransformComponent(ecs: ECSInstance, entity: Entity): TransformComponent | undefined {
-    return getEntity(ecs, entity)[TRANSFORM_TYPE] as TransformComponent | undefined;
+function getTransformComponent(
+    ecs: ECSInstance,
+    entity: Entity | EntityComponents
+): TransformComponent | undefined {
+    if (typeof entity === "string") {
+        return getEntity(ecs, entity)[TRANSFORM_TYPE] as TransformComponent | undefined;
+    }
+    return entity[TRANSFORM_TYPE] as TransformComponent | undefined;
 }
 
-export function getTransform(ecs: ECSInstance, entity: Entity): Transform | null {
+export function getTransform(ecs: ECSInstance, entity: Entity | EntityComponents): Transform | null {
     const t = getTransformComponent(ecs, entity);
     if (!t) return null;
     return {
@@ -32,7 +38,7 @@ export function getTransform(ecs: ECSInstance, entity: Entity): Transform | null
     };
 }
 
-export function getWorldTransform(ecs: ECSInstance, entity: Entity): Transform | null {
+export function getWorldTransform(ecs: ECSInstance, entity: Entity | EntityComponents): Transform | null {
     const t = getTransformComponent(ecs, entity);
     if (!t) return null;
 
@@ -67,17 +73,17 @@ export function getWorldTransform(ecs: ECSInstance, entity: Entity): Transform |
     };
 }
 
-export function getWorldPosition(ecs: ECSInstance, entity: Entity): { x: number; y: number } | null {
+export function getWorldPosition(ecs: ECSInstance, entity: Entity | EntityComponents): { x: number; y: number } | null {
     const w = getWorldTransform(ecs, entity);
     return w ? { x: w.x, y: w.y } : null;
 }
 
-export function getWorldRotation(ecs: ECSInstance, entity: Entity): number {
+export function getWorldRotation(ecs: ECSInstance, entity: Entity | EntityComponents): number {
     const w = getWorldTransform(ecs, entity);
     return w ? w.rotation : 0;
 }
 
-export function getWorldScale(ecs: ECSInstance, entity: Entity): { scaleX: number; scaleY: number } | null {
+export function getWorldScale(ecs: ECSInstance, entity: Entity | EntityComponents): { scaleX: number; scaleY: number } | null {
     const w = getWorldTransform(ecs, entity);
     return w ? { scaleX: w.scaleX, scaleY: w.scaleY } : null;
 }

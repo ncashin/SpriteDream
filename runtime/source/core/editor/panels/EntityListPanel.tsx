@@ -360,9 +360,7 @@ export function EntityListPanel() {
         if (pasted) {
           startUndoAction();
 
-          ecs.createEntity(pasted.entityName);
-
-          const entityProxy = ecs.getEntity(pasted.entityName);
+          const entityProxy = ecs.createEntity(pasted.entityName);
           for (const component of Object.values(pasted.components)) {
             if (component && typeof component === 'object' && 'type' in component) {
               entityProxy[component.type] = component;
@@ -414,8 +412,8 @@ export function EntityListPanel() {
 
     startUndoAction();
 
-    const newEntity = ecs.createEntity(entityName);
-    ecs.selectEntity(newEntity);
+    ecs.createEntity(entityName);
+    ecs.selectEntity(entityName);
   };
 
   const handleDeleteEntity = (entity: Entity, e: React.MouseEvent) => {

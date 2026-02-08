@@ -26,33 +26,39 @@ function getMimeType(filename: string): string {
 
 export async function loader({ params }: LoaderFunctionArgs) {
   const path = (params as { "*"?: string })["*"] || "";
-  
-  // Get the client build directory
-  const clientBuildPath = join(process.cwd(), 'build', 'client');
-  
+
   // Normalize the path
   let filePath = path;
-  if (!filePath || filePath === '/') {
+  if (!filePath || filePath === "/") {
     throw new Response("File not found", { status: 404 });
   }
-  
+
   // Remove leading slash if present
-  filePath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-  
-  const fullPath = join(clientBuildPath, filePath);
-  
-  // Security: ensure we're not accessing files outside the client build directory
-  if (!fullPath.startsWith(clientBuildPath)) {
-    throw new Response("Invalid path", { status: 400 });
-  }
-  
-  if (!existsSync(fullPath)) {
+  filePath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+
+  const clientAssetsPath = join(process.cwd(), "build", "client", "assets");
+  const runtimeAssetsPath =
+    process.env.NODE_ENV === "production"
+      ? join(process.cwd(), "runtime", "dist", "assets")
+      : join(process.cwd(), "..", "runtime", "dist", "assets");
+
+  const candidatePaths = [
+    { root: clientAssetsPath, fullPath: join(clientAssetsPath, filePath) },
+    { root: runtimeAssetsPath, fullPath: join(runtimeAssetsPath, filePath) },
+  ];
+
+  const assetEntry = candidatePaths.find(({ root, fullPath }) => {
+    if (!fullPath.startsWith(root)) return false;
+    return existsSync(fullPath);
+  });
+
+  if (!assetEntry) {
     throw new Response("File not found", { status: 404 });
   }
-  
-  const fileData = readFileSync(fullPath);
+
+  const fileData = readFileSync(assetEntry.fullPath);
   const mimeType = getMimeType(filePath);
-  
+
   return new Response(fileData, {
     headers: {
       "Content-Type": mimeType,

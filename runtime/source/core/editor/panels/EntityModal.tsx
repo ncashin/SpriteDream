@@ -254,6 +254,11 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         const existingComponent = currentData[componentType];
 
         if (existingComponent) {
+          for (const key of Object.keys(existingComponent)) {
+            if (!(key in updatedComponent)) {
+              delete (existingComponent as Record<string, unknown>)[key];
+            }
+          }
           Object.assign(existingComponent, updatedComponent);
           if (!existingComponent.type) {
             existingComponent.type = componentType;

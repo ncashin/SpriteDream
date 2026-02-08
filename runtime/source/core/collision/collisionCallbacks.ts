@@ -1,13 +1,15 @@
-import type { ECSInstance, Entity } from "../ecs/ecs";
+import type { Component, ECSInstance } from "../ecs/ecs";
 import type { Vector } from "../vector";
 
-export type CollisionCallback = (
-  ecs: ECSInstance,
-  entity: Entity,
-  other: Entity,
-  overlapAmount: number,
-  overlapNormal: Vector
-) => void;
+export type CollisionCallbackArgs = {
+  ecs: ECSInstance;
+  entity: Record<string, Component>;
+  other: Record<string, Component>;
+  overlapAmount: number;
+  overlapNormal: Vector;
+};
+
+export type CollisionCallback = (args: CollisionCallbackArgs) => void;
 
 export type CollisionCallbackDefinition = {
   name: string;

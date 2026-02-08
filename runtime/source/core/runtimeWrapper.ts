@@ -3,7 +3,7 @@ import "@vscode/codicons/dist/codicon.css";
 import { readFile } from "./fileUtilities";
 import { flushSceneSave, setSceneFile, updateSceneWithDiff } from "./scene/scene";
 import { initializeEditor, getEditorRoot } from "./editor/editorInitializer";
-import { resetAllCallbacks, setEditorUpdateEnabled, setUpdateEnabled } from "./gameloop";
+import { resetAllCallbacks, setDrawEnabled, setEditorUpdateEnabled, setUpdateEnabled } from "./gameloop";
 import type { InitialGameContext } from "./gameContext";
 import { isEditorMode } from "./utils";
 import type { ComponentType } from "react";
@@ -86,6 +86,8 @@ function initializeGameUI(GameUI?: ComponentType) {
 
 export function runGame(EditorUI?: ComponentType, GameUI?: ComponentType, forceReset = false) {
   resetAllCallbacks();
+  // Ensure rendering is enabled for both editor and runtime embeds.
+  setDrawEnabled(true);
 
   if ((isDev || isEditorMode()) && !editorInitialized) {
     initializeEditor(EditorUI);
@@ -160,6 +162,7 @@ const handleMessage = async (event: MessageEvent) => {
     case "setRunning":
       if (typeof running !== "boolean") break;
       setUpdateEnabled(running);
+      setDrawEnabled(true);
       if (isEditorMode()) {
         setEditorUpdateEnabled(!running);
       }

@@ -183,8 +183,8 @@ const handleCollisionPairSingle = (
 
 
 
-        if (bodyA.callbackName) {
-            const callbackDef = getCollisionCallback(bodyA.callbackName);
+        if (bodyA.collisionCallback) {
+            const callbackDef = getCollisionCallback(bodyA.collisionCallback);
             if (callbackDef) {
 
                 let localNormalA = worldDirectionToLocal(ecs, entityA, smallestNormal[0], smallestNormal[1]);
@@ -199,13 +199,13 @@ const handleCollisionPairSingle = (
                     localNormalA = { x: rotatedNormalX, y: rotatedNormalY };
                 }
                 const localNormalVector = create(localNormalA.x, localNormalA.y);
-                callbackDef.callback(
+                callbackDef.callback({
                     ecs,
-                    entityA,
-                    entityB,
-                    minOverlap,
-                    localNormalVector
-                );
+                    entity: getEntity(ecs, entityA),
+                    other: getEntity(ecs, entityB),
+                    overlapAmount: minOverlap,
+                    overlapNormal: localNormalVector,
+                });
             }
         }
 
@@ -214,8 +214,8 @@ const handleCollisionPairSingle = (
             const parentsA = getParents(ecs, entityA);
             for (const parentA of parentsA) {
                 const parentBody = getEntityCollisionBody(ecs, parentA);
-                if (parentBody?.callbackName) {
-                    const parentCallbackDef = getCollisionCallback(parentBody.callbackName);
+                if (parentBody?.collisionCallback) {
+                    const parentCallbackDef = getCollisionCallback(parentBody.collisionCallback);
                     if (parentCallbackDef) {
 
                         let localNormalParentA = worldDirectionToLocal(ecs, parentA, smallestNormal[0], smallestNormal[1]);
@@ -230,20 +230,20 @@ const handleCollisionPairSingle = (
                             localNormalParentA = { x: rotatedNormalX, y: rotatedNormalY };
                         }
                         const localNormalVectorParentA = create(localNormalParentA.x, localNormalParentA.y);
-                        parentCallbackDef.callback(
+                        parentCallbackDef.callback({
                             ecs,
-                            parentA,
-                            entityB,
-                            minOverlap,
-                            localNormalVectorParentA
-                        );
+                            entity: getEntity(ecs, parentA),
+                            other: getEntity(ecs, entityB),
+                            overlapAmount: minOverlap,
+                            overlapNormal: localNormalVectorParentA,
+                        });
                     }
                 }
             }
         }
 
-        if (bodyB.callbackName) {
-            const callbackDef = getCollisionCallback(bodyB.callbackName);
+        if (bodyB.collisionCallback) {
+            const callbackDef = getCollisionCallback(bodyB.collisionCallback);
             if (callbackDef) {
                 const reversedNormal = scale(smallestNormal, -1);
 
@@ -259,13 +259,13 @@ const handleCollisionPairSingle = (
                     localNormalB = { x: rotatedNormalX, y: rotatedNormalY };
                 }
                 const localNormalVectorB = create(localNormalB.x, localNormalB.y);
-                callbackDef.callback(
+                callbackDef.callback({
                     ecs,
-                    entityB,
-                    entityA,
-                    minOverlap,
-                    localNormalVectorB
-                );
+                    entity: getEntity(ecs, entityB),
+                    other: getEntity(ecs, entityA),
+                    overlapAmount: minOverlap,
+                    overlapNormal: localNormalVectorB,
+                });
             }
         }
 
@@ -274,8 +274,8 @@ const handleCollisionPairSingle = (
             const parentsB = getParents(ecs, entityB);
             for (const parentB of parentsB) {
                 const parentBody = getEntityCollisionBody(ecs, parentB);
-                if (parentBody?.callbackName) {
-                    const parentCallbackDef = getCollisionCallback(parentBody.callbackName);
+                if (parentBody?.collisionCallback) {
+                    const parentCallbackDef = getCollisionCallback(parentBody.collisionCallback);
                     if (parentCallbackDef) {
                         const reversedNormal = scale(smallestNormal, -1);
 
@@ -291,13 +291,13 @@ const handleCollisionPairSingle = (
                             localNormalParentB = { x: rotatedNormalX, y: rotatedNormalY };
                         }
                         const localNormalVectorParentB = create(localNormalParentB.x, localNormalParentB.y);
-                        parentCallbackDef.callback(
+                        parentCallbackDef.callback({
                             ecs,
-                            parentB,
-                            entityA,
-                            minOverlap,
-                            localNormalVectorParentB
-                        );
+                            entity: getEntity(ecs, parentB),
+                            other: getEntity(ecs, entityA),
+                            overlapAmount: minOverlap,
+                            overlapNormal: localNormalVectorParentB,
+                        });
                     }
                 }
             }

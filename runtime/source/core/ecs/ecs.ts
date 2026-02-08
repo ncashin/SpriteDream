@@ -148,7 +148,10 @@ export const createECSInstance = (
   return instance;
 };
 
-export const createEntity = (instance: ECSInstance, name: string): Entity => {
+export const createEntity = (
+  instance: ECSInstance,
+  name: string,
+): Record<string, Component> => {
   if (!name || typeof name !== 'string' || name.trim() === '') {
     throw new Error('Entity name is required and must be a non-empty string');
   }
@@ -165,7 +168,7 @@ export const createEntity = (instance: ECSInstance, name: string): Entity => {
     entityProxy[instance.defaultComponent.type] = defaultComponent;
   }
 
-  return name;
+  return entityProxy;
 };
 export const destroyEntity = (instance: ECSInstance, entity: Entity) => {
   if (instance.selectedEntity === entity) {
@@ -252,6 +255,22 @@ const createComponentReference = <ComponentType extends Component>(
     return;
   }
   entityComponents[COMPONENT_TYPE_DEF.type] = structuredClone(COMPONENT_TYPE_DEF);
+};
+
+export const addComponent = <
+  ComponentType extends Component,
+  UpdatedProperties extends Partial<ComponentType>,
+>(
+  entity: Record<string, Component>,
+  componentDefinition: ComponentType,
+  updatedProperties: UpdatedProperties = {} as UpdatedProperties,
+): Record<string, Component> => {
+  const mergedComponent = {
+    ...componentDefinition,
+    ...updatedProperties,
+  } as ComponentType;
+  entity[componentDefinition.type] = mergedComponent;
+  return entity;
 };
 
 const updateComposedPoolsForComponent = (
@@ -560,7 +579,8 @@ export const clearSelection = (instance: ECSInstance) => {
 export const curryECSInstance = (instance: ECSInstance) => ({
   ecsInstance: instance,
 
-  createEntity: (name: string): Entity => createEntity(instance, name),
+  createEntity: (name: string): Record<string, Component> =>
+    createEntity(instance, name),
   destroyEntity: (entity: Entity) => destroyEntity(instance, entity),
   renameEntity: (oldEntity: Entity, newEntity: Entity): boolean =>
     renameEntity(instance, oldEntity, newEntity),
@@ -570,6 +590,15 @@ export const curryECSInstance = (instance: ECSInstance) => ({
     COMPONENT_TYPE_DEF: ComponentType,
   ): ComponentType | undefined =>
     getComponent(instance, entity, COMPONENT_TYPE_DEF),
+  addComponent: <
+    ComponentType extends Component,
+    UpdatedProperties extends Partial<ComponentType>,
+  >(
+    entity: Record<string, Component>,
+    componentDefinition: ComponentType,
+    updatedProperties: UpdatedProperties,
+  ): Record<string, Component> =>
+    addComponent(entity, componentDefinition, updatedProperties),
   getEntity: (<const ComposedType extends readonly Component[]>(
     entity: Entity,
     COMPONENT_TYPE_DEFS?: ComposedType,
@@ -591,7 +620,8 @@ export const curryECSInstance = (instance: ECSInstance) => ({
   hasComponents: <const ComposedType extends Component[]>(
     entityData: Record<string, Component>,
     COMPONENT_TYPE_DEFS: ComposedType,
-  ) => hasComponents(entityData, COMPONENT_TYPE_DEFS),
+  ): entityData is EntityWithComponents<ComposedType> =>
+    hasComponents(entityData, COMPONENT_TYPE_DEFS),
   queryEntities: <const ComposedType extends Component[]>(
     COMPONENT_TYPE_DEFS: ComposedType,
   ) => queryEntities(instance, COMPONENT_TYPE_DEFS),

@@ -6,6 +6,7 @@ import { addDrawCallback, isUpdateEnabled } from "./gameloop";
 import { getViewport } from "./viewport/viewportPlugin";
 import { getWorldTransform, getWorldPosition } from "./transform";
 import { isEditorMode } from "./utils";
+import * as PIXI from "pixi.js";
 import { Application, Assets, Container, Graphics, Sprite, Texture } from "pixi.js";
 
 export type HitFlashComponent = Component & {
@@ -56,10 +57,23 @@ type SpriteRecord = {
 };
 
 function normalizeAssetPath(src: string): string {
-  if (src.startsWith("/") && !src.startsWith("//")) {
-    return src.slice(1);
+  if (!src) return src;
+
+  if (/^(data:|blob:|https?:|file:)/i.test(src) || src.startsWith("//")) {
+    return src;
   }
-  return src;
+
+  const trimmed = src.startsWith("/") && !src.startsWith("//") ? src.slice(1) : src;
+
+  if (typeof document !== "undefined" && document.baseURI) {
+    try {
+      return new URL(trimmed, document.baseURI).toString();
+    } catch {
+      return trimmed;
+    }
+  }
+
+  return trimmed;
 }
 
 const textureCache = new Map<string, Texture>();
@@ -211,8 +225,17 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     canvas.style.display = "block";
     canvas.style.margin = "0";
     canvas.style.padding = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
     canvas.style.pointerEvents = "auto";
     canvas.style.touchAction = "none";
+  };
+
+  const syncCanvasSize = () => {
+    if (!canvas) return;
+    const rect = context.rootElement.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    app.renderer.resize(rect.width, rect.height);
   };
 
   const createBaseDisplay = (sprite: SpriteComponent): SpriteRecord => {
@@ -331,31 +354,60 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
   prepareCanvas();
   extendedContext.canvas = canvas;
 
-  void app
-    .init({
-      canvas,
-      resizeTo: context.rootElement,
-      antialias: false,
-      backgroundAlpha: 0,
-      resolution: window.devicePixelRatio || 1,
-      autoDensity: true,
-      powerPreference: "high-performance",
-    })
-    .then(() => {
-      app.stage.addChild(worldContainer);
-      app.stage.addChild(overlayContainer);
-      overlayContainer.addChild(selectionGraphics);
-      overlayContainer.addChild(originGraphics);
+  const finalizePixiInit = () => {
+    app.stage.addChild(worldContainer);
+    app.stage.addChild(overlayContainer);
+    overlayContainer.addChild(selectionGraphics);
+    overlayContainer.addChild(originGraphics);
 
-      app.ticker.stop();
-      isPixiReady = true;
-    })
-    .catch((error) => {
-      console.error("Failed to initialize PixiJS:", error);
-    });
+    app.ticker.stop();
+    isPixiReady = true;
+    syncCanvasSize();
+  };
+
+  const initPixi = async () => {
+    // Ensure PIXI is available on the iframe window for runtime integrations.
+    (globalThis as typeof globalThis & { PIXI?: typeof PIXI }).PIXI ??= PIXI;
+
+    try {
+      await app.init({
+        canvas,
+        resizeTo: context.rootElement,
+        antialias: false,
+        backgroundAlpha: 0,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+        powerPreference: "high-performance",
+        preference: "webgl",
+      });
+      finalizePixiInit();
+    } catch (error) {
+      console.warn("PixiJS WebGL init failed, retrying with canvas renderer.", error);
+      try {
+        await app.init({
+          canvas,
+          resizeTo: context.rootElement,
+          antialias: false,
+          backgroundAlpha: 0,
+          resolution: window.devicePixelRatio || 1,
+          autoDensity: true,
+          powerPreference: "high-performance",
+          preference: "canvas",
+        });
+        finalizePixiInit();
+      } catch (fallbackError) {
+        console.error("Failed to initialize PixiJS:", fallbackError);
+      }
+    }
+  };
+
+  void initPixi();
 
   addDrawCallback(() => {
     if (!isPixiReady) return;
+    if (app.renderer.width === 0 || app.renderer.height === 0) {
+      syncCanvasSize();
+    }
 
     const viewport = getViewport();
     const { width: displayWidth, height: displayHeight } = getDisplaySize(app);

@@ -172,23 +172,6 @@ export async function loader({ params, request }: Route.LoaderArgs) {
         }
       }
       
-      // Inject script to enable editor mode
-      const editorModeScript = `
-  <script>
-    // Enable editor mode for website
-    window.__EDITOR_MODE_ENABLED__ = true;
-  </script>`;
-      
-      // Insert script before closing </head> tag or before </body> if no </head>
-      if (modifiedHtml.includes('</head>')) {
-        modifiedHtml = modifiedHtml.replace('</head>', `${editorModeScript}\n</head>`);
-      } else if (modifiedHtml.includes('</body>')) {
-        modifiedHtml = modifiedHtml.replace('</body>', `${editorModeScript}\n</body>`);
-      } else {
-        // Fallback: append at the end
-        modifiedHtml = `${modifiedHtml}${editorModeScript}`;
-      }
-      
       return new Response(modifiedHtml, {
         headers: {
           "Content-Type": mimeType,

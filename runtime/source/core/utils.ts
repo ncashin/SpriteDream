@@ -7,20 +7,32 @@ export const isDevelopment =
   import.meta.env &&
   import.meta.env.DEV;
 
-// Unified check: is this running in editor mode?
-// Checks both build-time (VITE_EDITOR_ENABLED) and runtime (window.__EDITOR_MODE_ENABLED__) flags
-export const isEditorMode = (): boolean => {
-  // Check for build-time editor mode (set via VITE_EDITOR_ENABLED)
+type EditorModeWindow = Window & {
+  __EDITOR_MODE_ENABLED__?: boolean;
+};
+
+const resolveEditorModeFlag = (): boolean => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const typedWindow = window as EditorModeWindow;
+  if (typeof typedWindow.__EDITOR_MODE_ENABLED__ === "boolean") {
+    return typedWindow.__EDITOR_MODE_ENABLED__;
+  }
+
   const isBuildTimeEditorEnabled =
     typeof import.meta !== "undefined" &&
     import.meta.env &&
     (import.meta.env.VITE_EDITOR_ENABLED === true ||
       import.meta.env.VITE_EDITOR_ENABLED === "true");
 
-  const isRuntimeEditorModeEnabled =
-    typeof window !== "undefined" &&
-    '__EDITOR_MODE_ENABLED__' in window &&
-    (window as { __EDITOR_MODE_ENABLED__?: boolean }).__EDITOR_MODE_ENABLED__ === true;
+  typedWindow.__EDITOR_MODE_ENABLED__ =
+    Boolean(isBuildTimeEditorEnabled) || Boolean(isDevelopment);
 
-  return isBuildTimeEditorEnabled || isRuntimeEditorModeEnabled || isDevelopment;
+  return typedWindow.__EDITOR_MODE_ENABLED__;
 };
+
+// Unified check: is this running in editor mode?
+// Use the single, cached window flag as the source of truth.
+export const isEditorMode = (): boolean => resolveEditorModeFlag();
