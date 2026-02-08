@@ -46,7 +46,7 @@
         "transform": {
           "type": "transform",
           "parent": null,
-          "x": -200,
+          "x": -240,
           "y": 100,
           "rotation": 0,
           "scaleX": 1,
@@ -86,8 +86,8 @@
         "transform": {
           "type": "transform",
           "parent": null,
-          "x": 238.38095238095235,
-          "y": 99.7777777777776,
+          "x": 240,
+          "y": 100,
           "rotation": 0,
           "scaleX": 1,
           "scaleY": 1

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Entity, EntityComponents } from "../ecs/ecs";
 import type { curryECSInstance } from "../ecs/ecs";
 import { addDrawCallback, removeDrawCallback, addEditorUpdateCallback, removeEditorCallback } from "../gameloop";
@@ -31,23 +31,35 @@ export function useECS(): EntityState {
 
     const gameContext = useGameContext();
     const ecs = (gameContext?.ecs as ReturnType<typeof curryECSInstance> | undefined);
+    const lastSelectedEntityRef = useRef<Entity | null>(null);
+    const lastEcsRef = useRef<ReturnType<typeof curryECSInstance> | undefined>(undefined);
 
     useEffect(() => {
         if (!ecs) {
-            // Reset state when ECS is not available
-            setEntityState({
+            // Keep the last selection during transient ECS resets (hot reload).
+            setEntityState((current) => ({
                 entities: [],
-                selectedEntity: null,
+                selectedEntity: current.selectedEntity,
                 entityComponents: {},
-                version: 0,
-            });
+                version: current.version + 1,
+            }));
             return;
+        }
+
+        if (ecs !== lastEcsRef.current) {
+            lastEcsRef.current = ecs;
+            const currentSelected = ecs.getSelectedEntity();
+            const lastSelected = lastSelectedEntityRef.current;
+            if (!currentSelected && lastSelected && ecs.ecsInstance.entities[lastSelected]) {
+                ecs.selectEntity(lastSelected);
+            }
         }
 
         const syncEntityState = () => {
             const allEntities = (Object.keys(ecs.ecsInstance.entities) as Entity[])
                 .filter((entity) => ecs.ecsInstance.entities[entity] !== undefined && ecs.ecsInstance.entities[entity] !== null);
             const selectedEntity = ecs.getSelectedEntity() ?? null;
+            lastSelectedEntityRef.current = selectedEntity;
 
             const entityComponents: Record<Entity, EntityComponents> = {};
             for (const entity of allEntities) {

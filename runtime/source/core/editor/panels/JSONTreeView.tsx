@@ -655,9 +655,9 @@ function TreeNodeComponent({
             display: 'flex',
             backgroundColor: 'transparent',
             cursor: hasChildren ? 'pointer' : 'default',
-            paddingLeft: `${indent}px`,
-            padding: '4px 2px',
             minHeight: '20px',
+            width: '100%',
+            boxSizing: 'border-box',
           }}
           onClick={handleRowClick}
           onMouseEnter={(e) => {
@@ -669,7 +669,7 @@ function TreeNodeComponent({
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between', paddingLeft: `${indent}px`, padding: '4px 2px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               {hasChildren && (
                 <span style={{
@@ -881,6 +881,8 @@ function TreeNodeComponent({
               padding: '1px 2px',
               backgroundColor: 'transparent',
               cursor: isEditable ? 'pointer' : 'default',
+              width: '100%',
+              boxSizing: 'border-box',
             }}
             onClick={handleRowClick}
             onMouseEnter={(e) => {
@@ -926,6 +928,8 @@ function TreeNodeComponent({
               alignItems: 'center',
               backgroundColor: 'transparent',
               cursor: isEditable ? 'pointer' : 'default',
+              width: '100%',
+              boxSizing: 'border-box',
             }}
             onClick={handleRowClick}
             onMouseEnter={(e) => {
@@ -1146,8 +1150,6 @@ function TreeNodeComponent({
             display: 'flex',
             backgroundColor: 'transparent',
             cursor: isEditable ? 'pointer' : 'default',
-            paddingLeft: `${indent}px`,
-            padding: '1px 2px',
             minHeight: '20px',
           }}
           onClick={handleRowClick}

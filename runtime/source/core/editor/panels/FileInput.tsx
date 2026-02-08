@@ -7,7 +7,7 @@ interface FileInputProps {
   onChange: (value: string) => void;
   accept?: string; // e.g., "image/*", ".png,.svg"
   placeholder?: string;
-  directory?: string; // Optional directory prop (currently unused but kept for compatibility)
+  directory?: string; // Directory to restrict selection to
 }
 
 export function FileInput({
@@ -15,6 +15,7 @@ export function FileInput({
   onChange,
   accept,
   placeholder = "Select file...",
+  directory = "assets",
 }: FileInputProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [availableAssets, setAvailableAssets] = useState<Set<string>>(new Set());
@@ -22,20 +23,20 @@ export function FileInput({
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load available assets from assets folder
+  // Load available assets from selected folder
   useEffect(() => {
   const loadAssets = async () => {
   try {
-    const files = await listFiles("assets");
+    const files = await listFiles(directory);
     const assetNames = new Set(files.map(([name]) => name));
     setAvailableAssets(assetNames);
   } catch (error) {
-    console.error("Failed to load assets:", error);
+    console.error(`Failed to load ${directory} assets:`, error);
     // If we can't load assets, allow all files (fallback)
   }
   };
   loadAssets();
-  }, []);
+  }, [directory]);
 
   // Drag and drop handlers
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -61,14 +62,14 @@ export function FileInput({
   (fileName: string) => {
   // Check if file exists in assets folder
   if (availableAssets.size > 0 && !availableAssets.has(fileName)) {
-    setError(`File "${fileName}" is not in the assets folder`);
+    setError(`File "${fileName}" is not in the ${directory} folder`);
     return false;
   }
   setError("");
   onChange(fileName);
   return true;
   },
-  [availableAssets, onChange]
+  [availableAssets, onChange, directory]
   );
 
   const handleDrop = useCallback(
@@ -150,27 +151,19 @@ export function FileInput({
     {displayValue}
     </span>
     {isValueSet && (
-    <X
-      size={10}
-      weight="bold"
+    <button
+      type="button"
       onClick={(e) => {
       e.stopPropagation();
       setError("");
       onChange("");
       }}
-      style={{
-      marginLeft: "4px",
-      marginRight: "2px",
-      cursor: "pointer",
-      color: "#808080",
-      }}
-      onMouseEnter={(e) => {
-      e.currentTarget.style.color = "#f48771";
-      }}
-      onMouseLeave={(e) => {
-      e.currentTarget.style.color = "#808080";
-      }}
-    />
+      className="bg-transparent border-none cursor-pointer p-0 rounded-md flex items-center justify-center transition-colors duration-100 text-[var(--vscode-foreground,rgba(255,255,255,0.9))] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.1))]"
+      style={{ marginLeft: "4px", marginRight: "2px" }}
+      title="Clear file"
+    >
+      <X size={12} weight="bold" />
+    </button>
     )}
   </div>
   {error && (
