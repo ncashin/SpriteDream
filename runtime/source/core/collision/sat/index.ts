@@ -201,7 +201,9 @@ const handleCollisionPairSingle = (
                 const localNormalVector = create(localNormalA.x, localNormalA.y);
                 callbackDef.callback({
                     ecs,
+                    entityId: entityA,
                     entity: getEntity(ecs, entityA),
+                    otherId: entityB,
                     other: getEntity(ecs, entityB),
                     overlapAmount: minOverlap,
                     overlapNormal: localNormalVector,
@@ -232,7 +234,9 @@ const handleCollisionPairSingle = (
                         const localNormalVectorParentA = create(localNormalParentA.x, localNormalParentA.y);
                         parentCallbackDef.callback({
                             ecs,
+                            entityId: parentA,
                             entity: getEntity(ecs, parentA),
+                            otherId: entityB,
                             other: getEntity(ecs, entityB),
                             overlapAmount: minOverlap,
                             overlapNormal: localNormalVectorParentA,
@@ -261,7 +265,9 @@ const handleCollisionPairSingle = (
                 const localNormalVectorB = create(localNormalB.x, localNormalB.y);
                 callbackDef.callback({
                     ecs,
+                    entityId: entityB,
                     entity: getEntity(ecs, entityB),
+                    otherId: entityA,
                     other: getEntity(ecs, entityA),
                     overlapAmount: minOverlap,
                     overlapNormal: localNormalVectorB,
@@ -293,7 +299,9 @@ const handleCollisionPairSingle = (
                         const localNormalVectorParentB = create(localNormalParentB.x, localNormalParentB.y);
                         parentCallbackDef.callback({
                             ecs,
+                            entityId: parentB,
                             entity: getEntity(ecs, parentB),
+                            otherId: entityA,
                             other: getEntity(ecs, entityA),
                             overlapAmount: minOverlap,
                             overlapNormal: localNormalVectorParentB,
@@ -320,6 +328,9 @@ const defaultCollisionResolver: CollisionResolver = (
     const bodyB = getEntityCollisionBody(ecs, entityB);
 
     if (!bodyA || !bodyB) return;
+    if (bodyA.bodyType === "trigger" || bodyB.bodyType === "trigger") {
+        return;
+    }
 
     const transformA = getEntity(ecs, entityA)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;
     const transformB = getEntity(ecs, entityB)[TransformComponentDefinition.type] as typeof TransformComponentDefinition | undefined;

@@ -166,13 +166,21 @@ function main({ ecs, input, sceneGraph }: GameContext) {
       y: velocityY,
     });
     ecs.addComponent(fireballEntity, CollisionBodyComponentDefinition, {
-      bodyType: "kinematic",
+      bodyType: "trigger",
       collisionEnabled: true,
+      collisionCallback: "Fireball Collision Callback",
     });
     ecs.addComponent(fireballEntity, ColliderComponentDefinition, {
       colliderName: "circle",
       radius: 12,
     });
+  });
+
+  registerCollisionCallback({
+    name: "Fireball Collision Callback",
+    callback: ({ ecs, entityId }) => {
+      ecs.destroyEntity(entityId);
+    },
   });
 
   registerCollisionCallback({

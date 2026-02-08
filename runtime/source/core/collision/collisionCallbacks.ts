@@ -3,7 +3,9 @@ import type { Vector } from "../vector";
 
 export type CollisionCallbackArgs = {
   ecs: ECSInstance;
+  entityId: string;
   entity: Record<string, Component>;
+  otherId: string;
   other: Record<string, Component>;
   overlapAmount: number;
   overlapNormal: Vector;

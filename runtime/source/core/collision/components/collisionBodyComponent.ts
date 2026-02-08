@@ -8,7 +8,7 @@ const getCollisionCallbackOptions = () =>
 export type CollisionBodyComponent = Component & {
     type: "collisionBody";
     bodyName?: string;
-    bodyType: "static" | "kinematic";
+    bodyType: "static" | "kinematic" | "trigger";
     collisionEnabled: boolean;
     collisionCallback?: string;
     propagateCollision?: boolean;
@@ -31,7 +31,7 @@ export const CollisionBodyComponentDefinition: CollisionBodyComponent = defineCo
         propertyInputTypes: {
             bodyType: {
                 type: "dropdown",
-                options: ["static", "kinematic"],
+                options: ["static", "kinematic", "trigger"],
             },
             collisionCallback: {
                 type: "dropdown",
