@@ -200,24 +200,51 @@ export const destroyEntity = (instance: ECSInstance, entity: EntityLike) => {
     return;
   }
 
-  if (instance.selectedEntity === entityId) {
-    instance.selectedEntity = null;
-  }
+  const toVisit: Entity[] = [entityId];
+  const toDelete: Entity[] = [];
+  const visited = new Set<Entity>();
 
-  for (const composedPool of Object.values(instance.composedPools)) {
-    const index = composedPool.indexOf(entityId);
-    if (index !== -1) {
-      composedPool.splice(index, 1);
+  while (toVisit.length > 0) {
+    const current = toVisit.pop() as Entity;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    toDelete.push(current);
+
+    for (const [childId, components] of Object.entries(instance.entities)) {
+      const transform = components.transform as { parent?: string | null } | undefined;
+      if (transform?.parent === current) {
+        toVisit.push(childId);
+      }
     }
   }
 
-  instance.componentProxyCache.delete(entityId);
-  instance.entityProxyCache.delete(entityId);
+  const destroySingle = (targetId: Entity) => {
+    if (!instance.entities[targetId]) return;
 
-  delete instance.entities[entityId];
+    if (instance.selectedEntity === targetId) {
+      instance.selectedEntity = null;
+    }
 
-  if (!instance.destroyEntityCallback) return;
-  instance.destroyEntityCallback(entityId);
+    for (const composedPool of Object.values(instance.composedPools)) {
+      const index = composedPool.indexOf(targetId);
+      if (index !== -1) {
+        composedPool.splice(index, 1);
+      }
+    }
+
+    instance.componentProxyCache.delete(targetId);
+    instance.entityProxyCache.delete(targetId);
+
+    delete instance.entities[targetId];
+
+    if (instance.destroyEntityCallback) {
+      instance.destroyEntityCallback(targetId);
+    }
+  };
+
+  for (let i = toDelete.length - 1; i >= 0; i -= 1) {
+    destroySingle(toDelete[i]);
+  }
 };
 
 export const renameEntity = (

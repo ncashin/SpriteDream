@@ -49,13 +49,13 @@ export const getCollisionResolver = (): CollisionResolver | null => {
 };
 
 const shouldCollideWithMasks = (
-    bodyA: { collisionLayer?: number; collisionMask?: number },
-    bodyB: { collisionLayer?: number; collisionMask?: number }
+    bodyA: { collisionLayer?: number; collideWith?: number },
+    bodyB: { collisionLayer?: number; collideWith?: number }
 ): boolean => {
     const layerA = (bodyA.collisionLayer ?? 1) >>> 0;
-    const maskA = (bodyA.collisionMask ?? 0xffffffff) >>> 0;
+    const maskA = (bodyA.collideWith ?? 0xffffffff) >>> 0;
     const layerB = (bodyB.collisionLayer ?? 1) >>> 0;
-    const maskB = (bodyB.collisionMask ?? 0xffffffff) >>> 0;
+    const maskB = (bodyB.collideWith ?? 0xffffffff) >>> 0;
     return (maskA & layerB) !== 0 && (maskB & layerA) !== 0;
 };
 

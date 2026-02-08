@@ -22,19 +22,21 @@
           "x": 0,
           "y": 0
         },
-        "collisionBody": {
-          "type": "collisionBody",
-          "bodyType": "kinematic",
-          "collisionEnabled": true,
-          "propagateCollision": false
-        },
         "collider": {
           "type": "collider",
           "colliderName": "circle",
           "radius": 12
+        },
+        "collisionBody": {
+          "type": "collisionBody",
+          "bodyType": "trigger",
+          "collisionEnabled": true,
+          "collisionCallback": "Fireball",
+          "propagateCollision": false,
+          "collisionLayer": 2,
+          "collideWith": 4
         }
       }
     }
   }
 }
-

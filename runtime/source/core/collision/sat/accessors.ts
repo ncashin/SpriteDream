@@ -160,7 +160,7 @@ export const buildBodyOverride = (body: CollisionBodyComponent): CollisionBodyCo
     collisionCallback: body.collisionCallback,
     propagateCollision: body.propagateCollision ?? false,
     collisionLayer: body.collisionLayer ?? 1,
-    collisionMask: body.collisionMask ?? 0xffffffff,
+    collideWith: body.collideWith ?? 0xffffffff,
 });
 
 export const getCollisionPosition = (

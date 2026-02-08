@@ -66,9 +66,9 @@ const plugins = [
   ecsPlugin,
   sceneGraphPlugin,
   sceneEntityPlugin,
-  ecsEditorPlugin,
   spritePlugin,
   collisionPlugin,
+  ecsEditorPlugin,
 ] as const;
 
 type GameContext = GameContextType<typeof plugins>;
@@ -81,7 +81,8 @@ initializeGame({
   GameUI,
 });
 
-function main({ ecs, input, sceneGraph }: GameContext) {
+function main({ ecs, input, sceneGraph, collision }: GameContext) {
+  collision.defineLayers(["Player", "Projectile", "World"]);
   const playerEntityId = "player";
 
   let timeSinceLastShot = 0;

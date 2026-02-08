@@ -1,19 +1,22 @@
 import type { Component } from "../../ecs/ecs";
 import { defineComponent } from "../../ecs/component";
 import { collisionCallbackRegistry } from "../collisionCallbacks";
+import { getCollisionLayerOptions } from "../collisionLayers";
 
 const getCollisionCallbackOptions = () =>
     Object.keys(collisionCallbackRegistry).sort();
+
+const getCollisionMaskOptions = () => getCollisionLayerOptions();
 
 export type CollisionBodyComponent = Component & {
     type: "collisionBody";
     bodyName?: string;
     bodyType: "static" | "kinematic" | "trigger";
     collisionEnabled: boolean;
-    collisionCallback?: string;
+    collisionCallback?: string | null;
     propagateCollision?: boolean;
     collisionLayer?: number;
-    collisionMask?: number;
+    collideWith?: number;
 };
 
 export const CollisionBodyComponentDefinition: CollisionBodyComponent = defineComponent(
@@ -21,9 +24,10 @@ export const CollisionBodyComponentDefinition: CollisionBodyComponent = defineCo
         type: "collisionBody",
         bodyType: "static",
         collisionEnabled: true,
+        collisionCallback: null,
         propagateCollision: false,
         collisionLayer: 1,
-        collisionMask: 0xffffffff,
+        collideWith: 0xffffffff,
     },
     {
         displayName: "Collision Body",
@@ -44,10 +48,12 @@ export const CollisionBodyComponentDefinition: CollisionBodyComponent = defineCo
                 type: "boolean",
             },
             collisionLayer: {
-                type: "number",
+                type: "bitmask",
+                options: getCollisionLayerOptions,
             },
-            collisionMask: {
-                type: "number",
+            collideWith: {
+                type: "bitmask",
+                options: getCollisionMaskOptions,
             },
         },
     }

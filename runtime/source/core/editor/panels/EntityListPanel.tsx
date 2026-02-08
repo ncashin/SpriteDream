@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import type { Entity } from "../../ecs/ecs";
 import { useGameContext, startUndoAction, undo, redo, copyEntity, pasteEntity, hasClipboardData } from "../useGameContext.tsx";
 import { useECS, useSceneEntities, useSelectedEntity } from "../useECS.tsx";
-import { CaretDown, CaretRight, Plus, PencilSimple, Trash } from "@phosphor-icons/react";
+import { CaretDown, CaretRight, LinkSimple, Plus, PencilSimple, Trash } from "@phosphor-icons/react";
 import { getChildren, getParents, setWorldPosition } from "../../transform";
 import { getViewport } from "../../viewport/viewportPlugin";
 import {
@@ -116,6 +116,7 @@ function DraggableEntityItem({
 
   const components = ecs.ecsInstance.entities[entity];
   const transform = components?.transform;
+  const isSceneEntity = Boolean(components?.sceneEntityRoot);
   const isChild = transform && transform.parent;
 
   const dragElementRef = useRef<HTMLSpanElement | null>(null);
@@ -157,9 +158,16 @@ function DraggableEntityItem({
       {renamingEntity === entity ? (
         <form
           onSubmit={onRenameSubmit}
-          className="flex flex-1 min-w-0"
+          className="flex items-center gap-1 flex-1 min-w-0"
           onClick={(e) => e.stopPropagation()}
         >
+          {isSceneEntity && (
+            <LinkSimple
+              size={12}
+              weight="bold"
+              className="shrink-0 text-[var(--vscode-foreground,rgba(255,255,255,0.7))]"
+            />
+          )}
           <input
             ref={renameInputRef}
             type="text"
@@ -174,11 +182,20 @@ function DraggableEntityItem({
         <>
           <span
             ref={combinedRef}
-            className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap cursor-grab active:cursor-grabbing"
+            className="flex items-center gap-1 flex-1 min-w-0 overflow-hidden cursor-grab active:cursor-grabbing"
             {...attributes}
             {...listeners}
           >
-            {entity}
+            {isSceneEntity && (
+              <LinkSimple
+                size={12}
+                weight="bold"
+                className="shrink-0 text-[var(--vscode-foreground,rgba(255,255,255,0.7))]"
+              />
+            )}
+            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+              {entity}
+            </span>
           </span>
           <div className="flex items-center gap-1.5">
             {hoveredEntity === entity && (

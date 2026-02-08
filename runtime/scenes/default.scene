@@ -30,7 +30,10 @@
           "bodyType": "static",
           "collisionEnabled": true,
           "bodyName": "platform",
-          "propagateCollision": false
+          "propagateCollision": false,
+          "collisionLayer": 4,
+          "collisionMask": 3,
+          "collideWith": 3
         },
         "collider": {
           "type": "collider",
@@ -68,7 +71,10 @@
           "collisionEnabled": true,
           "callbackName": "",
           "propagateCollision": false,
-          "collisionCallback": ""
+          "collisionCallback": "",
+          "collisionLayer": 4,
+          "collisionMask": 3,
+          "collideWith": 3
         },
         "collider": {
           "type": "collider",
@@ -103,7 +109,10 @@
           "type": "collisionBody",
           "bodyType": "static",
           "collisionEnabled": true,
-          "propagateCollision": true
+          "propagateCollision": true,
+          "collisionLayer": 4,
+          "collisionMask": 3,
+          "collideWith": 3
         },
         "collider": {
           "type": "collider",
@@ -111,8 +120,7 @@
           "width": 200,
           "height": 20,
           "angle": 0
-        },
-        "__isProxiedEntityComponents": true
+        }
       },
       "player": {
         "sprite": {
@@ -139,7 +147,9 @@
           "bodyType": "kinematic",
           "collisionEnabled": true,
           "propagateCollision": false,
-          "collisionCallback": "Player"
+          "collisionCallback": "Player",
+          "collisionLayer": 1,
+          "collideWith": 4
         },
         "collider": {
           "type": "collider",

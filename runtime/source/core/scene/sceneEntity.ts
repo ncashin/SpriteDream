@@ -12,6 +12,11 @@ export type SceneEntityComponent = Component & {
     rootEntity?: string;
 };
 
+export type SceneEntityRootComponent = Component & {
+    type: "sceneEntityRoot";
+    sceneName: string;
+};
+
 export const SceneEntityComponentDefinition: SceneEntityComponent = defineComponent(
     {
         type: "sceneEntity",
@@ -21,6 +26,22 @@ export const SceneEntityComponentDefinition: SceneEntityComponent = defineCompon
     {
         displayName: "Scene Entity",
         description: "Instantiate another scene as part of this scene",
+        propertyInputTypes: {
+            sceneName: {
+                type: "text",
+            },
+        },
+    }
+);
+
+export const SceneEntityRootComponentDefinition: SceneEntityRootComponent = defineComponent(
+    {
+        type: "sceneEntityRoot",
+        sceneName: "",
+    },
+    {
+        displayName: "Scene Entity Root",
+        description: "Root entity created from a scene entity instance",
         propertyInputTypes: {
             sceneName: {
                 type: "text",
@@ -138,6 +159,14 @@ function instantiateSceneEntityId(
 
     if (options.parentEntity) {
         ecs.setParent(rootName, options.parentEntity);
+    }
+
+    const rootEntityProxy = ecs.createEntity(rootName);
+    if (!rootEntityProxy[SceneEntityRootComponentDefinition.type]) {
+        rootEntityProxy[SceneEntityRootComponentDefinition.type] = {
+            ...SceneEntityRootComponentDefinition,
+            sceneName: typeof sceneDataOrName === "string" ? sceneDataOrName : "",
+        };
     }
 
     return rootName;
