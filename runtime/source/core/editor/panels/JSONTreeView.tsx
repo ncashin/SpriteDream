@@ -1151,6 +1151,8 @@ function TreeNodeComponent({
             backgroundColor: 'transparent',
             cursor: isEditable ? 'pointer' : 'default',
             minHeight: '20px',
+            width: '100%',
+            boxSizing: 'border-box',
           }}
           onClick={handleRowClick}
           onMouseEnter={(e) => {
@@ -1162,7 +1164,14 @@ function TreeNodeComponent({
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
-          <>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            paddingLeft: `${indent}px`,
+            padding: '1px 2px',
+            width: '100%',
+            boxSizing: 'border-box',
+          }}>
             <div style={{
               width: '16px',
               minWidth: '16px',
@@ -1185,7 +1194,6 @@ function TreeNodeComponent({
               )}
             </div>
             <div style={{
-              padding: '1px 2px',
               flex: '0 0 auto',
               display: 'flex',
               alignItems: 'center',
@@ -1228,7 +1236,6 @@ function TreeNodeComponent({
               </span>
             </div>
             <div style={{
-              padding: '1px 2px',
               position: 'relative',
               flex: '0 0 auto',
               display: 'flex',
@@ -1351,7 +1358,7 @@ function TreeNodeComponent({
                 </button>
               )}
             </div>
-          </>
+          </div>
         </div>
       )}
       {hasChildren && isExpanded && node.children && (
@@ -1634,10 +1641,10 @@ export function JSONTreeView({ json, onNodeSelect, onChange, className = '', ecs
           flex: 1,
           minHeight: 0,
           overflow: 'auto',
-          paddingLeft: '8px',
-          paddingRight: '4px',
-          paddingTop: '8px',
-          paddingBottom: '16px',
+          paddingLeft: 0,
+          paddingRight: 0,
+          paddingTop: 0,
+          paddingBottom: 0,
         }}
       >
         <div style={{

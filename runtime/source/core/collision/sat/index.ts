@@ -107,6 +107,9 @@ const handleCollisionPairSingle = (
     if (!bodyA.collisionEnabled || !bodyB.collisionEnabled) return;
     if (!shouldCollideWithMasks(bodyA, bodyB)) return;
 
+    const entityProxyA = getEntity(ecs, entityA);
+    const entityProxyB = getEntity(ecs, entityB);
+
     const colliderNameA = colliderA.colliderName ?? "rectangle";
     const colliderNameB = colliderB.colliderName ?? "rectangle";
     const colliderDefA = colliders[colliderNameA];
@@ -202,9 +205,9 @@ const handleCollisionPairSingle = (
                 callbackDef.callback({
                     ecs,
                     entityId: entityA,
-                    entity: getEntity(ecs, entityA),
+                    entity: entityProxyA,
                     otherId: entityB,
-                    other: getEntity(ecs, entityB),
+                    other: entityProxyB,
                     overlapAmount: minOverlap,
                     overlapNormal: localNormalVector,
                 });
@@ -237,7 +240,7 @@ const handleCollisionPairSingle = (
                             entityId: parentA,
                             entity: getEntity(ecs, parentA),
                             otherId: entityB,
-                            other: getEntity(ecs, entityB),
+                            other: entityProxyB,
                             overlapAmount: minOverlap,
                             overlapNormal: localNormalVectorParentA,
                         });
@@ -266,9 +269,9 @@ const handleCollisionPairSingle = (
                 callbackDef.callback({
                     ecs,
                     entityId: entityB,
-                    entity: getEntity(ecs, entityB),
+                    entity: entityProxyB,
                     otherId: entityA,
-                    other: getEntity(ecs, entityA),
+                    other: entityProxyA,
                     overlapAmount: minOverlap,
                     overlapNormal: localNormalVectorB,
                 });
@@ -302,7 +305,7 @@ const handleCollisionPairSingle = (
                             entityId: parentB,
                             entity: getEntity(ecs, parentB),
                             otherId: entityA,
-                            other: getEntity(ecs, entityA),
+                            other: entityProxyA,
                             overlapAmount: minOverlap,
                             overlapNormal: localNormalVectorParentB,
                         });

@@ -21,6 +21,7 @@ export const getEntityPosition = (
     ecs: ECSInstance,
     entity: Entity
 ): Vector | null => {
+    if (!ecs.entities[entity]) return null;
     const worldPos = getWorldPosition(ecs, entity);
     if (!worldPos) return null;
     return create(worldPos.x, worldPos.y);
@@ -30,6 +31,7 @@ export const getEntityVelocity = (
     ecs: ECSInstance,
     entity: Entity
 ): Vector | null => {
+    if (!ecs.entities[entity]) return null;
     const velocity = getEntity(ecs, entity)[VelocityComponentDefinition.type] as
         | typeof VelocityComponentDefinition
         | undefined;
@@ -80,6 +82,7 @@ export const getEntityCollider = (
     ecs: ECSInstance,
     entity: Entity
 ): ColliderComponent | null => {
+    if (!ecs.entities[entity]) return null;
     const override = colliderOverrideByEntity.get(entity);
     if (override) return override;
     return (
@@ -93,6 +96,7 @@ export const getEntityCollisionBody = (
     ecs: ECSInstance,
     entity: Entity
 ): CollisionBodyComponent | null => {
+    if (!ecs.entities[entity]) return null;
     const override = bodyOverrideByEntity.get(entity);
     if (override) return override;
     return (
@@ -167,6 +171,7 @@ export const getCollisionPosition = (
     ecs: ECSInstance,
     entity: Entity
 ): Vector | null => {
+    if (!ecs.entities[entity]) return null;
     const collider = getEntityCollider(ecs, entity);
     return getColliderWorldPosition(ecs, entity, collider);
 };
@@ -176,6 +181,7 @@ export const getColliderWorldPosition = (
     entity: Entity,
     collider?: Pick<ColliderShape, "offsetX" | "offsetY"> | null
 ): Vector | null => {
+    if (!ecs.entities[entity]) return null;
     const worldPos = getWorldPosition(ecs, entity);
     if (!worldPos) return null;
 
