@@ -1,0 +1,40 @@
+{
+  "ecs": {
+    "entities": {
+      "fireball": {
+        "transform": {
+          "type": "transform",
+          "parent": null,
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "sprite": {
+          "type": "sprite",
+          "width": 24,
+          "height": 24,
+          "image": "/fireball.png"
+        },
+        "velocity": {
+          "type": "velocity",
+          "x": 0,
+          "y": 0
+        },
+        "collisionBody": {
+          "type": "collisionBody",
+          "bodyType": "kinematic",
+          "collisionEnabled": true,
+          "propagateCollision": false
+        },
+        "collider": {
+          "type": "collider",
+          "colliderName": "circle",
+          "radius": 12
+        }
+      }
+    }
+  }
+}
+

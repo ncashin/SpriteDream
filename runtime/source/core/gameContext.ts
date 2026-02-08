@@ -15,26 +15,26 @@ export type ContextExtension<T extends InitialGameContext, Extension> = T &
 
 export type Plugin<Context = any, Result = any> = (context: Context) => Result;
 
-export type AccumulatePluginResults<
+export type GameContext<
   T extends readonly Plugin<any, any>[],
   Acc = InitialGameContext
 > = T extends readonly [infer First, ...infer Rest]
   ? First extends Plugin<any, infer R>
   ? Rest extends readonly Plugin<any, any>[]
-  ? AccumulatePluginResults<Rest, Acc & R>
+  ? GameContext<Rest, Acc & R>
   : Acc & R
   : Acc
   : Acc;
 
 export type RequirePlugin<T extends readonly Plugin<any, any>[]> =
-  AccumulatePluginResults<T> & {
+  GameContext<T> & {
     ecs: ReturnType<typeof curryECSInstance>;
   };
 
 export type GameConfig<T extends readonly Plugin<any, any>[]> = {
   plugins: T;
   initialScene: string;
-  main?: (context: AccumulatePluginResults<T>) => void;
+  main?: (context: GameContext<T>) => void;
   EditorUI?: ComponentType;
   GameUI?: ComponentType;
 };
@@ -42,10 +42,10 @@ export type GameConfig<T extends readonly Plugin<any, any>[]> = {
 function createGameContext<T extends readonly Plugin<any, any>[]>(
   initialContext: InitialGameContext,
   plugins: T,
-): AccumulatePluginResults<T> {
+): GameContext<T> {
   return (plugins as unknown as Plugin<any, any>[]).reduce(
     (context, plugin) => plugin(context),
-    initialContext as AccumulatePluginResults<T>
+    initialContext as GameContext<T>
   );
 }
 

@@ -3,7 +3,7 @@ import { useUIVisibilityStore } from "./core/editor/uiVisibility.ts";
 
 export function GameUI() {
     const { scene } = useScene();
-    const isGrounded = scene?.ecs?.entities?.player?.player?.isGrounded ?? false;
+  const isGrounded = scene?.ecs?.entities?.player?.playerComponent?.isGrounded ?? false;
     const visible = useUIVisibilityStore((state) => state.gameUIVisible);
 
     if (!visible) {

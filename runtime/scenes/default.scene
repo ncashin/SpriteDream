@@ -127,8 +127,8 @@
           "x": 0,
           "y": 0
         },
-        "player": {
-          "type": "player",
+        "playerComponent": {
+          "type": "playerComponent",
           "speed": 250,
           "gravity": 1800,
           "jumpStrength": 750,
