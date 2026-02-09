@@ -36,7 +36,7 @@ export default function Explore() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-void)] pt-24 pb-16">
-      <div className="w-full px-6 pr-2">
+      <div className="w-full px-6">
         {/* Games grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {games.map((game) => (
