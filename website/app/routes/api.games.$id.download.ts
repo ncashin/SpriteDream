@@ -7,6 +7,10 @@ import { eq } from "drizzle-orm";
 export async function loader({ params }: Route.LoaderArgs) {
   const gameId = params.id;
 
+  if (!db) {
+    return new Response("Database unavailable", { status: 503 });
+  }
+
   const [game] = await db
     .select({
       name: games.name,

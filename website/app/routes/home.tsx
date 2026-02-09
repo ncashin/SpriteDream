@@ -42,6 +42,15 @@ async function highlightTypeScriptCode(code: string): Promise<CodeLine[]> {
 }
 
 export async function loader({ }: Route.LoaderArgs) {
+  const mainTsLines = await highlightTypeScriptCode(runtimeMainTsSource);
+
+  if (!db) {
+    return {
+      gameId: null,
+      mainTsLines: mainTsLines as any as CodeLine[],
+    };
+  }
+
   const [firstGame] = await db
     .select({
       id: games.id,
@@ -49,8 +58,6 @@ export async function loader({ }: Route.LoaderArgs) {
     .from(games)
     .orderBy(asc(games.createdAt))
     .limit(1);
-
-  const mainTsLines = await highlightTypeScriptCode(runtimeMainTsSource);
 
   return {
     gameId: firstGame?.id || null,

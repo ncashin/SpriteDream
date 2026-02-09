@@ -56,6 +56,10 @@ async function extractBundle(gameId: string, gameBundle: Buffer): Promise<Map<st
 export async function loader({ params, request }: Route.LoaderArgs) {
   const gameId = params.id;
 
+  if (!db) {
+    return new Response("Database unavailable", { status: 503 });
+  }
+
   // Get game bundle from database
   const [game] = await db
     .select({

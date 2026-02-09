@@ -14,6 +14,13 @@ export function meta({ data }: Route.MetaArgs) {
 export async function loader({ params }: Route.LoaderArgs) {
   const gameId = params.id;
 
+  if (!db) {
+    return {
+      game: null,
+      dbUnavailable: true,
+    };
+  }
+
   const [game] = await db
     .select({
       id: games.id,
@@ -40,11 +47,39 @@ export async function loader({ params }: Route.LoaderArgs) {
         day: 'numeric'
       }),
     },
+    },
+    dbUnavailable: false,
   };
 }
 
 export default function GameDetails() {
-  const { game } = useLoaderData<typeof loader>();
+  const { game, dbUnavailable } = useLoaderData<typeof loader>();
+
+  if (!game) {
+    return (
+      <div className="fixed inset-0 top-10 bg-[var(--color-bg-base)]">
+        <div className="flex h-full w-full items-center justify-center">
+          <div className="text-center text-white/70 max-w-md px-6">
+            <h1 className="text-2xl font-black text-white">
+              {dbUnavailable ? "Database Unavailable" : "Game Not Found"}
+            </h1>
+            <p className="mt-3 text-sm text-white/50">
+              {dbUnavailable
+                ? "The game library is temporarily offline. Please try again later."
+                : "We could not find that game."}
+            </p>
+            <Link
+              to="/explore"
+              className="mt-6 inline-flex items-center gap-1.5 text-white/60 hover:text-white transition-colors text-sm"
+            >
+              <i className="codicon codicon-arrow-left w-4 h-4" />
+              Back to Explore
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const [iframeVisible, setIframeVisible] = useState(false);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const minRevealDelayMs = 350;

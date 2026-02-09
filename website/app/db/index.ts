@@ -19,16 +19,34 @@ try {
   dbPath = join(process.cwd(), "data", "gameide.db");
 }
 
-// Ensure data directory exists
-const dataDir = dirname(dbPath);
-mkdirSync(dataDir, { recursive: true });
+let dbError: Error | null = null;
+let sqlite: Database.Database | null = null;
 
-const sqlite = new Database(dbPath);
-export const db = drizzle(sqlite, { schema });
+// Ensure data directory exists
+try {
+  const dataDir = dirname(dbPath);
+  mkdirSync(dataDir, { recursive: true });
+} catch (error) {
+  dbError = error instanceof Error ? error : new Error(String(error));
+}
+
+if (!dbError) {
+  try {
+    sqlite = new Database(dbPath);
+  } catch (error) {
+    dbError = error instanceof Error ? error : new Error(String(error));
+  }
+}
+
+export const db = sqlite ? drizzle(sqlite, { schema }) : null;
+export const dbInitError = dbError;
 
 // Log database path in development for debugging
 if (process.env.NODE_ENV !== "production") {
   console.log(`[DB] Database path: ${dbPath}`);
+  if (dbError) {
+    console.warn(`[DB] Database disabled: ${dbError.message}`);
+  }
 }
 
 export * from "./schema";

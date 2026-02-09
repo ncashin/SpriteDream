@@ -4,6 +4,13 @@ import { db, games } from "../db";
 
 export async function action({ request }: Route.ActionArgs) {
   try {
+    if (!db) {
+      return new Response(
+        JSON.stringify({ error: "Database unavailable" }),
+        { status: 503, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const formData = await request.formData();
     
     const name = formData.get("name") as string;

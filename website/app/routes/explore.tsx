@@ -11,6 +11,10 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export async function loader({}: Route.LoaderArgs) {
+  if (!db) {
+    return { games: [] };
+  }
+
   const allGames = await db
     .select({
       id: games.id,
