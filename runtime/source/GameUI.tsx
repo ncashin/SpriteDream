@@ -13,7 +13,7 @@ export function GameUI() {
     return (
         <div className="absolute inset-0 flex items-center justify-center text-white">
             <div className="flex flex-col items-start text-left">
-                <div>This is GameUI</div>
+                <div>Click to shoot</div>
                 <div className="grid grid-cols-[auto_5ch] items-center justify-items-start gap-2">
                     <span>isGrounded:</span>
                     <span className="tabular-nums">{String(isGrounded)}</span>
