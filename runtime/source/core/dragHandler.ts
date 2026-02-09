@@ -131,6 +131,17 @@ export function registerDragHandler(
       }
 
       if (activeHandler && isMouseDown && dragStartScreenPos) {
+        const editorRoot = document.querySelector("#editor");
+        if (editorRoot) {
+          const elementAtPoint = document.elementFromPoint(mousePos.x, mousePos.y);
+          if (elementAtPoint) {
+            if (editorRoot.contains(elementAtPoint) && elementAtPoint !== editorRoot) {
+              cancelDrag();
+              return;
+            }
+          }
+        }
+
         const dx = mousePos.x - dragStartScreenPos.x;
         const dy = mousePos.y - dragStartScreenPos.y;
         const distance = Math.sqrt(dx * dx + dy * dy);

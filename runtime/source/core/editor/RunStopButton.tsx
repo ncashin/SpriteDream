@@ -11,6 +11,7 @@ import {
   restoreSceneFromSnapshot,
 } from "../scene/scene";
 import { runGame } from "../runtimeWrapper";
+import { cancelDrag } from "../dragHandler";
 import { getDefaultStore } from "jotai";
 import { gameContextAtom } from "./useGameContext";
 
@@ -29,6 +30,8 @@ export function RunStopButton() {
 
     // Save the selected entity before snapshot operations
     const selectedEntity = ecs?.getSelectedEntity?.() ?? null;
+
+    cancelDrag();
 
     if (wasRunning) {
       await restoreSceneFromSnapshot();

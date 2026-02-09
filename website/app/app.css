@@ -36,6 +36,8 @@ html,
 body {
   @apply bg-[var(--color-bg-void)] text-white antialiased;
   color-scheme: dark;
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 
 /* Selection */
