@@ -1,49 +1,29 @@
-import { initializeGame, type AccumulatePluginResults } from "./core/gameContext";
+import { initializeGame, type GameContext as GameContextType } from "./core/gameContext";
 import { ecsPlugin } from "./core/scene/ecsAdapter";
 import { spritePlugin } from "./core/sprite";
 import { inputPlugin } from "./core/input";
 import { viewportPlugin } from "./core/viewport/viewportPlugin";
 import { collisionPlugin } from "./core/collision/collisionPlugin";
 import { ecsEditorPlugin } from "./core/ecs/editor/ECSEditorPlugin";
+import { sceneGraphPlugin } from "./core/sceneGraph/sceneGraphPlugin";
+import { sceneEntityPlugin } from "./core/scene/sceneEntity";
 import {
   addUpdateCallback,
 } from "./core/gameloop";
-import type { Component } from "./core/ecs/ecs";
-import { getEntity } from "./core/ecs/ecs";
+import { type Component } from "./core/ecs/ecs";
 import { defineComponent, VelocityComponentDefinition, TransformComponentDefinition } from "./core/ecs/component";
-import { ColliderComponentDefinition } from "./core/collision/components/colliderComponent";
-import { CollisionBodyComponentDefinition } from "./core/collision/components/collisionBodyComponent";
-import { SpriteComponentDefinition } from "./core/sprite";
 import { registerCollisionCallback } from "./core/collision/collisionCallbacks";
+import { defineCollisionLayers } from "./core/collision/collisionLayers";
 import { screenToWorld } from "./core/viewport/viewportPlugin";
-import { getWorldPosition } from "./core/transform";
-import initialScene from "../scenes/default.scene?raw";
+import { loadScene } from "./core/scene/loadScene";
 
 import { EditorUI } from "./EditorUI";
 import { GameUI } from "./GameUI";
 
-export {
-  getViewport,
-  setViewport,
-  updateViewport,
-  resetViewport,
-  setViewportScale,
-  zoomViewport,
-} from "./core/viewport/viewportPlugin";
 
-const plugins = [
-  inputPlugin,
-  viewportPlugin,
-  ecsPlugin,
-  spritePlugin,
-  collisionPlugin,
-  ecsEditorPlugin,
-] as const;
-
-type GameContext = AccumulatePluginResults<typeof plugins>;
 
 export type PlayerComponent = Component & {
-  type: "player";
+  type: "playerComponent";
   speed: number;
   gravity: number;
   jumpStrength: number;
@@ -52,7 +32,7 @@ export type PlayerComponent = Component & {
 
 export const PlayerComponentDefinition: PlayerComponent = defineComponent(
   {
-    type: "player",
+    type: "playerComponent",
     speed: 0,
     gravity: 0,
     jumpStrength: 0,
@@ -60,48 +40,74 @@ export const PlayerComponentDefinition: PlayerComponent = defineComponent(
   },
   {
     displayName: "Player",
-    description: "Player controlled entity",
+    description: "Player Controlled Entity",
   }
 );
 
-export const SceneEntity = defineComponent(
+export type FireballComponent = Component & {
+  type: "fireball";
+  timeToLive: number;
+};
+
+export const FireballComponentDefinition: FireballComponent = defineComponent(
   {
-    type: "player",
-    sceneFile: "",
+    type: "fireball",
+    timeToLive: 2,
   },
   {
-    displayName: "Scene Entity",
-    description: "It do Scene Entity Things",
+    displayName: "Fireball",
+    description: "Player Fireball Projectile",
   }
 );
 
 
+const plugins = [
+  inputPlugin,
+  viewportPlugin,
+  ecsPlugin,
+  sceneGraphPlugin,
+  sceneEntityPlugin,
+  spritePlugin,
+  collisionPlugin,
+  ecsEditorPlugin,
+] as const;
+
+type GameContext = GameContextType<typeof plugins>;
 
 initializeGame({
   plugins,
-  initialScene,
+  initialScene: loadScene("default"),
   main,
   EditorUI,
   GameUI,
 });
 
-function main({ ecs, input }: GameContext) {
-  let previousMouseLeft = false;
-  let fireballCounter = 0;
+function main({ ecs, input, sceneGraph }: GameContext) {
+  const playerEntityId = "player";
+
+  let timeSinceLastShot = 0;
+  const timeBetweenShots = 0.25;
+
+  const playerEntity = ecs.getEntity(playerEntityId, [PlayerComponentDefinition, VelocityComponentDefinition]);
+  if (!playerEntity) {
+    return;
+  }
 
   addUpdateCallback((deltaTime: number) => {
-    const playerEntityId = "player";
-    const playerEntity = ecs.getEntity(playerEntityId, [PlayerComponentDefinition, VelocityComponentDefinition]);
-    if (!playerEntity) {
-      return;
-    }
-    const { speed, jumpStrength, gravity } = playerEntity.player;
+    const { speed, jumpStrength, gravity } = playerEntity.playerComponent;
 
-    if (input.isKeyPressed("a")) {
+    const movingLeft = input.isKeyPressed("a");
+    const movingRight = input.isKeyPressed("d");
+
+    if (movingLeft) {
       playerEntity.velocity.x = -speed;
-    } else if (input.isKeyPressed("d")) {
+    }
+
+    if (movingRight) {
       playerEntity.velocity.x = speed;
-    } else {
+    }
+
+    if (!movingLeft && !movingRight) {
       playerEntity.velocity.x *= 0.8;
       if (Math.abs(playerEntity.velocity.x) < 1) {
         playerEntity.velocity.x = 0;
@@ -110,61 +116,82 @@ function main({ ecs, input }: GameContext) {
 
     playerEntity.velocity.y += gravity * deltaTime;
 
-    if (input.isKeyPressed(" ") && playerEntity.player.isGrounded) {
+    if (input.isKeyPressed(" ") && playerEntity.playerComponent.isGrounded) {
       playerEntity.velocity.y = -jumpStrength;
-      playerEntity.player.isGrounded = false;
+      playerEntity.playerComponent.isGrounded = false;
     }
 
-    const mouseLeftPressed = input.isMouseButtonPressed("left");
-    const mouseClicked = mouseLeftPressed && !previousMouseLeft;
-    previousMouseLeft = mouseLeftPressed;
 
-    if (mouseClicked) {
-      const mousePos = input.getMousePosition();
-      const worldPos = screenToWorld(mousePos.x, mousePos.y);
-      const playerWorldPos = getWorldPosition(ecs.ecsInstance, playerEntityId);
-
-      if (playerWorldPos) {
-        const dx = worldPos.x - playerWorldPos.x;
-        const dy = worldPos.y - playerWorldPos.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance > 0) {
-          const fireballSpeed = 500;
-          const velocityX = (dx / distance) * fireballSpeed;
-          const velocityY = (dy / distance) * fireballSpeed;
-
-          const fireballId = `fireball_${fireballCounter++}`;
-          ecs.createEntity(fireballId);
-          const fireballEntity = ecs.getEntity(fireballId);
-
-          fireballEntity[TransformComponentDefinition.type] = { ...TransformComponentDefinition, x: playerWorldPos.x, y: playerWorldPos.y };
-          fireballEntity[SpriteComponentDefinition.type] = { ...SpriteComponentDefinition, width: 24, height: 24, image: "/fireball.png" };
-          fireballEntity[VelocityComponentDefinition.type] = { ...VelocityComponentDefinition, x: velocityX, y: velocityY };
-          fireballEntity[CollisionBodyComponentDefinition.type] = {
-            ...CollisionBodyComponentDefinition,
-            bodyType: "kinematic",
-            collisionEnabled: true,
-          };
-          fireballEntity[ColliderComponentDefinition.type] = {
-            ...ColliderComponentDefinition,
-            colliderName: "circle",
-            radius: 12,
-          };
-        }
-      }
-    }
   });
 
+  addUpdateCallback((deltaTime) => {
+    timeSinceLastShot += deltaTime;
+
+    const leftMousePressed = input.isMouseButtonPressed("left");
+    if (!leftMousePressed || timeSinceLastShot < timeBetweenShots) {
+      return;
+    }
+
+    const mousePos = input.getMousePosition();
+    const worldPos = screenToWorld(mousePos.x, mousePos.y);
+    const playerWorldPos = sceneGraph.getWorldPosition(playerEntity);
+    if (!playerWorldPos) {
+      return;
+    }
+
+    const dx = worldPos.x - playerWorldPos.x;
+    const dy = worldPos.y - playerWorldPos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance <= 0) {
+      return;
+    }
+
+    const fireballSpeed = 500;
+    const velocityX = (dx / distance) * fireballSpeed;
+    const velocityY = (dy / distance) * fireballSpeed;
+
+
+    const fireballScene = loadScene("fireball");
+    const newFireball = ecs.instantiateSceneEntity(fireballScene);
+    if (!newFireball) {
+      return;
+    }
+
+    const hasRequiredComponents = ecs.hasComponents(
+      newFireball,
+      [TransformComponentDefinition, VelocityComponentDefinition],
+    );
+    if (!hasRequiredComponents) {
+      return;
+    }
+
+    newFireball.transform.x = playerWorldPos.x;
+    newFireball.transform.y = playerWorldPos.y;
+
+    newFireball.velocity.x = velocityX;
+    newFireball.velocity.y = velocityY;
+
+    timeSinceLastShot = 0;
+  })
+
+  addUpdateCallback((deltaTime) => {
+    ecs.runQuery([FireballComponentDefinition], (entity, { fireball }) => {
+      fireball.timeToLive -= deltaTime;
+      if (fireball.timeToLive <= 0) {
+        ecs.destroyEntity(entity);
+      }
+    });
+  });
+
+  defineCollisionLayers(["Player", "Projectile", "World"]);
+
   registerCollisionCallback({
-    name: "player",
-    callback: (_ecs, entity, _other, _overlapAmount, overlapNormal) => {
-      const entityData = ecs.getEntity(entity);
-      if (!ecs.hasComponents(entityData, [PlayerComponentDefinition, VelocityComponentDefinition])) {
+    name: "Player",
+    callback: ({ entity, overlapNormal }) => {
+      const hasRequiredComponents = ecs.hasComponents(entity, [PlayerComponentDefinition, VelocityComponentDefinition]);
+      if (!hasRequiredComponents) {
         return;
       }
-
-      const velocity = getEntity(_ecs, entity)[VelocityComponentDefinition.type] as typeof VelocityComponentDefinition;
 
       const isVerticalCollision = Math.abs(overlapNormal[0]) < 0.5;
       const isNormalPointingUp = overlapNormal[1] < 0;
@@ -172,18 +199,23 @@ function main({ ecs, input }: GameContext) {
       const isLandingOnTop = isVerticalCollision && isNormalPointingUp;
       const isHittingHead = isVerticalCollision && isNormalPointingDown;
 
-      if (velocity.y > 0 && isLandingOnTop) {
-        velocity.y = 0;
-        entityData.player.isGrounded = true;
+      if (entity.velocity.y > 0 && isLandingOnTop) {
+        entity.velocity.y = 0;
+        entity.playerComponent.isGrounded = true;
       }
 
-      if (velocity.y < 0 && isHittingHead) {
-        velocity.y = 0;
+      if (entity.velocity.y < 0 && isHittingHead) {
+        entity.velocity.y = 0;
       }
     },
   });
+
+  registerCollisionCallback({
+    name: "Fireball",
+    callback: ({ entity }) => {
+      ecs.destroyEntity(entity);
+    },
+  });
 }
-
-
 
 
