@@ -47,7 +47,6 @@ export async function loader({ params }: Route.LoaderArgs) {
         day: 'numeric'
       }),
     },
-    },
     dbUnavailable: false,
   };
 }
