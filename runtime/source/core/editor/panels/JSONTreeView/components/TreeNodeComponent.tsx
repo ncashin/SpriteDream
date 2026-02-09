@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, createContext, useContext } from 'react';
-import type { RefObject, MouseEvent, KeyboardEvent, ReactNode } from 'react';
+import type { CSSProperties, RefObject, MouseEvent, KeyboardEvent, ReactNode } from 'react';
 import { CaretRight, Plus, Trash } from '@phosphor-icons/react';
 import type { ECSInstance, Entity } from '../../../../ecs/ecs';
 import type { TreeNodeComponentProps, JSONValue } from '../types';
@@ -365,6 +365,21 @@ export function TreeNodeComponent({
     }`;
   const rowStyle = undefined;
 
+  const childKeyColumn = useMemo(() => {
+    if (!node.children || node.children.length === 0) return null;
+    let max = 0;
+    for (const child of node.children) {
+      if (child.key && child.key !== 'root') {
+        max = Math.max(max, child.key.length);
+      }
+    }
+    return max > 0 ? max : null;
+  }, [node.children]);
+
+  const childStyle = childKeyColumn
+    ? ({ '--json-tree-key-column': `${childKeyColumn}ch` } as CSSProperties)
+    : undefined;
+
   if (isObjectOrArray) {
     return (
       <>
@@ -414,7 +429,7 @@ export function TreeNodeComponent({
           />
         )}
         {hasChildren && isExpanded && node.children && (
-          <div className="w-full">
+          <div className="w-full" style={childStyle}>
             {node.children.map((child) => (
               <TreeNodeComponent
                 key={child.path}
@@ -474,7 +489,7 @@ export function TreeNodeComponent({
         </div>
       </div>
       {hasChildren && isExpanded && node.children && (
-        <div className="w-full">
+        <div className="w-full" style={childStyle}>
           {node.children.map((child) => (
             <TreeNodeComponent
               key={child.path}

@@ -131,7 +131,7 @@ h1 {
 
 /* JSON Tree View Styles */
 .json-tree-view {
-  font-family: var(--vscode-font-family, system-ui, -apple-system, sans-serif);
+  font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace);
 }
 
 .json-tree-view table {
@@ -160,7 +160,7 @@ h1 {
 }
 
 .json-tree-row {
-  grid-template-columns: 1rem auto 1fr;
+  grid-template-columns: 1rem var(--json-tree-key-column, max-content) 1fr;
 }
 
 
