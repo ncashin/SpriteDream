@@ -13,6 +13,7 @@ export function meta({ }: Route.MetaArgs) {
 
 export default function ComingSoon() {
     const [email, setEmail] = useState("");
+    const [hasSubmitted, setHasSubmitted] = useState(false);
     const isSubmitDisabled = email.trim().length === 0;
 
     return (
@@ -36,7 +37,14 @@ export default function ComingSoon() {
 
                     <form
                         className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
-                        onSubmit={(event) => event.preventDefault()}
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            if (isSubmitDisabled) {
+                                return;
+                            }
+                            setHasSubmitted(true);
+                            setEmail("");
+                        }}
                     >
                         <input
                             type="email"
@@ -51,11 +59,20 @@ export default function ComingSoon() {
                         <button
                             type="submit"
                             disabled={isSubmitDisabled}
-                            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-[#1e1e23] bg-[#121216] px-4 text-sm font-semibold text-white/90 transition-all hover:bg-[#1e1e23] hover:border-[#37373b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/70 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-[#1e1e23] bg-[#121216] px-4 text-sm font-semibold text-white/90 transition-all hover:bg-[#1e1e23] hover:border-[#37373b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/70 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[170px]"
                         >
-                            Notify me
+                            {hasSubmitted ? "You're on the list" : "Notify me"}
                         </button>
                     </form>
+                    <div className="mt-3 min-h-[26px]">
+                        <p
+                            className={`pt-2 pl-1 text-sm font-medium text-white/70 transition-opacity ${
+                                hasSubmitted ? "opacity-100" : "opacity-0"
+                            }`}
+                        >
+                            Thanks! We&apos;ll be in touch soon.
+                        </p>
+                    </div>
 
                 </div>
             </div>

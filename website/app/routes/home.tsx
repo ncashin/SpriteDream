@@ -6,6 +6,9 @@ import { db, games } from "../db";
 import { asc } from "drizzle-orm";
 import React from "react";
 import runtimeMainTsSource from "../runtime/main.ts?raw";
+import { codeToTokens } from "shiki";
+import type { ThemedToken } from "shiki";
+import darkPlus from "shiki/themes/dark-plus.mjs";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -18,291 +21,23 @@ export const links: Route.LinksFunction = () => [
   { rel: "preload", href: "/api/runtime/", as: "document" },
 ];
 
-const CODE_KEYWORDS = [
-  "abstract",
-  "as",
-  "asserts",
-  "async",
-  "await",
-  "break",
-  "case",
-  "catch",
-  "class",
-  "const",
-  "constructor",
-  "continue",
-  "debugger",
-  "declare",
-  "default",
-  "delete",
-  "do",
-  "else",
-  "enum",
-  "export",
-  "extends",
-  "finally",
-  "for",
-  "from",
-  "function",
-  "get",
-  "if",
-  "implements",
-  "import",
-  "in",
-  "infer",
-  "instanceof",
-  "interface",
-  "is",
-  "keyof",
-  "let",
-  "module",
-  "namespace",
-  "new",
-  "of",
-  "override",
-  "package",
-  "private",
-  "protected",
-  "public",
-  "readonly",
-  "require",
-  "return",
-  "satisfies",
-  "set",
-  "static",
-  "super",
-  "switch",
-  "this",
-  "throw",
-  "try",
-  "type",
-  "typeof",
-  "var",
-  "void",
-  "while",
-  "with",
-  "yield",
-];
-
-const CODE_TYPES = [
-  "any",
-  "bigint",
-  "boolean",
-  "never",
-  "null",
-  "number",
-  "object",
-  "string",
-  "symbol",
-  "undefined",
-  "unknown",
-  "void",
-];
-
 type CodeToken = {
   text: string;
-  className?: string;
+  color?: string;
 };
 
-const NUMBER_PATTERN =
-  "(?:0[xX][\\da-fA-F]+|0[bB][01]+|0[oO][0-7]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)";
-const IDENTIFIER_PATTERN = "[A-Za-z_$][\\w$]*";
-const LITERAL_SET = new Set(["true", "false", "null", "undefined"]);
-const VARIABLE_DECLARATION_KEYWORDS = new Set([
-  "const",
-  "let",
-  "var",
-  "function",
-  "class",
-  "interface",
-  "type",
-  "enum",
-]);
+const CODE_THEME = darkPlus;
 
-const TOKEN_REGEX = new RegExp(
-  `${IDENTIFIER_PATTERN}|${NUMBER_PATTERN}|\\s+|\\S`,
-  "g"
-);
-
-function tokenizePlainText(text: string, baseClassName?: string): CodeToken[] {
-  const tokens: CodeToken[] = [];
-  let lastKeyword: string | null = null;
-  let match: RegExpExecArray | null;
-
-  while ((match = TOKEN_REGEX.exec(text)) !== null) {
-    const segment = match[0];
-
-    if (/^\s+$/.test(segment)) {
-      tokens.push({ text: segment, className: baseClassName });
-      continue;
-    }
-
-    if (new RegExp(`^${IDENTIFIER_PATTERN}$`).test(segment)) {
-      if (CODE_KEYWORDS.includes(segment)) {
-        tokens.push({ text: segment, className: "text-[#c586c0]" });
-        lastKeyword = segment;
-        continue;
-      }
-      if (CODE_TYPES.includes(segment)) {
-        tokens.push({ text: segment, className: "text-[#4ec9b0]" });
-        lastKeyword = null;
-        continue;
-      }
-      if (LITERAL_SET.has(segment)) {
-        tokens.push({ text: segment, className: "text-[#4ec9b0]" });
-        lastKeyword = null;
-        continue;
-      }
-      if (lastKeyword && VARIABLE_DECLARATION_KEYWORDS.has(lastKeyword)) {
-        tokens.push({ text: segment, className: "text-[#9cdcfe]" });
-      } else {
-        tokens.push({ text: segment, className: baseClassName });
-      }
-      lastKeyword = null;
-      continue;
-    }
-
-    if (new RegExp(`^${NUMBER_PATTERN}$`).test(segment)) {
-      tokens.push({ text: segment, className: "text-[#b5cea8]" });
-      lastKeyword = null;
-      continue;
-    }
-
-    tokens.push({ text: segment, className: baseClassName });
-    if (!/^[,;:.]$/.test(segment)) {
-      lastKeyword = null;
-    }
-  }
-
-  return tokens;
-}
-
-function tokenizeWithBaseColor(text: string, baseClassName: string): CodeToken[] {
-  return tokenizePlainText(text, baseClassName);
-}
-
-type TokenizerState = {
-  inBlockComment: boolean;
-  inTemplateString: boolean;
-};
-
-function tokenizeLine(line: string, state: TokenizerState): CodeToken[] {
-  if (!line) return [{ text: "" }];
-
-  const tokens: CodeToken[] = [];
-  let current = "";
-  let i = 0;
-
-  const flushCurrent = () => {
-    if (current) {
-      tokens.push(...tokenizePlainText(current));
-      current = "";
-    }
-  };
-
-  while (i < line.length) {
-    if (state.inBlockComment) {
-      const endIndex = line.indexOf("*/", i);
-      if (endIndex === -1) {
-        tokens.push(...tokenizeWithBaseColor(line.slice(i), "text-[#6a9955]"));
-        return tokens;
-      }
-      tokens.push(
-        ...tokenizeWithBaseColor(line.slice(i, endIndex + 2), "text-[#6a9955]")
-      );
-      state.inBlockComment = false;
-      i = endIndex + 2;
-      continue;
-    }
-
-    if (state.inTemplateString) {
-      let segment = "";
-      let isEscaped = false;
-      while (i < line.length) {
-        const char = line[i];
-        segment += char;
-        if (char === "\\" && !isEscaped) {
-          isEscaped = true;
-          i += 1;
-          continue;
-        }
-        if (char === "`" && !isEscaped) {
-          state.inTemplateString = false;
-          i += 1;
-          break;
-        }
-        isEscaped = false;
-        i += 1;
-      }
-      tokens.push(...tokenizeWithBaseColor(segment, "text-[#ce9178]"));
-      continue;
-    }
-
-    const char = line[i];
-    const nextChar = line[i + 1];
-
-    if (char === "/" && nextChar === "/") {
-      flushCurrent();
-      tokens.push(...tokenizeWithBaseColor(line.slice(i), "text-[#6a9955]"));
-      return tokens;
-    }
-
-    if (char === "/" && nextChar === "*") {
-      flushCurrent();
-      const endIndex = line.indexOf("*/", i + 2);
-      if (endIndex === -1) {
-        tokens.push(...tokenizeWithBaseColor(line.slice(i), "text-[#6a9955]"));
-        state.inBlockComment = true;
-        return tokens;
-      }
-      tokens.push(
-        ...tokenizeWithBaseColor(line.slice(i, endIndex + 2), "text-[#6a9955]")
-      );
-      i = endIndex + 2;
-      continue;
-    }
-
-    if (char === "'" || char === '"' || char === "`") {
-      flushCurrent();
-      let segment = char;
-      let isEscaped = false;
-      i += 1;
-      while (i < line.length) {
-        const next = line[i];
-        segment += next;
-        if (next === "\\" && !isEscaped) {
-          isEscaped = true;
-          i += 1;
-          continue;
-        }
-        if (next === char && !isEscaped) {
-          i += 1;
-          break;
-        }
-        isEscaped = false;
-        i += 1;
-      }
-      if (char === "`" && !segment.endsWith("`")) {
-        state.inTemplateString = true;
-      }
-      tokens.push(...tokenizeWithBaseColor(segment, "text-[#ce9178]"));
-      continue;
-    }
-
-    current += char;
-    i += 1;
-  }
-
-  flushCurrent();
-
-  return tokens;
-}
-
-function parseTypeScriptCode(code: string): CodeLine[] {
-  const state: TokenizerState = { inBlockComment: false, inTemplateString: false };
-  return code.split("\n").map((line, index) => ({
+async function highlightTypeScriptCode(code: string): Promise<CodeLine[]> {
+  const { tokens } = await codeToTokens(code, { lang: "ts", theme: CODE_THEME });
+  return tokens.map((lineTokens: ThemedToken[], index: number) => ({
     num: index + 1,
-    tokens: tokenizeLine(line, state),
+    tokens: lineTokens.length
+      ? lineTokens.map((token: ThemedToken) => ({
+          text: token.content,
+          color: token.color ?? undefined,
+        }))
+      : [{ text: "" }],
   }));
 }
 
@@ -315,7 +50,7 @@ export async function loader({ }: Route.LoaderArgs) {
     .orderBy(asc(games.createdAt))
     .limit(1);
 
-  const mainTsLines = parseTypeScriptCode(runtimeMainTsSource) as CodeLine[];
+  const mainTsLines = await highlightTypeScriptCode(runtimeMainTsSource);
 
   return {
     gameId: firstGame?.id || null,
@@ -402,6 +137,7 @@ function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines
     };
   }, []);
 
+
   return (
     <div 
       className="fixed top-14 right-2 md:right-4 w-[calc(100vw-1rem)] md:w-[calc(100vw-var(--sidebar-width)-5rem)] flex flex-col h-[calc(100vh-6rem)] max-w-[calc(100vw-1rem)] md:max-w-none"
@@ -422,28 +158,31 @@ function CodeBlock({ gameId, mainTsLines }: { gameId: string | null; mainTsLines
         ))}
       </div>
 
-      <div className="relative rounded-xl overflow-hidden border border-white/[0.06] border-t-0 bg-[var(--color-bg-base)] shadow-2xl shadow-[var(--color-accent)]/10 flex-1 min-w-0 flex flex-col">
+      <div className="relative rounded-xl overflow-hidden border border-white/[0.06] bg-[var(--color-bg-base)] shadow-2xl shadow-[var(--color-accent)]/10 flex-1 min-w-0 flex flex-col">
         <div className="absolute -top-8 -right-8 w-32 h-32 bg-[var(--color-accent)]/15 rounded-full blur-[60px] pointer-events-none" />
         <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-[var(--color-ember)]/12 rounded-full blur-[80px] pointer-events-none" />
 
         <div className="relative z-10 flex-1 min-h-0 overflow-hidden">
           <div
-            className={`absolute inset-0 z-10 h-full pt-5 pl-1 font-mono text-[11px] leading-5 overflow-y-auto overflow-x-auto overscroll-contain transition-opacity duration-200 ${
+            className={`absolute inset-0 z-10 h-full pt-5 pl-1 font-mono text-sm leading-6 overflow-y-auto overflow-x-hidden overscroll-contain transition-opacity duration-200 ${
               isMainTsActive ? "opacity-100" : "opacity-0 pointer-events-none"
             }`}
             aria-hidden={!isMainTsActive}
           >
             {mainTsLines.map((line, i) => {
               return (
-                <div 
-                  key={i} 
-                  className="flex items-center gap-4 -mx-2 px-2 rounded min-w-0 leading-5"
+                <div
+                  key={i}
+                  className="flex items-start gap-4 -mx-2 px-2 rounded min-w-0 leading-6"
                 >
                   <span className="text-white/25 w-6 text-right text-[10px] select-none flex-shrink-0">{line.num}</span>
-                  <span className="text-[#d4d4d4] min-w-0 whitespace-pre">
+                  <span className="text-[#d4d4d4] min-w-0 whitespace-pre-wrap break-words">
                     {line.tokens
                       ? line.tokens.map((token, tokenIndex) => (
-                        <span key={tokenIndex} className={token.className}>
+                        <span
+                          key={tokenIndex}
+                          style={token.color ? { color: token.color } : undefined}
+                        >
                           {token.text}
                         </span>
                       ))
@@ -560,7 +299,7 @@ export default function Home() {
   const { gameId, mainTsLines } = useLoaderData<typeof loader>();
 
   return (
-    <div className="h-screen bg-[var(--color-bg-void)] grid-bg overflow-y-auto">
+    <div className="min-h-screen bg-[var(--color-bg-void)] grid-bg">
       <div className="spotlight fixed inset-0 pointer-events-none" />
 
       <section className="flex pb-12 pt-12 px-10 h-[calc(100vh-3.5rem)] h-max">
