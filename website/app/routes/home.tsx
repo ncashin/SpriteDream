@@ -2,8 +2,6 @@ import type { Route } from "./+types/home";
 import { Link, useLoaderData } from "react-router";
 import { useEffect, useRef, useState } from "react";
 import { Play, PlayIcon } from "@phosphor-icons/react";
-import { db, games } from "../db";
-import { asc } from "drizzle-orm";
 import React from "react";
 import runtimeMainTsSource from "../runtime/main.ts?raw";
 import { codeToTokens } from "shiki";
@@ -44,23 +42,8 @@ async function highlightTypeScriptCode(code: string): Promise<CodeLine[]> {
 export async function loader({ }: Route.LoaderArgs) {
   const mainTsLines = await highlightTypeScriptCode(runtimeMainTsSource);
 
-  if (!db) {
-    return {
-      gameId: null,
-      mainTsLines: mainTsLines as any as CodeLine[],
-    };
-  }
-
-  const [firstGame] = await db
-    .select({
-      id: games.id,
-    })
-    .from(games)
-    .orderBy(asc(games.createdAt))
-    .limit(1);
-
   return {
-    gameId: firstGame?.id || null,
+    gameId: null,
     mainTsLines: mainTsLines as any as CodeLine[],
   };
 }

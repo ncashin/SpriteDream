@@ -1,8 +1,6 @@
 import type { Route } from "./+types/games.$id";
 import { useEffect, useRef, useState } from "react";
 import { useLoaderData, Link } from "react-router";
-import { db, games } from "../db";
-import { eq } from "drizzle-orm";
 
 export function meta({ data }: Route.MetaArgs) {
   return [
@@ -12,42 +10,9 @@ export function meta({ data }: Route.MetaArgs) {
 }
 
 export async function loader({ params }: Route.LoaderArgs) {
-  const gameId = params.id;
-
-  if (!db) {
-    return {
-      game: null,
-      dbUnavailable: true,
-    };
-  }
-
-  const [game] = await db
-    .select({
-      id: games.id,
-      name: games.name,
-      description: games.description,
-      author: games.author,
-      hasThumbnail: games.thumbnail,
-      createdAt: games.createdAt,
-    })
-    .from(games)
-    .where(eq(games.id, gameId));
-
-  if (!game) {
-    throw new Response("Game not found", { status: 404 });
-  }
-
   return {
-    game: {
-      ...game,
-      hasThumbnail: !!game.hasThumbnail,
-      formattedDate: new Date(game.createdAt).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      }),
-    },
-    dbUnavailable: false,
+    game: null,
+    dbUnavailable: true,
   };
 }
 

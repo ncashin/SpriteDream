@@ -1,7 +1,5 @@
 import type { Route } from "./+types/explore";
 import { Link, useLoaderData } from "react-router";
-import { db, games } from "../db";
-import { desc } from "drizzle-orm";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -11,27 +9,15 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export async function loader({}: Route.LoaderArgs) {
-  if (!db) {
-    return { games: [] };
-  }
-
-  const allGames = await db
-    .select({
-      id: games.id,
-      name: games.name,
-      description: games.description,
-      author: games.author,
-      hasThumbnail: games.thumbnail,
-      createdAt: games.createdAt,
-    })
-    .from(games)
-    .orderBy(desc(games.createdAt));
-
   return {
-    games: allGames.map((g) => ({
-      ...g,
-      hasThumbnail: !!g.hasThumbnail,
-    })),
+    games: [] as Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      author: string | null;
+      hasThumbnail: boolean;
+      createdAt: string | number | Date;
+    }>,
   };
 }
 
