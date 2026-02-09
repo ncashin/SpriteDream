@@ -131,7 +131,7 @@ h1 {
 
 /* JSON Tree View Styles */
 .json-tree-view {
-  font-family: var(--vscode-font-family, "Consolas", "Courier New", monospace);
+  font-family: var(--vscode-font-family, system-ui, -apple-system, sans-serif);
 }
 
 .json-tree-view table {
@@ -159,18 +159,11 @@ h1 {
   min-width: 200px;
 }
 
-.json-tree-view tr.json-tree-row td[colspan="3"] {
-  padding: 4px 2px;
-  min-height: 20px;
-}
-
 .json-tree-row {
-  transition: background-color 0.1s ease;
+  grid-template-columns: 1rem auto 1fr;
 }
 
-.json-tree-row:hover {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
+
 
 .json-tree-view input[type="text"] {
   background: transparent !important;
