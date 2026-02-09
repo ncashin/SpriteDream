@@ -1,9 +1,10 @@
-import Database from "better-sqlite3";
+import type { Database as BetterSqlite3Database } from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { mkdirSync } from "fs";
+import { createRequire } from "module";
 
 // Resolve database path - try multiple methods for reliability
 let dbPath: string;
@@ -20,7 +21,8 @@ try {
 }
 
 let dbError: Error | null = null;
-let sqlite: Database.Database | null = null;
+let sqlite: BetterSqlite3Database | null = null;
+const require = createRequire(import.meta.url);
 
 // Ensure data directory exists
 try {
@@ -32,7 +34,11 @@ try {
 
 if (!dbError) {
   try {
-    sqlite = new Database(dbPath);
+    const module = require("better-sqlite3") as unknown as {
+      default?: new (path: string) => BetterSqlite3Database;
+    } & (new (path: string) => BetterSqlite3Database);
+    const DatabaseConstructor = module.default ?? module;
+    sqlite = new DatabaseConstructor(dbPath);
   } catch (error) {
     dbError = error instanceof Error ? error : new Error(String(error));
   }
