@@ -160,7 +160,7 @@ h1 {
 }
 
 .json-tree-row {
-  grid-template-columns: 1rem var(--json-tree-key-column, max-content) 1fr;
+  grid-template-columns: 1rem clamp(6ch, var(--json-tree-key-column, 12ch), 18ch) 1fr;
   column-gap: 0;
 }
 

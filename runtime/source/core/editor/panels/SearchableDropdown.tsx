@@ -123,6 +123,7 @@ export function SearchableDropdown({
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
+            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.35)",
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -151,6 +152,7 @@ export function SearchableDropdown({
             style={{
               overflowY: "auto",
               maxHeight: "150px",
+              backgroundColor: "var(--vscode-dropdown-background, var(--vscode-editor-background, #1e1e1e))",
             }}
           >
             {showNoParent && (
@@ -183,7 +185,7 @@ export function SearchableDropdown({
               <div
                 style={{
                   padding: "4px 8px",
-                  textAlign: "center",
+                  textAlign: "left",
                   color: "var(--vscode-descriptionForeground, #808080)",
                   fontSize: "inherit",
                 }}

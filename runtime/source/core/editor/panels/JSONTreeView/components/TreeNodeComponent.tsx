@@ -3,9 +3,8 @@ import type { CSSProperties, RefObject, MouseEvent, KeyboardEvent, ReactNode } f
 import { CaretRight, Plus, Trash } from '@phosphor-icons/react';
 import type { ECSInstance, Entity } from '../../../../ecs/ecs';
 import type { TreeNodeComponentProps, JSONValue } from '../types';
-import { getPropertyInputType, parseInputValue } from '../utils';
+import { getPropertyInputType } from '../utils';
 import { TreeNodeValueEditor } from './TreeNodeValueEditor';
-import { AddChildForm } from './AddChildForm';
 
 type TreeContextValue = {
   expandedPaths: Set<string>;
@@ -167,7 +166,6 @@ export function TreeNodeComponent({
     onToggleExpand,
     onNodeClick,
     onValueChange,
-    onAddChild,
     onRemoveNode,
     onRenameKey,
     ecs,
@@ -175,22 +173,18 @@ export function TreeNodeComponent({
   } = useTreeContext();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
-  const [isAddingChild, setIsAddingChild] = useState(false);
-  const [newChildKey, setNewChildKey] = useState('');
-  const [newChildValue, setNewChildValue] = useState('');
   const [isEditingKey, setIsEditingKey] = useState(false);
   const [editKeyValue, setEditKeyValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const keyInputRef = useRef<HTMLInputElement>(null);
   const isExpanded = expandedPaths.has(node.path);
   const hasChildren = node.children && node.children.length > 0;
-  const indent = node.level * 16;
   const isObjectOrArray = node.type === 'object' || node.type === 'array';
   const isTypeField = node.key === 'type';
   const isEditable = !isObjectOrArray && node.key !== 'root' && !isTypeField;
   const isArrayIndex = /^\d+$/.test(node.key);
   const isKeyEditable = node.key !== 'root' && !isTypeField && !isArrayIndex && !!onRenameKey;
-  const canAddChild = isObjectOrArray && node.key !== 'root' && !!onAddChild;
+  const canAddChild = false;
   const canRemoveNode = node.key !== 'root' && !isTypeField && !!onRemoveNode;
 
   // Get custom input type for this property
@@ -249,38 +243,16 @@ export function TreeNodeComponent({
     setIsEditingKey(false);
   };
 
-  const handleStartAddChild = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsAddingChild(true);
-    setNewChildKey('');
-    setNewChildValue('');
-  };
 
   const handleRemoveNode = (e: React.MouseEvent) => {
     e.stopPropagation();
     onRemoveNode?.(node.path);
   };
 
-  const handleConfirmAddChild = (e: React.MouseEvent) => {
+  const handleStartAddChild = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!onAddChild) return;
-    if (node.type === 'object') {
-      const key = newChildKey.trim();
-      if (!key || key === 'type') return;
-      onAddChild(node.path, key, parseInputValue(newChildValue));
-    }
-    if (node.type === 'array') {
-      onAddChild(node.path, null, parseInputValue(newChildValue));
-    }
-    setIsAddingChild(false);
-    setNewChildKey('');
-    setNewChildValue('');
   };
 
-  const handleCancelAddChild = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsAddingChild(false);
-  };
 
   const handleValueChange = (newValue: JSONValue) => {
     if (onValueChange) {
@@ -416,18 +388,6 @@ export function TreeNodeComponent({
             />
           </div>
         </div>
-        {isAddingChild && (
-          <AddChildForm
-            nodeType={node.type as 'object' | 'array'}
-            indent={indent}
-            newChildKey={newChildKey}
-            newChildValue={newChildValue}
-            onKeyChange={setNewChildKey}
-            onValueChange={setNewChildValue}
-            onConfirm={handleConfirmAddChild}
-            onCancel={handleCancelAddChild}
-          />
-        )}
         {hasChildren && isExpanded && node.children && (
           <div className="w-full" style={childStyle}>
             {node.children.map((child) => (
