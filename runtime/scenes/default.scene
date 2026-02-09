@@ -15,7 +15,7 @@
           "type": "sprite",
           "width": 1000,
           "height": 300,
-          "color": "#4a5d3b"
+          "color": "#004200"
         },
         "velocity": {
           "type": "velocity",
