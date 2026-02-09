@@ -406,7 +406,7 @@ export function TreeNodeComponent({
               isBold={node.key !== 'root'}
             />
           </div>
-          <div className="flex items-center justify-between px-1 py-1">
+          <div className="flex items-center justify-between px-1 py-1 pl-2">
             <div className="flex-1"></div>
             <ActionButtons
               canAddChild={canAddChild}
@@ -467,7 +467,7 @@ export function TreeNodeComponent({
             showColon={true}
           />
         </div>
-        <div className="relative flex items-center justify-between px-1 py-1">
+        <div className="relative flex items-center justify-between px-1 py-1 pl-2">
           <TreeNodeValueEditor
             node={node}
             isEditing={isEditing}
