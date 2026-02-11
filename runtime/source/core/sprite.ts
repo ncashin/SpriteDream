@@ -496,5 +496,11 @@ export function spritePlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     app.renderer.render(app.stage);
   });
 
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      app.destroy({ removeView: true });
+    });
+  }
+
   return extendedContext;
 }

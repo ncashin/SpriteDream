@@ -208,7 +208,7 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
   let viewportDragStartX: number = 0;
   let viewportDragStartY: number = 0;
 
-  registerDragHandler(
+  const unregisterDrag = registerDragHandler(
     {
       priority: 0,
       canHandle: () => {
@@ -235,36 +235,29 @@ export function viewportPlugin<T extends RequirePlugin<[typeof inputPlugin]>>(
   );
 
   const gameRoot = document.querySelector("#gameRoot") as HTMLElement | null;
+  const wheelHandler = (e: WheelEvent) => {
+    if (!isEditorUpdateEnabled()) return;
+    const editorRoot = document.querySelector("#editor");
+    if (editorRoot) {
+      const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
+      if (elementAtPoint && editorRoot.contains(elementAtPoint) && elementAtPoint !== editorRoot) return;
+    }
+    const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
+    if (!canvas) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = canvas.getBoundingClientRect();
+    zoomViewport(-e.deltaY * 0.001, e.clientX - rect.left, e.clientY - rect.top);
+  };
   if (gameRoot) {
-    const wheelHandler = (e: WheelEvent) => {
-      if (!isEditorUpdateEnabled()) {
-        return;
-      }
+    gameRoot.addEventListener("wheel", wheelHandler, { passive: false });
+  }
 
-      const editorRoot = document.querySelector("#editor");
-      if (editorRoot) {
-        const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
-        if (elementAtPoint && editorRoot.contains(elementAtPoint) && elementAtPoint !== editorRoot) {
-          return;
-        }
-      }
-
-      const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
-      if (!canvas) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      // Ramping sensitivity: larger scrolls result in more zoom change
-      const delta = -e.deltaY * 0.001;
-      zoomViewport(delta, x, y);
-    };
-
-    gameRoot.addEventListener("wheel", wheelHandler, {
-      passive: false,
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      window.removeEventListener("resize", resizeHandler);
+      unregisterDrag();
+      if (gameRoot) gameRoot.removeEventListener("wheel", wheelHandler);
     });
   }
 

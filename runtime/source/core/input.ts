@@ -63,36 +63,38 @@ export function inputPlugin<T extends InitialGameContext>(
     offsetY: 0,
   };
 
-  // Set up keyboard event listeners
-  window.addEventListener("keydown", (e) => {
-    keys[e.key.toLowerCase()] = true;
-  });
-
-  window.addEventListener("keyup", (e) => {
-    keys[e.key.toLowerCase()] = false;
-  });
-
-  // Set up mouse event listeners
-  window.addEventListener("mousemove", (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-  });
-
-  window.addEventListener("mousedown", (e) => {
+  const onKeyDown = (e: KeyboardEvent) => { keys[e.key.toLowerCase()] = true; };
+  const onKeyUp = (e: KeyboardEvent) => { keys[e.key.toLowerCase()] = false; };
+  const onMouseMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
+  const onMouseDown = (e: MouseEvent) => {
     if (e.button === 0) mouse.buttons.left = true;
     if (e.button === 1) mouse.buttons.middle = true;
     if (e.button === 2) mouse.buttons.right = true;
-  });
-
-  window.addEventListener("mouseup", (e) => {
+  };
+  const onMouseUp = (e: MouseEvent) => {
     if (e.button === 0) mouse.buttons.left = false;
     if (e.button === 1) mouse.buttons.middle = false;
     if (e.button === 2) mouse.buttons.right = false;
-  });
+  };
+  const onContextMenu = (e: Event) => { e.preventDefault(); };
 
-  window.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
-  });
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+  window.addEventListener("mousemove", onMouseMove);
+  window.addEventListener("mousedown", onMouseDown);
+  window.addEventListener("mouseup", onMouseUp);
+  window.addEventListener("contextmenu", onContextMenu);
+
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("contextmenu", onContextMenu);
+    });
+  }
 
   addDrawCallback(() => {
     Object.assign(previousKeys, keys);

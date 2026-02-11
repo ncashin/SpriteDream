@@ -38,9 +38,11 @@ export function gameIDEPlugin(): Plugin {
 
 // HMR support for Vite - transparent to end users
 if (import.meta.hot) {
+  const handleAfterUpdate = () => { initializeGame(${objectArg}); };
   import.meta.hot.accept(() => { });
-  import.meta.hot.on('vite:afterUpdate', () => {
-    initializeGame(${objectArg});
+  import.meta.hot.on('vite:afterUpdate', handleAfterUpdate);
+  import.meta.hot.dispose(() => {
+    import.meta.hot.off('vite:afterUpdate', handleAfterUpdate);
   });
 }`;
                                     transformed =
@@ -101,9 +103,11 @@ if (import.meta.hot) {
 
 // HMR: Hot reload for scene changes (${sceneVar})
 if (import.meta.hot) {
+  const handleSceneUpdate = () => { loadScene(${sceneVar}); };
   import.meta.hot.accept(() => { });
-  import.meta.hot.on('vite:afterUpdate', () => {
-    loadScene(${sceneVar});
+  import.meta.hot.on('vite:afterUpdate', handleSceneUpdate);
+  import.meta.hot.dispose(() => {
+    import.meta.hot.off('vite:afterUpdate', handleSceneUpdate);
   });
 }`;
                         transformed =
