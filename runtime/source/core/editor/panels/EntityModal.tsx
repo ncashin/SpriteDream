@@ -1,10 +1,8 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { flushSync } from "react-dom";
 import type { Component, Entity } from "../../ecs/ecs";
 import type { curryECSInstance } from "../../ecs/ecs";
 import { useGameContext, startUndoAction } from "../useGameContext.tsx";
-import { useEntityData } from "../useECS.tsx";
-import { runImmediateEditorSync } from "../../gameloop";
+import { useEntityData, useECS } from "../useECS.tsx";
 import { componentRegistry } from "../../ecs/component";
 import { JSONTreeView } from "./JSONTreeView";
 import { SearchInput } from "./SearchInput";
@@ -19,6 +17,7 @@ interface EntityModalProps {
 export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const gameContext = useGameContext();
   const ecs = (gameContext?.ecs as ReturnType<typeof curryECSInstance> | undefined);
+  const { version } = useECS();
   const entityData = useEntityData(entity);
   const [entityDataJson, setEntityDataJson] = useState("");
   const [showAddComponent, setShowAddComponent] = useState(false);
@@ -36,7 +35,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
   const hasRecordedUndoRef = useRef(false);
   const lastEntityRef = useRef<Entity | null>(null);
 
-  // Update entityDataJson when entityData changes
+  // Update entityDataJson when entityData or ECS sync version changes (version ensures live updates on in-place mutations)
   useEffect(() => {
     if (isOpen && entity && entityData) {
       try {
@@ -53,7 +52,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     } else if (!isOpen) {
       setEntityDataJson("");
     }
-  }, [isOpen, entity, entityData]);
+  }, [isOpen, entity, entityData, version]);
 
   // Reset undo tracking when entity changes
   useEffect(() => {
@@ -118,7 +117,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     const entityProxy = ecs.getEntity(entity);
     entityProxy[newComponent.type] = newComponent;
 
-    flushSync(() => runImmediateEditorSync());
+    // entityDataJson will be updated automatically via useEffect when entityData changes
     setShowAddComponent(false);
     setAddComponentSearch("");
   };
@@ -129,7 +128,7 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
     const entityProxy = ecs.getEntity(entity);
     delete entityProxy[component.type];
 
-    flushSync(() => runImmediateEditorSync());
+    // entityDataJson will be updated automatically via useEffect when entityData changes
     setShowRemoveComponent(false);
     setRemoveComponentSearch("");
   };
@@ -273,8 +272,9 @@ export function EntityModal({ isOpen, entity, onClose }: EntityModalProps) {
         }
       }
 
+      // Update entityDataJson immediately for UI feedback
+      // The reactive entityData will update automatically via useEntityData
       setEntityDataJson(updatedJson);
-      flushSync(() => runImmediateEditorSync());
 
       undoDebounceTimeoutRef.current = setTimeout(() => {
         hasRecordedUndoRef.current = false;

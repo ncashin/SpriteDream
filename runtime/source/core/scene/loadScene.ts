@@ -10,6 +10,9 @@ const sceneNameToPath = {
 
 export type SceneName = keyof typeof sceneNameToPath;
 
+/** Scene names available for scene entity selection */
+export const availableSceneNames: SceneName[] = Object.keys(sceneNameToPath) as SceneName[];
+
 export function loadScene(name: SceneName): string {
     const scene = rawScenes[sceneNameToPath[name]];
     if (!scene) {

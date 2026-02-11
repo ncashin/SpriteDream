@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { Entity, EntityComponents } from "../ecs/ecs";
 import type { curryECSInstance } from "../ecs/ecs";
-import { addDrawCallback, removeDrawCallback, addEditorUpdateCallback, removeEditorCallback, addImmediateEditorSyncCallback, removeImmediateEditorSyncCallback } from "../gameloop";
+import { addDrawCallback, removeDrawCallback, addEditorUpdateCallback, removeEditorCallback } from "../gameloop";
 import { useGameContext } from "./useGameContext.tsx";
 
 export interface EntityState {
@@ -95,14 +95,12 @@ export function useECS(): EntityState {
         // even when draw callbacks are disabled.
         const drawCallbackId = addDrawCallback(scheduleSync);
         const editorCallbackId = addEditorUpdateCallback(scheduleSync);
-        const immediateSyncId = addImmediateEditorSyncCallback(syncEntityState);
 
         return () => {
             removeDrawCallback(drawCallbackId);
             if (editorCallbackId !== -1) {
                 removeEditorCallback(editorCallbackId);
             }
-            removeImmediateEditorSyncCallback(immediateSyncId);
         };
     }, [ecs]);
 

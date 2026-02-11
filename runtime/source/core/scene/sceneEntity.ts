@@ -2,14 +2,14 @@ import type { Component, Entity, EntityComponents } from "../ecs/ecs";
 import type { ContextExtension, RequirePlugin } from "../gameContext";
 import { defineComponent, TransformComponentDefinition } from "../ecs/component";
 import { addEditorStartCallback } from "../initialization";
+import { getChildren } from "../transform";
 import { ecsPlugin } from "./ecsAdapter";
 import type { SceneData } from "./scene";
-import { loadScene, loadSceneIfExists, type SceneName } from "./loadScene";
+import { loadScene, loadSceneIfExists, availableSceneNames, type SceneName } from "./loadScene";
 
 export type SceneEntityComponent = Component & {
     type: "sceneEntity";
     sceneName: string;
-    rootEntity?: string;
 };
 
 export type SceneEntityRootComponent = Component & {
@@ -20,14 +20,14 @@ export const SceneEntityComponentDefinition: SceneEntityComponent = defineCompon
     {
         type: "sceneEntity",
         sceneName: "",
-        rootEntity: "",
     },
     {
         displayName: "Scene Entity",
         description: "Instantiate another scene as part of this scene",
         propertyInputTypes: {
             sceneName: {
-                type: "text",
+                type: "dropdown",
+                options: availableSceneNames,
             },
         },
     }
@@ -111,13 +111,22 @@ function instantiateSceneEntityId(
         nameMap.set(id, getUniqueEntityName(existingNames, id));
     }
 
+    const parentEntity = options.parentEntity;
+    const useParentAsRoot = parentEntity != null;
+
     const rootName = entityIds.length === 1
         ? nameMap.get(entityIds[0])!
         : getUniqueEntityName(existingNames, options.rootName || "sceneRoot");
 
-    if (entityIds.length > 1) {
-        ecs.createEntity(rootName);
+    if (entityIds.length > 1 && !useParentAsRoot) {
+        const rootProxy = ecs.createEntity(rootName);
+        delete rootProxy[TransformComponentDefinition.type];
+        rootProxy[SceneEntityRootComponentDefinition.type] = {
+            ...SceneEntityRootComponentDefinition,
+        };
     }
+
+    const effectiveRoot = useParentAsRoot ? parentEntity : rootName;
 
     for (const id of entityIds) {
         const newId = nameMap.get(id)!;
@@ -137,8 +146,10 @@ function instantiateSceneEntityId(
                 const parent = (cloned as { parent?: string | null }).parent;
                 if (parent && nameMap.has(parent)) {
                     (cloned as { parent?: string | null }).parent = nameMap.get(parent);
-                } else if (entityIds.length > 1 && (!parent || !nameMap.has(parent))) {
+                } else if (entityIds.length > 1 && !useParentAsRoot && (!parent || !nameMap.has(parent))) {
                     (cloned as { parent?: string | null }).parent = rootName;
+                } else if (useParentAsRoot && (!parent || !nameMap.has(parent))) {
+                    (cloned as { parent?: string | null }).parent = parentEntity!;
                 }
             }
 
@@ -146,21 +157,37 @@ function instantiateSceneEntityId(
         }
 
         if (entityIds.length > 1 && !hasTransform) {
-            ecs.setParent(newId, rootName);
+            ecs.setParent(newId, effectiveRoot);
         }
     }
 
-    if (options.parentEntity) {
-        ecs.setParent(rootName, options.parentEntity);
+    if (parentEntity && !useParentAsRoot) {
+        ecs.setParent(rootName, parentEntity);
     }
 
-    const rootEntityProxy = ecs.createEntity(rootName);
-    if (!rootEntityProxy[SceneEntityRootComponentDefinition.type]) {
-        rootEntityProxy[SceneEntityRootComponentDefinition.type] = {
-            ...SceneEntityRootComponentDefinition,
-        };
+    if (useParentAsRoot) {
+        for (const id of entityIds) {
+            const newId = nameMap.get(id)!;
+            const childProxy = ecs.createEntity(newId);
+            if (!childProxy[SceneEntityRootComponentDefinition.type]) {
+                childProxy[SceneEntityRootComponentDefinition.type] = {
+                    ...SceneEntityRootComponentDefinition,
+                };
+            }
+        }
+    } else {
+        const rootEntityProxy = ecs.createEntity(rootName);
+        if (!rootEntityProxy[SceneEntityRootComponentDefinition.type]) {
+            rootEntityProxy[SceneEntityRootComponentDefinition.type] = {
+                ...SceneEntityRootComponentDefinition,
+            };
+        }
     }
 
+
+    if (useParentAsRoot) {
+        return entityIds.length === 1 ? nameMap.get(entityIds[0])! : parentEntity!;
+    }
     return rootName;
 }
 
@@ -174,6 +201,26 @@ export function instantiateSceneEntity(
     return ecs.getEntity(rootName);
 }
 
+function tryInstantiateSceneEntity(
+    ecs: ReturnType<typeof ecsPlugin>["ecs"],
+    entity: Entity,
+    sceneEntity: SceneEntityComponent
+): void {
+    const sceneName = sceneEntity.sceneName?.trim();
+    if (!sceneName) return;
+
+    const children = getChildren(ecs.ecsInstance, entity);
+    const alreadyInstantiated = children.some(
+        (childId) => ecs.ecsInstance.entities[childId]?.sceneEntityRoot
+    );
+    if (alreadyInstantiated) return;
+
+    instantiateSceneEntityId(ecs, sceneName, {
+        rootName: sceneName,
+        parentEntity: entity,
+    });
+}
+
 export function sceneEntityPlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     context: T
 ): ContextExtension<T, {
@@ -183,34 +230,44 @@ export function sceneEntityPlugin<T extends RequirePlugin<[typeof ecsPlugin]>>(
     loadScene: typeof loadScene;
     instantiateSceneEntity: CurriedInstantiateSceneEntity;
 }> {
-    const ecsWithSceneEntity = context.ecs as T["ecs"] & {
+    const ecs = context.ecs;
+    const ecsWithSceneEntity = ecs as T["ecs"] & {
         instantiateSceneEntity: CurriedInstantiateSceneEntity;
     };
     ecsWithSceneEntity.instantiateSceneEntity = (sceneDataOrName?, options?) =>
-        instantiateSceneEntity(context.ecs, sceneDataOrName, options);
+        instantiateSceneEntity(ecs, sceneDataOrName, options);
 
     addEditorStartCallback(() => {
-        context.ecs.runQuery(
-            [SceneEntityComponentDefinition],
-            (entity, { sceneEntity }) => {
-                const sceneName = sceneEntity.sceneName?.trim();
-                if (!sceneName) return;
-
-                const existingRoot = sceneEntity.rootEntity;
-                if (existingRoot && context.ecs.ecsInstance.entities[existingRoot]) {
-                    return;
-                }
-
-                const root = instantiateSceneEntityId(context.ecs, sceneName, {
-                    rootName: sceneName,
-                    parentEntity: entity,
-                });
-                if (root) {
-                    sceneEntity.rootEntity = root;
-                }
-            }
-        );
+        ecs.runQuery([SceneEntityComponentDefinition], (entity, { sceneEntity }) => {
+            tryInstantiateSceneEntity(ecs, entity, sceneEntity);
+        });
     });
+
+    const instance = ecs.ecsInstance;
+    const originalAddComponent = instance.addComponentCallback;
+    instance.addComponentCallback = (entity, component) => {
+        originalAddComponent?.(entity, component);
+        if (component.type === SceneEntityComponentDefinition.type) {
+            tryInstantiateSceneEntity(ecs, entity, component as SceneEntityComponent);
+        }
+    };
+
+    const originalProxyHandler = instance.componentProxyHandler;
+    if (originalProxyHandler) {
+        instance.componentProxyHandler = {
+            set: (entity, component, property, newValue) => {
+                const result = originalProxyHandler.set(entity, component, property, newValue);
+                if (
+                    result &&
+                    component.type === SceneEntityComponentDefinition.type &&
+                    property === "sceneName"
+                ) {
+                    tryInstantiateSceneEntity(ecs, entity, component as SceneEntityComponent);
+                }
+                return result;
+            },
+        };
+    }
 
     return {
         ...context,

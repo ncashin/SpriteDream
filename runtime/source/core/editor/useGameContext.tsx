@@ -5,7 +5,7 @@ import { undoRedoManager } from "./undoRedo";
 import { clipboardManager } from "./clipboard";
 
 export type GameContextType = Record<string, unknown> & {
-  ecs?: ReturnType<typeof curryECSInstance>;
+    ecs?: ReturnType<typeof curryECSInstance>;
 };
 
 export const gameContextAtom = atom<GameContextType | null>(null);

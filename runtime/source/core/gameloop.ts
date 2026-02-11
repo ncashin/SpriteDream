@@ -39,7 +39,6 @@ const updateCallbacks = createCallbackManager<(deltaTime: number) => void>();
 const drawCallbacks = createCallbackManager<() => void>();
 const editorDrawCallbacks = createCallbackManager<() => void>(true);
 const editorUpdateCallbacks = createCallbackManager<() => void>(true);
-const immediateEditorSyncCallbacks = createCallbackManager<() => void>(false);
 
 export let updateEnabled = false;
 export let drawEnabled = true;
@@ -93,40 +92,11 @@ export const addEditorUpdateCallback = (callback: () => void): CallbackId =>
 export const removeEditorCallback = (id: CallbackId): boolean =>
   editorUpdateCallbacks.remove(id);
 
-/**
- * Run editor update callbacks immediately. Use when ECS mutations (e.g. add/remove
- * component) should trigger UI refresh without waiting for the next frame.
- */
-export const runEditorUpdateCallbacks = (): void => {
-  if (editorUpdateEnabled) {
-    for (const callback of editorUpdateCallbacks.getArray()) {
-      callback();
-    }
-  }
-};
-
-export const addImmediateEditorSyncCallback = (callback: () => void): CallbackId =>
-  immediateEditorSyncCallbacks.add(callback);
-
-export const removeImmediateEditorSyncCallback = (id: CallbackId): boolean =>
-  immediateEditorSyncCallbacks.remove(id);
-
-/**
- * Run immediate sync callbacks synchronously. Use after ECS mutations to refresh
- * UI without waiting for next frame. Wrap in React flushSync for immediate paint.
- */
-export const runImmediateEditorSync = (): void => {
-  for (const callback of immediateEditorSyncCallbacks.getArray()) {
-    callback();
-  }
-};
-
 export const resetAllCallbacks = (): void => {
   updateCallbacks.clear();
   drawCallbacks.clear();
   editorDrawCallbacks.clear();
   editorUpdateCallbacks.clear();
-  immediateEditorSyncCallbacks.clear();
   nextCallbackId = 1;
   resetDragHandlerInitialization();
   clearStartCallbacks();
