@@ -67,6 +67,11 @@ export function getActiveHandler(): DragHandler | null {
 
 export function resetDragHandlerInitialization(): void {
   isInitialized = false;
+  dragHandlers.length = 0;
+  activeHandler = null;
+  dragStartWorldPos = null;
+  dragStartScreenPos = null;
+  previousMouseDown = false;
 }
 
 export function registerDragHandler(

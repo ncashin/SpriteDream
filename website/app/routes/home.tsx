@@ -11,7 +11,7 @@ import darkPlus from "shiki/themes/dark-plus.mjs";
 export function meta({ }: Route.MetaArgs) {
   return [
     { title: "GameIDE" },
-    { name: "description", content: "Build games without leaving VSCode" },
+    { name: "description", content: "The engine that works where you do" },
   ];
 }
 
