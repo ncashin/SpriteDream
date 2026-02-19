@@ -1,3 +1,2 @@
-import './style.css'
-import './root'
-
+import "./style.css";
+import "./root";
