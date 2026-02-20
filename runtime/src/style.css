@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@import "./flexoki/namespaced.css";
+@import "./flexoki/replacement.css";
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -26,4 +29,21 @@ body {
   min-width: 100vw;
   min-height: 100vh;
   margin: 0 auto;
+}
+
+.p-internal-sidebar {
+  padding-top: calc(var(--spacing) * 1);
+  padding-bottom: calc(var(--spacing) * 1);
+
+  padding-left: calc(var(--spacing) * 2.5);
+  padding-right: calc(var(--spacing) * 1.5);
+}
+
+.group-hover-visible {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.group:hover .group-hover-visible {
+  opacity: 1;
+  visibility: visible;
 }
