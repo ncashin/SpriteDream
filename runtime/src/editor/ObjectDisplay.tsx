@@ -1,8 +1,7 @@
-import { ChevronDown, ChevronRight, Cross, GripVertical, Plus, Trash, TrashIcon, X } from "lucide-react";
+import { Box, ChevronRight, Plus, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Scene } from "../scene/scene";
 import { PropertyDisplay } from "./PropertyDisplay";
-import { cn } from "../utils/cn";
 import { IconButton } from "./IconButton";
 
 export const ObjectDisplay = ({ scene, path = "Scene" }: { scene: Scene; path?: string }) => {
@@ -10,14 +9,17 @@ export const ObjectDisplay = ({ scene, path = "Scene" }: { scene: Scene; path?: 
   const sceneEntries = useMemo(() => Object.entries(scene), [scene]);
 
   return (
-    <div className={cn("flex flex-col gap-2 w-full", expanded && "pb-3.5")}>
+    <div className="flex flex-col gap-0.5 w-full">
       <button
-        className="flex flex-row justify-between items-center w-full  hover:bg-dark-ui rounded-md p-internal-sidebar group"
+        className="flex flex-row justify-between items-center w-full hover:bg-dark-ui rounded-md p-internal-sidebar group cursor-pointer"
         onClick={() => {
           setExpanded(!expanded);
         }}
       >
-        <h1 className="font-bold">{path}</h1>
+        <div className="flex items-center gap-1.5">
+          <Box size={16} strokeWidth={2.5} fontWeight={"bold"} className="text-muted shrink-0" />
+          <h1 className="font-bold">{path}</h1>
+        </div>
         <div className="flex flex-row group-hover-visible">
           <IconButton icon={Plus} />
           <IconButton icon={X} />
@@ -31,14 +33,17 @@ export const ObjectDisplay = ({ scene, path = "Scene" }: { scene: Scene; path?: 
         </div>
       </button>
 
-      {expanded &&
-        sceneEntries.map(([key, value]) =>
-          value && typeof value === "object" ? (
-            <ObjectDisplay scene={value as Scene} path={key} />
-          ) : (
-            <PropertyDisplay entry={[key, value]} />
-          ),
-        )}
+      {expanded && (
+        <div className="pl-5.5">
+          {sceneEntries.map(([key, value]) =>
+            value && typeof value === "object" ? (
+              <ObjectDisplay scene={value as Scene} path={key} key={key} />
+            ) : (
+              <PropertyDisplay entry={[key, value]} key={key} />
+            ),
+          )}
+        </div>
+      )}
     </div>
   );
 };

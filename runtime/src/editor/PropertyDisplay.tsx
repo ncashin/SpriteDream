@@ -3,7 +3,7 @@ const displayComponents: Record<string, (props: { value: any, onChange?: (val: a
     string: ({ value, onChange }) => (
         <input
             type="text"
-            className="bg-transparent min-w-full focus:outline-none focus:bg-dark-ui p-0.5 px-1 rounded-md flex-1 transition-colors truncate overflow-ellipsis overflow-hidden"
+            className="min-w-96 bg-transparent min-w-full cursor-pointer focus:outline-none focus:text-white focus:bg-dark-ui hover:bg-dark-ui p-0.5 px-1 rounded-md flex-1 transition-colors truncate overflow-ellipsis"
             defaultValue={value}
             onChange={e => onChange && onChange(e.target.value)}
         />
@@ -33,12 +33,12 @@ export const PropertyDisplay = ({ entry: [key, value] }: { entry: [string, unkno
     const type = value === null ? "object" : typeof value;
     const DisplayComponent = displayComponents[type];
     return (
-        <div className="flex flex-row items-center w-full group gap-2 p-internal-sidebar font-semibold ">
-            <h2 className="ext-light-ui">{key}:</h2>
-            <div className="truncate overflow-ellipsis overflow-hidden flex-1 text-light-ui-3">
+        <div className="flex flex-row items-center w-full group gap-2 p-internal-sidebar font-semibold text-light-ui-3">
+            <h2>{key}:</h2>
+            <div className=" flex-1">
                 {DisplayComponent
                     ? DisplayComponent({ value })
-                    : <p className="truncate overflow-ellipsis overflow-hidden">{String(value)}</p>}
+                    : <p className="truncate overflow-ellipsis">{String(value)}</p>}
             </div>
         </div>
     );
