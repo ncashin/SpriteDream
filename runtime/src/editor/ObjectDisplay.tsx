@@ -4,10 +4,31 @@ import type { Scene } from "../scene/scene";
 import { PropertyDisplay } from "./PropertyDisplay";
 import { IconButton } from "./IconButton";
 
-export const ObjectDisplay = ({ scene, path = "Scene" }: { scene: Scene; path?: string }) => {
+export const ObjectDisplay = ({
+  scene,
+  path = "Scene",
+  isDropdown = false,
+}: {
+  scene: Scene;
+  path?: string;
+  isDropdown?: boolean;
+}) => {
   const [expanded, setExpanded] = useState(false);
   const sceneEntries = useMemo(() => Object.entries(scene), [scene]);
 
+  if (!isDropdown) {
+    return (
+      <div>
+        {sceneEntries.map(([key, value]) =>
+          value && typeof value === "object" ? (
+            <ObjectDisplay scene={value as Scene} path={key} key={key} isDropdown={true} />
+          ) : (
+            <PropertyDisplay entry={[key, value]} key={key} />
+          ),
+        )}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-0.5 w-full">
       <button
@@ -17,7 +38,12 @@ export const ObjectDisplay = ({ scene, path = "Scene" }: { scene: Scene; path?: 
         }}
       >
         <div className="flex items-center gap-1.5">
-          <Box size={16} strokeWidth={2.5} fontWeight={"bold"} className="text-muted shrink-0" />
+          <Box
+            size={16}
+            strokeWidth={2.5}
+            fontWeight={"bold"}
+            className="text-muted shrink-0"
+          />
           <h1 className="font-bold">{path}</h1>
         </div>
         <div className="flex flex-row group-hover-visible">
@@ -37,7 +63,7 @@ export const ObjectDisplay = ({ scene, path = "Scene" }: { scene: Scene; path?: 
         <div className="pl-5.5">
           {sceneEntries.map(([key, value]) =>
             value && typeof value === "object" ? (
-              <ObjectDisplay scene={value as Scene} path={key} key={key} />
+              <ObjectDisplay scene={value as Scene} path={key} key={key} isDropdown={true} />
             ) : (
               <PropertyDisplay entry={[key, value]} key={key} />
             ),
