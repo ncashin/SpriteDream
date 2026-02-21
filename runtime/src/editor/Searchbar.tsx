@@ -17,7 +17,7 @@ export const Searchbar = () => {
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder="Search..."
-        className="bg-transparent outline-none text-white w-full font-semibold"
+        className="bg-transparent outline-none text-light-ui w-full font-semibold"
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />

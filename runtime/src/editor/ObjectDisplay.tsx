@@ -38,12 +38,8 @@ export const ObjectDisplay = ({
         }}
       >
         <div className="flex items-center gap-1.5">
-          <Box
-            size={16}
-            strokeWidth={2.5}
-            fontWeight={"bold"}
-            className="text-muted shrink-0"
-          />
+        <IconButton icon={Box} />
+
           <h1 className="font-bold">{path}</h1>
         </div>
         <div className="flex flex-row group-hover-visible">

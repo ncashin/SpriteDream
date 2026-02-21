@@ -3,7 +3,7 @@ const displayComponents: Record<string, (props: { value: any, onChange?: (val: a
     string: ({ value, onChange }) => (
         <input
             type="text"
-            className="min-w-96 bg-transparent min-w-full cursor-pointer focus:outline-none focus:text-white focus:bg-dark-ui hover:bg-dark-ui p-0.5 px-1 rounded-md flex-1 transition-colors truncate overflow-ellipsis"
+            className="min-w-96 bg-transparent min-w-full cursor-pointer focus:outline-none focus:text-light-ui focus:bg-dark-ui hover:bg-dark-ui p-0.5 px-1 rounded-md flex-1 transition-colors truncate overflow-ellipsis"
             defaultValue={value}
             onChange={e => onChange && onChange(e.target.value)}
         />

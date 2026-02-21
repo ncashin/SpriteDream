@@ -2,14 +2,6 @@ import { cn } from "../utils/cn";
 import { ObjectDisplay } from "./ObjectDisplay";
 import { Searchbar } from "./Searchbar";
 import testData from "./test.json";
-import { FolderKanban, Image, Settings as SettingsIcon } from "lucide-react";
-
-const tabs = [
-  { label: "Scene", icon: <FolderKanban size={18} className="inline mr-1 text-white" /> },
-  { label: "Assets", icon: <Image size={18} className="inline mr-1 text-white" /> },
-  { label: "Settings", icon: <SettingsIcon size={18} className="inline mr-1 text-white" /> }
-];
-
 
 export const Sidebar = () => {
   return (
@@ -23,7 +15,7 @@ export const Sidebar = () => {
         <h1 className="font-bold text-lg p-internal-sidebar">Scene View</h1>
       </div>
 
-      <div className="px-2 pr-3.5 pb-1.5">
+      <div className="px-2 pr-3.5 pb-1.5 text-sm  ">
         <Searchbar />
       </div>
 
