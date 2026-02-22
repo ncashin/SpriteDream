@@ -82,7 +82,6 @@ function fullIndex(
 ) {
   const meta = getMeta(target);
   const hash = definition.__hash;
-
   for (const key of Object.keys(target)) {
     if (matchesDefinition(definition, target[key])) {
       meta.forwardIndex.get(hash)!.add(key);
@@ -92,7 +91,6 @@ function fullIndex(
       meta.reverseIndex.get(key)!.add(hash);
     }
   }
-
   meta.indexed.add(hash);
 }
 
@@ -102,13 +100,10 @@ function evaluateKey(
 ) {
   const meta = getMeta(target);
   const value = target[key];
-
   for (const [hash, definition] of meta.definitions) {
     if (!meta.indexed.has(hash)) continue;
-
     const matches = matchesDefinition(definition, value);
     const indexed = meta.reverseIndex.get(key)?.has(hash);
-
     if (matches && !indexed) {
       meta.forwardIndex.get(hash)!.add(key);
       if (!meta.reverseIndex.has(key)) {
@@ -117,7 +112,6 @@ function evaluateKey(
       meta.reverseIndex.get(key)!.add(hash);
       meta.results.delete(hash);
     }
-
     if (!matches && indexed) {
       meta.forwardIndex.get(hash)?.delete(key);
       meta.reverseIndex.get(key)?.delete(hash);
@@ -142,30 +136,23 @@ function query<D extends DefinedObject>(
 ): Record<string, Instance<D["__definition"]>> {
   const meta = getMeta(target);
   registerDefinition(meta, definition);
-
   const hash = definition.__hash;
-
   if (!meta.indexed.has(hash)) {
     fullIndex(target, definition);
   }
-
   const cached = meta.results.get(hash);
   if (cached) {
     return cached as Record<string, Instance<D["__definition"]>>;
   }
-
   const result: Record<string, Instance<D["__definition"]>> = {};
   const keys = meta.forwardIndex.get(hash);
-
   if (keys) {
     for (const key of keys) {
       if (key in target) {
-        result[key] =
-          target[key] as Instance<D["__definition"]>;
+        result[key] = target[key] as Instance<D["__definition"]>;
       }
     }
   }
-
   meta.results.set(hash, result);
   return result;
 }
@@ -195,13 +182,10 @@ function bubble(
 ) {
   const relation = objectParent.get(target);
   if (!relation) return;
-
   const { parent, key } = relation;
   const parentMeta = objectMeta.get(parent);
   if (!parentMeta) return;
-
   evaluateKey(parent, key);
-
   const hashes = parentMeta.reverseIndex.get(key);
   if (hashes) {
     for (const hash of hashes) {
@@ -220,7 +204,6 @@ function bubble(
       }
     }
   }
-
   bubble(parent, property, newValue, oldValue);
 }
 
@@ -232,15 +215,11 @@ function onQueryChange<D extends DefinedObject>(
   const meta = getMeta(target);
   registerDefinition(meta, definition);
   query(target, definition);
-
   const hash = definition.__hash;
-
   if (!meta.listeners.has(hash)) {
     meta.listeners.set(hash, new Set());
   }
-
   meta.listeners.get(hash)!.add(handler);
-
   return () => {
     meta.listeners.get(hash)?.delete(handler);
   };
@@ -251,19 +230,15 @@ function createDeepProxy(
   parentRef?: { parent: Record<string, unknown>; key: string },
 ): unknown {
   if (!isObject(targetObject)) return targetObject;
-
   if (parentRef) {
     objectParent.set(targetObject, parentRef);
   }
-
   return new Proxy(targetObject, {
     get(object, property, receiver) {
       if (typeof property === "symbol") {
         return Reflect.get(object, property, receiver);
       }
-
       if (property === "__isProxy") return true;
-
       switch (property) {
         case "query":
           return <D extends DefinedObject>(definition: D) =>
@@ -274,7 +249,6 @@ function createDeepProxy(
             handler: (change: RawChange) => void,
           ) => onQueryChange(object, definition, handler);
       }
-
       if (property in object) {
         const val = object[property];
         if (!isObject(val)) return val;
@@ -286,25 +260,18 @@ function createDeepProxy(
         object[property] = proxy as Record<string, unknown>;
         return proxy;
       }
-
       return undefined;
     },
-
     set(object, property, value) {
       invariant(typeof property === "string");
-
       const oldValue = object[property];
-
       const wrapped = isObject(value)
         ? createDeepProxy(value, { parent: object, key: property })
         : value;
-
       object[property] = wrapped as Record<string, unknown>;
-
       const meta = objectMeta.get(object);
       if (meta) {
         evaluateKey(object, property);
-
         if (oldValue === undefined) {
           notify(meta, property, {
             type: "created",
@@ -321,22 +288,16 @@ function createDeepProxy(
             oldValue,
           });
         }
-
         bubble(object, property, value, oldValue);
       }
-
       return true;
     },
-
     deleteProperty(object, property) {
       invariant(typeof property === "string");
-
       const deletedObject = object[property];
-
       if (!Reflect.deleteProperty(object, property)) {
         return false;
       }
-
       const meta = objectMeta.get(object);
       if (meta) {
         removeKey(meta, property);
@@ -346,10 +307,8 @@ function createDeepProxy(
           deletedObject,
         });
       }
-
       return true;
     },
-
     has(object, property) {
       return Reflect.has(object, property);
     },
