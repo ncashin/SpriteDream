@@ -1,9 +1,11 @@
+import { useScene } from "../scene/useScene";
 import { cn } from "../utils/cn";
 import { ObjectDisplay } from "./ObjectDisplay";
 import { Searchbar } from "./Searchbar";
-import testData from "./test.json";
 
 export const Sidebar = () => {
+const scene = useScene();
+
   return (
     <div className="min-w-96 w-96 max-w-96 h-full pt-6   flex flex-col bg-dark-bg border border-dark-ui">
       <div className="pl-1.5 pb-4">
@@ -23,13 +25,13 @@ export const Sidebar = () => {
         className={cn(
           "overflow-x-auto h-full px-2 pb-8 text-sm",
           `
-      [&::-webkit-scrollbar]:h-1
-      [&::-webkit-scrollbar-track]:bg-dark-ui-2
-      [&::-webkit-scrollbar-thumb]:bg-light-ui-3
-  `,
+            [&::-webkit-scrollbar]:h-1
+            [&::-webkit-scrollbar-track]:bg-dark-ui-2
+            [&::-webkit-scrollbar-thumb]:bg-light-ui-3
+          `,
         )}
       >
-        <ObjectDisplay scene={testData} />
+        <ObjectDisplay scene={scene} />
       </div>
     </div>
   );

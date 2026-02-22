@@ -7,11 +7,17 @@ import {
 
 type ResolveType<T> = T extends TypeSymbol
   ? TypeSymbolMap[T]
-  : T extends (v: infer V) => boolean
-    ? V
-    : T extends Record<string, unknown>
-      ? { [K in keyof T]: ResolveType<T[K]> }
-      : T;
+  : T extends number
+    ? number
+    : T extends string
+      ? string
+      : T extends boolean
+        ? boolean
+        : T extends (v: infer V) => boolean
+          ? V
+          : T extends Record<string, unknown>
+            ? { [K in keyof T]: ResolveType<T[K]> }
+            : T;
 
 type ObjectDefinition = Record<string, unknown>;
 
@@ -20,19 +26,34 @@ export type DefinedObject = {
   __definition: ObjectDefinition;
 };
 
+type DefValueWithDefault =
+  | TypeSymbol
+  | number
+  | string
+  | boolean
+  | ((v: unknown) => boolean & { __default?: unknown });
+
 type RequiredKeys<D extends ObjectDefinition> = {
   [K in keyof D]: K extends `__${string}`
     ? never
-    : D[K] extends TypeSymbol
-      ? K
+    : D[K] extends DefValueWithDefault
+      ? D[K] extends number | string | boolean
+        ? never
+        : D[K] extends (v: unknown) => boolean
+          ? never
+          : K
       : never;
 }[keyof D];
 
 type OptionalKeys<D extends ObjectDefinition> = {
   [K in keyof D]: K extends `__${string}`
     ? never
-    : D[K] extends TypeSymbol
-      ? never
+    : D[K] extends DefValueWithDefault
+      ? D[K] extends number | string | boolean
+        ? K
+        : D[K] extends (v: unknown) => boolean
+          ? K
+          : never
       : K;
 }[keyof D];
 
@@ -73,7 +94,13 @@ function resolveValue(
       return (definitionValue as any).__default;
     }
     if (isMatchFunction(definitionValue)) return undefined;
-  
+    if (
+      typeof definitionValue === "number" ||
+      typeof definitionValue === "string" ||
+      typeof definitionValue === "boolean"
+    ) {
+      return definitionValue;
+    }
     return definitionValue;
   }
 
@@ -84,6 +111,16 @@ function matchesValue(definitionValue: unknown, instanceValue: unknown): boolean
 
   if (isMatchFunction(definitionValue)) {
     return definitionValue(instanceValue);
+  }
+
+  if (typeof definitionValue === "number") {
+    return instanceValue === undefined || typeof instanceValue === "number";
+  }
+  if (typeof definitionValue === "string") {
+    return instanceValue === undefined || typeof instanceValue === "string";
+  }
+  if (typeof definitionValue === "boolean") {
+    return instanceValue === undefined || typeof instanceValue === "boolean";
   }
 
   if (

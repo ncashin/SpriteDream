@@ -3,22 +3,22 @@ import "./root";
 
 import { getScene } from "./scene/scene";
 import { defineObject, instantiateObject, match } from "./scene/objectDefinition";
-import { $string, $number, $boolean } from "./scene/typeSymbol";
+import { $string, $number } from "./scene/typeSymbol";
 
 const ENTITY_COUNT = 1000;
-const LISTENER_COUNT = 1000;
+const LISTENER_COUNT = 2000;
 const MUTATION_ROUNDS = 10000;
 
 const DeepDef = defineObject({
-  type: match("entity"),
+  type: "entity",
   level: $number,
-  active: $boolean,
+  active: true,
   meta: {
     tag: $string,
-    score: $number,
+    score: 0,
     nested: {
       value: $number,
-      flag: $boolean,
+      flag: false,
     },
   },
 });

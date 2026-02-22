@@ -4,6 +4,7 @@ import type { Scene } from "../scene/scene";
 import { PropertyDisplay } from "./PropertyDisplay";
 import { IconButton } from "./IconButton";
 import { ObjectIcon } from "./ObjectIcon";
+import { cn } from "../utils/cn";
 
 export const ObjectDisplay = ({
   scene,
@@ -36,7 +37,7 @@ export const ObjectDisplay = ({
     );
   }
   return (
-    <div className="flex flex-col gap-0.5 w-full">
+    <div className="flex flex-col  w-full pb-0.5">
       <div
         className="flex flex-row justify-between items-center w-full hover:bg-dark-ui rounded-md p-internal-sidebar group cursor-pointer"
         onClick={() => {
@@ -61,7 +62,7 @@ export const ObjectDisplay = ({
       </div>
 
       {expanded && (
-        <div className="pl-5.5">
+        <div className="pl-5.5 flex flex-col ">
           {sceneEntries.map(([key, value]) =>
             value && typeof value === "object" ? (
               <ObjectDisplay
