@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
+import { cn } from "../utils/cn";
 
-export const Searchbar = () => {
+export const Searchbar = ({ className }: { className?: string }) => {
   const [search, setSearch] = useState("");
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <div
-      className={`flex items-center gap-1.5 px-2 py-1.5 hover:bg-dark-ui-2 cursor-pointer rounded-md p-internal-sidebar pb-2 fon-semibold ${
-        isFocused ? "bg-dark-ui-2" : ""
-      }`}
+      className={cn(
+        "flex items-center gap-1.5 px-2 py-1.5 hover:bg-dark-ui-2 cursor-pointer rounded-md p-internal-sidebar pb-2 fon-semibold",
+        isFocused && "bg-dark-ui-2",
+        className
+      )}
     >
       <Search size={16} strokeWidth={3} />
       <input
@@ -24,4 +27,3 @@ export const Searchbar = () => {
     </div>
   );
 }
-

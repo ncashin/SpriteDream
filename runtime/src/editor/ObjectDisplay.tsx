@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import type { Scene } from "../scene/scene";
 import { PropertyDisplay } from "./PropertyDisplay";
 import { IconButton } from "./IconButton";
+import { ObjectIcon } from "./ObjectIcon";
 
 export const ObjectDisplay = ({
   scene,
@@ -21,7 +22,12 @@ export const ObjectDisplay = ({
       <div>
         {sceneEntries.map(([key, value]) =>
           value && typeof value === "object" ? (
-            <ObjectDisplay scene={value as Scene} path={key} key={key} isDropdown={true} />
+            <ObjectDisplay
+              scene={value as Scene}
+              path={key}
+              key={key}
+              isDropdown={true}
+            />
           ) : (
             <PropertyDisplay entry={[key, value]} key={key} />
           ),
@@ -31,15 +37,14 @@ export const ObjectDisplay = ({
   }
   return (
     <div className="flex flex-col gap-0.5 w-full">
-      <button
+      <div
         className="flex flex-row justify-between items-center w-full hover:bg-dark-ui rounded-md p-internal-sidebar group cursor-pointer"
         onClick={() => {
           setExpanded(!expanded);
         }}
       >
         <div className="flex items-center gap-1.5">
-        <IconButton icon={Box} />
-
+          <ObjectIcon path={path} />
           <h1 className="font-bold">{path}</h1>
         </div>
         <div className="flex flex-row group-hover-visible">
@@ -53,13 +58,18 @@ export const ObjectDisplay = ({
             }}
           />
         </div>
-      </button>
+      </div>
 
       {expanded && (
         <div className="pl-5.5">
           {sceneEntries.map(([key, value]) =>
             value && typeof value === "object" ? (
-              <ObjectDisplay scene={value as Scene} path={key} key={key} isDropdown={true} />
+              <ObjectDisplay
+                scene={value as Scene}
+                path={key}
+                key={key}
+                isDropdown={true}
+              />
             ) : (
               <PropertyDisplay entry={[key, value]} key={key} />
             ),

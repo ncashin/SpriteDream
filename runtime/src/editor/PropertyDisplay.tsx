@@ -33,7 +33,7 @@ export const PropertyDisplay = ({ entry: [key, value] }: { entry: [string, unkno
     const type = value === null ? "object" : typeof value;
     const DisplayComponent = displayComponents[type];
     return (
-        <div className="flex flex-row items-center w-full group gap-2 p-internal-sidebar font-semibold text-light-ui-3">
+        <div className="flex flex-row items-center w-full group gap-2 p-internal-sidebar font-semibold text-dark-tx-2">
             <h2>{key}:</h2>
             <div className=" flex-1">
                 {DisplayComponent
