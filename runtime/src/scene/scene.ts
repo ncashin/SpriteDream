@@ -2,7 +2,7 @@ import invariant from "tiny-invariant";
 import {
   type DefinedObject,
   type Instance,
-  resolveDefinition,
+  matchesDefinition,
 } from "./objectDefinition";
 
 export type Scene = Record<string, unknown>;
@@ -11,61 +11,29 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-type Paths<T, Depth extends number[] = []> = Depth["length"] extends 4
-  ? never
-  : {
-      [K in keyof T & string]: T[K] extends Record<string, unknown>
-        ? K | `${K}.${Paths<T[K], [...Depth, 0]>}`
-        : K;
-    }[keyof T & string];
-
-type ValueAtPath<T, P extends string> = P extends `${infer K}.${infer Rest}`
-  ? K extends keyof T
-    ? ValueAtPath<T[K], Rest>
-    : unknown
-  : P extends keyof T
-  ? T[P]
-  : unknown;
-
-export type ChangeCreated<T> = {
-  type: "created";
-  path: string;
-  value: T;
-};
-
-export type ChangeDestroyed<T> = {
-  type: "destroyed";
-  path: string;
-  previous: T;
-};
-
-export type ChangePropertyUpdated<T> = {
-  [P in Paths<T>]: {
-    type: "propertyUpdated";
-    path: string;
-    value: T;
-    property: P;
-    propertyValue: ValueAtPath<T, P>;
-    previousPropertyValue: ValueAtPath<T, P>;
-  };
-}[Paths<T>];
-
-export type Change<T> =
-  | ChangeCreated<T>
-  | ChangeDestroyed<T>
-  | ChangePropertyUpdated<T>;
-
-export type QueryChangeHandler<T> = (change: Change<T>) => void;
+type RawChange =
+  | { type: "created"; path: string; object: unknown }
+  | { type: "destroyed"; path: string; deletedObject: unknown }
+  | {
+      type: "propertyUpdated";
+      path: string;
+      containingObject: unknown;
+      property: string;
+      newValue: unknown;
+      oldValue: unknown;
+    };
 
 interface ObjectMeta {
   forwardIndex: Map<string, Set<string>>;
   reverseIndex: Map<string, Set<string>>;
   results: Map<string, Record<string, unknown>>;
-  listeners: Map<string, Set<QueryChangeHandler<unknown>>>;
+  listeners: Map<string, Set<(change: RawChange) => void>>;
+  definitions: Map<string, DefinedObject>;
+  indexed: Set<string>;
 }
 
 const objectMeta = new WeakMap<Record<string, unknown>, ObjectMeta>();
-const objectParent = new WeakMap
+const objectParent = new WeakMap<
   Record<string, unknown>,
   { parent: Record<string, unknown>; key: string }
 >();
@@ -78,6 +46,8 @@ function getMeta(target: Record<string, unknown>): ObjectMeta {
       reverseIndex: new Map(),
       results: new Map(),
       listeners: new Map(),
+      definitions: new Map(),
+      indexed: new Set(),
     };
     objectMeta.set(target, meta);
   }
@@ -96,76 +66,74 @@ function getPath(target: Record<string, unknown>, key: string): string {
   return parts.join(".");
 }
 
-function indexObject(
-  target: Record<string, unknown>,
-  key: string,
-  hash: string,
-): void {
-  const { forwardIndex, reverseIndex } = getMeta(target);
-  if (!forwardIndex.has(hash)) forwardIndex.set(hash, new Set());
-  forwardIndex.get(hash)!.add(key);
-  if (!reverseIndex.has(key)) reverseIndex.set(key, new Set());
-  reverseIndex.get(key)!.add(hash);
-}
-
-function invalidateResults(meta: ObjectMeta, key: string): void {
-  const hashes = meta.reverseIndex.get(key);
-  if (!hashes) return;
-  for (const hash of hashes) meta.results.delete(hash);
-}
-
-function notifyListeners(
+function registerDefinition(
   meta: ObjectMeta,
-  hash: string,
-  change: Change<unknown>,
-): void {
-  const handlers = meta.listeners.get(hash);
-  if (!handlers) return;
-  for (const handler of handlers) handler(change);
+  definition: DefinedObject,
+) {
+  if (!meta.definitions.has(definition.__hash)) {
+    meta.definitions.set(definition.__hash, definition);
+    meta.forwardIndex.set(definition.__hash, new Set());
+  }
 }
 
-function emitForKey(
+function fullIndex(
   target: Record<string, unknown>,
-  meta: ObjectMeta,
-  key: string,
-  change: Change<unknown>,
-): void {
-  const hashes = meta.reverseIndex.get(key);
-  if (!hashes) return;
-  invalidateResults(meta, key);
-  for (const hash of hashes) notifyListeners(meta, hash, change);
-}
+  definition: DefinedObject,
+) {
+  const meta = getMeta(target);
+  const hash = definition.__hash;
 
-function bubbleToParent(
-  target: Record<string, unknown>,
-  property: string,
-  propertyValue: unknown,
-  previousPropertyValue: unknown,
-): void {
-  const relation = objectParent.get(target);
-  if (!relation) return;
-
-  const { parent, key: parentKey } = relation;
-  const parentMeta = objectMeta.get(parent);
-  if (!parentMeta) return;
-
-  const hashes = parentMeta.reverseIndex.get(parentKey);
-  if (hashes) {
-    invalidateResults(parentMeta, parentKey);
-    const value = parent[parentKey];
-    const path = getPath(parent, parentKey);
-    const change: Change<unknown> = {
-      type: "propertyUpdated",
-      path,
-      value,
-      property,
-      propertyValue,
-      previousPropertyValue,
-    };
-    for (const hash of hashes) notifyListeners(parentMeta, hash, change);
+  for (const key of Object.keys(target)) {
+    if (matchesDefinition(definition, target[key])) {
+      meta.forwardIndex.get(hash)!.add(key);
+      if (!meta.reverseIndex.has(key)) {
+        meta.reverseIndex.set(key, new Set());
+      }
+      meta.reverseIndex.get(key)!.add(hash);
+    }
   }
 
-  bubbleToParent(parent, property, propertyValue, previousPropertyValue);
+  meta.indexed.add(hash);
+}
+
+function evaluateKey(
+  target: Record<string, unknown>,
+  key: string,
+) {
+  const meta = getMeta(target);
+  const value = target[key];
+
+  for (const [hash, definition] of meta.definitions) {
+    if (!meta.indexed.has(hash)) continue;
+
+    const matches = matchesDefinition(definition, value);
+    const indexed = meta.reverseIndex.get(key)?.has(hash);
+
+    if (matches && !indexed) {
+      meta.forwardIndex.get(hash)!.add(key);
+      if (!meta.reverseIndex.has(key)) {
+        meta.reverseIndex.set(key, new Set());
+      }
+      meta.reverseIndex.get(key)!.add(hash);
+      meta.results.delete(hash);
+    }
+
+    if (!matches && indexed) {
+      meta.forwardIndex.get(hash)?.delete(key);
+      meta.reverseIndex.get(key)?.delete(hash);
+      meta.results.delete(hash);
+    }
+  }
+}
+
+function removeKey(meta: ObjectMeta, key: string) {
+  const hashes = meta.reverseIndex.get(key);
+  if (!hashes) return;
+  for (const hash of hashes) {
+    meta.forwardIndex.get(hash)?.delete(key);
+    meta.results.delete(hash);
+  }
+  meta.reverseIndex.delete(key);
 }
 
 function query<D extends DefinedObject>(
@@ -173,55 +141,109 @@ function query<D extends DefinedObject>(
   definition: D,
 ): Record<string, Instance<D["__definition"]>> {
   const meta = getMeta(target);
-  const cached = meta.results.get(definition.__hash);
-  if (cached) return cached as Record<string, Instance<D["__definition"]>>;
+  registerDefinition(meta, definition);
 
-  const keys = meta.forwardIndex.get(definition.__hash);
-  if (!keys) return {};
+  const hash = definition.__hash;
 
-  const result: Record<string, Instance<D["__definition"]>> = {};
-  for (const key of keys) {
-    if (key in target) result[key] = target[key] as Instance<D["__definition"]>;
+  if (!meta.indexed.has(hash)) {
+    fullIndex(target, definition);
   }
 
-  meta.results.set(definition.__hash, result);
+  const cached = meta.results.get(hash);
+  if (cached) {
+    return cached as Record<string, Instance<D["__definition"]>>;
+  }
+
+  const result: Record<string, Instance<D["__definition"]>> = {};
+  const keys = meta.forwardIndex.get(hash);
+
+  if (keys) {
+    for (const key of keys) {
+      if (key in target) {
+        result[key] =
+          target[key] as Instance<D["__definition"]>;
+      }
+    }
+  }
+
+  meta.results.set(hash, result);
   return result;
+}
+
+function notify(
+  meta: ObjectMeta,
+  key: string,
+  change: RawChange,
+) {
+  const hashes = meta.reverseIndex.get(key);
+  if (!hashes) return;
+  for (const hash of hashes) {
+    meta.results.delete(hash);
+    const handlers = meta.listeners.get(hash);
+    if (!handlers) continue;
+    for (const handler of handlers) {
+      handler(change);
+    }
+  }
+}
+
+function bubble(
+  target: Record<string, unknown>,
+  property: string,
+  newValue: unknown,
+  oldValue: unknown,
+) {
+  const relation = objectParent.get(target);
+  if (!relation) return;
+
+  const { parent, key } = relation;
+  const parentMeta = objectMeta.get(parent);
+  if (!parentMeta) return;
+
+  evaluateKey(parent, key);
+
+  const hashes = parentMeta.reverseIndex.get(key);
+  if (hashes) {
+    for (const hash of hashes) {
+      parentMeta.results.delete(hash);
+      const handlers = parentMeta.listeners.get(hash);
+      if (!handlers) continue;
+      for (const handler of handlers) {
+        handler({
+          type: "propertyUpdated",
+          path: getPath(parent, key),
+          containingObject: parent[key],
+          property,
+          newValue,
+          oldValue,
+        });
+      }
+    }
+  }
+
+  bubble(parent, property, newValue, oldValue);
 }
 
 function onQueryChange<D extends DefinedObject>(
   target: Record<string, unknown>,
   definition: D,
-  handler: QueryChangeHandler<Instance<D["__definition"]>>,
+  handler: (change: RawChange) => void,
 ): () => void {
   const meta = getMeta(target);
-  let handlers = meta.listeners.get(definition.__hash);
-  if (!handlers) {
-    handlers = new Set();
-    meta.listeners.set(definition.__hash, handlers);
+  registerDefinition(meta, definition);
+  query(target, definition);
+
+  const hash = definition.__hash;
+
+  if (!meta.listeners.has(hash)) {
+    meta.listeners.set(hash, new Set());
   }
-  handlers.add(handler as QueryChangeHandler<unknown>);
+
+  meta.listeners.get(hash)!.add(handler);
 
   return () => {
-    meta.listeners
-      .get(definition.__hash)
-      ?.delete(handler as QueryChangeHandler<unknown>);
+    meta.listeners.get(hash)?.delete(handler);
   };
-}
-
-function createObject<D extends DefinedObject>(
-  target: Record<string, unknown>,
-  key: string,
-  definition: D,
-  values: Record<string, unknown>,
-): Instance<D["__definition"]> {
-  const instance = resolveDefinition(definition, values);
-  target[key] = instance;
-  indexObject(target, key, definition.__hash);
-  const meta = getMeta(target);
-  invalidateResults(meta, key);
-  const path = getPath(target, key);
-  emitForKey(target, meta, key, { type: "created", path, value: instance });
-  return instance as Instance<D["__definition"]>;
 }
 
 function createDeepProxy(
@@ -229,81 +251,102 @@ function createDeepProxy(
   parentRef?: { parent: Record<string, unknown>; key: string },
 ): unknown {
   if (!isObject(targetObject)) return targetObject;
-  if (parentRef) objectParent.set(targetObject, parentRef);
+
+  if (parentRef) {
+    objectParent.set(targetObject, parentRef);
+  }
 
   return new Proxy(targetObject, {
     get(object, property, receiver) {
-      if (typeof property === "symbol")
+      if (typeof property === "symbol") {
         return Reflect.get(object, property, receiver);
+      }
+
       if (property === "__isProxy") return true;
 
       switch (property) {
         case "query":
           return <D extends DefinedObject>(definition: D) =>
-            query<D>(object, definition);
+            query(object, definition);
         case "onQueryChange":
           return <D extends DefinedObject>(
             definition: D,
-            handler: QueryChangeHandler<Instance<D["__definition"]>>,
-          ) => onQueryChange<D>(object, definition, handler);
-        case "createObject":
-          return <D extends DefinedObject>(
-            key: string,
-            definition: D,
-            values: Record<string, unknown>,
-          ) => createObject<D>(object, key, definition, values);
+            handler: (change: RawChange) => void,
+          ) => onQueryChange(object, definition, handler);
       }
 
       if (property in object) {
         const val = object[property];
         if (!isObject(val)) return val;
         if ((val as Record<string, unknown>).__isProxy) return val;
-        const proxy = createDeepProxy(val, { parent: object, key: property });
+        const proxy = createDeepProxy(val, {
+          parent: object,
+          key: property as string,
+        });
         object[property] = proxy as Record<string, unknown>;
         return proxy;
       }
 
-      const empty: Record<string, unknown> = {};
-      object[property] = empty;
-      return createDeepProxy(empty, { parent: object, key: property });
+      return undefined;
     },
 
     set(object, property, value) {
       invariant(typeof property === "string");
-      const previous = object[property];
+
+      const oldValue = object[property];
+
       const wrapped = isObject(value)
         ? createDeepProxy(value, { parent: object, key: property })
         : value;
+
       object[property] = wrapped as Record<string, unknown>;
+
       const meta = objectMeta.get(object);
       if (meta) {
-        const path = getPath(object, property);
-        emitForKey(object, meta, property, {
-          type: "propertyUpdated",
-          path,
-          value: wrapped,
-          property,
-          propertyValue: value,
-          previousPropertyValue: previous,
-        });
-        bubbleToParent(object, property, value, previous);
+        evaluateKey(object, property);
+
+        if (oldValue === undefined) {
+          notify(meta, property, {
+            type: "created",
+            path: getPath(object, property),
+            object: value,
+          });
+        } else {
+          notify(meta, property, {
+            type: "propertyUpdated",
+            path: getPath(object, property),
+            containingObject: object,
+            property,
+            newValue: value,
+            oldValue,
+          });
+        }
+
+        bubble(object, property, value, oldValue);
       }
+
       return true;
     },
 
     deleteProperty(object, property) {
       invariant(typeof property === "string");
-      const previous = object[property];
-      if (!Reflect.deleteProperty(object, property)) return false;
+
+      const deletedObject = object[property];
+
+      if (!Reflect.deleteProperty(object, property)) {
+        return false;
+      }
+
       const meta = objectMeta.get(object);
       if (meta) {
-        const path = getPath(object, property);
-        emitForKey(object, meta, property, {
+        removeKey(meta, property);
+        notify(meta, property, {
           type: "destroyed",
-          path,
-          previous,
+          path: getPath(object, property),
+          deletedObject,
         });
       }
+
       return true;
     },
 

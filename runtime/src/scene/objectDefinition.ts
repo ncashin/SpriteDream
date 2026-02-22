@@ -1,4 +1,4 @@
-import hashObject from "hash-object";
+import hashObject from "object-hash";
 import {
   type TypeSymbol,
   type TypeSymbolMap,
@@ -44,35 +44,86 @@ export type Instance<D extends ObjectDefinition> = {
   [K in Exclude<keyof D, `__${string}`>]: ResolveType<D[K]>;
 };
 
-
 function isMatchFunction(value: unknown): value is (v: unknown) => boolean {
   return typeof value === "function";
 }
 
 function resolveValue(
-  definitionValue: unknown,
-  instanceValue: unknown,
-): unknown {
+    definitionValue: unknown,
+    instanceValue: unknown,
+  ): unknown {
+    if (
+      definitionValue !== null &&
+      typeof definitionValue === "object" &&
+      !Array.isArray(definitionValue)
+    ) {
+      const nested = definitionValue as Record<string, unknown>;
+      const nestedOverrides = (instanceValue ?? {}) as Record<string, unknown>;
+      return Object.fromEntries(
+        Object.entries(nested).map(([k, v]) => [
+          k,
+          resolveValue(v, nestedOverrides[k]),
+        ]),
+      );
+    }
+  
+    if (instanceValue !== undefined) return instanceValue;
+    if (isTypeSymbol(definitionValue)) return undefined;
+    if (typeof definitionValue === "function" && "__default" in definitionValue) {
+      return (definitionValue as any).__default;
+    }
+    if (isMatchFunction(definitionValue)) return undefined;
+  
+    return definitionValue;
+  }
+
+function matchesValue(definitionValue: unknown, instanceValue: unknown): boolean {
+  if (isTypeSymbol(definitionValue)) {
+    return true;
+  }
+
+  if (isMatchFunction(definitionValue)) {
+    return definitionValue(instanceValue);
+  }
+
   if (
     definitionValue !== null &&
     typeof definitionValue === "object" &&
     !Array.isArray(definitionValue)
   ) {
+    if (
+      instanceValue === null ||
+      typeof instanceValue !== "object" ||
+      Array.isArray(instanceValue)
+    ) {
+      return false;
+    }
     const nested = definitionValue as Record<string, unknown>;
-    const nestedOverrides = (instanceValue ?? {}) as Record<string, unknown>;
-    return Object.fromEntries(
-      Object.entries(nested).map(([k, v]) => [
-        k,
-        resolveValue(v, nestedOverrides[k]),
-      ]),
+    const instanceObj = instanceValue as Record<string, unknown>;
+    return Object.entries(nested).every(([k, v]) =>
+      matchesValue(v, instanceObj[k]),
     );
   }
 
-  if (instanceValue !== undefined) return instanceValue;
-  if (isTypeSymbol(definitionValue)) return undefined;
-  if (isMatchFunction(definitionValue)) return definitionValue;
+  return instanceValue === definitionValue;
+}
 
-  return definitionValue;
+export function matchesDefinition<D extends ObjectDefinition>(
+  definition: DefinedObject & { __definition: D },
+  value: unknown,
+): value is Instance<D> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+
+  for (const [key, defValue] of Object.entries(definition.__definition)) {
+    if (key.startsWith("__")) continue;
+    if (!matchesValue(defValue, obj[key])) return false;
+  }
+
+  return true;
 }
 
 export function resolveDefinition<D extends ObjectDefinition>(
@@ -89,6 +140,7 @@ export function resolveDefinition<D extends ObjectDefinition>(
 
   return result as Instance<D>;
 }
+
 export function defineObject(
   definition: ObjectDefinition,
 ): DefinedObject & { __definition: typeof definition } {
@@ -99,8 +151,10 @@ export function defineObject(
 }
 
 export function match<T>(value: T) {
-  return (comparisonValue: T) => value === comparisonValue;
-}
+    const fn = (comparisonValue: T) => value === comparisonValue;
+    (fn as any).__default = value;
+    return fn;
+  }
 
 export function instantiateObject<D extends ObjectDefinition>(
   definition: DefinedObject & { __definition: D },
