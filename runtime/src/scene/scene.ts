@@ -318,4 +318,4 @@ function createDeepProxy(
 const sceneObject: Scene = {};
 const scene = createDeepProxy(sceneObject);
 
-export const getScene = () => scene;
+export const getScene = () => scene as any;

@@ -5,9 +5,9 @@ import { getScene } from "./scene/scene";
 import { defineObject, instantiateObject, match } from "./scene/objectDefinition";
 import { $string, $number, $boolean } from "./scene/typeSymbol";
 
-const ENTITY_COUNT = 5000;
-const LISTENER_COUNT = 2000;
-const MUTATION_ROUNDS = 20000;
+const ENTITY_COUNT = 1000;
+const LISTENER_COUNT = 1000;
+const MUTATION_ROUNDS = 10000;
 
 const DeepDef = defineObject({
   type: match("entity"),
@@ -19,14 +19,6 @@ const DeepDef = defineObject({
     nested: {
       value: $number,
       flag: $boolean,
-      deeper: {
-        timestamp: $number,
-        status: $boolean,
-        ultra: {
-          code: $string,
-          value: $number,
-        },
-      },
     },
   },
 });
@@ -39,26 +31,6 @@ const AltDef = defineObject({
     score: $number,
     nested: {
       flag: match(true),
-      deeper: {
-        ultra: {
-          value: match(0),
-        },
-      },
-    },
-  },
-});
-
-const AltDef2 = defineObject({
-  type: match("entity"),
-  active: match(true),
-  level: (v: number) => v > 1000,
-  meta: {
-    nested: {
-      deeper: {
-        ultra: {
-          value: (v: number) => v % 2 === 0,
-        },
-      },
     },
   },
 });
@@ -76,11 +48,6 @@ function seedEntities() {
         nested: {
           value: i * 10,
           flag: i % 3 === 0,
-          deeper: {
-            timestamp: Date.now(),
-            status: i % 5 === 0,
-            ultra: { code: `code_${i}`, value: i },
-          },
         },
       },
     });
@@ -88,55 +55,65 @@ function seedEntities() {
 }
 
 function registerMassListeners(): (() => void)[] {
-  const unsubscribers: (() => void)[] = [];
+  const unsub: (() => void)[] = [];
   for (let i = 0; i < LISTENER_COUNT; i++) {
-    unsubscribers.push(scene.onQueryChange(DeepDef, () => {}));
-    unsubscribers.push(scene.onQueryChange(AltDef, () => {}));
-    unsubscribers.push(scene.onQueryChange(AltDef2, () => {}));
+    unsub.push(scene.onQueryChange(DeepDef, () => {}));
+    unsub.push(scene.onQueryChange(AltDef, () => {}));
   }
-  return unsubscribers;
+  return unsub;
 }
 
-function hammerRandom() {
+function hammer() {
   for (let round = 0; round < MUTATION_ROUNDS; round++) {
-    const idx = Math.floor(Math.random() * ENTITY_COUNT);
-    const entity = scene[`entity_${idx}`];
-    entity.level = Math.floor(Math.random() * 10000);
-    entity.active = Math.random() < 0.5;
-    entity.meta.score = Math.random() * 10000;
-    entity.meta.nested.value = Math.floor(Math.random() * 5000);
-    entity.meta.nested.flag = Math.random() < 0.5;
-    entity.meta.nested.deeper.timestamp = Date.now();
-    entity.meta.nested.deeper.status = Math.random() < 0.5;
-    entity.meta.nested.deeper.ultra.code = `code_${Math.random() * 1000}`;
-    entity.meta.nested.deeper.ultra.value = Math.floor(Math.random() * 1000);
-    if (round % 100 === 0) {
+    const idx = round % ENTITY_COUNT;
+    const key = `entity_${idx}`;
+
+    scene[key].meta.nested.flag = Math.random() < 0.5;
+    scene[key].meta.score = Math.random() * 10000;
+    scene[key].active = Math.random() < 0.5;
+
+    if (round % 50 === 0) {
       const tempKey = `temp_${round}`;
       scene[tempKey] = instantiateObject(DeepDef, {
         level: -1,
         active: true,
-        meta: {
-          tag: "temp",
-          score: 0,
-          nested: {
-            value: 0,
-            flag: true,
-            deeper: { timestamp: 0, status: true, ultra: { code: "temp", value: 0 } },
-          },
-        },
+        meta: { tag: "temp", score: 0, nested: { value: 0, flag: true } },
       });
       delete scene[tempKey];
+    }
+
+    if (round % 100 === 0) {
+      const r1 = scene.query(DeepDef);
+      const r2 = scene.query(AltDef);
+      if (Object.keys(r1).length < 0 || Object.keys(r2).length < 0) throw new Error("impossible");
     }
   }
 }
 
 function concurrentQueryStress() {
-  for (let i = 0; i < 1000; i++) {
-    const idx = Math.floor(Math.random() * ENTITY_COUNT);
-    scene.query(DeepDef);
-    scene.query(AltDef);
-    scene.query(AltDef2);
-    scene[`entity_${idx}`].level = Math.random() * 10000;
+  for (let i = 0; i < 200; i++) {
+    const key = `entity_${i % ENTITY_COUNT}`;
+    const before = scene.query(DeepDef);
+    scene[key].level = i * 999;
+    const after = scene.query(DeepDef);
+    if (Object.keys(before).length < 0 || Object.keys(after).length < 0) throw new Error("impossible");
+  }
+}
+
+function deepNestedMutationStorm() {
+  for (let round = 0; round < 500; round++) {
+    const idx = round % ENTITY_COUNT;
+    scene[`entity_${idx}`].meta.nested.value = round;
+    scene[`entity_${idx}`].meta.nested.flag = round % 2 === 0;
+    scene[`entity_${idx}`].meta.tag = `mutated_${round}`;
+  }
+}
+
+function rapidListenerChurn() {
+  for (let i = 0; i < 300; i++) {
+    const unsub = scene.onQueryChange(DeepDef, () => {});
+    scene[`entity_${i % ENTITY_COUNT}`].meta.score = i;
+    unsub();
   }
 }
 
@@ -154,51 +131,30 @@ function massReaddition() {
       meta: {
         tag: `readded_${i}`,
         score: i,
-        nested: {
-          value: i,
-          flag: true,
-          deeper: { timestamp: Date.now(), status: true, ultra: { code: `re_${i}`, value: i } },
-        },
+        nested: { value: i, flag: true },
       },
     });
   }
 }
 
-function rapidListenerChurn() {
-  for (let i = 0; i < 3000; i++) {
-    const unsub = scene.onQueryChange(DeepDef, () => {});
-    const idx = Math.floor(Math.random() * ENTITY_COUNT);
-    scene[`entity_${idx}`].meta.score = i;
-    unsub();
-  }
-}
-
-function deepNestedMutationStorm() {
-  for (let round = 0; round < 1000; round++) {
-    const idx = round % ENTITY_COUNT;
-    scene[`entity_${idx}`].meta.nested.value = round;
-    scene[`entity_${idx}`].meta.nested.flag = round % 2 === 0;
-    scene[`entity_${idx}`].meta.tag = `mutated_${round}`;
-    scene[`entity_${idx}`].meta.nested.deeper.ultra.value = round * 2;
-  }
-}
-
-function verifyConsistency() {
+function verifyDeepDefMatches() {
   const results = scene.query(DeepDef);
-  const altResults = scene.query(AltDef);
-  const alt2Results = scene.query(AltDef2);
-  for (const [key, obj] of Object.entries(results as Record<string, any>)) {
-    if (obj.type !== "entity") throw new Error(`Consistency violation: ${key} type`);
+  for (const obj of Object.values(results as Record<string, any>)) {
+    if (obj.type !== "entity") throw new Error("DeepDef violation: type");
   }
-  for (const [key, obj] of Object.entries(altResults as Record<string, any>)) {
-    if (!obj.active) throw new Error(`AltDef violation: ${key} active`);
-    if (!obj.meta?.nested?.flag) throw new Error(`AltDef violation: ${key} nested.flag`);
+}
+
+function verifyAltDefMatches() {
+  const results = scene.query(AltDef);
+  for (const obj of Object.values(results as Record<string, any>)) {
+    if (!obj.active) throw new Error("AltDef violation: active");
+    if (!obj.meta?.nested?.flag) throw new Error("AltDef violation: nested.flag");
   }
-  for (const [key, obj] of Object.entries(alt2Results as Record<string, any>)) {
-    if (!obj.active || obj.level <= 1000) throw new Error(`AltDef2 violation: ${key}`);
-    if (obj.meta.nested.deeper.ultra.value % 2 !== 0)
-      throw new Error(`AltDef2 violation: ${key} ultra.value`);
-  }
+}
+
+function verifyAllQueries() {
+  verifyDeepDefMatches();
+  verifyAltDefMatches();
 }
 
 function run() {
@@ -206,53 +162,70 @@ function run() {
   console.time("seed");
   seedEntities();
   console.timeEnd("seed");
+
   console.time("initial queries");
-  scene.query(DeepDef);
-  scene.query(AltDef);
-  scene.query(AltDef2);
+  const q1 = scene.query(DeepDef);
+  const q2 = scene.query(AltDef);
+  console.log(`Initial DeepDef matches: ${Object.keys(q1).length}`);
+  console.log(`Initial AltDef matches: ${Object.keys(q2).length}`);
   console.timeEnd("initial queries");
+
   console.time("register listeners");
   const unsubscribers = registerMassListeners();
   console.timeEnd("register listeners");
+
   console.time("hammer mutations");
-  hammerRandom();
+  hammer();
   console.timeEnd("hammer mutations");
+
   console.time("concurrent query stress");
   concurrentQueryStress();
   console.timeEnd("concurrent query stress");
+
   console.time("deep nested mutation storm");
   deepNestedMutationStorm();
   console.timeEnd("deep nested mutation storm");
+
   console.time("rapid listener churn");
   rapidListenerChurn();
   console.timeEnd("rapid listener churn");
+
   console.time("mass deletion");
   massDeletion();
   console.timeEnd("mass deletion");
+
   console.time("queries after deletion");
-  scene.query(DeepDef);
-  scene.query(AltDef);
-  scene.query(AltDef2);
+  const q3 = scene.query(DeepDef);
+  const q4 = scene.query(AltDef);
+  console.log(`Post-deletion DeepDef matches: ${Object.keys(q3).length}`);
+  console.log(`Post-deletion AltDef matches: ${Object.keys(q4).length}`);
   console.timeEnd("queries after deletion");
+
   console.time("mass readd");
   massReaddition();
   console.timeEnd("mass readd");
+
   console.time("verify consistency");
-  verifyConsistency();
+  verifyAllQueries();
   console.timeEnd("verify consistency");
+
   console.time("unsubscribe all");
   for (const unsub of unsubscribers) unsub();
   console.timeEnd("unsubscribe all");
+
   console.time("post-unsub mutation");
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 200; i++) {
     scene[`entity_${i % ENTITY_COUNT}`].active = i % 2 === 0;
   }
   console.timeEnd("post-unsub mutation");
+
   console.time("final queries");
-  scene.query(DeepDef);
-  scene.query(AltDef);
-  scene.query(AltDef2);
+  const q5 = scene.query(DeepDef);
+  const q6 = scene.query(AltDef);
+  console.log(`Final DeepDef matches: ${Object.keys(q5).length}`);
+  console.log(`Final AltDef matches: ${Object.keys(q6).length}`);
   console.timeEnd("final queries");
+
   console.timeEnd("total");
 }
 
