@@ -1,6 +1,6 @@
 import { defineObject } from "../scene/objectDefinition";
 
-export const transform2DDefinition = defineObject({
+export const Transform2DDefinition = defineObject({
   transform2D: {
     x: 0,
     y: 0,

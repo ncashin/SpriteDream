@@ -2,10 +2,10 @@ import { Application, Assets, Sprite } from "pixi.js";
 
 import { defineObject, type Instance } from "../scene/objectDefinition";
 import type { SceneWithAPI } from "../scene/scene";
-import { transform2DDefinition } from "./transform2D";
+import { Transform2DDefinition } from "./transform2D";
 
-export const spriteDefinition = defineObject([
-  transform2DDefinition,
+export const SpriteDefinition = defineObject([
+  Transform2DDefinition,
   {
     sprite: {
       image: "",
@@ -15,7 +15,7 @@ export const spriteDefinition = defineObject([
   },
 ]);
 
-export type SpriteInstance = Instance<typeof spriteDefinition>;
+export type SpriteInstance = Instance<typeof SpriteDefinition>;
 
 const spriteRecord: Record<string, Sprite> = {};
 
@@ -48,7 +48,7 @@ export function handleSprites(
   pixiAppReady: Promise<Application>,
   scene: SceneWithAPI,
 ): void {
-  scene.onQueryChange(spriteDefinition, async (change) => {
+  scene.onQueryChange(SpriteDefinition, async (change) => {
     const application = await pixiAppReady;
     const path = change.path;
 
@@ -63,7 +63,7 @@ export function handleSprites(
     }
 
     if (change.type === "created") {
-      const sprites = scene.query(spriteDefinition);
+      const sprites = scene.query(SpriteDefinition);
       const object = sprites[path];
       if (object) await synchronizeSprite(application, path, object);
       return;
