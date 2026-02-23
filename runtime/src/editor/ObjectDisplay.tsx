@@ -1,22 +1,29 @@
-import { Box, ChevronRight, Plus, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronRight, Plus, X } from "lucide-react";
+import { useState } from "react";
 import type { Scene } from "../scene/scene";
 import { PropertyDisplay } from "./PropertyDisplay";
 import { IconButton } from "./IconButton";
 import { ObjectIcon } from "./ObjectIcon";
-import { cn } from "../utils/cn";
+
+/** Full path from scene root (e.g. "typescriptLogo.transform2D.x"). */
+export type ScenePath = string;
 
 export const ObjectDisplay = ({
   scene,
   path = "Scene",
   isDropdown = false,
+  onChange,
 }: {
   scene: Scene;
   path?: string;
   isDropdown?: boolean;
+  onChange?: (path: ScenePath, value: unknown) => void;
 }) => {
   const [expanded, setExpanded] = useState(false);
-  const sceneEntries = useMemo(() => Object.entries(scene), [scene]);
+  const sceneEntries = Object.entries(scene);
+
+  const fullPathFor = (key: string) =>
+    path === "Scene" ? key : `${path}.${key}`;
 
   if (!isDropdown) {
     return (
@@ -28,16 +35,25 @@ export const ObjectDisplay = ({
               path={key}
               key={key}
               isDropdown={true}
+              onChange={onChange}
             />
           ) : (
-            <PropertyDisplay entry={[key, value]} key={key} />
+            <PropertyDisplay
+              entry={[key, value]}
+              key={fullPathFor(key)}
+              onChange={
+                onChange
+                  ? (newValue: unknown) => onChange(fullPathFor(key), newValue)
+                  : undefined
+              }
+            />
           ),
         )}
       </div>
     );
   }
   return (
-    <div className="flex flex-col  w-full pb-0.5">
+    <div className="flex flex-col  w-full py-0.5">
       <div
         className="flex flex-row justify-between items-center w-full hover:bg-dark-ui rounded-md p-internal-sidebar group cursor-pointer"
         onClick={() => {
@@ -46,7 +62,7 @@ export const ObjectDisplay = ({
       >
         <div className="flex items-center gap-1.5">
           <ObjectIcon path={path} />
-          <h1 className="font-bold">{path}</h1>
+          <h1 className="font-bold">{path.split(".").pop() ?? path}</h1>
         </div>
         <div className="flex flex-row group-hover-visible">
           <IconButton icon={Plus} />
@@ -67,12 +83,21 @@ export const ObjectDisplay = ({
             value && typeof value === "object" ? (
               <ObjectDisplay
                 scene={value as Scene}
-                path={key}
+                path={fullPathFor(key)}
                 key={key}
                 isDropdown={true}
+                onChange={onChange}
               />
             ) : (
-              <PropertyDisplay entry={[key, value]} key={key} />
+              <PropertyDisplay
+                entry={[key, value]}
+                key={fullPathFor(key)}
+                onChange={
+                  onChange
+                    ? (newValue: unknown) => onChange(fullPathFor(key), newValue)
+                    : undefined
+                }
+              />
             ),
           )}
         </div>

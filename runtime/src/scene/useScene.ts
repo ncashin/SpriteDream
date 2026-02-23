@@ -1,14 +1,24 @@
 import { useSyncExternalStore } from "react";
 import { getScene } from "./scene";
 
-export function useScene() {
-  const scene = getScene();
+let cachedSnapshot: { scene: ReturnType<typeof getScene>; version: number } = {
+  scene: getScene(),
+  version: 0,
+};
 
+export function useScene() {
   const subscribe = (callback: () => void) => {
-    return scene.subscribe(() => callback());
+    return getScene().subscribe(() => {
+      cachedSnapshot = {
+        scene: getScene(),
+        version: cachedSnapshot.version + 1,
+      };
+      callback();
+    });
   };
 
-  const getSnapshot = () => getScene();
+  const getSnapshot = () => cachedSnapshot;
 
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return snapshot.scene;
 }

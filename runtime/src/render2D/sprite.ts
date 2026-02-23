@@ -52,6 +52,7 @@ export function handleSprites(
     const application = await pixiAppReady;
     const path = change.path;
 
+    console.log("CHANGE: ", change)
     if (change.type === "destroyed") {
       const pixiSprite = spriteRecord[path];
       if (pixiSprite) {

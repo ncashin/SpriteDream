@@ -1,10 +1,11 @@
 import { useScene } from "../scene/useScene";
 import { cn } from "../utils/cn";
 import { ObjectDisplay } from "./ObjectDisplay";
+import { setAtPath } from "./scenePath";
 import { Searchbar } from "./Searchbar";
 
 export const Sidebar = () => {
-const scene = useScene();
+  const scene = useScene();
 
   return (
     <div className="min-w-96 w-96 max-w-96 h-full pt-6   flex flex-col bg-dark-bg border border-dark-ui">
@@ -31,7 +32,10 @@ const scene = useScene();
           `,
         )}
       >
-        <ObjectDisplay scene={scene} />
+        <ObjectDisplay
+          scene={scene}
+          onChange={(path, value) => setAtPath(scene as Record<string, unknown>, path, value)}
+        />
       </div>
     </div>
   );

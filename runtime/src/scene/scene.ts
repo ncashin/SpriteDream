@@ -114,6 +114,15 @@ function getPath(target: Record<string, unknown>, key: string): string {
   return parts.join(".");
 }
 
+function getRoot(target: Record<string, unknown>): Record<string, unknown> {
+  let current = target;
+  while (true) {
+    const relation = objectParent.get(current);
+    if (!relation) return current;
+    current = relation.parent;
+  }
+}
+
 function registerDefinition(
   meta: ObjectMeta,
   definition: DefinedObject,
@@ -249,8 +258,7 @@ function bubble(
   const relation = objectParent.get(target);
   if (!relation) return;
   const { parent, key } = relation;
-  const parentMeta = objectMeta.get(parent);
-  if (!parentMeta) return;
+  getMeta(parent);
   evaluateKey(parent, key);
   const path = getPath(parent, key);
   const change: RawChange = {
@@ -262,7 +270,18 @@ function bubble(
     newValue,
     oldValue,
   };
+  const parentMeta = objectMeta.get(parent)!;
   notify(parentMeta, parent, key, change);
+  const root = getRoot(parent);
+  if (root !== parent) {
+    const rootMeta = objectMeta.get(root);
+    const rootKey = path.split(".")[0];
+    if (rootMeta?.forwardIndex && rootKey) {
+      for (const [hash, keys] of rootMeta.forwardIndex) {
+        if (keys.has(rootKey)) scheduleFlush(rootMeta, hash, change);
+      }
+    }
+  }
   bubble(parent, property, newValue, oldValue);
 }
 
@@ -334,7 +353,6 @@ function createDeepProxy(
         return true;
       }
       const oldValue = object[property];
-      // Same object just wrapped in proxy (e.g. first read of scene[key]) — index unchanged
       if (
         isObject(value) &&
         (value as Record<string, unknown>).__isProxy === true &&
@@ -365,6 +383,8 @@ function createDeepProxy(
             oldValue,
           });
         }
+        bubble(object, property, value, oldValue);
+      } else if (objectParent.get(object)) {
         bubble(object, property, value, oldValue);
       }
       return true;
