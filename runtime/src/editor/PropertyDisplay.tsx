@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type React from "react";
+import { cn } from "../utils/cn";
 
 const inputBase =
-  "min-w-0 flex-1 bg-transparent text-dark-tx-2 cursor-pointer focus:outline-none focus:text-light-ui focus:bg-dark-ui hover:bg-dark-ui p-0.5 px-1 rounded-md transition-colors";
+  "min-w-0 flex-1 bg-transparent text-dark-tx cursor-pointer focus:outline-none focus:text-light-ui focus:bg-dark-ui hover:bg-dark-ui p-0.5 px-1 rounded-md transition-colors";
 
 const displayComponents: Record<
   string,
@@ -15,7 +16,7 @@ const displayComponents: Record<
   string: ({ displayValue, onChange }) => (
     <input
       type="text"
-      className={`${inputBase} truncate overflow-ellipsis`}
+      className={cn(inputBase, "truncate overflow-ellipsis")}
       value={displayValue as string}
       onChange={(e) => onChange?.(e.target.value)}
       readOnly={!onChange}
@@ -32,7 +33,7 @@ const displayComponents: Record<
       <input
         type="text"
         inputMode="decimal"
-        className={`${inputBase} truncate overflow-ellipsis`}
+        className={cn(inputBase, "truncate overflow-ellipsis")}
         value={raw}
         onChange={(e) => {
           const v = e.target.value;
@@ -51,7 +52,7 @@ const displayComponents: Record<
     <label className="flex items-center gap-2 min-h-[1.5rem] p-0.5 px-1 rounded-md hover:bg-dark-ui focus-within:bg-dark-ui cursor-pointer">
       <input
         type="checkbox"
-        className="accent-dark-ui text-dark-tx-2"
+        className="accent-dark-ui text-dark-tx"
         checked={!!displayValue}
         onChange={(e) => onChange?.(e.target.checked)}
         disabled={!onChange}
@@ -59,7 +60,7 @@ const displayComponents: Record<
     </label>
   ),
   object: ({ value }) => (
-    <pre className="flex-1 max-w-full whitespace-pre-wrap break-words text-dark-tx-2">
+    <pre className="flex-1 max-w-full whitespace-pre-wrap break-words text-dark-tx">
       {JSON.stringify(value)}
     </pre>
   ),
@@ -99,7 +100,7 @@ export const PropertyDisplay = ({
       : undefined;
 
   return (
-    <div className="flex flex-row items-center w-full group gap-2 p-internal-sidebar font-semibold text-dark-tx-2">
+    <div className={cn("flex flex-row items-center w-full group gap-2 p-internal-sidebar font-semibold text-dark-tx")}>
       <h2>{key}:</h2>
       <div className=" flex-1">
         {DisplayComponent ? (
@@ -109,7 +110,7 @@ export const PropertyDisplay = ({
             onChange: handleChange,
           })
         ) : (
-          <p className="truncate overflow-ellipsis text-dark-tx-2">{String(value)}</p>
+          <p className={cn("truncate overflow-ellipsis text-dark-tx")}>{String(value)}</p>
         )}
       </div>
     </div>

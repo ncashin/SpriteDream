@@ -13,5 +13,5 @@ export const editorPlugin = (): Plugin => (context) => {
   flushSync(() => {
     root.render(createElement(Editor));
   });
-  return context;
+  return { ...context, __isEditor: true };
 };
