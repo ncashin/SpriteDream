@@ -234,7 +234,6 @@ function mergeDefinitions(items: DefinitionInput[]): ObjectDefinition {
   for (const item of items) {
     const def = getDefinition(item);
     for (const [key, value] of Object.entries(def)) {
-      if (key.startsWith("__")) continue;
       result[key] = value;
     }
   }
@@ -272,7 +271,10 @@ export function instantiateObject<D extends ObjectDefinition>(
   const result: Record<string, unknown> = {};
 
   for (const [key, defValue] of Object.entries(__definition)) {
-    if (key.startsWith("__")) continue;
+    if (key.startsWith("__")) {
+      result[key] = defValue;
+      continue;
+    }
     const instanceValue = (values as Record<string, unknown>)[key];
     result[key] = resolveValue(defValue, instanceValue);
   }

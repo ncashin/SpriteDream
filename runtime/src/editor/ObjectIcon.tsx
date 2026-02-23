@@ -6,9 +6,24 @@ import { Searchbar } from "./Searchbar";
 
 import { icons } from "lucide-react";
 
-export const ObjectIcon = ({ path }: { path: string }) => {
+const resolveIcon = (name: unknown): typeof Box => {
+  if (typeof name !== "string") return Box;
+  if (name in icons) return (icons as Record<string, typeof Box>)[name];
+  const lower = name.toLowerCase();
+  const key = Object.keys(icons).find((k) => k.toLowerCase() === lower);
+  return key ? (icons as Record<string, typeof Box>)[key] : Box;
+};
+
+export const ObjectIcon = ({
+  path,
+  iconName,
+}: {
+  path: string;
+  iconName?: unknown;
+}) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const IconComponent = resolveIcon(iconName);
 
   useEffect(() => {
     function handleClick(event: MouseEvent) {
@@ -28,7 +43,7 @@ export const ObjectIcon = ({ path }: { path: string }) => {
   }, [dropdownOpen]);
   return (
     <div className="relative flex items-center gap-1.5" ref={dropdownRef}>
-      <IconButton icon={Box} onClick={() => setDropdownOpen((open) => !open)} />
+      <IconButton icon={IconComponent} onClick={() => setDropdownOpen((open) => !open)} />
       {dropdownOpen && (
         <Dropdown className="top-[160%] -left-1 p-1.5 max-h-48">
           <label className="flex flex-row pr-w-full justify-between text-sm items-center font-semibold hover:bg-dark-ui rounded-md px-2 py-1     group cursor-pointer gap-2">

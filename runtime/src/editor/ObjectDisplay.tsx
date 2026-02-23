@@ -5,7 +5,6 @@ import { PropertyDisplay } from "./PropertyDisplay";
 import { IconButton } from "./IconButton";
 import { ObjectIcon } from "./ObjectIcon";
 
-/** Full path from scene root (e.g. "typescriptLogo.transform2D.x"). */
 export type ScenePath = string;
 
 export const ObjectDisplay = ({
@@ -61,7 +60,7 @@ export const ObjectDisplay = ({
         }}
       >
         <div className="flex items-center gap-1.5">
-          <ObjectIcon path={path} />
+          <ObjectIcon path={path} iconName={(scene as Record<string, unknown>).__icon} />
           <h1 className="font-bold">{path.split(".").pop() ?? path}</h1>
         </div>
         <div className="flex flex-row group-hover-visible">

@@ -8,6 +8,7 @@ export const SpriteDefinition = defineObject([
   Transform2DDefinition,
   {
     sprite: {
+      __icon: "Image",
       image: "",
       width: 0,
       height: 0,
