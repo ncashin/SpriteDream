@@ -50,6 +50,7 @@ function applyTransformAndSize(
   const height = spriteInstance.sprite.height;
 
   if (displayObject instanceof Sprite) {
+    displayObject.anchor.set(0.5, 0.5);
     displayObject.width = width;
     displayObject.height = height;
     displayObject.scale.set(scaleX, scaleY);
@@ -60,6 +61,7 @@ function applyTransformAndSize(
   const boundsWidth = bounds.width || 1;
   const boundsHeight = bounds.height || 1;
 
+  displayObject.pivot.set(boundsWidth / 2, boundsHeight / 2);
   displayObject.scale.set(
     (width ? width / boundsWidth : 1) * scaleX,
     (height ? height / boundsHeight : 1) * scaleY
