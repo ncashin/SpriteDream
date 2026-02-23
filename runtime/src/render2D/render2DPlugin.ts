@@ -9,69 +9,69 @@ export const render2DPlugin = (): Plugin => (context) => {
   const gameElement = document.getElementById("game");
   invariant(gameElement, "#game element must exist in the DOM");
 
-  const app = new Application();
-  const pixiAppReady = app
+  const application = new Application();
+  const pixiApplicationReady = application
     .init({
       resizeTo: gameElement,
       backgroundColor: 0x1099bb,
     })
     .then(() => {
-      gameElement.appendChild(app.canvas);
-      return app;
+      gameElement.appendChild(application.canvas);
+      return application;
     });
 
-  const spriteMap = new Map<string, Sprite>();
+  const spriteRecord: Record<string, Sprite> = {};
 
-  const syncSprite = async (
-    app: Application,
+  const synchronizeSprite = async (
+    application: Application,
     path: string,
-    obj: SpriteInstance,
+    object: SpriteInstance,
   ) => {
-    const existing = spriteMap.get(path);
-    if (existing) {
-      existing.position.set(obj.transform2D.x, obj.transform2D.y);
-      existing.rotation = obj.transform2D.rotation;
-      existing.width = obj.sprite.width;
-      existing.height = obj.sprite.height;
-      const texture = await Assets.load(obj.sprite.image);
-      existing.texture = texture;
+    const existingSprite = spriteRecord[path];
+    if (existingSprite) {
+      existingSprite.position.set(object.transform2D.x, object.transform2D.y);
+      existingSprite.rotation = object.transform2D.rotation;
+      existingSprite.width = object.sprite.width;
+      existingSprite.height = object.sprite.height;
+      const texture = await Assets.load(object.sprite.image);
+      existingSprite.texture = texture;
       return;
     }
-    const texture = await Assets.load(obj.sprite.image);
+    const texture = await Assets.load(object.sprite.image);
     const pixiSprite = new Sprite(texture);
-    pixiSprite.position.set(obj.transform2D.x, obj.transform2D.y);
-    pixiSprite.rotation = obj.transform2D.rotation;
-    pixiSprite.width = obj.sprite.width;
-    pixiSprite.height = obj.sprite.height;
-    app.stage.addChild(pixiSprite);
-    spriteMap.set(path, pixiSprite);
+    pixiSprite.position.set(object.transform2D.x, object.transform2D.y);
+    pixiSprite.rotation = object.transform2D.rotation;
+    pixiSprite.width = object.sprite.width;
+    pixiSprite.height = object.sprite.height;
+    application.stage.addChild(pixiSprite);
+    spriteRecord[path] = pixiSprite;
   };
 
   const scene = getScene();
   scene.onQueryChange(spriteDefinition, async (change) => {
-    const app = await pixiAppReady;
+    const application = await pixiApplicationReady;
     const path = change.path;
     
     if (change.type === "destroyed") {
-      const pixiSprite = spriteMap.get(path);
+      const pixiSprite = spriteRecord[path];
       if (pixiSprite) {
-        app.stage.removeChild(pixiSprite);
+        application.stage.removeChild(pixiSprite);
         pixiSprite.destroy();
-        spriteMap.delete(path);
+        delete spriteRecord[path];
       }
       return;
     }
 
     if (change.type === "created") {
       const sprites = scene.query(spriteDefinition);
-      const obj = sprites[path];
-      if (obj) syncSprite(app, path, obj);
+      const object = sprites[path];
+      if (object) synchronizeSprite(application, path, object);
       return;
     }
 
     if (change.type === "propertyUpdated") {
       const rootPath = path.split(".")[0];
-      const pixiSprite = spriteMap.get(rootPath);
+      const pixiSprite = spriteRecord[rootPath];
       if (!pixiSprite) return;
       switch (change.segmentKey) {
         case "transform2D":
@@ -107,7 +107,7 @@ export const render2DPlugin = (): Plugin => (context) => {
 
   return {
     ...context,
-    pixiApp: app,
-    pixiAppReady,
+    pixiApp: application,
+    pixiAppReady: pixiApplicationReady,
   };
 };
