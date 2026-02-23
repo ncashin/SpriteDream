@@ -135,9 +135,9 @@
   --color-flexoki-light-ui-3: var(--color-flexoki-base-200);
   --color-flexoki-dark-bg: var(--color-flexoki-black);
   --color-flexoki-dark-bg-2: var(--color-flexoki-base-950);
-  --color-flexoki-dark-tx: var(--color-flexoki-base-200);
-  --color-flexoki-dark-tx-2: var(--color-flexoki-base-500);
-  --color-flexoki-dark-tx-3: var(--color-flexoki-base-700);
+  --color-flexoki-dark-tx: #ffffff;
+  --color-flexoki-dark-tx-2: #e0e0e0;
+  --color-flexoki-dark-tx-3: #b3b3b3;
   --color-flexoki-dark-ui: var(--color-flexoki-base-900);
   --color-flexoki-dark-ui-2: var(--color-flexoki-base-850);
   --color-flexoki-dark-ui-3: var(--color-flexoki-base-800);

@@ -7,19 +7,25 @@ import { ObjectIcon } from "./ObjectIcon";
 
 export type ScenePath = string;
 
+const isHiddenKey = (key: string) => key.startsWith("__");
+
 export const ObjectDisplay = ({
   scene,
   path = "Scene",
   isDropdown = false,
+  showHiddenProperties = false,
   onChange,
 }: {
   scene: Scene;
   path?: string;
   isDropdown?: boolean;
+  showHiddenProperties?: boolean;
   onChange?: (path: ScenePath, value: unknown) => void;
 }) => {
   const [expanded, setExpanded] = useState(false);
-  const sceneEntries = Object.entries(scene);
+  const sceneEntries = Object.entries(scene).filter(
+    ([key]) => showHiddenProperties || !isHiddenKey(key),
+  );
 
   const fullPathFor = (key: string) =>
     path === "Scene" ? key : `${path}.${key}`;
@@ -34,6 +40,7 @@ export const ObjectDisplay = ({
               path={key}
               key={key}
               isDropdown={true}
+              showHiddenProperties={showHiddenProperties}
               onChange={onChange}
             />
           ) : (
@@ -85,6 +92,7 @@ export const ObjectDisplay = ({
                 path={fullPathFor(key)}
                 key={key}
                 isDropdown={true}
+                showHiddenProperties={showHiddenProperties}
                 onChange={onChange}
               />
             ) : (
