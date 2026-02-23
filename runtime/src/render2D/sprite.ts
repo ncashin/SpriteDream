@@ -15,8 +15,7 @@ export const spriteDefinition = defineObject([
   },
 ]);
 
-export type SpriteDefinition = typeof spriteDefinition.__definition;
-export type SpriteInstance = Instance<typeof spriteDefinition.__definition>;
+export type SpriteInstance = Instance<typeof spriteDefinition>;
 
 const spriteRecord: Record<string, Sprite> = {};
 

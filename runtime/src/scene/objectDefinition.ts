@@ -61,9 +61,13 @@ type InstantiationValues<D extends ObjectDefinition> = {
   [K in RequiredKeys<D>]: ResolveType<D[K]>;
 } & { [K in OptionalKeys<D>]?: ResolveType<D[K]> };
 
-export type Instance<D extends ObjectDefinition> = {
-  [K in Exclude<keyof D, `__${string}`>]: ResolveType<D[K]>;
-};
+export type Instance<T> = T extends { __definition: infer D }
+  ? D extends ObjectDefinition
+    ? { [K in Exclude<keyof D, `__${string}`>]: ResolveType<D[K]> }
+    : never
+  : T extends ObjectDefinition
+    ? { [K in Exclude<keyof T, `__${string}`>]: ResolveType<T[K]> }
+    : never;
 
 /** All segment keys for property updates (e.g. "transform2D" | "transform2D.x" | "sprite.width") */
 export type NestedPaths<I> = I extends object
