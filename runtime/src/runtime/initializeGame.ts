@@ -7,6 +7,7 @@ type FullContext<Plugins> = Plugins extends readonly [...any[], infer Last]
   : GameContext;
 
 export type InitializeGameOptions<Plugins extends readonly Plugin[] = []> = {
+  initialContext?: GameContext;
   main: (ctx: FullContext<Plugins>) => void;
   plugins?: Plugins;
 };
@@ -14,7 +15,7 @@ export type InitializeGameOptions<Plugins extends readonly Plugin[] = []> = {
 export const initializeGame = <const Plugins extends readonly Plugin[] = []>(
   options: InitializeGameOptions<Plugins>
 ) => {
-  const initialContext = {} as GameContext;
+  const initialContext = options.initialContext ?? ({} as GameContext);
   const ctx = (options.plugins ?? []).reduce(
     (acc, plugin) => plugin(acc),
     initialContext
