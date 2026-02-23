@@ -26,40 +26,14 @@ export type DefinedObject = {
   __definition: ObjectDefinition;
 };
 
-type DefValueWithDefault =
-  | TypeSymbol
-  | number
-  | string
-  | boolean
-  | ((v: unknown) => boolean & { __default?: unknown });
+/** Instance values are optional overrides merged on top of definition defaults. */
+type DeepPartial<T> = T extends Record<string, unknown>
+  ? { [K in keyof T]?: DeepPartial<T[K]> }
+  : T;
 
-type RequiredKeys<D extends ObjectDefinition> = {
-  [K in keyof D]: K extends `__${string}`
-    ? never
-    : D[K] extends DefValueWithDefault
-      ? D[K] extends number | string | boolean
-        ? never
-        : D[K] extends (v: unknown) => boolean
-          ? never
-          : K
-      : never;
-}[keyof D];
-
-type OptionalKeys<D extends ObjectDefinition> = {
-  [K in keyof D]: K extends `__${string}`
-    ? never
-    : D[K] extends DefValueWithDefault
-      ? D[K] extends number | string | boolean
-        ? K
-        : D[K] extends (v: unknown) => boolean
-          ? K
-          : never
-      : K;
-}[keyof D];
-
-type InstantiationValues<D extends ObjectDefinition> = {
-  [K in RequiredKeys<D>]: ResolveType<D[K]>;
-} & { [K in OptionalKeys<D>]?: ResolveType<D[K]> };
+type InstantiationValues<D extends ObjectDefinition> = DeepPartial<{
+  [K in Exclude<keyof D, `__${string}`>]: ResolveType<D[K]>;
+}>;
 
 export type Instance<T> = T extends { __definition: infer D }
   ? D extends ObjectDefinition
@@ -265,7 +239,7 @@ export function match<T>(value: T) {
 
 export function instantiateObject<D extends ObjectDefinition>(
   definition: DefinedObject & { __definition: D },
-  values: InstantiationValues<D>,
+  values: InstantiationValues<D> = {} as InstantiationValues<D>,
 ): Instance<D> {
   const { __definition } = definition;
   const result: Record<string, unknown> = {};

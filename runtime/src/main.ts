@@ -14,7 +14,6 @@ initializeGame({
       transform2D: {
         x: 100,
         y: 100,
-        rotation: 0,
       },
       sprite: {
         image: "/src/typescript.svg",
