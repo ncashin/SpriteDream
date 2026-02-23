@@ -43,6 +43,8 @@ function applyTransformAndSize(
 ): void {
   displayObject.position.set(spriteInstance.transform2D.x, spriteInstance.transform2D.y);
   displayObject.rotation = spriteInstance.transform2D.rotation;
+  const scaleX = spriteInstance.transform2D.scaleX;
+  const scaleY = spriteInstance.transform2D.scaleY;
 
   const width = spriteInstance.sprite.width;
   const height = spriteInstance.sprite.height;
@@ -50,6 +52,7 @@ function applyTransformAndSize(
   if (displayObject instanceof Sprite) {
     displayObject.width = width;
     displayObject.height = height;
+    displayObject.scale.set(scaleX, scaleY);
     return;
   }
 
@@ -58,8 +61,8 @@ function applyTransformAndSize(
   const boundsHeight = bounds.height || 1;
 
   displayObject.scale.set(
-    width ? width / boundsWidth : 1,
-    height ? height / boundsHeight : 1
+    (width ? width / boundsWidth : 1) * scaleX,
+    (height ? height / boundsHeight : 1) * scaleY
   );
 }
 
@@ -152,6 +155,7 @@ export function handleSprites(
       case "transform2D":
         displayObject.position.set(change.newValue.x, change.newValue.y);
         displayObject.rotation = change.newValue.rotation;
+        displayObject.scale.set(change.newValue.scaleX, change.newValue.scaleY);
         break;
       case "transform2D.x":
         displayObject.position.x = change.newValue;
@@ -161,6 +165,10 @@ export function handleSprites(
         break;
       case "transform2D.rotation":
         displayObject.rotation = change.newValue;
+        break;
+      case "transform2D.scaleX":
+      case "transform2D.scaleY":
+        applyTransformAndSize(displayObject, spriteInstance);
         break;
       case "sprite": {
         const updatedSprite = change.newValue;

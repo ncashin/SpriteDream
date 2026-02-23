@@ -6,5 +6,7 @@ export const Transform2DDefinition = defineObject({
     x: 0,
     y: 0,
     rotation: 0,
+    scaleX: 1,
+    scaleY: 1,
   },
 });
