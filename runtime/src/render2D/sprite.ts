@@ -1,4 +1,15 @@
-import { Application, Assets, Sprite } from "pixi.js";
+import {
+  type Application,
+  type Container,
+  Assets,
+  Graphics,
+  GraphicsContext,
+  Sprite,
+} from "pixi.js";
+
+function isGraphicsContext(value: unknown): value is GraphicsContext {
+  return value instanceof GraphicsContext;
+}
 
 import { defineObject, type Instance } from "../scene/objectDefinition";
 import type { SceneWithAPI } from "../scene/scene";
@@ -18,91 +29,216 @@ export const SpriteDefinition = defineObject([
 
 export type SpriteInstance = Instance<typeof SpriteDefinition>;
 
-const spriteRecord: Record<string, Sprite> = {};
+function isSVGPath(imageURL: string): boolean {
+  return /\.svg$/i.test(imageURL);
+}
 
-async function synchronizeSprite(
-  application: Application,
-  path: string,
-  object: SpriteInstance,
-): Promise<void> {
-  const existingSprite = spriteRecord[path];
-  if (existingSprite) {
-    existingSprite.position.set(object.transform2D.x, object.transform2D.y);
-    existingSprite.rotation = object.transform2D.rotation;
-    existingSprite.width = object.sprite.width;
-    existingSprite.height = object.sprite.height;
-    const texture = await Assets.load(object.sprite.image);
-    existingSprite.texture = texture;
+type SpriteDisplayObject = Sprite | Graphics;
+
+const spriteRecord: Record<string, SpriteDisplayObject> = {};
+
+function applyTransformAndSize(
+  displayObject: SpriteDisplayObject,
+  spriteInstance: SpriteInstance,
+): void {
+  displayObject.position.set(spriteInstance.transform2D.x, spriteInstance.transform2D.y);
+  displayObject.rotation = spriteInstance.transform2D.rotation;
+
+  const width = spriteInstance.sprite.width;
+  const height = spriteInstance.sprite.height;
+
+  if (displayObject instanceof Sprite) {
+    displayObject.width = width;
+    displayObject.height = height;
     return;
   }
-  const texture = await Assets.load(object.sprite.image);
-  const pixiSprite = new Sprite(texture);
-  pixiSprite.position.set(object.transform2D.x, object.transform2D.y);
-  pixiSprite.rotation = object.transform2D.rotation;
-  pixiSprite.width = object.sprite.width;
-  pixiSprite.height = object.sprite.height;
-  application.stage.addChild(pixiSprite);
-  spriteRecord[path] = pixiSprite;
+
+  const bounds = displayObject.bounds;
+  const boundsWidth = bounds.width || 1;
+  const boundsHeight = bounds.height || 1;
+
+  displayObject.scale.set(
+    width ? width / boundsWidth : 1,
+    height ? height / boundsHeight : 1
+  );
+}
+
+async function synchronizeSprite(
+  world: Container,
+  path: string,
+  spriteInstance: SpriteInstance,
+): Promise<void> {
+  const imageURL = spriteInstance.sprite.image;
+  const useSVGGraphics = isSVGPath(imageURL);
+  const existingDisplayObject = spriteRecord[path];
+
+  if (existingDisplayObject) {
+    const existingIsGraphics = existingDisplayObject instanceof Graphics;
+    if (existingIsGraphics === useSVGGraphics) {
+      applyTransformAndSize(existingDisplayObject, spriteInstance);
+      if (existingDisplayObject instanceof Sprite) {
+        existingDisplayObject.texture = await Assets.load(imageURL);
+        return;
+      }
+      const loaded = await Assets.load({
+        src: imageURL,
+        data: { parseAsGraphicsContext: true },
+      });
+      if (!isGraphicsContext(loaded)) return;
+      existingDisplayObject.context = loaded;
+      applyTransformAndSize(existingDisplayObject, spriteInstance);
+      return;
+    }
+    world.removeChild(existingDisplayObject);
+    existingDisplayObject.destroy();
+    delete spriteRecord[path];
+  }
+
+  if (useSVGGraphics) {
+    const loaded = await Assets.load({
+      src: imageURL,
+      data: { parseAsGraphicsContext: true },
+    });
+    if (!isGraphicsContext(loaded)) return;
+
+    const newGraphics = new Graphics(loaded);
+    applyTransformAndSize(newGraphics, spriteInstance);
+    world.addChild(newGraphics);
+    spriteRecord[path] = newGraphics;
+    return;
+  }
+
+  const texture = await Assets.load(imageURL);
+  const newSprite = new Sprite(texture);
+  applyTransformAndSize(newSprite, spriteInstance);
+  world.addChild(newSprite);
+  spriteRecord[path] = newSprite;
 }
 
 export function handleSprites(
-  pixiAppReady: Promise<Application>,
+  pixiAppAndWorld: Promise<{ application: Application; world: Container }>,
   scene: SceneWithAPI,
 ): void {
   scene.onQueryChange(SpriteDefinition, async (change) => {
-    const application = await pixiAppReady;
+    const { world } = await pixiAppAndWorld;
     const path = change.path;
 
-    console.log("CHANGE: ", change)
     if (change.type === "destroyed") {
-      const pixiSprite = spriteRecord[path];
-      if (pixiSprite) {
-        application.stage.removeChild(pixiSprite);
-        pixiSprite.destroy();
-        delete spriteRecord[path];
-      }
+      const displayObject = spriteRecord[path];
+      if (!displayObject) return;
+      world.removeChild(displayObject);
+      displayObject.destroy();
+      delete spriteRecord[path];
       return;
     }
 
     if (change.type === "created") {
-      const sprites = scene.query(SpriteDefinition);
-      const object = sprites[path];
-      if (object) await synchronizeSprite(application, path, object);
+      const spritesDictionary = scene.query(SpriteDefinition);
+      const spriteInstance = spritesDictionary[path];
+      if (!spriteInstance) return;
+      await synchronizeSprite(world, path, spriteInstance);
       return;
     }
 
-    if (change.type === "propertyUpdated") {
-      const rootPath = path.split(".")[0];
-      const pixiSprite = spriteRecord[rootPath];
-      if (!pixiSprite) return;
-      switch (change.segmentKey) {
-        case "transform2D":
-          pixiSprite.position.set(change.newValue.x, change.newValue.y);
-          pixiSprite.rotation = change.newValue.rotation;
+    if (change.type !== "propertyUpdated") return;
+
+    const rootPath = path.split(".")[0];
+    const displayObject = spriteRecord[rootPath];
+    if (!displayObject) return;
+    const spriteInstance = scene.query(SpriteDefinition)[rootPath];
+    if (!spriteInstance) return;
+
+    switch (change.segmentKey) {
+      case "transform2D":
+        displayObject.position.set(change.newValue.x, change.newValue.y);
+        displayObject.rotation = change.newValue.rotation;
+        break;
+      case "transform2D.x":
+        displayObject.position.x = change.newValue;
+        break;
+      case "transform2D.y":
+        displayObject.position.y = change.newValue;
+        break;
+      case "transform2D.rotation":
+        displayObject.rotation = change.newValue;
+        break;
+      case "sprite": {
+        const updatedSprite = change.newValue;
+        
+        if (displayObject instanceof Sprite) {
+          displayObject.width = updatedSprite.width;
+          displayObject.height = updatedSprite.height;
+          displayObject.texture = await Assets.load(updatedSprite.image);
           break;
-        case "transform2D.x":
-          pixiSprite.position.x = change.newValue;
+        }
+
+        const loaded = await Assets.load({
+          src: updatedSprite.image,
+          data: { parseAsGraphicsContext: true },
+        });
+        if (!isGraphicsContext(loaded)) break;
+        displayObject.context = loaded;
+        const bounds = displayObject.bounds;
+        displayObject.scale.set(
+          updatedSprite.width ? updatedSprite.width / (bounds.width || 1) : 1,
+          updatedSprite.height ? updatedSprite.height / (bounds.height || 1) : 1
+        );
+        break;
+      }
+      case "sprite.width":
+        if (displayObject instanceof Sprite) {
+          displayObject.width = change.newValue;
           break;
-        case "transform2D.y":
-          pixiSprite.position.y = change.newValue;
+        }
+        {
+          const bounds = displayObject.bounds;
+          displayObject.scale.x = change.newValue
+            ? change.newValue / (bounds.width || 1)
+            : 1;
+        }
+        break;
+      case "sprite.height":
+        if (displayObject instanceof Sprite) {
+          displayObject.height = change.newValue;
           break;
-        case "transform2D.rotation":
-          pixiSprite.rotation = change.newValue;
+        }
+        {
+          const bounds = displayObject.bounds;
+          displayObject.scale.y = change.newValue
+            ? change.newValue / (bounds.height || 1)
+            : 1;
+        }
+        break;
+      case "sprite.image": {
+        const newImageURL = change.newValue as string;
+        if (isSVGPath(newImageURL) && displayObject instanceof Graphics) {
+          const loaded = await Assets.load({
+            src: newImageURL,
+            data: { parseAsGraphicsContext: true },
+          });
+          if (!isGraphicsContext(loaded)) break;
+          displayObject.context = loaded;
           break;
-        case "sprite":
-          pixiSprite.width = change.newValue.width;
-          pixiSprite.height = change.newValue.height;
-          pixiSprite.texture = await Assets.load(change.newValue.image);
+        }
+
+        if (isSVGPath(newImageURL)) {
+          await synchronizeSprite(world, rootPath, {
+            ...spriteInstance,
+            sprite: { ...spriteInstance.sprite, image: newImageURL },
+          });
           break;
-        case "sprite.width":
-          pixiSprite.width = change.newValue;
+        }
+
+        if (displayObject instanceof Sprite) {
+          displayObject.texture = await Assets.load(newImageURL);
           break;
-        case "sprite.height":
-          pixiSprite.height = change.newValue;
-          break;
-        case "sprite.image":
-          pixiSprite.texture = await Assets.load(change.newValue);
-          break;
+        }
+
+        await synchronizeSprite(world, rootPath, {
+          ...spriteInstance,
+          sprite: { ...spriteInstance.sprite, image: newImageURL },
+        });
+        break;
       }
     }
   });

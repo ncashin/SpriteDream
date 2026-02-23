@@ -17,8 +17,8 @@ initializeGame({
       },
       sprite: {
         image: "/src/typescript.svg",
-        width: 128,
-        height: 128,
+        width: 32,
+        height: 32,
       },
     });
   },
