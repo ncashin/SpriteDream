@@ -29,7 +29,6 @@ export type RawChange =
       oldValue: unknown;
     };
 
-/** Change type inferred from definition instance I; propertyUpdated is discriminated by segmentKey. */
 export type QueryChange<I> =
   | { type: "created"; path: string; object: I }
   | { type: "destroyed"; path: string; deletedObject: I }
@@ -40,7 +39,7 @@ export type QueryChange<I> =
         segmentKey: K;
         property: string;
         containingObject: unknown;
-        newValue: PathValue<I, K>;
+        newValue: PathValue<I, Extract<K, string>>;
         oldValue: unknown;
       };
     }[NestedPaths<I>];
