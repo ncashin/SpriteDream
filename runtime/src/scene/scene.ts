@@ -241,7 +241,14 @@ function notify(
         if (definition && matchesDefinition(definition, target[key])) {
           result[key] = target[key] as Record<string, unknown>;
         } else {
+          const deletedObject = result[key];
           delete result[key];
+          scheduleFlush(meta, hash, {
+            type: "destroyed",
+            path: change.path,
+            deletedObject,
+          });
+          continue;
         }
       }
     }
