@@ -8,10 +8,7 @@ export const Sidebar = () => {
   const scene = useScene();
 
   return (
-    <div className="min-w-96 w-96 max-w-96 h-full pt-6   flex flex-col bg-dark-bg border border-dark-ui">
-      <div className="pl-1.5 pb-4">
-        <h1 className="font-bold text-xl p-internal-sidebar">GameIDE</h1>
-      </div>
+    <div className="min-w-80 w-80 max-w-80 h-full pt-5.5 flex flex-col bg-dark-bg border border-dark-ui">
 
       
       <div className="pl-1.5 pb-2">
