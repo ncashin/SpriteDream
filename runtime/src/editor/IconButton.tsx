@@ -11,7 +11,7 @@ export const IconButton = ({ icon: Icon, ...props }: { icon: LucideIcon } & Reac
   return (
     <button
       {...props}
-      className="cursor-pointer flex items-center justify-center rounded bg-transparent hover:bg-dark-ui-3 transition-colors"
+      className="p-0.5 cursor-pointer flex items-center justify-center rounded bg-transparent hover:bg-dark-ui-3 transition-colors"
       type="button"
       onClick={handleClick}
     >

@@ -84,7 +84,7 @@ export const ObjectDisplay = ({
       </div>
 
       {expanded && (
-        <div className="pl-5.5 flex flex-col ">
+        <div className="pl-6.5 flex flex-col ">
           {sceneEntries.map(([key, value]) =>
             value && typeof value === "object" ? (
               <ObjectDisplay

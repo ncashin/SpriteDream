@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useScene } from "../scene/useScene";
 import { cn } from "../utils/cn";
+import { BooleanInput } from "./inputs";
 import { ObjectDisplay } from "./ObjectDisplay";
 import { setAtPath } from "./scenePath";
 import { Searchbar } from "./Searchbar";
@@ -19,15 +20,14 @@ export const Sidebar = () => {
 
       <div className="px-2 pr-3.5 pb-1.5 text-sm text-dark-tx flex items-center gap-2">
         <Searchbar />
-        <label className="flex items-center gap-1.5 whitespace-nowrap text-dark-fg-muted cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showHiddenProperties}
-            onChange={(e) => setShowHiddenProperties(e.target.checked)}
-            className="rounded border-dark-ui-2"
+        <div className="flex items-center gap-1.5 whitespace-nowrap text-dark-fg-muted">
+          <BooleanInput
+            value={showHiddenProperties}
+            displayValue={showHiddenProperties}
+            onChange={(v) => setShowHiddenProperties(!!v)}
+            label="Show Hidden"
           />
-          Show hidden
-        </label>
+        </div>
       </div>
 
       <div
