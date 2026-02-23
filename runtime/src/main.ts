@@ -2,10 +2,25 @@ import "./style.css";
 import { initializeGame } from "./runtime/initializeGame";
 import { editorPlugin } from "./editor/editorPlugin";
 import { render2DPlugin } from "./render2D/render2DPlugin";
+import { getScene } from "./scene/scene";
+import { spriteDefinition } from "./render2D/sprite";
+import { instantiateObject } from "./scene/objectDefinition";
 
 initializeGame({
-    plugins: [editorPlugin(), render2DPlugin()],
-    main: (_context) => {
-        console.log("Hello From main.ts")
-    }
-})
+  plugins: [editorPlugin(), render2DPlugin()],
+  main: () => {
+    const scene = getScene();
+    scene.typescriptLogo = instantiateObject(spriteDefinition, {
+      transform2D: {
+        x: 100,
+        y: 100,
+        rotation: 0,
+      },
+      sprite: {
+        image: "/src/typescript.svg",
+        width: 128,
+        height: 128,
+      },
+    });
+  },
+});

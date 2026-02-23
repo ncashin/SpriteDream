@@ -19,7 +19,7 @@ type ResolveType<T> = T extends TypeSymbol
             ? { [K in keyof T]: ResolveType<T[K]> }
             : T;
 
-type ObjectDefinition = Record<string, unknown>;
+export type ObjectDefinition = Record<string, unknown>;
 
 export type DefinedObject = {
   __hash: string;
@@ -64,6 +64,32 @@ type InstantiationValues<D extends ObjectDefinition> = {
 export type Instance<D extends ObjectDefinition> = {
   [K in Exclude<keyof D, `__${string}`>]: ResolveType<D[K]>;
 };
+
+/** All segment keys for property updates (e.g. "transform2D" | "transform2D.x" | "sprite.width") */
+export type NestedPaths<I> = I extends object
+  ?
+    | keyof I
+    | {
+        [K in keyof I]: K extends string
+          ? I[K] extends object
+            ? NestedPaths<I[K]> extends infer N
+              ? N extends string
+                ? `${K}.${N}`
+                : never
+              : never
+            : never
+          : never;
+      }[keyof I]
+  : never;
+
+/** Value type at path P within I (e.g. PathValue<SpriteInstance, "transform2D.x"> => number) */
+export type PathValue<I, P extends string> = P extends `${infer K}.${infer Rest}`
+  ? K extends keyof I
+    ? PathValue<I[K], Rest>
+    : never
+  : P extends keyof I
+    ? I[P]
+    : never;
 
 function isMatchFunction(value: unknown): value is (v: unknown) => boolean {
   return typeof value === "function";
@@ -178,12 +204,36 @@ export function resolveDefinition<D extends ObjectDefinition>(
   return result as Instance<D>;
 }
 
+type DefinitionInput =
+  | DefinedObject
+  | ObjectDefinition;
+
+function getDefinition(input: DefinitionInput): ObjectDefinition {
+  return "__definition" in input
+    ? (input as DefinedObject).__definition
+    : input;
+}
+
+function mergeDefinitions(items: DefinitionInput[]): ObjectDefinition {
+  const result: ObjectDefinition = {};
+  for (const item of items) {
+    const def = getDefinition(item);
+    for (const [key, value] of Object.entries(def)) {
+      if (key.startsWith("__")) continue;
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 export function defineObject(
-  definition: ObjectDefinition,
-): DefinedObject & { __definition: typeof definition } {
+  definition: ObjectDefinition | DefinitionInput[],
+): DefinedObject & { __definition: ObjectDefinition } {
+  const resolved =
+    Array.isArray(definition) ? mergeDefinitions(definition) : definition;
   return {
-    __hash: hashObject(definition),
-    __definition: definition,
+    __hash: hashObject(resolved),
+    __definition: resolved,
   };
 }
 

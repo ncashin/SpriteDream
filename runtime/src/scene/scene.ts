@@ -2,6 +2,9 @@ import invariant from "tiny-invariant";
 import {
   type DefinedObject,
   type Instance,
+  type NestedPaths,
+  type ObjectDefinition,
+  type PathValue,
   matchesDefinition,
 } from "./objectDefinition";
 
@@ -19,11 +22,34 @@ export type RawChange =
   | {
       type: "propertyUpdated";
       path: string;
+      segmentKey: string;
       containingObject: unknown;
       property: string;
       newValue: unknown;
       oldValue: unknown;
     };
+
+/** Change type inferred from definition instance I; propertyUpdated is discriminated by segmentKey. */
+export type QueryChange<I> =
+  | { type: "created"; path: string; object: I }
+  | { type: "destroyed"; path: string; deletedObject: I }
+  | {
+      [K in NestedPaths<I>]: {
+        type: "propertyUpdated";
+        path: string;
+        segmentKey: K;
+        property: string;
+        containingObject: unknown;
+        newValue: PathValue<I, K>;
+        oldValue: unknown;
+      };
+    }[NestedPaths<I>];
+
+function segmentKeyFromPath(path: string, property: string): string {
+  const dot = path.indexOf(".");
+  const segment = dot >= 0 ? path.slice(dot + 1) : "";
+  return segment ? `${segment}.${property}` : property;
+}
 
 interface ObjectMeta {
   forwardIndex: Map<string, Set<string>>;
@@ -155,10 +181,10 @@ function removeKey(meta: ObjectMeta, key: string) {
   meta.reverseIndex.delete(key);
 }
 
-function query<D extends DefinedObject>(
+function query<D extends ObjectDefinition>(
   target: Record<string, unknown>,
-  definition: D,
-): Record<string, Instance<D["__definition"]>> {
+  definition: { __hash: string; __definition: D },
+): Record<string, Instance<D>> {
   const meta = getMeta(target);
   registerDefinition(meta, definition);
   const hash = definition.__hash;
@@ -167,14 +193,14 @@ function query<D extends DefinedObject>(
   }
   const cached = meta.results.get(hash);
   if (cached) {
-    return cached as Record<string, Instance<D["__definition"]>>;
+    return cached as Record<string, Instance<D>>;
   }
-  const result: Record<string, Instance<D["__definition"]>> = {};
+  const result: Record<string, Instance<D>> = {} as Record<string, Instance<D>>;
   const keys = meta.forwardIndex.get(hash);
   if (keys) {
     for (const key of keys) {
       if (key in target) {
-        result[key] = target[key] as Instance<D["__definition"]>;
+        result[key] = target[key] as Instance<D>;
       }
     }
   }
@@ -226,9 +252,11 @@ function bubble(
   const parentMeta = objectMeta.get(parent);
   if (!parentMeta) return;
   evaluateKey(parent, key);
+  const path = getPath(parent, key);
   const change: RawChange = {
     type: "propertyUpdated",
-    path: getPath(parent, key),
+    path,
+    segmentKey: segmentKeyFromPath(path, property),
     containingObject: parent[key],
     property,
     newValue,
@@ -238,10 +266,10 @@ function bubble(
   bubble(parent, property, newValue, oldValue);
 }
 
-function onQueryChange<D extends DefinedObject>(
+function onQueryChange<D extends ObjectDefinition>(
   target: Record<string, unknown>,
-  definition: D,
-  handler: (change: RawChange) => void,
+  definition: { __hash: string; __definition: D },
+  handler: (change: QueryChange<Instance<D>>) => void,
 ): () => void {
   const meta = getMeta(target);
   registerDefinition(meta, definition);
@@ -250,9 +278,9 @@ function onQueryChange<D extends DefinedObject>(
   if (!meta.listeners.has(hash)) {
     meta.listeners.set(hash, new Set());
   }
-  meta.listeners.get(hash)!.add(handler);
+  meta.listeners.get(hash)!.add(handler as (change: RawChange) => void);
   return () => {
-    meta.listeners.get(hash)?.delete(handler);
+    meta.listeners.get(hash)?.delete(handler as (change: RawChange) => void);
   };
 }
 
@@ -272,12 +300,13 @@ function createDeepProxy(
       if (property === "__isProxy") return true;
       switch (property) {
         case "query":
-          return <D extends DefinedObject>(definition: D) =>
-            query(object, definition);
+          return <D extends ObjectDefinition>(
+            definition: { __hash: string; __definition: D },
+          ) => query(object, definition);
         case "onQueryChange":
-          return <D extends DefinedObject>(
-            definition: D,
-            handler: (change: RawChange) => void,
+          return <D extends ObjectDefinition>(
+            definition: { __hash: string; __definition: D },
+            handler: (change: QueryChange<Instance<D>>) => void,
           ) => onQueryChange(object, definition, handler);
         case "subscribe":
           return (handler: (change: RawChange) => void) => {
@@ -325,9 +354,11 @@ function createDeepProxy(
             object: value,
           });
         } else {
+          const path = getPath(object, property);
           notify(meta, object, property, {
             type: "propertyUpdated",
-            path: getPath(object, property),
+            path,
+            segmentKey: segmentKeyFromPath(path, property),
             containingObject: object,
             property,
             newValue: value,
@@ -367,4 +398,16 @@ function createDeepProxy(
 const sceneObject: Scene = {};
 const scene = createDeepProxy(sceneObject);
 
-export const getScene = () => scene as any;
+/** Scene type with typed query and onQueryChange inferred from definition. */
+export type SceneWithAPI = Record<string, unknown> & {
+  query<D extends ObjectDefinition>(
+    definition: { __hash: string; __definition: D },
+  ): Record<string, Instance<D>>;
+  onQueryChange<D extends ObjectDefinition>(
+    definition: { __hash: string; __definition: D },
+    handler: (change: QueryChange<Instance<D>>) => void,
+  ): () => void;
+  subscribe(handler: (change: RawChange) => void): () => void;
+};
+
+export const getScene = (): SceneWithAPI => scene as SceneWithAPI;
