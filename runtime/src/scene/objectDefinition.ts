@@ -208,6 +208,17 @@ type DefinitionInput =
   | DefinedObject
   | ObjectDefinition;
 
+/** Extract definition shape from a single input (DefinedObject or plain definition). */
+type ExtractDefinition<T> = T extends { __definition: infer D } ? D : T;
+
+/** Inferred definition type from a tuple of inputs (intersection of all definitions). */
+type DefinitionsFromTuple<Tuple extends readonly DefinitionInput[]> =
+  Tuple extends readonly [infer First, ...infer Rest]
+    ? Rest extends readonly DefinitionInput[]
+      ? ExtractDefinition<First> & DefinitionsFromTuple<Rest>
+      : ExtractDefinition<First>
+    : {};
+
 function getDefinition(input: DefinitionInput): ObjectDefinition {
   return "__definition" in input
     ? (input as DefinedObject).__definition
@@ -226,14 +237,20 @@ function mergeDefinitions(items: DefinitionInput[]): ObjectDefinition {
   return result;
 }
 
+export function defineObject<const T extends readonly DefinitionInput[]>(
+  definition: T,
+): { __hash: string; __definition: DefinitionsFromTuple<T> };
+export function defineObject<D extends ObjectDefinition>(
+  definition: D,
+): { __hash: string; __definition: D };
 export function defineObject(
   definition: ObjectDefinition | DefinitionInput[],
-): DefinedObject & { __definition: ObjectDefinition } {
+): { __hash: string; __definition: ObjectDefinition } {
   const resolved =
     Array.isArray(definition) ? mergeDefinitions(definition) : definition;
   return {
     __hash: hashObject(resolved),
-    __definition: resolved,
+    __definition: resolved as ObjectDefinition,
   };
 }
 
