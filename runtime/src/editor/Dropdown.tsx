@@ -8,7 +8,13 @@ type DropdownProps = {
 
 export const Dropdown: React.FC<DropdownProps> = ({ children, className, }) => {
   return (
-    <div className={cn("absolute z-20 min-w-48 rounded-md bg-dark-bg shadow-lg border border-dark-ui-3", className)}>
+    <div
+      className={cn(
+        "absolute z-20 min-w-48 rounded-md shadow-lg border",
+        "bg-[var(--color-dark-ui-2)] border-[var(--color-dark-ui-3)]",
+        className
+      )}
+    >
       {children}
     </div>
   );
