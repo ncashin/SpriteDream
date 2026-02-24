@@ -36,8 +36,8 @@ export const PropertyDisplay = ({
       : undefined;
 
   return (
-    <div className={cn("flex flex-row items-center w-full group gap-2 p-internal-sidebar font-semibold text-dark-tx-2")}>
-      <h2>{key}:</h2>
+    <div className={cn(" flex flex-row items-center w-full group gap-2 p-internal-sidebar font-semibold text-dark-tx-2")}>
+      <h2 className="w-16 min-w-16 truncate">{key}:</h2>
       <div className=" flex-1">
         {DisplayComponent ? (
           <DisplayComponent

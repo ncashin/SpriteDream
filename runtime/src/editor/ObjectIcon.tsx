@@ -47,7 +47,6 @@ export const ObjectIcon = ({
       {dropdownOpen && (
         <Dropdown className="top-[160%] -left-1 p-1.5 max-h-48">
           <label className="flex flex-row pr-w-full justify-between text-sm items-center font-semibold hover:bg-dark-ui rounded-md px-2 py-1     group cursor-pointer gap-2">
-           
             <span>Display in Game?</span>
             <input
               type="checkbox"
