@@ -57,24 +57,24 @@ export const SceneView = ({
         <Searchbar
           className="flex-1"
           rightAdornment={
-            <div className="relative">
-              <IconButton
-                icon={SlidersHorizontal}
-                onClick={() => setDropdownOpen((open) => !open)}
-              />
-              {dropdownOpen && (
-                <Dropdown className="top-[140%] -right-1 mt-0.5 p-1.5 ">
-                  <div className="text-dark-fg-muted flex items-center gap-1.5 p-0.5 min-w-max">
-                    <BooleanInput
-                      value={showHiddenProperties}
-                      displayValue={showHiddenProperties}
-                      onChange={(v) => setShowHiddenProperties(!!v)}
-                      label="Show Hidden Properties"
-                    />
-                  </div>
-                </Dropdown>
-              )}
-            </div>
+            <IconButton
+              icon={SlidersHorizontal}
+              onClick={() => setDropdownOpen((open) => !open)}
+            />
+          }
+          dropdown={
+            dropdownOpen ? (
+              <Dropdown className="top-[140%] -right-1 mt-0.5 p-1.5 ">
+                <div className="text-dark-fg-muted flex items-center gap-1.5 p-0.5 min-w-max">
+                  <BooleanInput
+                    value={showHiddenProperties}
+                    displayValue={showHiddenProperties}
+                    onChange={(v) => setShowHiddenProperties(!!v)}
+                    label="Show Hidden Properties"
+                  />
+                </div>
+              </Dropdown>
+            ) : null
           }
         />
       </div>
