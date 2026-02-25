@@ -13,11 +13,12 @@ export const OverlayButton = ({
 }: OverlayButtonProps) => {
   return (
     <button
-      className="flex flex-row items-center gap-0.5 pl-2 pr-2.5 pt-1.5 py-0.5 rounded-md text-xs sidebar-hover"
+      className="flex flex-row items-center pl-2.5 pr-2 py-1 gap-1 rounded-md text-xs sidebar-hover"
       {...props}
     >
-      {Icon && <Icon size={12} strokeWidth={1.5} />}
       <span>{text}</span>
+      {Icon && <Icon size={12} strokeWidth={1.5} />}
+
     </button>
   );
 };

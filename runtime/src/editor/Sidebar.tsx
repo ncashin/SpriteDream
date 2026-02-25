@@ -17,7 +17,7 @@ export const Sidebar = () => {
     >
       <header
         className={cn(
-          "pl-4 pr-3 pt-4 pb-3.5 shrink-0 flex flex-row items-center min-h-[2.75rem]",
+          "pl-4 pr-4 pt-4 pb-3.5 shrink-0 flex flex-row items-center min-h-[2.75rem]",
           collapsed ? "cursor-pointer" : "gap-2 border-b border-[#444444]"
         )}
         onClick={collapsed ? () => setCollapsed(false) : undefined}
@@ -50,7 +50,7 @@ export const Sidebar = () => {
         )}
       </header>
       {!collapsed && (
-        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-0.5 pt-2 px-1.5">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-0.5">
           <SceneView />
           <Assets />
         </div>

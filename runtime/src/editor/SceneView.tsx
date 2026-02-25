@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { Scene } from "../scene/scene";
 import { useScene } from "../scene/useScene";
@@ -7,6 +7,7 @@ import { BooleanInput } from "./inputs";
 import { Dropdown } from "./Dropdown";
 import { IconButton } from "./IconButton";
 import { ObjectDisplay } from "./ObjectDisplay";
+import { PanelHeader } from "./PanelHeader";
 import { setAtPath } from "./scenePath";
 import { Searchbar } from "./Searchbar";
 
@@ -48,9 +49,8 @@ export const SceneView = ({
   return (
     <div
       className={cn(
-        "flex flex-col",
-        expanded && "min-h-0 flex-[6] overflow-y-scroll overflow-x-auto pb-8 -mx-1.5 -mt-2 -mb-0.5",
-        !expanded && "pb-1",
+        "flex flex-col border-b border-[#444444]",
+        expanded && "min-h-0 flex-[6] overflow-y-scroll overflow-x-auto",
         expanded &&
           `
           [&::-webkit-scrollbar]:h-1
@@ -60,66 +60,50 @@ export const SceneView = ({
         `
       )}
     >
-      <div className={cn(expanded && "px-1.5 pt-2 pb-0.5")}>
+      <PanelHeader
+        title="Scene View"
+        expanded={expanded}
+        onToggle={() => setExpanded((e) => !e)}
+      >
         <div
-          className="sticky top-0 z-10 -mt-2 pt-2"
-          style={{ backgroundColor: "rgba(44, 44, 44, 0.98)" }}
+          ref={dropdownRef}
+          className="relative text-sm text-dark-tx flex flex-col pb-0.5"
         >
-          <button
-            type="button"
-            onClick={() => setExpanded((e) => !e)}
-            className="mb-1.5 mt-1 w-full flex items-center gap-1 text-left text-sm font-medium text-dark-tx sidebar-padding rounded-md"
-          >
-            <span className="">Scene View</span>
-            {expanded ? (
-              <ChevronDown size={14} className="shrink-0" />
-            ) : (
-              <ChevronRight size={14} className="shrink-0" />
-            )}
-          </button>
-
-          {expanded && (
-            <div
-              ref={dropdownRef}
-              className="relative text-sm text-dark-tx flex flex-col pb-1"
-            >
-            <Searchbar
-              className="flex-1"
-              rightAdornment={
-                <IconButton
-                  icon={SlidersHorizontal}
-                  onClick={() => setDropdownOpen((open) => !open)}
-                />
-              }
-              dropdown={
-                dropdownOpen ? (
-                  <Dropdown className="top-[140%] -right-1 mt-0.5 p-1.5 ">
-                    <div className="text-dark-fg-muted flex items-center gap-1.5 p-0.5 min-w-max">
-                      <BooleanInput
-                        value={showHiddenProperties}
-                        displayValue={showHiddenProperties}
-                        onChange={(v) => setShowHiddenProperties(!!v)}
-                        label="Show Hidden Properties"
-                      />
-                    </div>
-                  </Dropdown>
-                ) : null
-              }
-            />
-          </div>
-          )}
+          <Searchbar
+            className="flex-1 pt-0.5"
+            rightAdornment={
+              <IconButton
+                icon={SlidersHorizontal}
+                onClick={() => setDropdownOpen((open) => !open)}
+              />
+            }
+            dropdown={
+              dropdownOpen ? (
+                <Dropdown className="top-[140%] -right-1 mt-0.5 p-1.5 ">
+                  <div className="text-dark-fg-muted flex items-center gap-1.5 p-0.5 min-w-max">
+                    <BooleanInput
+                      value={showHiddenProperties}
+                      displayValue={showHiddenProperties}
+                      onChange={(v) => setShowHiddenProperties(!!v)}
+                      label="Show Hidden Properties"
+                    />
+                  </div>
+                </Dropdown>
+              ) : null
+            }
+          />
         </div>
+      </PanelHeader>
 
-        {expanded && (
-          <div className="text-sm text-dark-tx min-w-0">
-            <ObjectDisplay
-              scene={scene}
-              showHiddenProperties={showHiddenProperties}
-              onChange={onChange}
-            />
-          </div>
-        )}
-      </div>
+      {expanded && (
+        <div className={cn("panel-inner !pt-0", "text-sm text-dark-tx min-w-0")}>
+          <ObjectDisplay
+            scene={scene}
+            showHiddenProperties={showHiddenProperties}
+            onChange={onChange}
+          />
+        </div>
+      )}
     </div>
   );
 };
