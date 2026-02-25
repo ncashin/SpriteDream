@@ -1,4 +1,4 @@
-import { SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { Scene } from "../scene/scene";
 import { useScene } from "../scene/useScene";
@@ -19,6 +19,7 @@ export const SceneView = ({
   scene: sceneProp,
   onChange: onChangeProp,
 }: SceneViewProps) => {
+  const [expanded, setExpanded] = useState(true);
   const [showHiddenProperties, setShowHiddenProperties] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -46,55 +47,69 @@ export const SceneView = ({
 
   return (
     <>
-      <div className="pl-2.5 pb-2">
-        <h1 className="font-bold text-dark-tx p-internal-sidebar">Scene View</h1>
-      </div>
-
-      <div
-        ref={dropdownRef}
-        className="relative px-2 pr-3.5 pb-1.5 text-sm text-dark-tx"
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        className="w-full flex items-center gap-1 text-left text-sm text-dark-tx sidebar-padding sidebar-hover rounded-md -mx-1"
       >
-        <Searchbar
-          className="flex-1"
-          rightAdornment={
-            <IconButton
-              icon={SlidersHorizontal}
-              onClick={() => setDropdownOpen((open) => !open)}
-            />
-          }
-          dropdown={
-            dropdownOpen ? (
-              <Dropdown className="top-[140%] -right-1 mt-0.5 p-1.5 ">
-                <div className="text-dark-fg-muted flex items-center gap-1.5 p-0.5 min-w-max">
-                  <BooleanInput
-                    value={showHiddenProperties}
-                    displayValue={showHiddenProperties}
-                    onChange={(v) => setShowHiddenProperties(!!v)}
-                    label="Show Hidden Properties"
-                  />
-                </div>
-              </Dropdown>
-            ) : null
-          }
-        />
-      </div>
 
-      <div
-        className={cn(
-          "overflow-x-auto h-full px-2 pb-8 text-sm text-dark-tx",
-          `
-            [&::-webkit-scrollbar]:h-1
-            [&::-webkit-scrollbar-track]:bg-dark-ui-2
-            [&::-webkit-scrollbar-thumb]:bg-light-ui-3
-          `,
+        <span className="">Scene View</span>
+        {expanded ? (
+          <ChevronDown size={14} className="shrink-0" />
+        ) : (
+          <ChevronRight size={14} className="shrink-0" />
         )}
-      >
-        <ObjectDisplay
-          scene={scene}
-          showHiddenProperties={showHiddenProperties}
-          onChange={onChange}
-        />
-      </div>
+      </button>
+
+      {expanded && (
+        <>
+          <div
+            ref={dropdownRef}
+            className="relative px-2 pb-1.5 text-sm text-dark-tx"
+          >
+            <Searchbar
+              className="flex-1"
+              rightAdornment={
+                <IconButton
+                  icon={SlidersHorizontal}
+                  onClick={() => setDropdownOpen((open) => !open)}
+                />
+              }
+              dropdown={
+                dropdownOpen ? (
+                  <Dropdown className="top-[140%] -right-1 mt-0.5 p-1.5 ">
+                    <div className="text-dark-fg-muted flex items-center gap-1.5 p-0.5 min-w-max">
+                      <BooleanInput
+                        value={showHiddenProperties}
+                        displayValue={showHiddenProperties}
+                        onChange={(v) => setShowHiddenProperties(!!v)}
+                        label="Show Hidden Properties"
+                      />
+                    </div>
+                  </Dropdown>
+                ) : null
+              }
+            />
+          </div>
+
+          <div
+            className={cn(
+              "overflow-x-auto h-full px-2 pb-8 text-sm text-dark-tx",
+              `
+                [&::-webkit-scrollbar]:h-1
+                [&::-webkit-scrollbar-track]:bg-dark-ui-2
+                [&::-webkit-scrollbar-thumb]:bg-light-ui-3
+              `,
+            )}
+          >
+            <ObjectDisplay
+              scene={scene}
+              showHiddenProperties={showHiddenProperties}
+              onChange={onChange}
+            />
+          </div>
+        </>
+      )}
     </>
   );
 };

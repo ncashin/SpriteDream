@@ -19,20 +19,20 @@ export const Searchbar = ({
     <div className={cn("relative", className)}>
       <div
         className={cn(
-          "flex flex-row justify-between items-center w-full gap-1.5 px-2 py-1.5 hover:bg-dark-ui-2 rounded-md p-internal-sidebar pb-2 font-semibold group",
+          "flex flex-row justify-between items-center w-full gap-1.5 px-2 py-1.5 sidebar-hover rounded-md sidebar-padding pb-2 font-semibold group",
           isFocused && "bg-dark-ui-2"
         )}
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <div className="p-0.5 shrink-0">
-            <Search size={16} strokeWidth={3} />
+            <Search size={16} strokeWidth={1.5} />
           </div>
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search..."
-            className="bg-transparent outline-none text-light-ui w-full font-semibold min-w-0"
+            className="bg-transparent outline-none text-light-ui w-full min-w-0"
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
           />

@@ -11,11 +11,11 @@ export const IconButton = ({ icon: Icon, ...props }: { icon: LucideIcon } & Reac
   return (
     <button
       {...props}
-      className="p-0.5 cursor-pointer flex items-center justify-center rounded bg-transparent hover:bg-dark-ui-3 transition-colors"
+      className="p-0.5 cursor-pointer flex items-center justify-center rounded bg-transparent hover:bg-dark-ui-3 transition-colors font-normal"
       type="button"
       onClick={handleClick}
     >
-      <Icon size={16} strokeWidth={2.5} />
+      <Icon size={16} strokeWidth={1.5} />
     </button>
   );
 };

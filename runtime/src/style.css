@@ -4,6 +4,7 @@
 @import "./flexoki/replacement.css";
 
 :root {
+  --sidebar-spacing: 0.25rem;
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -31,12 +32,15 @@ body {
   margin: 0 auto;
 }
 
-.p-internal-sidebar {
-  padding-top: calc(var(--spacing) * 1);
-  padding-bottom: calc(var(--spacing) * 1);
+.sidebar-padding {
+  padding-top: calc(var(--sidebar-spacing) * 1);
+  padding-bottom: calc(var(--sidebar-spacing) * 1);
+  padding-left: calc(var(--sidebar-spacing) * 2.5);
+  padding-right: calc(var(--sidebar-spacing) * 1.5);
+}
 
-  padding-left: calc(var(--spacing) * 2.5);
-  padding-right: calc(var(--spacing) * 1.5);
+.sidebar-hover:hover {
+  background-color: #383838;
 }
 
 .group-hover-visible {

@@ -61,14 +61,14 @@ export const ObjectDisplay = ({
   return (
     <div className="flex flex-col  w-full py-0.5">
       <div
-        className="flex flex-row justify-between items-center w-full hover:bg-dark-ui rounded-md p-internal-sidebar group cursor-pointer"
+        className="flex flex-row justify-between items-center w-full sidebar-hover rounded-md sidebar-padding group cursor-pointer"
         onClick={() => {
           setExpanded(!expanded);
         }}
       >
         <div className="flex items-center gap-1.5">
           <ObjectIcon path={path} iconName={(scene as Record<string, unknown>).__icon} />
-          <h1 className="font-bold">{path.split(".").pop() ?? path}</h1>
+          <h1>{path.split(".").pop() ?? path}</h1>
         </div>
         <div className="flex flex-row group-hover-visible">
           <IconButton icon={Plus} />

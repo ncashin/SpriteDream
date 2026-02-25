@@ -18,7 +18,7 @@ export const OverlayButton = ({
       {...props}
     >
       <span>{text}</span>
-      {Icon && <Icon size={12} strokeWidth={3} />}
+      {Icon && <Icon size={12} strokeWidth={1.5} />}
     </button>
   );
 };
