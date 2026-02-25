@@ -50,7 +50,7 @@ export const SceneView = ({
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-center gap-1 text-left text-sm text-dark-tx sidebar-padding rounded-md"
+        className="mb-1.5 mt-1 w-full flex items-center gap-1 text-left text-sm font-medium text-dark-tx sidebar-padding rounded-md"
       >
 
         <span className="">Scene View</span>
