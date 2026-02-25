@@ -18,7 +18,7 @@ export const Searchbar = ({
     <div className={cn("relative", className)}>
       <div
         className={cn(
-          "flex flex-row justify-between items-center w-full gap-1.5 sidebar-padding-icon-row rounded-md group bg-[#383838]"
+          "flex flex-row justify-between items-center w-full gap-1.5 sidebar-padding-icon-row rounded-md group sidebar-hover"
         )}
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">

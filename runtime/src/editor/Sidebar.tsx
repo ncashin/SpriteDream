@@ -11,7 +11,7 @@ export const Sidebar = () => {
   return (
     <div
       className={cn(
-        "h-full flex flex-col bg-[#2c2c2c] border-r border-[#444444] transition-[width] duration-200 ease-out",
+        "h-full max-h-screen flex flex-col bg-[#2c2c2c] border-r border-[#444444] transition-[width] duration-200 ease-out",
         collapsed ? "w-14 min-w-14 shrink-0" : "min-w-80 w-80 max-w-80"
       )}
     >
@@ -50,7 +50,7 @@ export const Sidebar = () => {
         )}
       </header>
       {!collapsed && (
-        <div className="flex-1 min-h-0 flex flex-col gap-0.5 pt-2 px-1.5">
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-0.5 pt-2 px-1.5">
           <SceneView />
           <Assets />
         </div>

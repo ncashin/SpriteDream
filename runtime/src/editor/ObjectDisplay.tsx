@@ -32,7 +32,7 @@ export const ObjectDisplay = ({
 
   if (!isDropdown) {
     return (
-      <div>
+      <div className="flex flex-col gap-1 pt-0.5">
         {sceneEntries.map(([key, value]) =>
           value && typeof value === "object" ? (
             <ObjectDisplay

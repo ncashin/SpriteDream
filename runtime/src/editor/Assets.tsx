@@ -18,7 +18,7 @@ export const Assets = () => {
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="mb-1.5 mt-1 w-full flex items-center gap-1 text-left text-sm font-medium text-dark-tx sidebar-padding rounded-md"
+          className="pb-1.5 mt-1 w-full flex items-center gap-1 text-left text-sm font-medium text-dark-tx sidebar-padding rounded-md"
         >
           <span>Assets</span>
           {expanded ? (
@@ -40,7 +40,7 @@ export const Assets = () => {
             )}
           >
           <div className="sidebar-padding flex flex-col gap-1 items-start text-dark-fg-muted">
-            <div className="py-1.5 px-2 rounded-md sidebar-hover text-left">
+            <div className="py-1.5 rounded-md">
               <span className="truncate text-dark-fg-muted">No assets yet</span>
             </div>
           </div>

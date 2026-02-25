@@ -49,11 +49,10 @@ export const SceneView = ({
     <div
       className={cn(
         "flex flex-col",
-        expanded && "min-h-0 flex-[6] overflow-auto pb-8 -mx-1.5 -mt-2 -mb-0.5",
+        expanded && "min-h-0 flex-[6] overflow-y-scroll overflow-x-auto pb-8 -mx-1.5 -mt-2 -mb-0.5",
         !expanded && "pb-1",
         expanded &&
           `
-          [scrollbar-gutter:stable_both]
           [&::-webkit-scrollbar]:h-1
           [&::-webkit-scrollbar]:w-1
           [&::-webkit-scrollbar-track]:bg-dark-ui-2
