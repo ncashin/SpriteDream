@@ -47,6 +47,14 @@ body {
   padding-right: calc(var(--sidebar-spacing) * 0.75);
 }
 
+/* Between sidebar-padding and icon-row: for panel headers that sit above icon rows */
+.sidebar-padding-header {
+  padding-top: calc(var(--sidebar-spacing) * 1);
+  padding-bottom: calc(var(--sidebar-spacing) * 1);
+  padding-left: calc(var(--sidebar-spacing) * 2);
+  padding-right: calc(var(--sidebar-spacing) * 1.25);
+}
+
 /* Internal padding for sidebar panels (SceneView, Assets) – one wrapper, no negative margins */
 .panel-inner-x {
   padding-left: calc(var(--sidebar-spacing) * 1.5);
@@ -67,14 +75,21 @@ body {
   padding-bottom: calc(var(--sidebar-spacing) * 1);
 }
 
-.sidebar-content-fade {
-  transition: opacity 280ms ease-out;
-  opacity: 1;
+.sidebar-clip {
+  /* width set inline; no transition — clip only, no resize */
 }
-.sidebar-content-fade.sidebar-content-hidden {
+
+.sidebar-inner {
+  width: 20rem;
+  min-width: 20rem;
+}
+
+.sidebar-content-fade {
+  transition: opacity 150ms ease-out;
   opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
+}
+.sidebar-content-fade.sidebar-content-visible {
+  opacity: 1;
 }
 
 .sidebar-hover:hover {

@@ -64,10 +64,11 @@ export const SceneView = ({
         title="Scene View"
         expanded={expanded}
         onToggle={() => setExpanded((e) => !e)}
+        alignWithIconRow
       >
         <div
           ref={dropdownRef}
-          className="relative text-sm text-dark-tx flex flex-col pb-0.5"
+          className="relative text-sm text-dark-tx flex flex-col pb-0.5 pt-0.5"
         >
           <Searchbar
             className="flex-1 pt-0.5"

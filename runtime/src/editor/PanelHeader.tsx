@@ -6,6 +6,8 @@ export type PanelHeaderProps = {
   expanded: boolean;
   onToggle: () => void;
   className?: string;
+  /** Use icon-row left padding so title aligns with rows below (e.g. Searchbar, object rows) */
+  alignWithIconRow?: boolean;
   children?: React.ReactNode;
 };
 
@@ -14,6 +16,7 @@ export const PanelHeader = ({
   expanded,
   onToggle,
   className,
+  alignWithIconRow,
   children,
 }: PanelHeaderProps) => (
   <div
@@ -23,14 +26,13 @@ export const PanelHeader = ({
     <button
       type="button"
       onClick={onToggle}
-      className="mb-1.5 mt-1 w-full flex items-center gap-1 text-left text-sm font-medium text-dark-tx sidebar-padding rounded-md"
+      className={cn(
+        "font-bold mb-1.5 mt-1 w-full flex items-center gap-1 text-left text-sm font-medium text-dark-tx-3 hover:text-white rounded-md transition-colors",
+        alignWithIconRow ? "sidebar-padding-header" : "sidebar-padding"
+      )}
     >
       <span>{title}</span>
-      {expanded ? (
-        <ChevronDown size={14} className="shrink-0" />
-      ) : (
-        <ChevronRight size={14} className="shrink-0" />
-      )}
+    
     </button>
     {expanded && children}
   </div>

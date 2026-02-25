@@ -84,30 +84,33 @@ export const ObjectDisplay = ({
       </div>
 
       {expanded && (
-        <div className="pl-5 flex flex-col pt-0.5 gap-0.5">
+        <div className="flex flex-col pt-0.5 gap-0.5">
           {sceneEntries.map(([key, value]) =>
             value && typeof value === "object" ? (
-              <ObjectDisplay
-                scene={value as Scene}
-                path={fullPathFor(key)}
-                key={key}
-                isDropdown={true}
-                showHiddenProperties={showHiddenProperties}
-                onChange={onChange}
-              />
+              <div className="pl-5.5" key={fullPathFor(key)}>
+                <ObjectDisplay
+                  scene={value as Scene}
+                  path={fullPathFor(key)}
+                  isDropdown={true}
+                  showHiddenProperties={showHiddenProperties}
+                  onChange={onChange}
+                />
+              </div>
             ) : (
-              <PropertyDisplay
-                entry={[key, value]}
-                key={fullPathFor(key)}
-                onChange={
-                  onChange
-                    ? (newValue: unknown) => onChange(fullPathFor(key), newValue)
-                    : undefined
-                }
-              />
+              <div className="pl-5" key={fullPathFor(key)}>
+                <PropertyDisplay
+                  entry={[key, value]}
+                  onChange={
+                    onChange
+                      ? (newValue: unknown) => onChange(fullPathFor(key), newValue)
+                      : undefined
+                  }
+                />
+              </div>
             ),
           )}
         </div>
+      
       )}
     </div>
   );
