@@ -19,7 +19,7 @@ export const Searchbar = ({
     <div className={cn("relative", className)}>
       <div
         className={cn(
-          "flex flex-row justify-between items-center w-full gap-1.5 px-2 py-1.5 sidebar-hover rounded-md sidebar-padding pb-2 font-semibold group",
+          "flex flex-row justify-between items-center w-full gap-1.5 sidebar-padding-icon-row sidebar-hover rounded-md group",
           isFocused && "bg-dark-ui-2"
         )}
       >

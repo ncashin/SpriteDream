@@ -39,6 +39,14 @@ body {
   padding-right: calc(var(--sidebar-spacing) * 1.5);
 }
 
+/* Same as sidebar-padding but pl reduced by 0.5 so icon left edge aligns with Scene View text */
+.sidebar-padding-icon-row {
+  padding-top: calc(var(--sidebar-spacing) * 1);
+  padding-bottom: calc(var(--sidebar-spacing) * 1);
+  padding-left: calc(var(--sidebar-spacing) * 2);
+  padding-right: calc(var(--sidebar-spacing) * 1.5);
+}
+
 .sidebar-hover:hover {
   background-color: #383838;
 }

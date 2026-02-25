@@ -59,9 +59,9 @@ export const ObjectDisplay = ({
     );
   }
   return (
-    <div className="flex flex-col  w-full py-0.5">
+    <div className="flex flex-col w-full ">
       <div
-        className="flex flex-row justify-between items-center w-full sidebar-hover rounded-md sidebar-padding group cursor-pointer"
+        className="flex flex-row justify-between items-center w-full sidebar-hover rounded-md sidebar-padding-icon-row group cursor-pointer"
         onClick={() => {
           setExpanded(!expanded);
         }}

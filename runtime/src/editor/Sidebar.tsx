@@ -1,44 +1,55 @@
-import { PanelLeft, PanelLeftClose } from "lucide-react";
+import { PanelLeftClose } from "lucide-react";
 import { useState } from "react";
-import { cn } from "../utils/cn";
 import { IconButton } from "./IconButton";
 import { SceneView } from "./SceneView";
+import { cn } from "../utils/cn";
 
 export const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div
-      className={`h-full flex flex-col bg-[#2c2c2c] border border-dark-ui transition-[width] duration-200 ease-out ${
-        collapsed ? "min-w-12 w-12 max-w-12" : "min-w-80 w-80 max-w-80"
-      }`}
+      className={cn(
+        "h-full flex flex-col bg-[#2c2c2c] border-r border-[#444444] transition-[width] duration-200 ease-out",
+        collapsed ? "w-fit min-w-0 shrink-0" : "min-w-80 w-80 max-w-80"
+      )}
     >
       <header
-        className={`shrink-0 border-b border-dark-ui flex min-h-[2.75rem] sidebar-padding ${
-          collapsed
-            ? "flex-col items-center gap-1"
-            : "flex-row items-center gap-2"
-        }`}
-      >
-        <img
-          src="/logo.png"
-          alt="Logo"
-          className="h-6 w-6 shrink-0 object-contain"
-        />
-        {!collapsed && (
-          <span className="text-sm font-medium text-dark-tx truncate flex-1">
-            Scene
-          </span>
+        className={cn(
+          "pl-4 pr-3 pt-4 pb-3.5 shrink-0 flex flex-row items-center min-h-[2.75rem]",
+          collapsed ? "cursor-pointer" : "gap-2 border-b border-[#444444]"
         )}
-        <IconButton
-          icon={collapsed ? PanelLeft : PanelLeftClose}
-          onClick={() => setCollapsed((c) => !c)}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className={cn("sidebar-hover", collapsed ? "" : "ml-auto")}
-        />
+        onClick={collapsed ? () => setCollapsed(false) : undefined}
+        title={collapsed ? "Expand sidebar" : undefined}
+      >
+        <span
+          className={cn(
+            "inline-flex",
+            collapsed && "rounded-md sidebar-hover p-2 -m-2"
+          )}
+        >
+          <img
+            src="/logo.png"
+            alt="Logo"
+            className="h-6 w-6 shrink-0 object-contain"
+          />
+        </span>
+        {!collapsed && (
+          <>
+            <span className="text-sm font-medium text-dark-tx truncate flex-1">
+              GameIDE
+            </span>
+            <IconButton
+              icon={PanelLeftClose}
+              onClick={() => setCollapsed(true)}
+              title="Collapse sidebar"
+              className="sidebar-hover ml-auto"
+            />
+          </>
+        )}
       </header>
       {!collapsed && (
-        <div className="flex-1 min-h-0 overflow-auto sidebar-padding">
+        <div className="flex-1 min-h-0 overflow-auto pt-2 px-1.5 flex flex-col gap-0.5">
           <SceneView />
         </div>
       )}

@@ -50,7 +50,7 @@ export const SceneView = ({
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-center gap-1 text-left text-sm text-dark-tx sidebar-padding sidebar-hover rounded-md -mx-1"
+        className="w-full flex items-center gap-1 text-left text-sm text-dark-tx sidebar-padding rounded-md"
       >
 
         <span className="">Scene View</span>
@@ -65,7 +65,7 @@ export const SceneView = ({
         <>
           <div
             ref={dropdownRef}
-            className="relative px-2 pb-1.5 text-sm text-dark-tx"
+            className="relative  text-sm text-dark-tx"
           >
             <Searchbar
               className="flex-1"
@@ -94,7 +94,7 @@ export const SceneView = ({
 
           <div
             className={cn(
-              "overflow-x-auto h-full px-2 pb-8 text-sm text-dark-tx",
+              "overflow-x-auto h-full pb-8 text-sm text-dark-tx",
               `
                 [&::-webkit-scrollbar]:h-1
                 [&::-webkit-scrollbar-track]:bg-dark-ui-2

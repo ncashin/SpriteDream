@@ -15,7 +15,7 @@ export function BooleanInput({ displayValue, onChange, label }: BooleanInputProp
 
   if (label != null) {
     return (
-      <label className="flex flex-row items-center w-full group gap-2 sidebar-padding font-semibold text-dark-tx cursor-pointer sidebar-hover rounded-md min-h-[1.5rem]">
+      <label className="flex flex-row items-center w-full group gap-2 sidebar-padding text-dark-tx cursor-pointer sidebar-hover rounded-md min-h-[1.5rem]">
         <h2>{label}</h2>
         <div className="flex-1 min-w-0 flex items-center p-0.5 px-1">{checkbox}</div>
       </label>
