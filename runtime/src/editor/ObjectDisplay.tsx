@@ -66,7 +66,7 @@ export const ObjectDisplay = ({
           setExpanded(!expanded);
         }}
       >
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <ObjectIcon path={path} iconName={(scene as Record<string, unknown>).__icon} />
           <h1>{path.split(".").pop() ?? path}</h1>
         </div>
@@ -84,7 +84,7 @@ export const ObjectDisplay = ({
       </div>
 
       {expanded && (
-        <div className="pl-6.5 flex flex-col pt-0.5 gap-0.5">
+        <div className="pl-5 flex flex-col pt-0.5 gap-0.5">
           {sceneEntries.map(([key, value]) =>
             value && typeof value === "object" ? (
               <ObjectDisplay
