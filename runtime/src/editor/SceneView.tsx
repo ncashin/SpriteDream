@@ -46,27 +46,44 @@ export const SceneView = ({
   }, [dropdownOpen]);
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setExpanded((e) => !e)}
-        className="mb-1.5 mt-1 w-full flex items-center gap-1 text-left text-sm font-medium text-dark-tx sidebar-padding rounded-md"
-      >
-
-        <span className="">Scene View</span>
-        {expanded ? (
-          <ChevronDown size={14} className="shrink-0" />
-        ) : (
-          <ChevronRight size={14} className="shrink-0" />
-        )}
-      </button>
-
-      {expanded && (
-        <>
-          <div
-            ref={dropdownRef}
-            className="relative  text-sm text-dark-tx"
+    <div
+      className={cn(
+        "flex flex-col",
+        expanded && "min-h-0 flex-[6] overflow-auto pb-8 -mx-1.5 -mt-2 -mb-0.5",
+        !expanded && "pb-1",
+        expanded &&
+          `
+          [scrollbar-gutter:stable_both]
+          [&::-webkit-scrollbar]:h-1
+          [&::-webkit-scrollbar]:w-1
+          [&::-webkit-scrollbar-track]:bg-dark-ui-2
+          [&::-webkit-scrollbar-thumb]:bg-light-ui-3
+        `
+      )}
+    >
+      <div className={cn(expanded && "px-1.5 pt-2 pb-0.5")}>
+        <div
+          className="sticky top-0 z-10 -mt-2 pt-2"
+          style={{ backgroundColor: "rgba(44, 44, 44, 0.98)" }}
+        >
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            className="mb-1.5 mt-1 w-full flex items-center gap-1 text-left text-sm font-medium text-dark-tx sidebar-padding rounded-md"
           >
+            <span className="">Scene View</span>
+            {expanded ? (
+              <ChevronDown size={14} className="shrink-0" />
+            ) : (
+              <ChevronRight size={14} className="shrink-0" />
+            )}
+          </button>
+
+          {expanded && (
+            <div
+              ref={dropdownRef}
+              className="relative text-sm text-dark-tx flex flex-col pb-1"
+            >
             <Searchbar
               className="flex-1"
               rightAdornment={
@@ -91,25 +108,19 @@ export const SceneView = ({
               }
             />
           </div>
+          )}
+        </div>
 
-          <div
-            className={cn(
-              "overflow-x-auto h-full pb-8 text-sm text-dark-tx",
-              `
-                [&::-webkit-scrollbar]:h-1
-                [&::-webkit-scrollbar-track]:bg-dark-ui-2
-                [&::-webkit-scrollbar-thumb]:bg-light-ui-3
-              `,
-            )}
-          >
+        {expanded && (
+          <div className="text-sm text-dark-tx min-w-0">
             <ObjectDisplay
               scene={scene}
               showHiddenProperties={showHiddenProperties}
               onChange={onChange}
             />
           </div>
-        </>
-      )}
-    </>
+        )}
+      </div>
+    </div>
   );
 };

@@ -13,14 +13,12 @@ export const Searchbar = ({
   dropdown?: React.ReactNode;
 }) => {
   const [search, setSearch] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
 
   return (
     <div className={cn("relative", className)}>
       <div
         className={cn(
-          "flex flex-row justify-between items-center w-full gap-1.5 sidebar-padding-icon-row sidebar-hover rounded-md group",
-          isFocused && "bg-dark-ui-2"
+          "flex flex-row justify-between items-center w-full gap-1.5 sidebar-padding-icon-row rounded-md group bg-[#383838]"
         )}
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -33,8 +31,6 @@ export const Searchbar = ({
             onChange={e => setSearch(e.target.value)}
             placeholder="Search..."
             className="bg-transparent outline-none text-light-ui w-full min-w-0"
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
           />
         </div>
         {rightAdornment != null && (

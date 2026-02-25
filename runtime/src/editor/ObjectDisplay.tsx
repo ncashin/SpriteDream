@@ -59,7 +59,7 @@ export const ObjectDisplay = ({
     );
   }
   return (
-    <div className="flex flex-col w-full ">
+    <div className="flex flex-col w-full">
       <div
         className="flex flex-row justify-between items-center w-full sidebar-hover rounded-md sidebar-padding-icon-row group cursor-pointer"
         onClick={() => {
@@ -84,7 +84,7 @@ export const ObjectDisplay = ({
       </div>
 
       {expanded && (
-        <div className="pl-6.5 flex flex-col ">
+        <div className="pl-6.5 flex flex-col pt-0.5 gap-0.5">
           {sceneEntries.map(([key, value]) =>
             value && typeof value === "object" ? (
               <ObjectDisplay
