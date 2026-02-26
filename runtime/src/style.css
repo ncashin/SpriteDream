@@ -5,6 +5,12 @@
 
 :root {
   --sidebar-spacing: 0.25rem;
+  /* Editor color tokens (sidebar background, hover/accent, Scene view text, header white) */
+  --editor-background: #2c2c2c;
+  --editor-accent: #383838;
+  --editor-text-light: #ffffff;
+  --editor-text-visible: #ffffff;
+
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -17,6 +23,14 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tailwind helpers: bg-editor-background, bg-editor-accent, text-editor-text-light, text-editor-text-visible */
+@theme inline {
+  --color-editor-background: var(--editor-background);
+  --color-editor-accent: var(--editor-accent);
+  --color-editor-text-light: var(--editor-text-light);
+  --color-editor-text-visible: var(--editor-text-visible);
 }
 
 body {
@@ -93,7 +107,21 @@ body {
 }
 
 .sidebar-hover:hover {
-  background-color: #383838;
+  background-color: var(--editor-accent);
+}
+
+/* Transform mode gizmo buttons (translate/rotate/scale) */
+.transform-gizmo-btn {
+  background-color: var(--editor-background);
+}
+.transform-gizmo-btn:hover {
+  background-color: var(--editor-accent);
+}
+.transform-gizmo-btn.is-selected {
+  background-color: var(--editor-accent);
+}
+.transform-gizmo-btn.is-selected:hover {
+  background-color: #454545;
 }
 
 .group-hover-visible {

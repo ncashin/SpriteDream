@@ -1,4 +1,3 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "../utils/cn";
 
 export type PanelHeaderProps = {
@@ -20,18 +19,18 @@ export const PanelHeader = ({
   children,
 }: PanelHeaderProps) => (
   <div
-    className={cn("panel-inner-x pt-3 shrink-0 sticky top-0 z-10 pb-2", className)}
-    style={{ backgroundColor: "rgba(44, 44, 44, 0.98)" }}
+    className={cn(" panel-inner-x shrink-0 sticky top-0 z-10", className)}
+    style={{ backgroundColor: "color-mix(in srgb, var(--editor-background) 98%, transparent)" }}
   >
     <button
       type="button"
       onClick={onToggle}
       className={cn(
-        "font-bold mb-1.5 mt-1 w-full flex items-center gap-1 text-left text-sm font-medium text-dark-tx-3 hover:text-white rounded-md transition-colors",
+        "font-bold w-full flex items-center gap-1 !pb-2 text-left text-sm font-medium text-dark-tx-3 hover:text-[var(--editor-text-visible)] rounded-md transition-colors",
         alignWithIconRow ? "sidebar-padding-header" : "sidebar-padding"
       )}
     >
-      <span>{title}</span>
+      <span className="text-base">{title}</span>
     
     </button>
     {expanded && children}

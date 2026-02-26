@@ -19,9 +19,7 @@ export const TransformModeWidget = () => {
           key={id}
           type="button"
           title={id}
-          className={`flex flex-row items-center justify-center px-2.5 py-1 min-h-6 rounded-md text-xs bg-[#2c2c2c] sidebar-hover ${
-            mode === id ? "bg-[#383838]" : ""
-          }`}
+          className={`flex flex-row items-center justify-center px-2.5 py-1 min-h-6 rounded-md text-xs transform-gizmo-btn ${mode === id ? "is-selected" : ""}`}
           onClick={() => setMode(id)}
         >
           <Icon size={12} strokeWidth={1.5} />

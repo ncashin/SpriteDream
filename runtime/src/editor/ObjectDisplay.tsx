@@ -66,7 +66,7 @@ export const ObjectDisplay = ({
           setExpanded(!expanded);
         }}
       >
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" style={{ color: "var(--editor-text-visible)" }}>
           <ObjectIcon path={path} iconName={(scene as Record<string, unknown>).__icon} />
           <h1>{path.split(".").pop() ?? path}</h1>
         </div>

@@ -30,7 +30,7 @@ export const Searchbar = ({
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search..."
-            className="bg-transparent outline-none text-light-ui w-full min-w-0"
+            className="bg-transparent outline-none text-editor-text-light placeholder:text-dark-tx-3 w-full min-w-0"
           />
         </div>
         {rightAdornment != null && (

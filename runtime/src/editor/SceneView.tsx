@@ -68,7 +68,8 @@ export const SceneView = ({
       >
         <div
           ref={dropdownRef}
-          className="relative text-sm text-dark-tx flex flex-col pb-0.5 pt-0.5"
+          className="relative text-sm flex flex-col pb-0.5 pt-0.5"
+          style={{ color: "var(--editor-text-light)" }}
         >
           <Searchbar
             className="flex-1 pt-0.5"
@@ -97,7 +98,10 @@ export const SceneView = ({
       </PanelHeader>
 
       {expanded && (
-        <div className={cn("panel-inner !pt-0", "text-sm text-dark-tx min-w-0")}>
+        <div
+          className={cn("panel-inner !pt-0", "text-sm min-w-0")}
+          style={{ color: "var(--editor-text-light)" }}
+        >
           <ObjectDisplay
             scene={scene}
             showHiddenProperties={showHiddenProperties}

@@ -36,7 +36,7 @@ export const PropertyDisplay = ({
       : undefined;
 
   return (
-    <div className={cn(" flex flex-row items-center w-full group gap-2 sidebar-padding text-dark-tx-2")}>
+    <div className={cn(" flex flex-row items-center w-full group gap-2 sidebar-padding text-editor-text-light")}>
       <h2 className="w-16 min-w-16 truncate">{key}:</h2>
       <div className=" flex-1">
         {DisplayComponent ? (
@@ -46,7 +46,7 @@ export const PropertyDisplay = ({
             onChange={handleChange}
           />
         ) : (
-          <p className={cn("truncate overflow-ellipsis text-dark-tx-2")}>{String(value)}</p>
+          <p className={cn("truncate overflow-ellipsis text-editor-text-light")}>{String(value)}</p>
         )}
       </div>
     </div>

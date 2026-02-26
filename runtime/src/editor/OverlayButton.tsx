@@ -13,7 +13,7 @@ export const OverlayButton = ({
 }: OverlayButtonProps) => {
   return (
     <button
-      className="flex flex-row items-center pl-2.5 pr-2 py-1 gap-1 rounded-md text-xs bg-[#2c2c2c] sidebar-hover"
+      className="flex flex-row items-center pl-2.5 pr-2 py-1 gap-1 rounded-md text-xs bg-editor-background sidebar-hover"
       {...props}
     >
       <span>{text}</span>
