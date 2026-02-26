@@ -6,9 +6,9 @@ import { TransformModeWidget } from "./TransformModeWidget";
 
 export const Editor = () => {
   return (
-    <div className="flex flex-row h-full w-full">
+    <div className="flex flex-row h-screen w-full min-h-0">
       <Sidebar />
-      <div className="relative grow h-full w-full">
+      <div className="relative flex flex-1 min-w-0 min-h-0">
         <Game />
         <div className="absolute top-3.5 right-3.5 z-10 flex flex-row items-center gap-1  rounded-md bg-editor-background p-0.5">
           <TransformModeWidget />

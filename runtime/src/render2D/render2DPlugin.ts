@@ -11,44 +11,40 @@ const DEFAULT_BACKGROUND_COLOR = 0x1c1b1a;
 
 export type Render2DPluginOptions = {
   backgroundColor?: number;
-  viewport?: boolean;
 };
 
-export const render2DPlugin = (options?: Render2DPluginOptions): Plugin => (context) => {
-  const gameElement = document.getElementById("game");
-  invariant(gameElement, "#game element must exist in the DOM");
+export const render2DPlugin = (options?: Render2DPluginOptions): Plugin =>
+  async (context) => {
+    const gameElement = document.getElementById("game");
+    invariant(gameElement, "#game element must exist in the DOM");
 
-  const resolution = typeof window !== "undefined" ? window.devicePixelRatio : 1;
-  const autoDensity = true;
+    const resolution = typeof window !== "undefined" ? window.devicePixelRatio : 1;
+    const autoDensity = true;
 
-  const application = new Application();
-  const pixiApplicationReady = application
-    .init({
+    const application = new Application();
+    
+   await application.init({
       resizeTo: gameElement,
       backgroundColor: options?.backgroundColor ?? DEFAULT_BACKGROUND_COLOR,
       resolution,
       autoDensity,
       antialias: true,
     })
-    .then(() => {
-      gameElement.appendChild(application.canvas);
-      return application;
-    });
 
-  const pixiWithViewport = pixiApplicationReady.then((app) => {
-    const enableViewport = options?.viewport !== false;
-    if (enableViewport) {
-      const viewport = setupViewport(app);
-      return { application: app, world: viewport.world };
-    }
-    return { application: app, world: app.stage };
-  });
+    gameElement.appendChild(application.canvas);
+    const resizeObserver = new ResizeObserver(() => application.resize());
+    resizeObserver.observe(gameElement);
 
-  handleSprites(pixiWithViewport, getScene());
+    const viewport = setupViewport(application);
 
-  return {
-    ...context,
-    pixiApplication: application,
-    pixiApplicationReady: pixiApplicationReady,
+    handleSprites(
+      Promise.resolve({ application, world: viewport.world }),
+      getScene(),
+    );
+
+    return {
+      ...context,
+      pixiApplication: application,
+      viewport,
+    };
   };
-};

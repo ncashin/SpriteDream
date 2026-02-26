@@ -1,6 +1,10 @@
 import type { GameContext, Plugin } from "./plugin";
 
-type ContextAfter<P> = P extends (ctx: any) => infer R ? R : never;
+type ContextAfter<P> = P extends (ctx: any) => infer R
+  ? R extends Promise<infer X>
+    ? X
+    : R
+  : never;
 
 type FullContext<Plugins> = Plugins extends readonly [...any[], infer Last]
   ? ContextAfter<Last>
@@ -8,17 +12,17 @@ type FullContext<Plugins> = Plugins extends readonly [...any[], infer Last]
 
 export type InitializeGameOptions<Plugins extends readonly Plugin[] = []> = {
   initialContext?: GameContext;
-  main: (ctx: FullContext<Plugins>) => void;
+  main: (ctx: FullContext<Plugins>) => void | Promise<void>;
   plugins?: Plugins;
 };
 
-export const initializeGame = <const Plugins extends readonly Plugin[] = []>(
+export const initializeGame = async <const Plugins extends readonly Plugin[] = []>(
   options: InitializeGameOptions<Plugins>
 ) => {
   const initialContext = options.initialContext ?? ({} as GameContext);
-  const ctx = (options.plugins ?? []).reduce(
-    (acc, plugin) => plugin(acc),
-    initialContext
-  ) as FullContext<Plugins>;
-  options.main(ctx);
+  let context: GameContext = initialContext;
+  for (const plugin of options.plugins ?? []) {
+    context = await plugin(context);
+  }
+  await options.main(context as FullContext<Plugins>);
 };

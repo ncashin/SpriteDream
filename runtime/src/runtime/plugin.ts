@@ -1,6 +1,6 @@
 export type GameContext = {};
 
-export type Plugin = (context: GameContext) => GameContext;
+export type Plugin = (context: GameContext) => Promise<GameContext>;
 
 export type PluginFactory<TOptions = void> = (
   options?: TOptions

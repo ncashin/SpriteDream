@@ -1,4 +1,13 @@
 import { Application, Container } from "pixi.js";
+import invariant from "tiny-invariant";
+
+import { setupEditorViewport } from "./editorViewport";
+
+export type ViewportState = {
+  x: number;
+  y: number;
+  zoom: number;
+};
 
 export type ViewportOptions = {
   minScale?: number;
@@ -6,13 +15,9 @@ export type ViewportOptions = {
   wheelZoomSpeed?: number;
 };
 
-const DEFAULT_OPTIONS: Required<ViewportOptions> = {
-  minScale: 0.1,
-  maxScale: 10,
-  wheelZoomSpeed: 0.002,
-};
-
 export type Viewport = {
+  /** Viewport state: (x, y) is the world position at canvas center, zoom is scale */
+  viewport: ViewportState;
   world: Container;
   destroy: () => void;
 };
@@ -21,83 +26,44 @@ export function setupViewport(
   application: Application,
   options: ViewportOptions = {},
 ): Viewport {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
   const world = new Container();
   const stage = application.stage;
   stage.removeChildren();
   stage.addChild(world);
 
-  const canvas = application.canvas as HTMLCanvasElement;
-  const { width, height } = application.screen;
-  world.position.set(width / 2, height / 2);
-  let isDragging = false;
-  let lastClientX = 0;
-  let lastClientY = 0;
+  const canvas = application.canvas;
+  invariant(canvas instanceof HTMLCanvasElement, "application.canvas must be an HTMLCanvasElement");
 
-  function clientToCanvas(clientX: number, clientY: number): { x: number; y: number } {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY,
-    };
+  const state: ViewportState = { x: 0, y: 0, zoom: 1 };
+
+  function applyViewport() {
+    const { width, height } = application.screen;
+    world.position.set(width / 2 - state.x * state.zoom, height / 2 - state.y * state.zoom);
+    world.scale.set(state.zoom, state.zoom);
   }
 
-  function handlePointerDown(e: PointerEvent) {
-    if (e.button !== 0) return;
-    isDragging = true;
-    lastClientX = e.clientX;
-    lastClientY = e.clientY;
-    canvas.setPointerCapture(e.pointerId);
-  }
+  const viewport = new Proxy(state, {
+    set(target, key, value) {
+      if (typeof key === "string" && key in target) {
+        target[key as keyof ViewportState] = value as number;
+        applyViewport();
+      }
+      return true;
+    },
+  }) as ViewportState;
 
-  function handlePointerMove(e: PointerEvent) {
-    if (!isDragging) return;
-    const dx = e.clientX - lastClientX;
-    const dy = e.clientY - lastClientY;
-    lastClientX = e.clientX;
-    lastClientY = e.clientY;
-    world.position.x += dx;
-    world.position.y += dy;
-  }
+  applyViewport();
+  const resizeObserver = new ResizeObserver(applyViewport);
+  resizeObserver.observe(canvas);
 
-  function handlePointerUp(e: PointerEvent) {
-    if (e.button !== 0) return;
-    isDragging = false;
-    canvas.releasePointerCapture(e.pointerId);
-  }
-
-  function handleWheel(e: WheelEvent) {
-    e.preventDefault();
-    const { x: cursorX, y: cursorY } = clientToCanvas(e.clientX, e.clientY);
-    const worldX = (cursorX - world.position.x) / world.scale.x;
-    const worldY = (cursorY - world.position.y) / world.scale.y;
-    const delta = -e.deltaY * opts.wheelZoomSpeed;
-    const newScale = Math.min(
-      opts.maxScale,
-      Math.max(opts.minScale, world.scale.x + delta),
-    );
-    world.scale.set(newScale, newScale);
-    world.position.x = cursorX - worldX * newScale;
-    world.position.y = cursorY - worldY * newScale;
-  }
-
-  canvas.addEventListener("pointerdown", handlePointerDown);
-  canvas.addEventListener("pointermove", handlePointerMove);
-  canvas.addEventListener("pointerup", handlePointerUp);
-  canvas.addEventListener("pointerleave", handlePointerUp);
-  canvas.addEventListener("wheel", handleWheel, { passive: false });
+  const editorViewport = setupEditorViewport(application, viewport, options);
 
   function destroy() {
-    canvas.removeEventListener("pointerdown", handlePointerDown);
-    canvas.removeEventListener("pointermove", handlePointerMove);
-    canvas.removeEventListener("pointerup", handlePointerUp);
-    canvas.removeEventListener("pointerleave", handlePointerUp);
-    canvas.removeEventListener("wheel", handleWheel);
+    editorViewport.destroy();
+    resizeObserver.disconnect();
     stage.removeChild(world);
     world.destroy({ children: true });
   }
 
-  return { world, destroy };
+  return { viewport, world, destroy };
 }

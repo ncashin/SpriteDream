@@ -39,16 +39,14 @@ export const Sidebar = () => {
       )}
       style={{
         backgroundColor: "var(--editor-background)",
-        width: collapsed ? "3.5rem" : "20rem",
+        width: collapsed ? "3.75rem" : "20rem",
       }}
     >
       <div className="sidebar-inner h-full flex flex-col shrink-0 pt-2">
       <header
         className={cn(
-          "sidebar-padding-icon-row shrink-0 flex flex-row items-center",
-          collapsed
-            ? "!pt-3 !pb-1 !pl-4 !pr-1.5 cursor-pointer min-h-[2.25rem]"
-            : "!pt-2 !pb-3 !pl-4 gap-2 min-h-[2.75rem]"
+          "sidebar-padding-icon-row shrink-0 flex flex-row items-center !pt-2 !pb-3 !pl-4 h-[3.5rem] min-h-[3.5rem]",
+          collapsed ? "!pr-1.5 cursor-pointer" : "gap-2"
         )}
         onClick={collapsed ? () => setCollapsed(false) : undefined}
         title={collapsed ? "Expand sidebar" : undefined}

@@ -33,17 +33,29 @@
   --color-editor-text-visible: var(--editor-text-visible);
 }
 
+html,
 body {
+  height: 100%;
   margin: 0;
+}
+body {
   display: flex;
   min-width: 100vw;
   min-height: 100vh;
 }
 
 #app {
+  display: flex;
+  flex-direction: column;
   min-width: 100vw;
   min-height: 100vh;
+  height: 100%;
   margin: 0 auto;
+}
+
+#game {
+  display: block;
+  overflow: hidden;
 }
 
 .sidebar-padding {

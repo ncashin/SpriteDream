@@ -6,7 +6,7 @@ import { getScene } from "./scene/scene";
 import { SpriteDefinition } from "./render2D/sprite";
 import { instantiateObject } from "./scene/objectDefinition";
 
-initializeGame({
+await initializeGame({
   plugins: [editorPlugin(), render2DPlugin()],
   main: () => {
     const scene = getScene();
