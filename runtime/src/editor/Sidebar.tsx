@@ -35,19 +35,20 @@ export const Sidebar = () => {
   return (
     <div
       className={cn(
-        "sidebar-clip h-full max-h-screen flex flex-col border-r border-[#444444] shrink-0 overflow-hidden",
-        collapsed && "pt-2"
+        "sidebar-clip h-full max-h-screen flex flex-col border-r border-[#444444] shrink-0 overflow-hidden"
       )}
       style={{
         backgroundColor: "var(--editor-background)",
         width: collapsed ? "3.5rem" : "20rem",
       }}
     >
-      <div className="sidebar-inner h-full flex flex-col shrink-0">
+      <div className="sidebar-inner h-full flex flex-col shrink-0 pt-2">
       <header
         className={cn(
-          "sidebar-padding-icon-row !pl-4 !pb-3 shrink-0 flex flex-row items-center",
-          collapsed ? "!pt-0 cursor-pointer h-[2.75rem]" : "!pt-2 gap-2 min-h-[2.75rem]"
+          "sidebar-padding-icon-row shrink-0 flex flex-row items-center",
+          collapsed
+            ? "!pt-2 !pb-1 !pl-4 !pr-1.5 cursor-pointer min-h-[2.25rem]"
+            : "!pt-2 !pb-3 !pl-4 gap-2 min-h-[2.75rem]"
         )}
         onClick={collapsed ? () => setCollapsed(false) : undefined}
         title={collapsed ? "Expand sidebar" : undefined}
@@ -73,10 +74,10 @@ export const Sidebar = () => {
           >
             <SidebarHeaderButton
               icon={SidebarSimpleIcon}
-              size={28}
+              size={20}
               onClick={handleCollapse}
               title="Collapse sidebar"
-              className="sidebar-hover sidebar-icon-hit"
+              className="sidebar-hover sidebar-icon-hit w-9 h-9 min-w-9 min-h-9"
             />
           </div>
         )}

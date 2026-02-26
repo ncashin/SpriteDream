@@ -50,14 +50,7 @@ export const SceneView = ({
     <div
       className={cn(
         "flex flex-col border-b border-[#444444]",
-        expanded && "min-h-0 flex-[6] overflow-y-scroll overflow-x-auto",
-        expanded &&
-          `
-          [&::-webkit-scrollbar]:h-1
-          [&::-webkit-scrollbar]:w-1
-          [&::-webkit-scrollbar-track]:bg-dark-ui-2
-          [&::-webkit-scrollbar-thumb]:bg-light-ui-3
-        `
+        expanded && "min-h-0 flex-[6]"
       )}
     >
       <PanelHeader
@@ -99,7 +92,10 @@ export const SceneView = ({
 
       {expanded && (
         <div
-          className={cn("panel-inner !pt-0", "text-sm min-w-0")}
+          className={cn(
+            "panel-inner !pt-0 text-sm min-w-0 overflow-y-auto overflow-x-auto min-h-0 flex-1",
+            "[&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-light-ui-3"
+          )}
           style={{ color: "var(--editor-text-light)" }}
         >
           <ObjectDisplay

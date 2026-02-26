@@ -19,8 +19,7 @@ export const PanelHeader = ({
   children,
 }: PanelHeaderProps) => (
   <div
-    className={cn(" panel-inner-x shrink-0 sticky top-0 z-10", className)}
-    style={{ backgroundColor: "color-mix(in srgb, var(--editor-background) 98%, transparent)" }}
+    className={cn("panel-inner-x shrink-0", className)}
   >
     <button
       type="button"

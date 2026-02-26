@@ -9,14 +9,7 @@ export const Assets = () => {
     <div
       className={cn(
         "flex flex-col",
-        expanded && "min-h-0 flex-[4] overflow-y-scroll overflow-x-auto",
-        expanded &&
-          `
-          [&::-webkit-scrollbar]:h-1
-          [&::-webkit-scrollbar]:w-1
-          [&::-webkit-scrollbar-track]:bg-black/0
-          [&::-webkit-scrollbar-thumb]:bg-light-ui-3
-        `
+        expanded && "min-h-0 flex-[4]"
       )}
     >
       <PanelHeader
@@ -27,7 +20,12 @@ export const Assets = () => {
       />
 
       {expanded && (
-        <div className="panel-inner !pt-0 text-sm text-dark-tx min-w-0">
+        <div
+          className={cn(
+            "panel-inner !pt-0 text-sm text-dark-tx min-w-0 overflow-y-auto overflow-x-auto min-h-0 flex-1",
+            "[&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-light-ui-3"
+          )}
+        >
           <div className="sidebar-padding flex flex-col gap-1 items-start text-dark-fg-muted">
             <div className="py-0.5 rounded-md">
               <span className="truncate text-dark-fg-muted">No assets yet</span>
