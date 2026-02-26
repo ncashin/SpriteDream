@@ -47,7 +47,7 @@ export const Sidebar = () => {
         className={cn(
           "sidebar-padding-icon-row shrink-0 flex flex-row items-center",
           collapsed
-            ? "!pt-2 !pb-1 !pl-4 !pr-1.5 cursor-pointer min-h-[2.25rem]"
+            ? "!pt-3 !pb-1 !pl-4 !pr-1.5 cursor-pointer min-h-[2.25rem]"
             : "!pt-2 !pb-3 !pl-4 gap-2 min-h-[2.75rem]"
         )}
         onClick={collapsed ? () => setCollapsed(false) : undefined}

@@ -3,7 +3,7 @@ import { cn } from "../utils/cn";
 import { PanelHeader } from "./PanelHeader";
 
 export const Assets = () => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <div
