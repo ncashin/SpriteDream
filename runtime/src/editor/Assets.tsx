@@ -14,7 +14,7 @@ export const Assets = () => {
           `
           [&::-webkit-scrollbar]:h-1
           [&::-webkit-scrollbar]:w-1
-          [&::-webkit-scrollbar-track]:bg-dark-ui-2
+          [&::-webkit-scrollbar-track]:bg-black/0
           [&::-webkit-scrollbar-thumb]:bg-light-ui-3
         `
       )}
@@ -23,7 +23,7 @@ export const Assets = () => {
         title="Assets"
         expanded={expanded}
         onToggle={() => setExpanded((e) => !e)}
-        className={cn("panel-inner-x shrink-0", expanded && "!pb-0")}
+        className={cn("panel-inner-x shrink-0 !pt-1.5 pb-1", expanded && "!pb-0 ")}
       />
 
       {expanded && (

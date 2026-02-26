@@ -1,9 +1,9 @@
-import { PanelLeftClose } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Assets } from "./Assets";
 import { SceneView } from "./SceneView";
 import { SidebarHeaderButton } from "./SidebarHeaderButton";
 import { cn } from "../utils/cn";
+import { SidebarSimpleIcon } from "@phosphor-icons/react";
 
 const FADE_MS = 150;
 
@@ -34,7 +34,10 @@ export const Sidebar = () => {
 
   return (
     <div
-      className="sidebar-clip h-full max-h-screen flex flex-col border-r border-[#444444] shrink-0 overflow-hidden"
+      className={cn(
+        "sidebar-clip h-full max-h-screen flex flex-col border-r border-[#444444] shrink-0 overflow-hidden",
+        collapsed && "pt-2"
+      )}
       style={{
         backgroundColor: "var(--editor-background)",
         width: collapsed ? "3.5rem" : "20rem",
@@ -43,8 +46,8 @@ export const Sidebar = () => {
       <div className="sidebar-inner h-full flex flex-col shrink-0">
       <header
         className={cn(
-          "pl-4 pr-4 pt-4 pb-3.5 shrink-0 flex flex-row items-center min-h-[2.75rem]",
-          collapsed ? "cursor-pointer" : "gap-2"
+          "sidebar-padding-icon-row !pl-4 !pb-3 shrink-0 flex flex-row items-center",
+          collapsed ? "!pt-0 cursor-pointer h-[2.75rem]" : "!pt-2 gap-2 min-h-[2.75rem]"
         )}
         onClick={collapsed ? () => setCollapsed(false) : undefined}
         title={collapsed ? "Expand sidebar" : undefined}
@@ -52,13 +55,13 @@ export const Sidebar = () => {
         <span
           className={cn(
             "inline-flex",
-            collapsed && "rounded-md sidebar-hover p-2 -m-2"
+            collapsed && "rounded-md sidebar-hover sidebar-icon-hit sidebar-icon-hit-inset"
           )}
         >
           <img
             src="/logo.png"
             alt="Logo"
-            className="h-6 w-6 shrink-0 object-contain"
+            className="h-7 w-7 shrink-0 object-contain"
           />
         </span>
         {showContent && (
@@ -69,10 +72,11 @@ export const Sidebar = () => {
             )}
           >
             <SidebarHeaderButton
-              icon={PanelLeftClose}
+              icon={SidebarSimpleIcon}
+              size={28}
               onClick={handleCollapse}
               title="Collapse sidebar"
-              className="sidebar-hover"
+              className="sidebar-hover sidebar-icon-hit"
             />
           </div>
         )}

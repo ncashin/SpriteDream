@@ -26,11 +26,11 @@ export const PanelHeader = ({
       type="button"
       onClick={onToggle}
       className={cn(
-        "font-bold w-full flex items-center gap-1 !pb-2 text-left text-sm font-medium text-dark-tx-3 hover:text-[var(--editor-text-visible)] rounded-md transition-colors",
+        "font-bold w-full flex items-center gap-1 !pt-2 !pb-3.5 text-left text-sm font-medium text-dark-tx-3 hover:text-[var(--editor-text-visible)] rounded-md transition-colors",
         alignWithIconRow ? "sidebar-padding-header" : "sidebar-padding"
       )}
     >
-      <span className="text-base">{title}</span>
+      <span className="">{title}</span>
     
     </button>
     {expanded && children}

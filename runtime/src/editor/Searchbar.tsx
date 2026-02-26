@@ -21,7 +21,7 @@ export const Searchbar = ({
           "flex flex-row justify-between items-center w-full gap-1.5 sidebar-padding-icon-row rounded-md group sidebar-hover"
         )}
       >
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+        <div className="flex items-center gap-0.5 min-w-0 flex-1">
           <div className="p-0.5 shrink-0">
             <Search size={16} strokeWidth={1.5} />
           </div>
