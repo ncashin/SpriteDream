@@ -45,6 +45,7 @@ export const render2DPlugin = (options?: Render2DPluginOptions): Plugin =>
     return {
       ...context,
       pixiApplication: application,
-      viewport,
+      viewport: viewport.viewport,
+      world: viewport.world,
     };
   };

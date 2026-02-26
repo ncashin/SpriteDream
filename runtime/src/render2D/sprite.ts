@@ -53,7 +53,8 @@ function applyTransformAndSize(
     displayObject.anchor.set(0.5, 0.5);
     displayObject.width = width;
     displayObject.height = height;
-    displayObject.scale.set(scaleX, scaleY);
+    // Negate scaleY so sprite "up" (image top) matches world +Y (viewport is Y-up)
+    displayObject.scale.set(scaleX, -scaleY);
     return;
   }
 
@@ -62,9 +63,10 @@ function applyTransformAndSize(
   const boundsHeight = bounds.height || 1;
 
   displayObject.pivot.set(boundsWidth / 2, boundsHeight / 2);
+  // Negate Y scale so Graphics "up" matches world +Y (viewport is Y-up)
   displayObject.scale.set(
     (width ? width / boundsWidth : 1) * scaleX,
-    (height ? height / boundsHeight : 1) * scaleY
+    -((height ? height / boundsHeight : 1) * scaleY)
   );
 }
 
@@ -157,7 +159,7 @@ export function handleSprites(
       case "transform2D":
         displayObject.position.set(change.newValue.x, change.newValue.y);
         displayObject.rotation = change.newValue.rotation;
-        displayObject.scale.set(change.newValue.scaleX, change.newValue.scaleY);
+        displayObject.scale.set(change.newValue.scaleX, -change.newValue.scaleY);
         break;
       case "transform2D.x":
         displayObject.position.x = change.newValue;
@@ -191,7 +193,7 @@ export function handleSprites(
         const bounds = displayObject.bounds;
         displayObject.scale.set(
           updatedSprite.width ? updatedSprite.width / (bounds.width || 1) : 1,
-          updatedSprite.height ? updatedSprite.height / (bounds.height || 1) : 1
+          -(updatedSprite.height ? updatedSprite.height / (bounds.height || 1) : 1)
         );
         break;
       }
@@ -215,8 +217,8 @@ export function handleSprites(
         {
           const bounds = displayObject.bounds;
           displayObject.scale.y = change.newValue
-            ? change.newValue / (bounds.height || 1)
-            : 1;
+            ? -(change.newValue / (bounds.height || 1))
+            : -1;
         }
         break;
       case "sprite.image": {

@@ -28,7 +28,6 @@ export function setupEditorViewport(
   let lastClientX = 0;
   let lastClientY = 0;
 
-  /** Cursor position in viewport/screen coordinates (same space as application.screen). */
   function clientToCanvas(clientX: number, clientY: number): { x: number; y: number } {
     const rect = canvas.getBoundingClientRect();
     const { width: screenW, height: screenH } = application.screen;
@@ -66,10 +65,9 @@ export function setupEditorViewport(
 
   function handleWheel(e: WheelEvent) {
     e.preventDefault();
-    const { width, height } = application.screen;
+    const screenSize = application.screen;
     const { x: cursorX, y: cursorY } = clientToCanvas(e.clientX, e.clientY);
-    const worldUnderCursorX = viewport.x + (cursorX - width / 2) / viewport.zoom;
-    const worldUnderCursorY = viewport.y + (cursorY - height / 2) / viewport.zoom;
+    const worldUnderCursor = viewport.screenToWorld({ x: cursorX, y: cursorY });
     const delta = -e.deltaY * opts.wheelZoomSpeed;
     const newZoom = Math.min(
       opts.maxScale,
@@ -77,8 +75,8 @@ export function setupEditorViewport(
     );
     const zoomChanged = newZoom !== viewport.zoom;
     if (zoomChanged) {
-      viewport.x = worldUnderCursorX - (cursorX - width / 2) / newZoom;
-      viewport.y = worldUnderCursorY - (cursorY - height / 2) / newZoom;
+      viewport.x = worldUnderCursor.x - (cursorX - screenSize.width / 2) / newZoom;
+      viewport.y = worldUnderCursor.y - (cursorY - screenSize.height / 2) / newZoom;
       viewport.zoom = newZoom;
     }
   }

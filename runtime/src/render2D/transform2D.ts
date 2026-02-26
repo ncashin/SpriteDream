@@ -1,5 +1,7 @@
 import { defineObject } from "../scene/objectDefinition";
 
+export type Position2D = { x: number; y: number };
+
 export const Transform2DDefinition = defineObject({
   transform2D: {
     __icon: "Move",
