@@ -1,10 +1,15 @@
+import type { ComponentType } from "react";
 import { Cog, PlayIcon } from "lucide-react";
-import { Game } from "./Game";
+
 import { OverlayButton } from "./OverlayButton";
 import { Sidebar } from "./Sidebar";
 import { TransformModeWidget } from "./TransformModeWidget";
 
-export const Editor = () => {
+export type EditorProps = {
+  Game: ComponentType;
+};
+
+export const Editor = ({ Game }: EditorProps) => {
   return (
     <div className="flex flex-row h-screen w-full min-h-0">
       <Sidebar />

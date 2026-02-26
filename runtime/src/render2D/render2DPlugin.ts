@@ -37,7 +37,7 @@ export const render2DPlugin =
 
     const { viewport, world } = setupViewport(application);
 
-    if (!context.__isRunning) {
+    if (!window.__isRunning) {
       setupEditorViewport(application, viewport);
     }
 

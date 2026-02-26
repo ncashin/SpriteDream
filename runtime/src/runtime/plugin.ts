@@ -1,6 +1,11 @@
+declare global {
+  interface Window {
+    __isRunning: boolean;
+  }
+}
+
 export type GameContext = {
   __gameRoot: HTMLElement;
-  __isRunning: boolean;
 };
 
 export type Plugin = (context: GameContext) => GameContext | Promise<GameContext>;
