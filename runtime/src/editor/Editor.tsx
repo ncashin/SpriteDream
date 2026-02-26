@@ -10,7 +10,7 @@ export const Editor = () => {
       <Sidebar />
       <div className="relative grow h-full w-full">
         <Game />
-        <div className="absolute top-3.5 right-3.5 z-10 text-sm flex flex-row items-center gap-2">
+        <div className="absolute top-3.5 right-3.5 z-10 flex flex-row items-center gap-1  rounded-md bg-editor-background p-0.5">
           <TransformModeWidget />
           <OverlayButton text="Settings" icon={Cog} />
           <OverlayButton text="Run" icon={PlayIcon} />

@@ -13,13 +13,13 @@ export const TransformModeWidget = () => {
   const [mode, setMode] = useState<TransformMode>("translate");
 
   return (
-    <div className="flex flex-row gap-2">
+    <div className="flex flex-row gap-0.5">
       {modes.map(({ id, icon: Icon }) => (
         <button
           key={id}
           type="button"
           title={id}
-          className={`flex flex-row items-center justify-center px-2.5 py-1 min-h-6 rounded-md text-xs transform-gizmo-btn ${mode === id ? "is-selected" : ""}`}
+          className={`flex flex-row items-center justify-center p-1 rounded-md text-xs transform-gizmo-btn ${mode === id ? "is-selected" : ""}`}
           onClick={() => setMode(id)}
         >
           <Icon size={12} strokeWidth={1.5} />
