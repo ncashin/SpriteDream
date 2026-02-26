@@ -1,8 +1,8 @@
 import { Application } from "pixi.js";
-import invariant from "tiny-invariant";
 
 import type { Plugin } from "../runtime/plugin";
 import { getScene } from "../scene/scene";
+import { setupEditorViewport } from "./editorViewport";
 import { handleSprites } from "./sprite";
 import { setupViewport } from "./viewport";
 
@@ -13,39 +13,41 @@ export type Render2DPluginOptions = {
   backgroundColor?: number;
 };
 
-export const render2DPlugin = (options?: Render2DPluginOptions): Plugin =>
+export const render2DPlugin =
+  (options?: Render2DPluginOptions): Plugin =>
   async (context) => {
-    const gameElement = document.getElementById("game");
-    invariant(gameElement, "#game element must exist in the DOM");
-
-    const resolution = typeof window !== "undefined" ? window.devicePixelRatio : 1;
+    const { __gameRoot } = context;
+    const resolution =
+      typeof window !== "undefined" ? window.devicePixelRatio : 1;
     const autoDensity = true;
 
     const application = new Application();
-    
-   await application.init({
-      resizeTo: gameElement,
+
+    await application.init({
+      resizeTo: __gameRoot,
       backgroundColor: options?.backgroundColor ?? DEFAULT_BACKGROUND_COLOR,
       resolution,
       autoDensity,
       antialias: true,
-    })
+    });
 
-    gameElement.appendChild(application.canvas);
+    __gameRoot.appendChild(application.canvas);
     const resizeObserver = new ResizeObserver(() => application.resize());
-    resizeObserver.observe(gameElement);
+    resizeObserver.observe(__gameRoot);
 
-    const viewport = setupViewport(application);
+    const { viewport, world } = setupViewport(application);
 
-    handleSprites(
-      Promise.resolve({ application, world: viewport.world }),
-      getScene(),
-    );
+    if (!context.__isRunning) {
+      setupEditorViewport(application, viewport);
+    }
+
+    const scene = getScene();
+    handleSprites({ application, world }, scene);
 
     return {
       ...context,
-      pixiApplication: application,
-      viewport: viewport.viewport,
-      world: viewport.world,
+      application,
+      viewport,
+      world,
     };
   };

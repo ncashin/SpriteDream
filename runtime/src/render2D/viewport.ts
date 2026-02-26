@@ -2,7 +2,6 @@ import { Application, Container } from "pixi.js";
 import invariant from "tiny-invariant";
 
 import type { Position2D } from "./transform2D";
-import { setupEditorViewport } from "./editorViewport";
 
 export type ViewportState = {
   x: number;
@@ -14,27 +13,19 @@ export type ViewportState = {
 
 export type ScreenSize = { width: number; height: number };
 
-export type ViewportOptions = {
-  minScale?: number;
-  maxScale?: number;
-  wheelZoomSpeed?: number;
-};
-
 export type Viewport = {
   viewport: ViewportState;
   world: Container;
-  destroy: () => void;
+  cleanup: () => void;
 };
 
-export function setupViewport(
-  application: Application,
-  options: ViewportOptions = {},
-): Viewport {
+export function setupViewport(application: Application): Viewport {
   const world = new Container();
   const stage = application.stage;
   stage.removeChildren();
   stage.addChild(world);
-  stage.scale.y = -1; // Y-up: flip vertically so +Y is up
+  // Y-up: flip vertically so +Y is up
+  stage.scale.y = -1; 
 
   const canvas = application.canvas;
   invariant(
@@ -48,14 +39,16 @@ export function setupViewport(
     const { width, height } = application.screen;
     return {
       x: state.x + (screen.x - width / 2) / state.zoom,
-      y: state.y + (height / 2 - screen.y) / state.zoom, // Y-up: screen top = larger world y
+      // Y-up: screen top = larger world y
+      y: state.y + (height / 2 - screen.y) / state.zoom, 
     };
   };
   const worldToScreen = (worldPos: Position2D) => {
     const { width, height } = application.screen;
     return {
       x: width / 2 + (worldPos.x - state.x) * state.zoom,
-      y: height / 2 - (worldPos.y - state.y) * state.zoom, // Y-up: world y up = smaller screen y
+      // Y-up: world y up = smaller screen y
+      y: height / 2 - (worldPos.y - state.y) * state.zoom, 
     };
   };
 
@@ -75,7 +68,7 @@ export function setupViewport(
     set y(value: number) {
       state.y = value;
       const { height } = application.screen;
-      world.position.y = height / 2 + state.y * state.zoom;
+      world.position.y = height / 2 - state.y * state.zoom;
     },
     
     get zoom() {
@@ -86,7 +79,7 @@ export function setupViewport(
       const { width, height } = application.screen;
       world.position.set(
         width / 2 - state.x * state.zoom,
-        height / 2 + state.y * state.zoom,
+        height / 2 - state.y * state.zoom,
       );
       world.scale.set(state.zoom, state.zoom);
     },
@@ -99,7 +92,7 @@ export function setupViewport(
   stage.position.y = height;
   world.position.set(
     width / 2 - state.x * state.zoom,
-    height / 2 + state.y * state.zoom,
+    height / 2 - state.y * state.zoom,
   );
   world.scale.set(state.zoom, state.zoom);
 
@@ -108,20 +101,17 @@ export function setupViewport(
     stage.position.y = height;
     world.position.set(
       width / 2 - state.x * state.zoom,
-      height / 2 + state.y * state.zoom,
+      height / 2 - state.y * state.zoom,
     );
     world.scale.set(state.zoom, state.zoom);
   });
   resizeObserver.observe(canvas);
 
-  const editorViewport = setupEditorViewport(application, viewport, options);
-
-  function destroy() {
-    editorViewport.destroy();
+  function cleanup() {
     resizeObserver.disconnect();
     stage.removeChild(world);
     world.destroy({ children: true });
   }
 
-  return { viewport, world, destroy };
+  return { viewport, world, cleanup };
 }

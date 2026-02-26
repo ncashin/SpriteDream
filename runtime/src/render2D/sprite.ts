@@ -6,6 +6,7 @@ import {
   GraphicsContext,
   Sprite,
 } from "pixi.js";
+import invariant from "tiny-invariant";
 
 function isGraphicsContext(value: unknown): value is GraphicsContext {
   return value instanceof GraphicsContext;
@@ -123,7 +124,7 @@ async function synchronizeSprite(
 }
 
 export function handleSprites(
-  pixiAppAndWorld: Promise<{ application: Application; world: Container }>,
+  pixiAppAndWorld: { application: Application; world: Container },
   scene: SceneWithAPI,
 ): void {
   scene.onQueryChange(SpriteDefinition, async (change) => {

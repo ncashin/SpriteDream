@@ -19,7 +19,7 @@ export function setupEditorViewport(
   application: Application,
   viewport: ViewportState,
   options: EditorViewportOptions = {},
-): { destroy: () => void } {
+): { cleanup: () => void } {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const canvas = application.canvas;
   invariant(canvas instanceof HTMLCanvasElement, "application.canvas must be an HTMLCanvasElement");
@@ -54,7 +54,7 @@ export function setupEditorViewport(
     lastClientX = e.clientX;
     lastClientY = e.clientY;
     viewport.x -= dx / viewport.zoom;
-    viewport.y -= dy / viewport.zoom;
+    viewport.y += dy / viewport.zoom;
   }
 
   function handlePointerUp(e: PointerEvent) {
@@ -76,7 +76,7 @@ export function setupEditorViewport(
     const zoomChanged = newZoom !== viewport.zoom;
     if (zoomChanged) {
       viewport.x = worldUnderCursor.x - (cursorX - screenSize.width / 2) / newZoom;
-      viewport.y = worldUnderCursor.y - (cursorY - screenSize.height / 2) / newZoom;
+      viewport.y = worldUnderCursor.y - (screenSize.height / 2 - cursorY) / newZoom;
       viewport.zoom = newZoom;
     }
   }
@@ -87,7 +87,7 @@ export function setupEditorViewport(
   canvas.addEventListener("pointerleave", handlePointerUp);
   canvas.addEventListener("wheel", handleWheel, { passive: false });
 
-  function destroy() {
+  function cleanup() {
     canvas.removeEventListener("pointerdown", handlePointerDown);
     canvas.removeEventListener("pointermove", handlePointerMove);
     canvas.removeEventListener("pointerup", handlePointerUp);
@@ -95,5 +95,5 @@ export function setupEditorViewport(
     canvas.removeEventListener("wheel", handleWheel);
   }
 
-  return { destroy };
+  return { cleanup };
 }

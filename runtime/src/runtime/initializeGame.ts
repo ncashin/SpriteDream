@@ -1,3 +1,4 @@
+import invariant from "tiny-invariant";
 import type { GameContext, Plugin } from "./plugin";
 
 type ContextAfter<P> = P extends (ctx: any) => infer R
@@ -20,6 +21,14 @@ export const initializeGame = async <const Plugins extends readonly Plugin[] = [
   options: InitializeGameOptions<Plugins>
 ) => {
   const initialContext = options.initialContext ?? ({} as GameContext);
+  invariant(
+    initialContext.__gameRoot,
+    "#game element must exist in the DOM"
+  );
+  invariant(
+    typeof initialContext.__isRunning === "boolean",
+    "initialContext.__isRunning must be a boolean"
+  );
   let context: GameContext = initialContext;
   for (const plugin of options.plugins ?? []) {
     context = await plugin(context);

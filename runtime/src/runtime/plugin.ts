@@ -1,4 +1,7 @@
-export type GameContext = {};
+export type GameContext = {
+  __gameRoot: HTMLElement;
+  __isRunning: boolean;
+};
 
 export type Plugin = (context: GameContext) => GameContext | Promise<GameContext>;
 
