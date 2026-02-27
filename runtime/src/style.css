@@ -144,3 +144,12 @@ body {
   opacity: 1;
   visibility: visible;
 }
+
+/* Game view iframe: no focus ring so clicking to play doesn’t show outline */
+.game-view-iframe:focus,
+.game-view-iframe:focus-visible,
+#game:focus,
+#game:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}

@@ -1,9 +1,10 @@
-import { Application } from "pixi.js";
+import { Application, Container } from "pixi.js";
 
-import type { Plugin } from "../runtime/plugin";
+import type { GameContext, Plugin } from "../runtime/plugin";
 import { getScene } from "../scene/scene";
 import { setupEditorViewport } from "./editorViewport";
 import { handleSprites } from "./sprite";
+import type { ViewportState } from "./viewport";
 import { setupViewport } from "./viewport";
 import { editorStart } from "../runtime/gameloop";
 
@@ -14,8 +15,14 @@ export type Render2DPluginOptions = {
   backgroundColor?: number;
 };
 
+export type Render2DContext = GameContext & {
+  application: Application;
+  viewport: ViewportState;
+  world: Container;
+};
+
 export const render2DPlugin =
-  (options?: Render2DPluginOptions): Plugin =>
+  (options?: Render2DPluginOptions): Plugin<Render2DContext> =>
   async (context) => {
     const { __gameRoot } = context;
     const resolution =

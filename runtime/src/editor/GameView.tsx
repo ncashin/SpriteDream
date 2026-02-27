@@ -26,7 +26,7 @@ export const GameView = ({
       src={iframeSrc}
       title={title}
       className={cn(
-        "absolute inset-0 block w-full min-w-full h-full min-h-0 border-0",
+        "game-view-iframe absolute inset-0 block w-full min-w-full h-full min-h-0 border-0",
         className
       )}
       onLoad={(e) =>

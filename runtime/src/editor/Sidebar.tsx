@@ -87,7 +87,7 @@ export const Sidebar = ({ sceneSyncKey = 0 }: { sceneSyncKey?: number }) => {
             contentVisible && !fadingOut && "sidebar-content-visible pointer-events-auto"
           )}
         >
-          <SceneView key={sceneSyncKey} />
+          <SceneView />
           <Assets />
         </div>
       )}

@@ -8,11 +8,13 @@ export type GameContext = {
   __gameRoot: HTMLElement;
 };
 
-export type Plugin = (context: GameContext) => GameContext | Promise<GameContext>;
+export type Plugin<TContext extends GameContext = GameContext> = (
+  context: GameContext
+) => TContext | Promise<TContext>;
 
-export type PluginFactory<TOptions = void> = (
+export type PluginFactory<TOptions = void, TContext extends GameContext = GameContext> = (
   options?: TOptions
-) => Plugin;
+) => Plugin<TContext>;
 
 export type RequirePlugins<P extends readonly Plugin[]> = readonly [...P];
 

@@ -3,15 +3,19 @@ import { syncIFrameScene } from "../iframe/iframe";
 import { runEditorUpdateLoop, runUpdateLoop } from "./gameloop";
 import type { GameContext, Plugin } from "./plugin";
 
-type ContextAfter<P> = P extends (context: unknown) => infer R
+/** Infer return type of a plugin (use `any` for param so contravariance doesn't produce never). */
+type ContextAfter<P> = P extends (context: any) => infer R
   ? R extends Promise<infer X>
     ? X
     : R
-  : never;
-
-type FullContext<Plugins> = Plugins extends readonly [...unknown[], infer Last]
-  ? ContextAfter<Last>
   : GameContext;
+
+/** Union of all plugin return types so context has every plugin's additions (e.g. input, viewport). */
+type FullContext<Plugins> = Plugins extends readonly [infer First, ...infer Rest]
+  ? ContextAfter<First> & FullContext<Rest>
+  : Plugins extends readonly []
+    ? GameContext
+    : GameContext;
 
 export type InitializeGameOptions<Plugins extends readonly Plugin[] = []> = {
   initialContext?: Partial<GameContext>;
