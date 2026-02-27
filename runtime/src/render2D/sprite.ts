@@ -41,7 +41,10 @@ function applyTransformAndSize(
   displayObject: SpriteDisplayObject,
   spriteInstance: SpriteInstance,
 ): void {
-  displayObject.position.set(spriteInstance.transform2D.x, spriteInstance.transform2D.y);
+  displayObject.position.set(
+    spriteInstance.transform2D.x,
+    spriteInstance.transform2D.y,
+  );
   displayObject.rotation = spriteInstance.transform2D.rotation;
   const scaleX = spriteInstance.transform2D.scaleX;
   const scaleY = spriteInstance.transform2D.scaleY;
@@ -51,10 +54,15 @@ function applyTransformAndSize(
 
   if (displayObject instanceof Sprite) {
     displayObject.anchor.set(0.5, 0.5);
-    displayObject.width = width;
-    displayObject.height = height;
+    const tex = displayObject.texture;
+    const texW = tex?.width ?? 1;
+    const texH = tex?.height ?? 1;
+    // Apply logical size (width, height) and transform scale together so both take effect.
     // Negate scaleY so sprite "up" (image top) matches world +Y (viewport is Y-up)
-    displayObject.scale.set(scaleX, -scaleY);
+    displayObject.scale.set(
+      (width ? width / texW : 1) * scaleX,
+      -((height ? height / texH : 1) * scaleY),
+    );
     return;
   }
 
@@ -66,7 +74,7 @@ function applyTransformAndSize(
   // Negate Y scale so Graphics "up" matches world +Y (viewport is Y-up)
   displayObject.scale.set(
     (width ? width / boundsWidth : 1) * scaleX,
-    -((height ? height / boundsHeight : 1) * scaleY)
+    -((height ? height / boundsHeight : 1) * scaleY),
   );
 }
 
@@ -126,6 +134,12 @@ export function handleSprites(
   pixiAppAndWorld: { application: Application; world: Container },
   scene: SceneWithAPI,
 ): void {
+  const { world } = pixiAppAndWorld;
+  const sprites = scene.query(SpriteDefinition);
+  for (const [path, instance] of Object.entries(sprites)) {
+    synchronizeSprite(world, path, instance);
+  }
+
   scene.onQueryChange(SpriteDefinition, async (change) => {
     const { world } = await pixiAppAndWorld;
     const path = change.path;
@@ -159,7 +173,10 @@ export function handleSprites(
       case "transform2D":
         displayObject.position.set(change.newValue.x, change.newValue.y);
         displayObject.rotation = change.newValue.rotation;
-        displayObject.scale.set(change.newValue.scaleX, -change.newValue.scaleY);
+        applyTransformAndSize(displayObject, {
+          ...spriteInstance,
+          transform2D: change.newValue,
+        });
         break;
       case "transform2D.x":
         displayObject.position.x = change.newValue;
@@ -176,7 +193,7 @@ export function handleSprites(
         break;
       case "sprite": {
         const updatedSprite = change.newValue;
-        
+
         if (displayObject instanceof Sprite) {
           displayObject.width = updatedSprite.width;
           displayObject.height = updatedSprite.height;
@@ -193,7 +210,9 @@ export function handleSprites(
         const bounds = displayObject.bounds;
         displayObject.scale.set(
           updatedSprite.width ? updatedSprite.width / (bounds.width || 1) : 1,
-          -(updatedSprite.height ? updatedSprite.height / (bounds.height || 1) : 1)
+          -(updatedSprite.height
+            ? updatedSprite.height / (bounds.height || 1)
+            : 1),
         );
         break;
       }

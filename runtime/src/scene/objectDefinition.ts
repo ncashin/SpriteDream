@@ -237,20 +237,32 @@ export function match<T>(value: T) {
     return fn;
   }
 
+export function instantiateObject<const T extends readonly DefinitionInput[]>(
+  definitions: T,
+  values: Record<string, unknown>,
+): Instance<DefinitionsFromTuple<T>>;
 export function instantiateObject<D extends ObjectDefinition>(
   definition: DefinedObject & { __definition: D },
+  values?: InstantiationValues<D>,
+): Instance<D>;
+export function instantiateObject<D extends ObjectDefinition>(
+  definition:
+    | (DefinedObject & { __definition: D })
+    | DefinitionInput[],
   values: InstantiationValues<D> = {} as InstantiationValues<D>,
 ): Instance<D> {
-  const { __definition } = definition;
+  const __definition: ObjectDefinition = Array.isArray(definition)
+    ? mergeDefinitions(definition as DefinitionInput[])
+    : (definition as DefinedObject & { __definition: D }).__definition;
   const result: Record<string, unknown> = {};
+  const valuesRecord = values as Record<string, unknown>;
 
   for (const [key, defValue] of Object.entries(__definition)) {
     if (key.startsWith("__")) {
-      result[key] = defValue;
+      result[key] = valuesRecord[key] ?? defValue;
       continue;
     }
-    const instanceValue = (values as Record<string, unknown>)[key];
-    result[key] = resolveValue(defValue, instanceValue);
+    result[key] = resolveValue(defValue, valuesRecord[key]);
   }
 
   return result as Instance<D>;
