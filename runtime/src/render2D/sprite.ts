@@ -6,7 +6,6 @@ import {
   GraphicsContext,
   Sprite,
 } from "pixi.js";
-import invariant from "tiny-invariant";
 
 function isGraphicsContext(value: unknown): value is GraphicsContext {
   return value instanceof GraphicsContext;

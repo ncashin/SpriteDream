@@ -7,7 +7,7 @@ import { SidebarSimpleIcon } from "@phosphor-icons/react";
 
 const FADE_MS = 150;
 
-export const Sidebar = () => {
+export const Sidebar = ({ sceneSyncKey = 0 }: { sceneSyncKey?: number }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [fadingOut, setFadingOut] = useState(false);
   const [contentVisible, setContentVisible] = useState(false);
@@ -87,7 +87,7 @@ export const Sidebar = () => {
             contentVisible && !fadingOut && "sidebar-content-visible pointer-events-auto"
           )}
         >
-          <SceneView />
+          <SceneView key={sceneSyncKey} />
           <Assets />
         </div>
       )}

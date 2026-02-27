@@ -437,3 +437,37 @@ export type SceneWithAPI = Record<string, unknown> & {
 };
 
 export const getScene = (): SceneWithAPI => scene as SceneWithAPI;
+
+/**
+ * Applies an arbitrary JSON object onto the scene by overwriting values through
+ * the scene proxy, so subscriptions and reactivity are triggered.
+ */
+export function applyPatch(
+  scene: Record<string, unknown>,
+  patch: Record<string, unknown>
+): void {
+  for (const key of Object.keys(patch)) {
+    const value = patch[key];
+    const existing = scene[key];
+
+    const isPlainObject =
+      value != null &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.getPrototypeOf(value) === Object.prototype;
+
+    const existingIsObject =
+      existing != null &&
+      typeof existing === "object" &&
+      (existing as Record<string, unknown>).__isProxy === true;
+
+    if (isPlainObject && existingIsObject) {
+      applyPatch(
+        existing as Record<string, unknown>,
+        value as Record<string, unknown>
+      );
+    } else {
+      scene[key] = value;
+    }
+  }
+}

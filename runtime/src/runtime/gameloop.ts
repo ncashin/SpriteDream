@@ -1,11 +1,16 @@
 declare global {
   interface Window {
-    __isRunning: boolean;
+    gameIDE: {
+      __isRunning?: boolean;
+    };
   }
 }
 
-window.__isRunning = import.meta.env.PROD;
-
+window.gameIDE = window.gameIDE || {};
+window.gameIDE.__isRunning =
+  import.meta.env.PROD ||
+  (typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("run") === "true");
 
 type VoidFunction = () => void;
 type UpdateFunction = (deltaMilliseconds: number) => void;
@@ -14,11 +19,15 @@ const gameUpdateCallbacks: UpdateFunction[] = [];
 const editorUpdateCallbacks: UpdateFunction[] = [];
 
 export const gameStart = (callback: VoidFunction): void => {
-  callback();
+  if (window.gameIDE.__isRunning) {
+    callback();
+  }
 };
 
 export const gameUpdate = (callback: UpdateFunction): void => {
-  gameUpdateCallbacks.push(callback);
+  if (window.gameIDE.__isRunning) {
+    gameUpdateCallbacks.push(callback);
+  }
 };
 export const cleanupGameUpdate = (callback: UpdateFunction): void => {
   const index = gameUpdateCallbacks.indexOf(callback);
@@ -31,13 +40,16 @@ export const runUpdateLoop = (deltaMilliseconds: number): void => {
   }
 };
 
-
 export const editorStart = (callback: VoidFunction): void => {
-  callback();
+  if (!window.gameIDE.__isRunning) {
+    callback();
+  }
 };
 
 export const editorUpdate = (callback: UpdateFunction): void => {
-  editorUpdateCallbacks.push(callback);
+  if (!window.gameIDE.__isRunning) {
+    editorUpdateCallbacks.push(callback);
+  }
 };
 export const cleanupEditorUpdate = (callback: UpdateFunction): void => {
   const index = editorUpdateCallbacks.indexOf(callback);
@@ -49,5 +61,3 @@ export const runEditorUpdateLoop = (deltaMilliseconds: number): void => {
     callback(deltaMilliseconds);
   }
 };
-
-

@@ -1,7 +1,6 @@
-import { createElement, type ComponentType } from "react";
-import { createRoot } from "react-dom/client";
-import { flushSync } from "react-dom";
 import invariant from "tiny-invariant";
+import { syncIFrameScene } from "../iframe/iframe";
+import { runEditorUpdateLoop, runUpdateLoop } from "./gameloop";
 import type { GameContext, Plugin } from "./plugin";
 
 type ContextAfter<P> = P extends (context: unknown) => infer R
@@ -15,8 +14,6 @@ type FullContext<Plugins> = Plugins extends readonly [...unknown[], infer Last]
   : GameContext;
 
 export type InitializeGameOptions<Plugins extends readonly Plugin[] = []> = {
-  Editor: ComponentType<{ Game: ComponentType }>;
-  Game: ComponentType;
   initialContext?: Partial<GameContext>;
   main: (context: FullContext<Plugins>) => void | Promise<void>;
   plugins?: Plugins;
@@ -25,15 +22,13 @@ export type InitializeGameOptions<Plugins extends readonly Plugin[] = []> = {
 export const initializeGame = async <const Plugins extends readonly Plugin[] = []>(
   options: InitializeGameOptions<Plugins>
 ) => {
-  const app = document.getElementById("app");
-  invariant(app, "#app element must exist in the DOM");
-
-  const root = createRoot(app);
-  flushSync(() => {
-    root.render(
-      createElement(options.Editor, { Game: options.Game })
-    );
-  });
+  if (!import.meta.env.PROD && window.parent !== window) {
+    syncIFrameScene({
+      targetWindow: window.parent,
+      origin: "*",
+      sendInitialState: true,
+    });
+  }
 
   const __gameRoot = document.getElementById("game");
   invariant(__gameRoot, "#game element must exist in the DOM");
@@ -49,4 +44,14 @@ export const initializeGame = async <const Plugins extends readonly Plugin[] = [
   }
 
   await options.main(context as FullContext<Plugins>);
+
+  let lastTime = performance.now();
+  const tick = (now: number) => {
+    const delta = now - lastTime;
+    runUpdateLoop(delta);
+    runEditorUpdateLoop(delta);
+    lastTime = now;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 };

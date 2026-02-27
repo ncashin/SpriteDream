@@ -5,6 +5,7 @@ import { getScene } from "../scene/scene";
 import { setupEditorViewport } from "./editorViewport";
 import { handleSprites } from "./sprite";
 import { setupViewport } from "./viewport";
+import { editorStart } from "../runtime/gameloop";
 
 /** Hex color matching CSS --color-dark-bg-2 (base-950) */
 const DEFAULT_BACKGROUND_COLOR = 0x1c1b1a;
@@ -37,9 +38,9 @@ export const render2DPlugin =
 
     const { viewport, world } = setupViewport(application);
 
-    if (!window.__isRunning) {
+    editorStart(() => {
       setupEditorViewport(application, viewport);
-    }
+    });
 
     const scene = getScene();
     handleSprites({ application, world }, scene);

@@ -15,7 +15,7 @@ const resolveIcon = (name: unknown): typeof Box => {
 };
 
 export const ObjectIcon = ({
-  path,
+  path: _path,
   iconName,
 }: {
   path: string;
