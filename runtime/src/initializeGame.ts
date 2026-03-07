@@ -1,4 +1,10 @@
-import { startGameloop } from "./gameloop";
+import {
+  clearUpdateScope,
+  removeGameUpdatesForScope,
+  setUpdateScope,
+  startGameloop,
+} from "./gameloop";
+import { setInitialScene } from "./scene";
 
 export type Plugin<T = unknown> = (input: T) => T;
 
@@ -24,28 +30,55 @@ export type InitializeGameOptions<
 > = {
   plugins?: Plugins;
   initialContext: Initial;
+  initialScene?: Record<string, unknown>;
   main: (ctx: FinalContext<Initial, Plugins>) => void;
 };
 
+const MAIN_SCOPE = "main";
+
 function initializeGame<Initial, const Plugins extends readonly [PluginFn, ...PluginFn[]]>(
-  options: { initialContext: Initial; plugins: Plugins; main: (ctx: FinalContext<Initial, Plugins>) => void }
-): void;
-function initializeGame<Initial>(options: { initialContext: Initial; main: (ctx: Initial) => void }): void;
+  options: { initialContext: Initial; plugins: Plugins; initialScene?: Record<string, unknown>; main: (ctx: FinalContext<Initial, Plugins>) => void }
+): FinalContext<Initial, Plugins>;
+function initializeGame<Initial>(options: { initialContext: Initial; initialScene?: Record<string, unknown>; main: (ctx: Initial) => void }): Initial;
 function initializeGame<Initial, Plugins extends readonly PluginFn[]>(
   options: InitializeGameOptions<Initial, Plugins>
-): void {
-  let result: any = options.initialContext;
-  if (Array.isArray(options.plugins)) {
-    for (const plugin of options.plugins) {
-      if (typeof plugin === "function") {
-        result = plugin(result);
+): FinalContext<Initial, Plugins> | Initial {
+  const hot = import.meta.hot;
+  const data = hot?.data as { ctx?: unknown; mainScope?: string } | undefined;
+  const isHmr = hot && data?.ctx !== undefined;
+
+  let result: any;
+
+  if (isHmr) {
+    result = data!.ctx;
+    removeGameUpdatesForScope(data!.mainScope ?? MAIN_SCOPE);
+  } else {
+    setInitialScene(options.initialScene);
+
+    result = options.initialContext;
+    if (Array.isArray(options.plugins)) {
+      for (const plugin of options.plugins) {
+        if (typeof plugin === "function") {
+          result = plugin(result);
+        }
       }
     }
+
+    if (hot) {
+      (hot.data as { ctx?: unknown; mainScope?: string }).mainScope = MAIN_SCOPE;
+    }
+    startGameloop();
   }
 
+  setUpdateScope(MAIN_SCOPE);
   options.main(result);
+  clearUpdateScope();
 
-  startGameloop();
+  if (hot) {
+    (hot.data as { ctx?: unknown }).ctx = result;
+  }
+
+  return result;
 }
 
 export { initializeGame };

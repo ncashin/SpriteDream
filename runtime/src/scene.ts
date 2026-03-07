@@ -41,10 +41,25 @@ function createProxy(target: SceneObject): SceneObject {
 }
 
 let scene: SceneObject | undefined;
+let initialSceneData: SceneObject | undefined;
+
+if (import.meta.hot) {
+  const data = import.meta.hot.data as { scene?: SceneObject };
+  if (data.scene) scene = data.scene;
+  import.meta.hot.dispose(() => {
+    data.scene = scene;
+  });
+}
+
+export function setInitialScene(data: SceneObject | undefined): void {
+  initialSceneData = data;
+}
 
 export function getScene(): SceneObject {
   if (!scene) {
-    scene = createProxy({});
+    const base = initialSceneData ?? {};
+    initialSceneData = undefined;
+    scene = createProxy(base);
   }
 
   return scene;
