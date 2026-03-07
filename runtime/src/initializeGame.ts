@@ -10,10 +10,8 @@ export type Plugin<T = unknown> = (input: T) => T;
 
 type PluginFn = (input: any) => any;
 
-/** What plugin P adds: (input: I) => O adds Omit<O, keyof I>. */
 type PluginAdds<P> = P extends (input: infer I) => infer O ? Omit<O, keyof I> : never;
 
-/** Reduce over plugins: merge each plugin's added shape. */
 type ReducePlugins<Ps extends readonly PluginFn[]> = Ps extends readonly [infer P, ...infer Rest]
   ? P extends PluginFn
     ? Rest extends readonly PluginFn[]
@@ -31,26 +29,26 @@ export type InitializeGameOptions<
   plugins?: Plugins;
   initialContext: Initial;
   initialScene?: Record<string, unknown>;
-  main: (ctx: FinalContext<Initial, Plugins>) => void;
+  main: (context: FinalContext<Initial, Plugins>) => void;
 };
 
 const MAIN_SCOPE = "main";
 
 function initializeGame<Initial, const Plugins extends readonly [PluginFn, ...PluginFn[]]>(
-  options: { initialContext: Initial; plugins: Plugins; initialScene?: Record<string, unknown>; main: (ctx: FinalContext<Initial, Plugins>) => void }
+  options: { initialContext: Initial; plugins: Plugins; initialScene?: Record<string, unknown>; main: (context: FinalContext<Initial, Plugins>) => void }
 ): FinalContext<Initial, Plugins>;
-function initializeGame<Initial>(options: { initialContext: Initial; initialScene?: Record<string, unknown>; main: (ctx: Initial) => void }): Initial;
+function initializeGame<Initial>(options: { initialContext: Initial; initialScene?: Record<string, unknown>; main: (context: Initial) => void }): Initial;
 function initializeGame<Initial, Plugins extends readonly PluginFn[]>(
   options: InitializeGameOptions<Initial, Plugins>
 ): FinalContext<Initial, Plugins> | Initial {
   const hot = import.meta.hot;
-  const data = hot?.data as { ctx?: unknown; mainScope?: string } | undefined;
-  const isHmr = hot && data?.ctx !== undefined;
+  const data = hot?.data as { context?: unknown; mainScope?: string } | undefined;
+  const isHotModuleReplacement = hot !== undefined && data?.context !== undefined;
 
   let result: any;
 
-  if (isHmr) {
-    result = data!.ctx;
+  if (isHotModuleReplacement) {
+    result = data!.context;
     removeGameUpdatesForScope(data!.mainScope ?? MAIN_SCOPE);
   } else {
     setInitialScene(options.initialScene);
@@ -65,7 +63,7 @@ function initializeGame<Initial, Plugins extends readonly PluginFn[]>(
     }
 
     if (hot) {
-      (hot.data as { ctx?: unknown; mainScope?: string }).mainScope = MAIN_SCOPE;
+      (hot.data as { context?: unknown; mainScope?: string }).mainScope = MAIN_SCOPE;
     }
     startGameloop();
   }
@@ -75,7 +73,7 @@ function initializeGame<Initial, Plugins extends readonly PluginFn[]>(
   clearUpdateScope();
 
   if (hot) {
-    (hot.data as { ctx?: unknown }).ctx = result;
+    (hot.data as { context?: unknown }).context = result;
   }
 
   return result;
