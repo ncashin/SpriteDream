@@ -1,5 +1,9 @@
-export function definePlugin<TOptions, TIn, TOut extends TIn>(
-  factory: (options?: TOptions) => (input: TIn) => TOut,
-): (options?: TOptions) => (input: TIn) => TOut {
+export function definePlugin<
+  TOptions = unknown,
+  TRequired = object,
+  TAdd = unknown,
+>(
+  factory: (options?: TOptions) => (input: TRequired) => TRequired & TAdd,
+): (options?: TOptions) => (input: TRequired) => TRequired & TAdd {
   return factory;
 }

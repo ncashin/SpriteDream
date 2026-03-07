@@ -1,38 +1,38 @@
 import { startGameloop } from "./gameloop";
 
-/** A plugin receives the current context (from initialContext or the previous plugin) and returns the context for the next plugin or main. */
-export type Plugin<T> = (input: T) => T;
+export type Plugin<T = unknown> = (input: T) => T;
 
-/** Infers the final context type after running the plugin chain. Each plugin's return value is the next plugin's input. */
-type PipelineResult<TInitial, P> = P extends readonly [(input: TInitial) => infer TOut, ...infer Rest]
-  ? Rest extends readonly ((input: any) => any)[]
-    ? PipelineResult<TOut, Rest>
-    : TOut
-  : TInitial;
+type PluginFn = (input: any) => any;
+
+/** What plugin P adds: (input: I) => O adds Omit<O, keyof I>. */
+type PluginAdds<P> = P extends (input: infer I) => infer O ? Omit<O, keyof I> : never;
+
+/** Reduce over plugins: merge each plugin's added shape. */
+type ReducePlugins<Ps extends readonly PluginFn[]> = Ps extends readonly [infer P, ...infer Rest]
+  ? P extends PluginFn
+    ? Rest extends readonly PluginFn[]
+      ? PluginAdds<P> & ReducePlugins<Rest>
+      : PluginAdds<P>
+    : unknown
+  : unknown;
+
+export type FinalContext<Initial, Plugins extends readonly PluginFn[]> = Initial & ReducePlugins<Plugins>;
 
 export type InitializeGameOptions<
-  TInitial = unknown,
-  TPlugins extends readonly ((input: any) => any)[] = readonly []
+  Initial = unknown,
+  Plugins extends readonly PluginFn[] = readonly []
 > = {
-  /** Plugins run in order; each receives the context returned by the previous (or initialContext for the first). */
-  plugins?: TPlugins;
-  initialContext: TInitial;
-  main: (gameContext: PipelineResult<TInitial, TPlugins>) => void;
+  plugins?: Plugins;
+  initialContext: Initial;
+  main: (ctx: FinalContext<Initial, Plugins>) => void;
 };
 
-function initializeGame<TInitial, const TPlugins extends readonly [(input: any) => any, ...((input: any) => any)[]]>(
-  options: {
-    initialContext: TInitial;
-    plugins: TPlugins;
-    main: (gameContext: PipelineResult<TInitial, TPlugins>) => void;
-  }
+function initializeGame<Initial, const Plugins extends readonly [PluginFn, ...PluginFn[]]>(
+  options: { initialContext: Initial; plugins: Plugins; main: (ctx: FinalContext<Initial, Plugins>) => void }
 ): void;
-function initializeGame<T>(options: {
-  initialContext: T;
-  main: (gameContext: T) => void;
-}): void;
-function initializeGame<TInitial, TPlugins extends readonly ((input: any) => any)[]>(
-  options: InitializeGameOptions<TInitial, TPlugins>
+function initializeGame<Initial>(options: { initialContext: Initial; main: (ctx: Initial) => void }): void;
+function initializeGame<Initial, Plugins extends readonly PluginFn[]>(
+  options: InitializeGameOptions<Initial, Plugins>
 ): void {
   let result: any = options.initialContext;
   if (Array.isArray(options.plugins)) {
