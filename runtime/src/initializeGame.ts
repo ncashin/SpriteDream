@@ -8,23 +8,23 @@ import { setInitialScene } from "./scene";
 
 export type Plugin<T = unknown> = (input: T) => T;
 
-type PluginFn = (input: any) => any;
+type PluginFunction = (input: any) => any;
 
 type PluginAdds<P> = P extends (input: infer I) => infer O ? Omit<O, keyof I> : never;
 
-type ReducePlugins<Ps extends readonly PluginFn[]> = Ps extends readonly [infer P, ...infer Rest]
-  ? P extends PluginFn
-    ? Rest extends readonly PluginFn[]
+type ReducePlugins<Ps extends readonly PluginFunction[]> = Ps extends readonly [infer P, ...infer Rest]
+  ? P extends PluginFunction
+    ? Rest extends readonly PluginFunction[]
       ? PluginAdds<P> & ReducePlugins<Rest>
       : PluginAdds<P>
     : unknown
   : unknown;
 
-export type FinalContext<Initial, Plugins extends readonly PluginFn[]> = Initial & ReducePlugins<Plugins>;
+export type FinalContext<Initial, Plugins extends readonly PluginFunction[]> = Initial & ReducePlugins<Plugins>;
 
 export type InitializeGameOptions<
   Initial = unknown,
-  Plugins extends readonly PluginFn[] = readonly []
+  Plugins extends readonly PluginFunction[] = readonly []
 > = {
   plugins?: Plugins;
   initialContext: Initial;
@@ -34,11 +34,11 @@ export type InitializeGameOptions<
 
 const MAIN_SCOPE = "main";
 
-function initializeGame<Initial, const Plugins extends readonly [PluginFn, ...PluginFn[]]>(
+function initializeGame<Initial, const Plugins extends readonly [PluginFunction, ...PluginFunction[]]>(
   options: { initialContext: Initial; plugins: Plugins; initialScene?: Record<string, unknown>; main: (context: FinalContext<Initial, Plugins>) => void }
 ): FinalContext<Initial, Plugins>;
 function initializeGame<Initial>(options: { initialContext: Initial; initialScene?: Record<string, unknown>; main: (context: Initial) => void }): Initial;
-function initializeGame<Initial, Plugins extends readonly PluginFn[]>(
+function initializeGame<Initial, Plugins extends readonly PluginFunction[]>(
   options: InitializeGameOptions<Initial, Plugins>
 ): FinalContext<Initial, Plugins> | Initial {
   const hot = import.meta.hot;

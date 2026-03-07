@@ -15,7 +15,7 @@ initializeGame({
     rootElement,
   },
   initialScene: sceneData,
-  plugins: [inputPlugin(), render2DPlugin()] as const,
+  plugins: [inputPlugin(), render2DPlugin()],
   main(gameContext) {
     const { render2D, input } = gameContext;
     const { canvasElement, context } = render2D;
