@@ -1,16 +1,4 @@
-@import "tailwindcss";
-
-@import "./flexoki/namespaced.css";
-@import "./flexoki/replacement.css";
-
 :root {
-  --sidebar-spacing: 0.25rem;
-  /* Editor color tokens (sidebar background, hover/accent, Scene view text, header white) */
-  --editor-background: #2c2c2c;
-  --editor-accent: #383838;
-  --editor-text-light: #ffffff;
-  --editor-text-visible: #ffffff;
-
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -25,131 +13,84 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Tailwind helpers: bg-editor-background, bg-editor-accent, text-editor-text-light, text-editor-text-visible */
-@theme inline {
-  --color-editor-background: var(--editor-background);
-  --color-editor-accent: var(--editor-accent);
-  --color-editor-text-light: var(--editor-text-light);
-  --color-editor-text-visible: var(--editor-text-visible);
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
 }
 
-html,
 body {
-  height: 100%;
   margin: 0;
-}
-body {
   display: flex;
-  min-width: 100vw;
+  place-items: center;
+  min-width: 320px;
   min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
 }
 
 #app {
-  display: flex;
-  flex-direction: column;
-  min-width: 100vw;
-  min-height: 100vh;
-  height: 100%;
+  max-width: 1280px;
   margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
 }
 
-#game {
-  display: block;
-  overflow: hidden;
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.vanilla:hover {
+  filter: drop-shadow(0 0 2em #3178c6aa);
 }
 
-.sidebar-padding {
-  padding-top: calc(var(--sidebar-spacing) * 1);
-  padding-bottom: calc(var(--sidebar-spacing) * 1);
-  padding-left: calc(var(--sidebar-spacing) * 2.5);
-  padding-right: calc(var(--sidebar-spacing) * 1.5);
+.card {
+  padding: 2em;
 }
 
-/* Same as sidebar-padding but pl reduced by 0.5 so icon left edge aligns with Scene View text */
-.sidebar-padding-icon-row {
-  padding-top: calc(var(--sidebar-spacing) * 1);
-  padding-bottom: calc(var(--sidebar-spacing) * 1);
-  padding-left: calc(var(--sidebar-spacing) * 1.25);
-  padding-right: calc(var(--sidebar-spacing) * 0.75);
+.read-the-docs {
+  color: #888;
 }
 
-/* Between sidebar-padding and icon-row: for panel headers that sit above icon rows */
-.sidebar-padding-header {
-  padding-top: calc(var(--sidebar-spacing) * 1);
-  padding-bottom: calc(var(--sidebar-spacing) * 1);
-  padding-left: calc(var(--sidebar-spacing) * 2);
-  padding-right: calc(var(--sidebar-spacing) * 1.25);
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
 }
 
-/* Internal padding for sidebar panels (SceneView, Assets) – one wrapper, no negative margins */
-.panel-inner-x {
-  padding-left: calc(var(--sidebar-spacing) * 1.5);
-  padding-right: calc(var(--sidebar-spacing) * 1.5);
-}
-
-.panel-inner {
-  padding-top: calc(var(--sidebar-spacing) * 2);
-  padding-left: calc(var(--sidebar-spacing) * 1.5);
-  padding-right: calc(var(--sidebar-spacing) * 1.5);
-  padding-bottom: calc(var(--sidebar-spacing) * 8);
-}
-
-.panel-inner-collapsed {
-  padding-top: calc(var(--sidebar-spacing) * 2);
-  padding-left: calc(var(--sidebar-spacing) * 1.5);
-  padding-right: calc(var(--sidebar-spacing) * 1.5);
-  padding-bottom: calc(var(--sidebar-spacing) * 1);
-}
-
-.sidebar-clip {
-  /* width set inline; no transition — clip only, no resize */
-}
-
-.sidebar-inner {
-  width: 20rem;
-  min-width: 20rem;
-}
-
-.sidebar-content-fade {
-  transition: opacity 150ms ease-out;
-  opacity: 0;
-}
-.sidebar-content-fade.sidebar-content-visible {
-  opacity: 1;
-}
-
-.sidebar-hover:hover {
-  background-color: var(--editor-accent);
-}
-
-/* Transform mode gizmo buttons (translate/rotate/scale) */
-.transform-gizmo-btn {
-  background-color: var(--editor-background);
-}
-.transform-gizmo-btn:hover {
-  background-color: var(--editor-accent);
-}
-.transform-gizmo-btn.is-selected {
-  background-color: var(--editor-accent);
-}
-.transform-gizmo-btn.is-selected:hover {
-  background-color: #454545;
-}
-
-.group-hover-visible {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.group:hover .group-hover-visible {
-  opacity: 1;
-  visibility: visible;
-}
-
-/* Game view iframe: no focus ring so clicking to play doesn’t show outline */
-.game-view-iframe:focus,
-.game-view-iframe:focus-visible,
-#game:focus,
-#game:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
 }
