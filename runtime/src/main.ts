@@ -10,7 +10,7 @@ initializeGame({
   initialContext: {
     rootElement
   },
-  plugins: [render2DPlugin],
+  plugins: [render2DPlugin()],
   main(gameContext) {
     console.log('Game started', gameContext);
   },
