@@ -1,10 +1,11 @@
 type GameCallback = () => void;
+type UpdateCallback = (deltaTime: number) => void;
 
 type LifecycleRegistry = {
   gameStart: GameCallback[];
-  gameUpdate: GameCallback[];
+  gameUpdate: UpdateCallback[];
   editorStart: GameCallback[];
-  editorUpdate: GameCallback[];
+  editorUpdate: UpdateCallback[];
 };
 
 const lifecycle: LifecycleRegistry = {
@@ -15,7 +16,7 @@ const lifecycle: LifecycleRegistry = {
 };
 
 let currentUpdateScope: string | undefined;
-const scopeToCallbacks = new Map<string, GameCallback[]>();
+const scopeToCallbacks = new Map<string, UpdateCallback[]>();
 
 export function setUpdateScope(scope: string): void {
   currentUpdateScope = scope;
@@ -54,12 +55,17 @@ if (import.meta.hot) {
   });
 }
 
-function registerCallback(list: GameCallback[], callback: GameCallback): void {
-  list.push(callback);
+function registerCallback(list: GameCallback[], callback: GameCallback): void;
+function registerCallback(list: UpdateCallback[], callback: UpdateCallback): void;
+function registerCallback(
+  list: GameCallback[] | UpdateCallback[],
+  callback: GameCallback | UpdateCallback
+): void {
+  (list as (GameCallback | UpdateCallback)[]).push(callback);
 
   if (import.meta.hot) {
     const data = import.meta.hot.data as {
-      callbacks?: { list: GameCallback[]; callback: GameCallback }[];
+      callbacks?: { list: (GameCallback | UpdateCallback)[]; callback: GameCallback | UpdateCallback }[];
     };
 
     if (!data.callbacks) data.callbacks = [];
@@ -68,7 +74,7 @@ function registerCallback(list: GameCallback[], callback: GameCallback): void {
 
     import.meta.hot.dispose(() => {
       for (const entry of data.callbacks!) {
-        const index = entry.list.indexOf(entry.callback);
+        const index = entry.list.indexOf(entry.callback as GameCallback & UpdateCallback);
         if (index !== -1) entry.list.splice(index, 1);
       }
     });
@@ -80,7 +86,7 @@ export function gameStart(callback: GameCallback): void {
   callback();
 }
 
-export function gameUpdate(callback: GameCallback): void {
+export function gameUpdate(callback: UpdateCallback): void {
   lifecycle.gameUpdate.push(callback);
   if (currentUpdateScope !== undefined) {
     if (!scopeToCallbacks.has(currentUpdateScope)) {
@@ -89,7 +95,7 @@ export function gameUpdate(callback: GameCallback): void {
     scopeToCallbacks.get(currentUpdateScope)!.push(callback);
   }
   if (import.meta.hot) {
-    const data = import.meta.hot.data as { callbacks?: { list: GameCallback[]; callback: GameCallback }[] };
+    const data = import.meta.hot.data as { callbacks?: { list: UpdateCallback[]; callback: UpdateCallback }[] };
     if (!data.callbacks) data.callbacks = [];
     data.callbacks.push({ list: lifecycle.gameUpdate, callback });
     import.meta.hot.dispose(() => {
@@ -106,30 +112,36 @@ export function editorStart(callback: GameCallback): void {
   callback();
 }
 
-export function editorUpdate(callback: GameCallback): void {
+export function editorUpdate(callback: UpdateCallback): void {
   registerCallback(lifecycle.editorUpdate, callback);
 }
 
 export function startGameloop(): void {
   if (!gameRunning) {
     gameRunning = true;
+    let lastTime = performance.now();
 
-    function gameFrame(): void {
-      for (const update of lifecycle.gameUpdate) update();
+    function gameFrame(now: number): void {
+      const deltaTime = (now - lastTime) / 1000; // seconds
+      lastTime = now;
+      for (const update of lifecycle.gameUpdate) update(deltaTime);
       requestAnimationFrame(gameFrame);
     }
 
-    gameFrame();
+    requestAnimationFrame(gameFrame);
   }
 
   if (!editorRunning) {
     editorRunning = true;
+    let lastTime = performance.now();
 
-    function editorFrame(): void {
-      for (const update of lifecycle.editorUpdate) update();
+    function editorFrame(now: number): void {
+      const deltaTime = (now - lastTime) / 1000; // seconds
+      lastTime = now;
+      for (const update of lifecycle.editorUpdate) update(deltaTime);
       requestAnimationFrame(editorFrame);
     }
 
-    editorFrame();
+    requestAnimationFrame(editorFrame);
   }
 }

@@ -22,6 +22,20 @@ export const render2DPlugin = definePlugin<
     const context = canvasElement.getContext("2d");
     invariant(context);
 
+    const resize = () => {
+      const dpr = window.devicePixelRatio ?? 1;
+      const w = rootElement.clientWidth;
+      const h = rootElement.clientHeight;
+      canvasElement.width = Math.floor(w * dpr);
+      canvasElement.height = Math.floor(h * dpr);
+      canvasElement.style.width = `${w}px`;
+      canvasElement.style.height = `${h}px`;
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    resize();
+    window.addEventListener("resize", resize);
+
     return { ...inputContext, render2D: { canvasElement, context } };
   },
 );

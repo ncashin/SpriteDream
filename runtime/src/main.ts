@@ -21,19 +21,21 @@ initializeGame({
     const { canvasElement, context } = render2D;
     const scene = getScene();
 
-    gameUpdate(() => {
+    gameUpdate((deltaTime) => {
       const player = scene.player as any;
       const h = input.getAxis("Horizontal");
       const v = input.getAxis("Vertical");
-      player.x += h * player.speed * (1 / 60);
-      player.y -= v * player.speed * (1 / 60);
+      player.x += h * player.speed * deltaTime;
+      player.y -= v * player.speed * deltaTime;
 
-      const maxX = canvasElement.width - player.size;
-      const maxY = canvasElement.height - player.size;
+      const canvasW = canvasElement.clientWidth;
+      const canvasH = canvasElement.clientHeight;
+      const maxX = canvasW - player.size;
+      const maxY = canvasH - player.size;
       player.x = Math.max(0, Math.min(maxX, player.x));
       player.y = Math.max(0, Math.min(maxY, player.y));
 
-      context.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      context.clearRect(0, 0, canvasW, canvasH);
       context.fillStyle = "#3b82f6";
       context.fillRect(player.x, player.y, player.size, player.size);
     });
