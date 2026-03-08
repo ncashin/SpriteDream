@@ -1,6 +1,5 @@
 type SceneObject = Record<PropertyKey, unknown>;
 
-/** path = path to parent object; full key path is path.concat(key) */
 export type SceneUpdate =
   | { type: "set"; path: PropertyKey[]; key: PropertyKey; value: unknown }
   | { type: "delete"; path: PropertyKey[]; key: PropertyKey };
@@ -19,7 +18,7 @@ let scene: SceneObject | undefined;
 let rootTarget: SceneObject | undefined;
 let initialSceneData: SceneObject | undefined;
 
-if (import.meta.hot) {
+if (typeof import.meta !== "undefined" && import.meta.hot) {
   const hotData = import.meta.hot.data as {
     scene?: SceneObject;
     rootTarget?: SceneObject;
@@ -135,7 +134,6 @@ export function getRootTarget(): SceneObject | undefined {
   return rootTarget;
 }
 
-/** Copy source into target (clear target's keys, then deep-copy source). Keeps target identity so existing proxy refs stay valid. */
 function copyInto(target: SceneObject, source: SceneObject): void {
   for (const key of Object.keys(target)) {
     delete target[key];

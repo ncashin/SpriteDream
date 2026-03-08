@@ -1,4 +1,4 @@
-export type ScenePatch = Record<PropertyKey, unknown>;
+import type { ScenePatch } from "./types.js";
 
 function isMergeable(
   value: unknown

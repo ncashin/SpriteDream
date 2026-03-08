@@ -40,7 +40,7 @@ export function removeGameUpdatesForScope(scope: string): void {
 let gameRunning = false;
 let editorRunning = false;
 
-if (import.meta.hot) {
+if (typeof import.meta !== "undefined" && import.meta.hot) {
   const data = import.meta.hot.data as {
     gameRunning?: boolean;
     editorRunning?: boolean;
@@ -63,7 +63,7 @@ function registerCallback(
 ): void {
   (list as (GameCallback | UpdateCallback)[]).push(callback);
 
-  if (import.meta.hot) {
+  if (typeof import.meta !== "undefined" && import.meta.hot) {
     const data = import.meta.hot.data as {
       callbacks?: { list: (GameCallback | UpdateCallback)[]; callback: GameCallback | UpdateCallback }[];
     };
@@ -94,7 +94,7 @@ export function gameUpdate(callback: UpdateCallback): void {
     }
     scopeToCallbacks.get(currentUpdateScope)!.push(callback);
   }
-  if (import.meta.hot) {
+  if (typeof import.meta !== "undefined" && import.meta.hot) {
     const data = import.meta.hot.data as { callbacks?: { list: UpdateCallback[]; callback: UpdateCallback }[] };
     if (!data.callbacks) data.callbacks = [];
     data.callbacks.push({ list: lifecycle.gameUpdate, callback });

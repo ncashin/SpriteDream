@@ -17,10 +17,10 @@
       const vscode = typeof acquireVsCodeApi !== "undefined" ? acquireVsCodeApi() : null;
       let pendingInitialSceneContent = null;
 
-      function sendSceneUpdateToIframe(content) {
+      function sendSceneContentToIframe(content) {
         if (iframe?.contentWindow) {
           iframe.contentWindow.postMessage(
-            { type: "gameide.sceneUpdate", content: content },
+            { type: "gameide.editor.setSceneContent", content: content },
             "*"
           );
         }
@@ -28,7 +28,7 @@
 
       iframe.addEventListener("load", function () {
         if (pendingInitialSceneContent !== null) {
-          sendSceneUpdateToIframe(pendingInitialSceneContent);
+          sendSceneContentToIframe(pendingInitialSceneContent);
         }
       });
 
@@ -39,9 +39,9 @@
         if (!msg || typeof msg.type !== "string") return;
 
         if (event.source === iframe?.contentWindow) {
-          if (msg.type === "gameide.requestInitialScene") {
+          if (msg.type === "gameide.editor.requestInitialScene") {
             if (pendingInitialSceneContent !== null) {
-              sendSceneUpdateToIframe(pendingInitialSceneContent);
+              sendSceneContentToIframe(pendingInitialSceneContent);
             } else {
               vscode?.postMessage({ type: "requestInitialScene" });
             }
@@ -49,22 +49,22 @@
         } else {
           if (msg.type === "update" && msg.content !== undefined) {
             pendingInitialSceneContent = msg.content;
-            sendSceneUpdateToIframe(msg.content);
+            sendSceneContentToIframe(msg.content);
           }
           if (msg.type === "scenePatch" && msg.patch) {
             iframe?.contentWindow?.postMessage(
-              { type: "gameide.scenePatch", patch: msg.patch },
+              { type: "gameide.editor.scenePatch", patch: msg.patch },
               "*"
             );
           }
           return;
         }
 
-        if (msg.type === "gameide.scenePatch" && msg.patch) {
+        if (msg.type === "gameide.editor.scenePatch" && msg.patch) {
           vscode?.postMessage({ type: "scenePatch", patch: msg.patch });
         }
-        if (msg.type === "gameide.sceneChanged" && msg.content !== undefined) {
-          vscode?.postMessage({ type: "sceneChanged", content: msg.content });
+        if (msg.type === "gameide.editor.setSceneContent" && msg.content !== undefined) {
+          vscode?.postMessage({ type: "setSceneContent", content: msg.content });
         }
       });
     })();

@@ -1,38 +1,14 @@
 import * as vscode from "vscode";
-import sceneEditorHTML from "./sceneEditor.html";
 import {
-  createSceneMessageHandler,
-  type SceneWebviewMessage,
-} from "./sceneMessageHandler";
+  applyScenePatch,
+  createSceneChannel,
+  SCENE_CHANNEL,
+  type MessageTransport,
+  type SceneData,
+} from "gameide";
+import sceneEditorHTML from "./sceneEditor.html";
 
-export interface SceneData {
-  [key: string]: unknown;
-}
-
-function isMergeable(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** Apply a JSON patch object; null at a key means delete that key. */
-function applyScenePatch(scene: SceneData, patch: SceneData): void {
-  for (const key of Object.keys(patch)) {
-    const patchValue = patch[key];
-    if (patchValue === null) {
-      delete scene[key];
-    } else if (isMergeable(patchValue)) {
-      const existing = scene[key];
-      if (existing !== undefined && isMergeable(existing)) {
-        applyScenePatch(existing, patchValue);
-      } else {
-        const created: SceneData = {};
-        scene[key] = created;
-        applyScenePatch(created, patchValue);
-      }
-    } else {
-      scene[key] = patchValue;
-    }
-  }
-}
+export type { SceneData };
 
 export class SceneDocument implements vscode.CustomDocument {
   private _data: SceneData;
@@ -132,22 +108,67 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     const html = this.getHtmlForWebview(webview);
     webview.html = html;
 
-    const handleMessage = createSceneMessageHandler({
-      document,
-      fireEdit: (event) => this._onDidChangeCustomDocument.fire(event),
-      applyScenePatch,
-      notifyWebviews: () => document.notifyWebviews(),
-    });
-    
-    webview.onDidReceiveMessage((message: { type: string }) => {
-      if (message.type === "requestInitialScene") {
-        webview.postMessage({
-          type: "update",
-          content: JSON.stringify(document.getData(), null, 2),
+    const isSceneMessage = (type: string) =>
+      type === SCENE_CHANNEL.setSceneContent ||
+      type === "setSceneContent" ||
+      type === SCENE_CHANNEL.scenePatch ||
+      type === "scenePatch";
+
+    const isUndoable = (type: string) =>
+      type === SCENE_CHANNEL.setSceneContent ||
+      type === "setSceneContent" ||
+      type === SCENE_CHANNEL.scenePatch ||
+      type === "scenePatch";
+
+    const transport: MessageTransport = {
+      send: (m: unknown) => {
+        const msg = m as { type: string; content?: string };
+        if (
+          msg.type === SCENE_CHANNEL.setSceneContent &&
+          msg.content !== undefined
+        ) {
+          webview.postMessage({ type: "update", content: msg.content });
+        } else {
+          webview.postMessage(m);
+        }
+      },
+      onMessage: (handler: (m: unknown) => void) => {
+        webview.onDidReceiveMessage((message: { type: string }) => {
+          const undoable = isUndoable(message.type);
+          const prev = undoable ? document.getData() : null;
+          handler(message);
+          if (isSceneMessage(message.type)) {
+            document.notifyWebviews();
+          }
+          if (undoable && prev) {
+            const next = document.getData();
+            this._onDidChangeCustomDocument.fire({
+              document,
+              label: "Edit",
+              undo: async () => {
+                document.setData(prev);
+                document.notifyWebviews();
+              },
+              redo: async () => {
+                document.setData(next);
+                document.notifyWebviews();
+              },
+            });
+          }
         });
-        return;
-      }
-      handleMessage(message as SceneWebviewMessage);
+        return () => {};
+      },
+    };
+
+    createSceneChannel({
+      transport,
+      context: {
+        getSceneData: () => document.getData(),
+        setSceneData: (data: SceneData) => document.setData(data),
+        applyScenePatch,
+      },
+      onRequestInitial: () =>
+        JSON.stringify(document.getData(), null, 2),
     });
   }
 

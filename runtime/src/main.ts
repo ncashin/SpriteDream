@@ -1,9 +1,11 @@
-import { gameUpdate } from "./gameloop";
-import { iframePlugin } from "./iframePlugin";
-import { initializeGame } from "./initializeGame";
-import { inputPlugin } from "./inputPlugin";
-import { render2DPlugin } from "./render2DPlugin";
-import { getScene } from "./scene";
+import {
+  gameUpdate,
+  getScene,
+  editorPlugin,
+  initializeGame,
+  inputPlugin,
+  render2DPlugin,
+} from "gameide";
 import sceneData from "../public/sample.scene?raw";
 import "./style.css";
 import invariant from "tiny-invariant";
@@ -29,7 +31,7 @@ initializeGame({
     rootElement,
   },
   ...(inEditor ? {} : { initialScene: JSON.parse(sceneData) }),
-  plugins: [iframePlugin(), inputPlugin(), render2DPlugin()],
+  plugins: [editorPlugin(), inputPlugin(), render2DPlugin()],
   main(gameContext) {
     const { render2D, input, rootElement } = gameContext;
     const { canvasElement, context } = render2D;

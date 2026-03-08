@@ -1,5 +1,5 @@
-import { definePlugin } from "./plugin";
-import { gameUpdate } from "./gameloop";
+import { definePlugin } from "./plugin.js";
+import { gameUpdate } from "./gameloop.js";
 
 export type InputBinding =
   | `Key${string}`

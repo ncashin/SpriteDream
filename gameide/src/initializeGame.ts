@@ -3,8 +3,8 @@ import {
   removeGameUpdatesForScope,
   setUpdateScope,
   startGameloop,
-} from "./gameloop";
-import { setInitialScene } from "./scene";
+} from "./gameloop.js";
+import { setInitialScene } from "./scene.js";
 
 export type Plugin<T = unknown> = (input: T) => T;
 
@@ -41,7 +41,7 @@ function initializeGame<Initial>(options: { initialContext: Initial; initialScen
 function initializeGame<Initial, Plugins extends readonly PluginFunction[]>(
   options: InitializeGameOptions<Initial, Plugins>
 ): FinalContext<Initial, Plugins> | Initial {
-  const hot = import.meta.hot;
+  const hot = typeof import.meta !== "undefined" ? import.meta.hot : undefined;
   const data = hot?.data as { context?: unknown; mainScope?: string } | undefined;
   const isHotModuleReplacement = hot !== undefined && data?.context !== undefined;
 

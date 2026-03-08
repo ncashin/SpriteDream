@@ -1,7 +1,5 @@
 import "./main";
 
 if (import.meta.hot) {
-  import.meta.hot.accept("./main", () => {
-    import("./main");
-  });
+  import.meta.hot.accept("./main", () => {});
 }

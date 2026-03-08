@@ -1,4 +1,4 @@
-import { definePlugin } from "./plugin";
+import { definePlugin } from "./plugin.js";
 import invariant from "tiny-invariant";
 
 export type Render2DPluginRequiredContext = { rootElement: HTMLElement };
