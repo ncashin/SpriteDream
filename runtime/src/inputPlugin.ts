@@ -13,6 +13,7 @@ export type AxisConfig = {
 
 export type ButtonConfig = InputBinding[];
 
+export type InputPluginRequiredContext = { rootElement?: HTMLElement };
 export type InputPluginOptions = {
   axes?: Record<string, AxisConfig>;
   buttons?: Record<string, ButtonConfig>;
@@ -50,11 +51,11 @@ export type InputContext = {
   getMouseDelta: () => { x: number; y: number };
 };
 
-export const inputPlugin = definePlugin<InputPluginOptions, object, { input: InputContext }>(
-  (options?: InputPluginOptions) => (inputContext): object & { input: InputContext } => {
+export const inputPlugin = definePlugin<InputPluginOptions, InputPluginRequiredContext, { input: InputContext }>(
+  (options?: InputPluginOptions) => (inputContext: InputPluginRequiredContext): InputPluginRequiredContext & { input: InputContext } => {
     const axes = { ...DEFAULT_AXES, ...options?.axes };
     const buttons = { ...DEFAULT_BUTTONS, ...options?.buttons };
-    const target = options?.target ?? document;
+    const target = options?.target ?? inputContext.rootElement ?? document;
 
     const keyState: Record<string, boolean> = {};
     const mouseState: Record<string, boolean> = {};
@@ -165,5 +166,5 @@ export const inputPlugin = definePlugin<InputPluginOptions, object, { input: Inp
     };
 
     return { ...inputContext, input };
-  },
+  }
 );

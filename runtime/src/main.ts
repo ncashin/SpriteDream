@@ -17,9 +17,14 @@ initializeGame({
   initialScene: sceneData,
   plugins: [inputPlugin(), render2DPlugin()],
   main(gameContext) {
-    const { render2D, input } = gameContext;
+    const { render2D, input, rootElement } = gameContext;
     const { canvasElement, context } = render2D;
     const scene = getScene();
+
+    rootElement.tabIndex = 0;
+    rootElement.style.outline = "none";
+    rootElement.addEventListener("mousedown", () => rootElement.focus());
+    rootElement.focus();
 
     gameUpdate((deltaTime) => {
       const player = scene.player as any;
