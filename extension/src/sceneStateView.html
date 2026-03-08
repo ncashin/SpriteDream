@@ -42,8 +42,8 @@
       border-radius: 3px;
     }
     .row:hover { background: var(--vscode-list-hoverBackground); }
-    .row.expandable { cursor: pointer; padding-left: 4px; }
-    .row.expandable .row-icon { margin-right: 8px; }
+    .row.expandable { cursor: pointer; }
+    .row.expandable .row-icon { margin-right: 4px; }
     .key {
       flex-shrink: 0;
       margin-right: 10px;
@@ -52,29 +52,20 @@
     .value {
       flex: 1;
       min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       color: var(--vscode-descriptionForeground);
       cursor: text;
     }
-    .value.editable:hover { text-decoration: underline; }
-    .value input {
-      width: auto;
-      min-width: 2em;
-      font: inherit;
-      color: var(--vscode-input-foreground);
-      background: var(--vscode-input-background);
-      border: 1px solid var(--vscode-input-border);
-      padding: 2px 6px;
-      margin: -1px 0;
-      border-radius: 3px;
-    }
-    .value input:focus {
-      outline: 1px solid var(--vscode-focusBorder);
-      outline-offset: -1px;
+    .value[contenteditable="true"] {
+      background: color-mix(in srgb, var(--vscode-input-background) 20%, transparent);
+      border-radius: 2px;
     }
     .doc {
       font-weight: 600;
       margin: 8px 0 6px 0;
-      padding: 2px 4px 2px 8px;
+      padding: 2px 4px 2px 0;
       color: var(--vscode-foreground);
     }
     .doc:first-child { margin-top: 0; }
@@ -148,64 +139,32 @@
           valueCell.style.cursor = 'default';
         } else {
           valueCell.textContent = formatVal(value);
-          valueCell.classList.add('editable');
+          valueCell.contentEditable = 'true';
+          valueCell.spellcheck = false;
           valueCell.dataset.uri = uri;
           valueCell.dataset.path = JSON.stringify(path);
-          valueCell.dataset.docName = docName;
-          valueCell.addEventListener('click', (e) => {
-            e.stopPropagation();
-            startEdit(valueCell, path, uri, value);
+          valueCell.dataset.initial = formatVal(value);
+          valueCell.addEventListener('click', (e) => e.stopPropagation());
+          valueCell.addEventListener('blur', () => {
+            const raw = valueCell.textContent.trim();
+            let parsed;
+            try { parsed = JSON.parse(raw); } catch { parsed = raw; }
+            vscode.postMessage({ type: 'edit', uri, path, value: parsed });
+            valueCell.dataset.initial = formatVal(parsed);
+          });
+          valueCell.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              valueCell.blur();
+            }
+            if (e.key === 'Escape') {
+              valueCell.textContent = valueCell.dataset.initial;
+              valueCell.blur();
+            }
           });
         }
         row.appendChild(valueCell);
         return { row, valueCell, keySpan };
-      }
-
-      function startEdit(cell, path, uri, currentVal) {
-        if (cell.querySelector('input')) return;
-
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = typeof currentVal === 'string' ? currentVal : formatVal(currentVal);
-        input.size = Math.max(8, input.value.length + 2);
-        input.dataset.uri = uri;
-        input.dataset.path = JSON.stringify(path);
-        cell.textContent = '';
-        cell.appendChild(input);
-        input.focus();
-        input.select();
-
-        function commit() {
-          const raw = input.value.trim();
-          let parsed;
-          try { parsed = JSON.parse(raw); } catch { parsed = raw; }
-          vscode.postMessage({ type: 'edit', uri, path, value: parsed });
-          cell.removeChild(input);
-          cell.textContent = formatVal(parsed);
-          cell.classList.add('editable');
-          cell.onclick = (e) => {
-            e.stopPropagation();
-            startEdit(cell, path, uri, parsed);
-          };
-        }
-
-        input.addEventListener('blur', commit);
-        input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            input.blur();
-          }
-          if (e.key === 'Escape') {
-            cell.removeChild(input);
-            cell.textContent = formatVal(currentVal);
-            cell.classList.add('editable');
-            cell.onclick = (e) => {
-              e.stopPropagation();
-              startEdit(cell, path, uri, currentVal);
-            };
-            input.blur();
-          }
-        });
       }
 
       function appendExpandableRow(entry, value, path, uri, docName, container, open) {
