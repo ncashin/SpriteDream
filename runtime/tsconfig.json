@@ -6,6 +6,11 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
     "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "gameide": ["../gameide/src"],
+      "gameide/*": ["../gameide/src/*"]
+    },
 
     /* Bundler mode */
     "moduleResolution": "bundler",
