@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { applyScenePatch, pathToPatch } from "gameide";
 import type { SceneData } from "gameide";
 import type { SceneDocumentRegistry } from "./sceneDocumentRegistry";
-import sceneStateViewHTML from "./sceneStateView.html";
+import sceneStateViewHTML from "./sceneStateView.html?raw";
 import { Box, ChevronRight, ChevronDown } from "lucide";
 
 type IconNode = [tag: string, attrs: Record<string, string | number | undefined>][];

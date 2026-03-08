@@ -14,7 +14,7 @@ const UNDOABLE_MESSAGE_TYPES = new Set<string>([
 ]);
 import type { ViteDevServer } from "./devServer";
 import type { SceneDocumentRegistry } from "./sceneDocumentRegistry";
-import sceneEditorHTML from "./sceneEditor.html";
+import sceneEditorHTML from "./sceneEditor.html?raw";
 
 export type { SceneData };
 
