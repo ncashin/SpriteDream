@@ -1,4 +1,5 @@
-export type { SceneData, ScenePatch, SceneWebviewMessage } from "./types.js";
+export type { ScenePatch } from "./scenePatch.js";
+export type { SceneData, SceneWebviewMessage } from "./sceneChannel.js";
 export { applyScenePatch, pathToPatch } from "./scenePatch.js";
 export { createSceneTransportPostMessage as createPostMessageTransport } from "./sceneChannelTransport.js";
   export type { SceneChannelTransport, PostMessageTransportOptions } from "./sceneChannelTransport.js";

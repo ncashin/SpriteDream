@@ -1,8 +1,16 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
 import { pathToPatch } from "./scenePatch.js";
-import type { SceneData, ScenePatch } from "./types.js";
+import type { ScenePatch } from "./scenePatch.js";
 import type { SceneUpdate } from "./scene.js";
 import { getScene } from "./scene.js";
+
+export type SceneData = Record<string, unknown>;
+
+export interface SceneWebviewMessage {
+  type: string;
+  content?: string;
+  patch?: SceneData;
+}
 
 export const SCENE_CHANNEL = {
   requestInitialScene: "gameide.editor.requestInitialScene",

@@ -1,4 +1,4 @@
-import type { ScenePatch } from "./types.js";
+export type ScenePatch = Record<PropertyKey, unknown>;
 
 function isMergeable(
   value: unknown
@@ -34,7 +34,6 @@ export function applyScenePatch(
   }
 }
 
-/** Build a nested patch object from a path and value (or delete). Use null at leaf for delete. */
 export function pathToPatch(
   path: PropertyKey[],
   value?: unknown,
