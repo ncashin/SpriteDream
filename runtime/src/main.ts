@@ -24,13 +24,11 @@ function isPlayer(obj: unknown): obj is Player {
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-const inEditor = typeof window !== "undefined" && window.self !== window.top;
-
 initializeGame({
   initialContext: {
     rootElement,
   },
-  ...(inEditor ? {} : { initialScene: JSON.parse(sceneData) }),
+  initialScene: JSON.parse(sceneData),
   plugins: [editorPlugin(), inputPlugin(), render2DPlugin()],
   main(gameContext) {
     const { render2D, input, rootElement } = gameContext;
