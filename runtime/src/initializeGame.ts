@@ -48,8 +48,8 @@ function initializeGame<Initial, Plugins extends readonly PluginFunction[]>(
   let result: any;
 
   if (isHotModuleReplacement) {
-    result = data!.context;
-    removeGameUpdatesForScope(data!.mainScope ?? MAIN_SCOPE);
+    result = data?.context;
+    removeGameUpdatesForScope(data?.mainScope ?? MAIN_SCOPE);
   } else {
     setInitialScene(options.initialScene);
 

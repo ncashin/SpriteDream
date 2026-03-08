@@ -10,6 +10,64 @@
   </style>
 </head>
 <body>
-  <iframe src="http://localhost:{{PORT}}"></iframe>
+  <iframe id="gameide-runtime" src="http://localhost:{{PORT}}"></iframe>
+  <script>
+    (function () {
+      const iframe = document.getElementById("gameide-runtime");
+      const vscode = typeof acquireVsCodeApi !== "undefined" ? acquireVsCodeApi() : null;
+      let pendingInitialSceneContent = null;
+
+      function sendSceneUpdateToIframe(content) {
+        if (iframe?.contentWindow) {
+          iframe.contentWindow.postMessage(
+            { type: "gameide.sceneUpdate", content: content },
+            "*"
+          );
+        }
+      }
+
+      iframe.addEventListener("load", function () {
+        if (pendingInitialSceneContent !== null) {
+          sendSceneUpdateToIframe(pendingInitialSceneContent);
+        }
+      });
+
+      vscode?.postMessage({ type: "requestInitialScene" });
+
+      window.addEventListener("message", function (event) {
+        const msg = event.data;
+        if (!msg || typeof msg.type !== "string") return;
+
+        if (event.source === iframe?.contentWindow) {
+          if (msg.type === "gameide.requestInitialScene") {
+            if (pendingInitialSceneContent !== null) {
+              sendSceneUpdateToIframe(pendingInitialSceneContent);
+            } else {
+              vscode?.postMessage({ type: "requestInitialScene" });
+            }
+          }
+        } else {
+          if (msg.type === "update" && msg.content !== undefined) {
+            pendingInitialSceneContent = msg.content;
+            sendSceneUpdateToIframe(msg.content);
+          }
+          if (msg.type === "scenePatch" && msg.patch) {
+            iframe?.contentWindow?.postMessage(
+              { type: "gameide.scenePatch", patch: msg.patch },
+              "*"
+            );
+          }
+          return;
+        }
+
+        if (msg.type === "gameide.scenePatch" && msg.patch) {
+          vscode?.postMessage({ type: "scenePatch", patch: msg.patch });
+        }
+        if (msg.type === "gameide.sceneChanged" && msg.content !== undefined) {
+          vscode?.postMessage({ type: "sceneChanged", content: msg.content });
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

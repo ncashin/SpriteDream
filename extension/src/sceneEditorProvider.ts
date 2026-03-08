@@ -1,8 +1,37 @@
 import * as vscode from "vscode";
 import sceneEditorHTML from "./sceneEditor.html";
+import {
+  createSceneMessageHandler,
+  type SceneWebviewMessage,
+} from "./sceneMessageHandler";
 
 export interface SceneData {
   [key: string]: unknown;
+}
+
+function isMergeable(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Apply a JSON patch object; null at a key means delete that key. */
+function applyScenePatch(scene: SceneData, patch: SceneData): void {
+  for (const key of Object.keys(patch)) {
+    const patchValue = patch[key];
+    if (patchValue === null) {
+      delete scene[key];
+    } else if (isMergeable(patchValue)) {
+      const existing = scene[key];
+      if (existing !== undefined && isMergeable(existing)) {
+        applyScenePatch(existing, patchValue);
+      } else {
+        const created: SceneData = {};
+        scene[key] = created;
+        applyScenePatch(created, patchValue);
+      }
+    } else {
+      scene[key] = patchValue;
+    }
+  }
 }
 
 export class SceneDocument implements vscode.CustomDocument {
@@ -36,6 +65,10 @@ export class SceneDocument implements vscode.CustomDocument {
         panel.webview.postMessage({ type: "update", content: json });
       }
     }
+  }
+
+  applyPatch(patch: SceneData): void {
+    applyScenePatch(this._data, patch);
   }
 
   dispose(): void {
@@ -99,33 +132,22 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     const html = this.getHtmlForWebview(webview);
     webview.html = html;
 
-    webview.onDidReceiveMessage((message: { type: string; content?: string }) => {
-      if (message.type === "edit" && message.content !== undefined) {
-        try {
-          const newData = JSON.parse(message.content) as SceneData;
-          const oldData = document.getData();
-          this._onDidChangeCustomDocument.fire({
-            document,
-            label: "Edit",
-            undo: () => {
-              document.setData(oldData);
-              document.notifyWebviews();
-            },
-            redo: () => {
-              document.setData(newData);
-              document.notifyWebviews();
-            },
-          });
-          document.setData(newData);
-        } catch {
-          // Invalid JSON, ignore
-        }
-      }
+    const handleMessage = createSceneMessageHandler({
+      document,
+      fireEdit: (event) => this._onDidChangeCustomDocument.fire(event),
+      applyScenePatch,
+      notifyWebviews: () => document.notifyWebviews(),
     });
-
-    webview.postMessage({
-      type: "update",
-      content: JSON.stringify(document.getData(), null, 2),
+    
+    webview.onDidReceiveMessage((message: { type: string }) => {
+      if (message.type === "requestInitialScene") {
+        webview.postMessage({
+          type: "update",
+          content: JSON.stringify(document.getData(), null, 2),
+        });
+        return;
+      }
+      handleMessage(message as SceneWebviewMessage);
     });
   }
 
@@ -187,6 +209,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     const csp = [
       "default-src 'none'",
       `frame-src http://localhost:${port}`,
+      "script-src 'unsafe-inline'",
       "style-src 'unsafe-inline'",
     ].join("; ");
     return sceneEditorHTML
