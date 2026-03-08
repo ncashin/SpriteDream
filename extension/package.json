@@ -4,6 +4,10 @@
   "displayName": "Game IDE Scene Preview",
   "description": "Open .scene files in a custom editor with live Vite preview",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ncashin/gameide.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -11,8 +15,6 @@
     "Other"
   ],
   "activationEvents": [
-    "onCustomEditor:gameide.scenePreview",
-    "onView:gameide.sceneState",
     "workspaceContains:**/*.scene"
   ],
   "main": "./out/extension.js",
