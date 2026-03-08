@@ -1,0 +1,77 @@
+{
+  "name": "gameide-scene-preview",
+  "publisher": "gameide",
+  "displayName": "Game IDE Scene Preview",
+  "description": "Open .scene files in a custom editor with live Vite preview",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCustomEditor:gameide.scenePreview",
+    "onView:gameide.sceneState",
+    "workspaceContains:**/*.scene"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gameide",
+          "title": "Game IDE",
+          "icon": "$(file-code)"
+        }
+      ]
+    },
+    "views": {
+      "gameide": [
+        {
+          "type": "webview",
+          "id": "gameide.sceneState",
+          "name": "Scene State"
+        }
+      ]
+    },
+    "customEditors": [
+      {
+        "viewType": "gameide.scenePreview",
+        "displayName": "Scene Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.scene"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "languages": [
+      {
+        "id": "json",
+        "extensions": [
+          ".scene"
+        ],
+        "aliases": [
+          "Scene (JSON)"
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.24.0",
+    "typescript": "~5.6.0"
+  },
+  "dependencies": {
+    "gameide": "*",
+    "lucide": "^0.577.0"
+  }
+}

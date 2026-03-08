@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--vscode-font-family);
+      font-size: var(--vscode-font-size);
+      color: var(--vscode-foreground);
+      background: var(--vscode-sideBar-background);
+    }
+    #root {
+      background: var(--vscode-editorWidget-background);
+      border: 1px solid var(--vscode-widget-border);
+      border-radius: 3px;
+      padding: 8px 4px 8px 8px;
+      margin: 0;
+    }
+    .tree {
+      padding-left: 0;
+      list-style: none;
+      margin: 0;
+    }
+    .tree ul {
+      padding-left: 16px;
+      list-style: none;
+      border-left: 1px solid var(--vscode-widget-border);
+      margin: 2px 0;
+      border-radius: 2px;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 2px 4px 2px 8px;
+      margin: 1px 0;
+      cursor: default;
+      border-radius: 3px;
+    }
+    .row:hover { background: var(--vscode-list-hoverBackground); }
+    .row.expandable { cursor: pointer; }
+    .row.expandable .row-icon { margin-right: 4px; }
+    .key {
+      flex-shrink: 0;
+      margin-right: 10px;
+      color: var(--vscode-foreground);
+    }
+    .value {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--vscode-descriptionForeground);
+      cursor: text;
+    }
+    .value[contenteditable="true"] {
+      background: color-mix(in srgb, var(--vscode-input-background) 20%, transparent);
+      border-radius: 2px;
+    }
+    .doc {
+      font-weight: 600;
+      margin: 8px 0 6px 0;
+      padding: 2px 4px 2px 0;
+      color: var(--vscode-foreground);
+    }
+    .doc:first-child { margin-top: 0; }
+    .row-icon {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--vscode-descriptionForeground);
+      opacity: 0.8;
+      margin-right: 8px;
+    }
+    .row-icon svg { display: block; }
+    .toggle svg { display: block; }
+    .toggle {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--vscode-descriptionForeground);
+      margin-left: auto;
+      color: var(--vscode-descriptionForeground);
+      opacity: 0;
+      transition: opacity 0.1s ease;
+    }
+    .row.expandable:hover .toggle { opacity: 0.9; }
+    .empty {
+      color: var(--vscode-descriptionForeground);
+      font-style: italic;
+      padding: 12px 4px 12px 8px;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  {{LUCIDE_ICONS_SCRIPT}}
+  <div id="root"></div>
+  <script>
+    (function () {
+      const vscode = acquireVsCodeApi();
+      const root = document.getElementById('root');
+
+      function formatVal(v) {
+        if (v === null) return 'null';
+        if (typeof v === 'string') return JSON.stringify(v);
+        return String(v);
+      }
+
+      function hasChildren(v) {
+        return v !== null && typeof v === 'object' && (Array.isArray(v) || Object.keys(v).length > 0);
+      }
+
+      function buildEntry(key, value, path, uri, docName) {
+        const row = document.createElement('div');
+        row.className = 'row' + (hasChildren(value) ? ' expandable' : '');
+
+        const keySpan = document.createElement('span');
+        keySpan.className = 'key';
+        keySpan.textContent = key;
+        row.appendChild(keySpan);
+
+        const valueCell = document.createElement('span');
+        valueCell.className = 'value';
+
+        if (hasChildren(value)) {
+          valueCell.textContent = Array.isArray(value) ? `[${value.length}]` : '';
+          valueCell.style.cursor = 'default';
+        } else {
+          valueCell.textContent = formatVal(value);
+          valueCell.contentEditable = 'true';
+          valueCell.spellcheck = false;
+          valueCell.dataset.uri = uri;
+          valueCell.dataset.path = JSON.stringify(path);
+          valueCell.dataset.initial = formatVal(value);
+          valueCell.addEventListener('click', (e) => e.stopPropagation());
+          valueCell.addEventListener('blur', () => {
+            const raw = valueCell.textContent.trim();
+            let parsed;
+            try { parsed = JSON.parse(raw); } catch { parsed = raw; }
+            vscode.postMessage({ type: 'edit', uri, path, value: parsed });
+            valueCell.dataset.initial = formatVal(parsed);
+          });
+          valueCell.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              valueCell.blur();
+            }
+            if (e.key === 'Escape') {
+              valueCell.textContent = valueCell.dataset.initial;
+              valueCell.blur();
+            }
+          });
+        }
+        row.appendChild(valueCell);
+        return { row, valueCell, keySpan };
+      }
+
+      function appendExpandableRow(entry, value, path, uri, docName, container, open) {
+        const { row } = entry;
+        const ul = document.createElement('ul');
+        const icon = document.createElement('span');
+        icon.className = 'row-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        if (window.LUCIDE_ICONS) icon.innerHTML = window.LUCIDE_ICONS.folder;
+        row.insertBefore(icon, row.firstChild);
+        const toggle = document.createElement('span');
+        toggle.className = 'toggle';
+        if (window.LUCIDE_ICONS) toggle.innerHTML = open ? window.LUCIDE_ICONS.chevronDown : window.LUCIDE_ICONS.chevronRight;
+        else toggle.textContent = open ? '▼' : '▶';
+        row.appendChild(toggle);
+        row.addEventListener('click', () => {
+          ul.hidden = !ul.hidden;
+          if (window.LUCIDE_ICONS) toggle.innerHTML = ul.hidden ? window.LUCIDE_ICONS.chevronRight : window.LUCIDE_ICONS.chevronDown;
+          else toggle.textContent = ul.hidden ? '▶' : '▼';
+        });
+        container.appendChild(row);
+        container.appendChild(ul);
+        ul.hidden = !open;
+        renderNode(value, path, uri, docName, ul, false);
+      }
+
+      function renderNode(value, path, uri, docName, container, open) {
+        if (Array.isArray(value)) {
+          value.forEach((item, i) => {
+            const p = [...path, String(i)];
+            const entry = buildEntry(String(i), item, p, uri, docName);
+            hasChildren(item) ? appendExpandableRow(entry, item, p, uri, docName, container, open) : container.appendChild(entry.row);
+          });
+          return;
+        }
+        if (value !== null && typeof value === 'object') {
+          Object.entries(value).forEach(([k, v]) => {
+            const p = [...path, k];
+            const entry = buildEntry(k, v, p, uri, docName);
+            hasChildren(v) ? appendExpandableRow(entry, v, p, uri, docName, container, open) : container.appendChild(entry.row);
+          });
+        }
+      }
+
+      function render(documents) {
+        root.innerHTML = '';
+        if (!documents || documents.length === 0) {
+          root.innerHTML = '<div class="empty">Open a .scene file to view state.</div>';
+          return;
+        }
+
+        documents.forEach((doc) => {
+          const docDiv = document.createElement('div');
+          docDiv.className = 'doc';
+          docDiv.textContent = doc.name;
+          root.appendChild(docDiv);
+
+          const ul = document.createElement('ul');
+          ul.className = 'tree';
+          root.appendChild(ul);
+
+          const data = doc.data || {};
+          Object.entries(data).forEach(([key, value]) => {
+            const path = [key];
+            const entry = buildEntry(key, value, path, doc.uri, doc.name);
+            if (hasChildren(value)) {
+              const childUl = document.createElement('ul');
+              const icon = document.createElement('span');
+              icon.className = 'row-icon';
+              icon.setAttribute('aria-hidden', 'true');
+              if (window.LUCIDE_ICONS) icon.innerHTML = window.LUCIDE_ICONS.folder;
+              entry.row.insertBefore(icon, entry.row.firstChild);
+              const toggle = document.createElement('span');
+              toggle.className = 'toggle';
+              if (window.LUCIDE_ICONS) toggle.innerHTML = window.LUCIDE_ICONS.chevronDown;
+              else toggle.textContent = '▼';
+              entry.row.appendChild(toggle);
+              entry.row.addEventListener('click', () => {
+                childUl.hidden = !childUl.hidden;
+                if (window.LUCIDE_ICONS) toggle.innerHTML = childUl.hidden ? window.LUCIDE_ICONS.chevronRight : window.LUCIDE_ICONS.chevronDown;
+                else toggle.textContent = childUl.hidden ? '▶' : '▼';
+              });
+              ul.appendChild(entry.row);
+              ul.appendChild(childUl);
+              renderNode(value, path, doc.uri, doc.name, childUl, true);
+            } else {
+              ul.appendChild(entry.row);
+            }
+          });
+        });
+      }
+
+      window.addEventListener('message', (e) => {
+        const msg = e.data;
+        if (msg.type === 'update') render(msg.documents);
+      });
+
+      vscode.postMessage({ type: 'ready' });
+    })();
+  </script>
+</body>
+</html>

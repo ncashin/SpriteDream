@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="{{CSP}}">
+  <title>Scene</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; }
+    iframe { display: block; width: 100%; height: 100%; border: none; }
+  </style>
+</head>
+<body>
+  <iframe id="gameide-runtime" src="http://localhost:{{PORT}}"></iframe>
+  <script>
+    (function () {
+      const iframe = document.getElementById("gameide-runtime");
+      const vscode = typeof acquireVsCodeApi !== "undefined" ? acquireVsCodeApi() : null;
+      let pendingInitialSceneContent = null;
+
+      function sendInitialSceneToIframe(content) {
+        if (iframe?.contentWindow) {
+          iframe.contentWindow.postMessage(
+            { type: "gameide.editor.initialScene", content: content },
+            "*"
+          );
+        }
+      }
+
+      iframe.addEventListener("load", function () {
+        if (pendingInitialSceneContent !== null) {
+          sendInitialSceneToIframe(pendingInitialSceneContent);
+        }
+      });
+
+      vscode?.postMessage({ type: "requestInitialScene" });
+
+      window.addEventListener("message", function (event) {
+        const msg = event.data;
+        if (!msg || typeof msg.type !== "string") return;
+
+        if (event.source === iframe?.contentWindow) {
+          if (msg.type === "gameide.editor.requestInitialScene") {
+            if (pendingInitialSceneContent !== null) {
+              sendInitialSceneToIframe(pendingInitialSceneContent);
+            } else {
+              vscode?.postMessage({ type: "requestInitialScene" });
+            }
+          }
+        } else {
+          if (msg.type === "update" && msg.content !== undefined) {
+            pendingInitialSceneContent = msg.content;
+            sendInitialSceneToIframe(msg.content);
+          }
+          if (msg.type === "scenePatch" && msg.patch) {
+            iframe?.contentWindow?.postMessage(
+              { type: "gameide.editor.scenePatch", patch: msg.patch },
+              "*"
+            );
+          }
+          return;
+        }
+
+        if (msg.type === "gameide.editor.scenePatch" && msg.patch) {
+          vscode?.postMessage({ type: "gameide.editor.scenePatch", patch: msg.patch });
+        }
+        if (msg.type === "gameide.editor.sceneChanged" && msg.content !== undefined) {
+          vscode?.postMessage({ type: "gameide.editor.sceneChanged", content: msg.content });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

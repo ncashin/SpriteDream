@@ -1,0 +1,9 @@
+{
+  "name": "gameide-monorepo",
+  "private": true,
+  "workspaces": [
+    "gameide",
+    "runtime",
+    "extension"
+  ]
+}

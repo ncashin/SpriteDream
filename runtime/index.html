@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // When loaded inside a Cursor/VS Code webview iframe, the document may require Trusted Types.
+      // Create a default policy so script URLs and inline scripts are allowed.
+      if (typeof trustedTypes !== 'undefined' && trustedTypes.createPolicy) {
+        try {
+          trustedTypes.createPolicy('default', {
+            createScriptURL: function (s) { return s; },
+            createScript: function (s) { return s; }
+          });
+        } catch (_) {}
+      }
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>runtime</title>
+    <link href="/src/style.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/entry.ts"></script>
+  </body>
+</html>
