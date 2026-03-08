@@ -8,11 +8,11 @@ import {
   type SceneData,
 } from "gameide";
 
-/** Message types that should create undo/redo steps in the editor. */
 const UNDOABLE_MESSAGE_TYPES = new Set<string>([
   SCENE_CHANNEL.initialScene,
   SCENE_CHANNEL.scenePatch,
 ]);
+import type { ViteDevServer } from "./devServer";
 import sceneEditorHTML from "./sceneEditor.html";
 
 export type { SceneData };
@@ -66,7 +66,10 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
 
   readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
 
-  constructor(private readonly extensionUri: vscode.Uri) {}
+  constructor(
+    private readonly extensionUri: vscode.Uri,
+    private readonly devServer: ViteDevServer | null = null
+  ) {}
 
   async openCustomDocument(
     uri: vscode.Uri,
@@ -112,7 +115,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       enableScripts: true,
       localResourceRoots: [this.extensionUri],
     };
-    const html = this.getHtmlForWebview(webview);
+    const html = this.getHTMLForWebview(webview);
     webview.html = html;
 
     const transport: SceneChannelTransport = {
@@ -218,8 +221,10 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     await vscode.workspace.fs.writeFile(uri, bytes);
   }
 
-  private getHtmlForWebview(_webview: vscode.Webview): string {
-    const port = parseInt(process.env.GAMEIDE_RUNTIME_PORT ?? "38472", 10) || 38472;
+  private getHTMLForWebview(_webview: vscode.Webview): string {
+    const port = this.devServer
+      ? this.devServer.getPort()
+      : parseInt(process.env.GAMEIDE_RUNTIME_PORT ?? "38472", 10) || 38472;
     const csp = [
       "default-src 'none'",
       `frame-src http://localhost:${port}`,
