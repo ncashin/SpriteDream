@@ -61,10 +61,10 @@
         }
 
         if (msg.type === "gameide.editor.scenePatch" && msg.patch) {
-          vscode?.postMessage({ type: "scenePatch", patch: msg.patch });
+          vscode?.postMessage({ type: "gameide.editor.scenePatch", patch: msg.patch });
         }
         if (msg.type === "gameide.editor.sceneChanged" && msg.content !== undefined) {
-          vscode?.postMessage({ type: "sceneChanged", content: msg.content });
+          vscode?.postMessage({ type: "gameide.editor.sceneChanged", content: msg.content });
         }
       });
     })();

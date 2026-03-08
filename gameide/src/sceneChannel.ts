@@ -17,11 +17,6 @@ export const SCENE_MESSAGE_TYPES = new Set([
   SCENE_CHANNEL.sceneChanged,
 ]);
 
-export const UNDOABLE_MESSAGE_TYPES = new Set([
-  SCENE_CHANNEL.initialScene,
-  SCENE_CHANNEL.scenePatch,
-]);
-
 export type SceneChannelInMessage =
   | { type: typeof SCENE_CHANNEL.initialScene; content: string }
   | { type: typeof SCENE_CHANNEL.scenePatch; patch: ScenePatch };

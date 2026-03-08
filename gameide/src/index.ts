@@ -6,7 +6,6 @@ export {
   createSceneChannel,
   SCENE_CHANNEL,
   SCENE_MESSAGE_TYPES,
-  UNDOABLE_MESSAGE_TYPES,
 } from "./sceneChannel.js";
 export type {
   CreateSceneChannelOptions,

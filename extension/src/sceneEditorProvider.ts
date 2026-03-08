@@ -4,10 +4,15 @@ import {
   createSceneChannel,
   SCENE_CHANNEL,
   SCENE_MESSAGE_TYPES,
-  UNDOABLE_MESSAGE_TYPES,
   type SceneChannelTransport,
   type SceneData,
 } from "gameide";
+
+/** Message types that should create undo/redo steps in the editor. */
+const UNDOABLE_MESSAGE_TYPES = new Set<string>([
+  SCENE_CHANNEL.initialScene,
+  SCENE_CHANNEL.scenePatch,
+]);
 import sceneEditorHTML from "./sceneEditor.html";
 
 export type { SceneData };
@@ -127,7 +132,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
           const undoable = UNDOABLE_MESSAGE_TYPES.has(message.type);
           const previous = undoable ? document.getData() : null;
           handler(message);
-          if (SCENE_MESSAGE_TYPES.has(message.type)) {
+          if ((SCENE_MESSAGE_TYPES as Set<string>).has(message.type)) {
             document.notifyWebviews();
           }
           if (undoable && previous) {
