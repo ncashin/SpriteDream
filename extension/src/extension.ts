@@ -17,7 +17,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const sceneDocumentRegistry = new SceneDocumentRegistry();
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(
-      "gameide.scenePreview",
+      "gameide.sceneEditor",
       new SceneEditorProvider(
         context.extensionUri,
         devServer,

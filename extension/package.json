@@ -2,8 +2,8 @@
   "type": "module",
   "name": "gameide-extension",
   "publisher": "gameide",
-  "displayName": "Game IDE Scene Preview",
-  "description": "Open .scene files in a custom editor with live Vite preview",
+  "displayName": "GameIDE",
+  "description": "Open .scene files in a custom editor",
   "version": "0.1.0",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
       "activitybar": [
         {
           "id": "gameide",
-          "title": "Game IDE",
+          "title": "GameIDE",
           "icon": "$(file-code)"
         }
       ]
@@ -40,7 +40,7 @@
     },
     "customEditors": [
       {
-        "viewType": "gameide.scenePreview",
+        "viewType": "gameide.sceneEditor",
         "displayName": "Scene Editor",
         "selector": [
           {

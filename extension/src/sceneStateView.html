@@ -58,10 +58,8 @@
       color: var(--vscode-descriptionForeground);
       cursor: text;
     }
-    .value[contenteditable="true"] {
-      background: color-mix(in srgb, var(--vscode-input-background) 20%, transparent);
-      border-radius: 2px;
-    }
+    .value[contenteditable="true"] { border-radius: 2px; }
+    .value:focus { outline: none; box-shadow: none; }
     .doc {
       font-weight: 600;
       margin: 8px 0 6px 0;
