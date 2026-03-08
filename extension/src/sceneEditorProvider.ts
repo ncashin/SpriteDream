@@ -3,7 +3,9 @@ import {
   applyScenePatch,
   createSceneChannel,
   SCENE_CHANNEL,
-  type MessageTransport,
+  SCENE_MESSAGE_TYPES,
+  UNDOABLE_MESSAGE_TYPES,
+  type SceneChannelTransport,
   type SceneData,
 } from "gameide";
 import sceneEditorHTML from "./sceneEditor.html";
@@ -108,23 +110,11 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     const html = this.getHtmlForWebview(webview);
     webview.html = html;
 
-    const isSceneMessage = (type: string) =>
-      type === SCENE_CHANNEL.setSceneContent ||
-      type === "setSceneContent" ||
-      type === SCENE_CHANNEL.scenePatch ||
-      type === "scenePatch";
-
-    const isUndoable = (type: string) =>
-      type === SCENE_CHANNEL.setSceneContent ||
-      type === "setSceneContent" ||
-      type === SCENE_CHANNEL.scenePatch ||
-      type === "scenePatch";
-
-    const transport: MessageTransport = {
+    const transport: SceneChannelTransport = {
       send: (m: unknown) => {
         const msg = m as { type: string; content?: string };
         if (
-          msg.type === SCENE_CHANNEL.setSceneContent &&
+          msg.type === SCENE_CHANNEL.initialScene &&
           msg.content !== undefined
         ) {
           webview.postMessage({ type: "update", content: msg.content });
@@ -134,19 +124,19 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       },
       onMessage: (handler: (m: unknown) => void) => {
         webview.onDidReceiveMessage((message: { type: string }) => {
-          const undoable = isUndoable(message.type);
-          const prev = undoable ? document.getData() : null;
+          const undoable = UNDOABLE_MESSAGE_TYPES.has(message.type);
+          const previous = undoable ? document.getData() : null;
           handler(message);
-          if (isSceneMessage(message.type)) {
+          if (SCENE_MESSAGE_TYPES.has(message.type)) {
             document.notifyWebviews();
           }
-          if (undoable && prev) {
+          if (undoable && previous) {
             const next = document.getData();
             this._onDidChangeCustomDocument.fire({
               document,
               label: "Edit",
               undo: async () => {
-                document.setData(prev);
+                document.setData(previous);
                 document.notifyWebviews();
               },
               redo: async () => {
@@ -162,11 +152,9 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
 
     createSceneChannel({
       transport,
-      context: {
-        getSceneData: () => document.getData(),
-        setSceneData: (data: SceneData) => document.setData(data),
-        applyScenePatch,
-      },
+      getSceneData: () => document.getData(),
+      setSceneData: (data: SceneData) => document.setData(data),
+      applyScenePatch,
       onRequestInitial: () =>
         JSON.stringify(document.getData(), null, 2),
     });

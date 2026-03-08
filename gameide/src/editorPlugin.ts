@@ -1,4 +1,4 @@
-import { createPostMessageTransport } from "./messageChannel.js";
+import { createSceneTransportPostMessage } from "./sceneChannelTransport.js";
 import { createSceneChannel } from "./sceneChannel.js";
 import { applyScenePatch } from "./scenePatch.js";
 import { getRootTarget, replaceScene, subscribeToSceneUpdates } from "./scene.js";
@@ -9,17 +9,15 @@ export const editorPlugin = () =>
   (input: unknown) => {
     if (typeof window !== "undefined" && window.self !== window.top) {
       createSceneChannel({
-        transport: createPostMessageTransport({
+        transport: createSceneTransportPostMessage({
           target: window.parent,
           source: window,
         }),
-        context: {
-          getSceneData: () =>
-            JSON.parse(JSON.stringify(getRootTarget() ?? {})),
-          setSceneData: (data) => replaceScene(data),
-          applyScenePatch,
-        },
-        outgoing: { subscribeToUpdates: subscribeToSceneUpdates },
+        getSceneData: () =>
+          JSON.parse(JSON.stringify(getRootTarget() ?? {})),
+        setSceneData: (data) => replaceScene(data),
+        applyScenePatch,
+        subscribeToUpdates: subscribeToSceneUpdates,
       });
     }
     return input;

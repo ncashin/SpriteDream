@@ -1,4 +1,4 @@
-import type { MessageTransport } from "./messageChannel.js";
+import type { SceneChannelTransport } from "./sceneChannelTransport.js";
 import { pathToPatch } from "./scenePatch.js";
 import type { SceneData, ScenePatch } from "./types.js";
 import type { SceneUpdate } from "./scene.js";
@@ -6,48 +6,52 @@ import { getScene } from "./scene.js";
 
 export const SCENE_CHANNEL = {
   requestInitialScene: "gameide.editor.requestInitialScene",
-  setSceneContent: "gameide.editor.setSceneContent",
+  initialScene: "gameide.editor.initialScene",
   scenePatch: "gameide.editor.scenePatch",
+  sceneChanged: "gameide.editor.sceneChanged",
 } as const;
 
+export const SCENE_MESSAGE_TYPES = new Set([
+  SCENE_CHANNEL.initialScene,
+  SCENE_CHANNEL.scenePatch,
+  SCENE_CHANNEL.sceneChanged,
+]);
+
+export const UNDOABLE_MESSAGE_TYPES = new Set([
+  SCENE_CHANNEL.initialScene,
+  SCENE_CHANNEL.scenePatch,
+]);
+
 export type SceneChannelInMessage =
-  | { type: typeof SCENE_CHANNEL.setSceneContent; content: string }
+  | { type: typeof SCENE_CHANNEL.initialScene; content: string }
   | { type: typeof SCENE_CHANNEL.scenePatch; patch: ScenePatch };
 
 export type SceneChannelOutMessage =
   | { type: typeof SCENE_CHANNEL.requestInitialScene }
   | { type: typeof SCENE_CHANNEL.scenePatch; patch: ScenePatch }
-  | { type: typeof SCENE_CHANNEL.setSceneContent; content: string };
+  | { type: typeof SCENE_CHANNEL.sceneChanged; content: string };
 
-export interface SceneChannelContext {
+export interface CreateSceneChannelOptions {
+  transport: SceneChannelTransport;
   getSceneData(): SceneData;
   setSceneData(data: SceneData): void;
   applyScenePatch: (scene: SceneData, patch: ScenePatch) => void;
-}
-
-export interface SceneChannelOutgoingOptions {
-  subscribeToUpdates: (callback: (update: SceneUpdate) => void) => () => void;
-}
-
-export interface CreateSceneChannelOptions {
-  transport: MessageTransport;
-  context: SceneChannelContext;
-  outgoing?: SceneChannelOutgoingOptions;
+  subscribeToUpdates?: (callback: (update: SceneUpdate) => void) => () => void;
   onRequestInitial?: () => string;
 }
 
 export interface SceneChannel {
   dispose(): void;
   sendPatch(patch: ScenePatch): void;
-  sendSceneContent(content: string): void;
+  sendInitialScene(content: string): void;
+  sendSceneChanged(content: string): void;
   requestInitialScene(): void;
 }
 
 export function createSceneChannel(
   options: CreateSceneChannelOptions
 ): SceneChannel {
-  const { transport, context, outgoing, onRequestInitial } = options;
-  const { getSceneData, setSceneData, applyScenePatch: applyPatch } = context;
+  const { transport, getSceneData, setSceneData, applyScenePatch: applyPatch, subscribeToUpdates, onRequestInitial } = options;
 
   let initialSceneReceived = false;
 
@@ -55,8 +59,12 @@ export function createSceneChannel(
     transport.send({ type: SCENE_CHANNEL.scenePatch, patch });
   }
 
-  function sendSceneContent(content: string): void {
-    transport.send({ type: SCENE_CHANNEL.setSceneContent, content });
+  function sendInitialScene(content: string): void {
+    transport.send({ type: SCENE_CHANNEL.initialScene, content });
+  }
+
+  function sendSceneChanged(content: string): void {
+    transport.send({ type: SCENE_CHANNEL.sceneChanged, content });
   }
 
   function requestInitialScene(): void {
@@ -74,19 +82,21 @@ export function createSceneChannel(
     const isRequestInitial =
       type === SCENE_CHANNEL.requestInitialScene ||
       type === "requestInitialScene";
-    const isSetSceneContent =
-      type === SCENE_CHANNEL.setSceneContent ||
-      type === "sceneUpdate" ||
-      type === "sceneChanged";
+    const isInitialScene =
+      type === SCENE_CHANNEL.initialScene ||
+      type === "setSceneContent" ||
+      type === "sceneUpdate";
     const isScenePatch =
       type === SCENE_CHANNEL.scenePatch || type === "scenePatch";
+    const isSceneChanged =
+      type === SCENE_CHANNEL.sceneChanged || type === "sceneChanged";
 
     if (isRequestInitial && onRequestInitial) {
-      sendSceneContent(onRequestInitial());
+      sendInitialScene(onRequestInitial());
       return;
     }
 
-    if (isSetSceneContent && content !== undefined) {
+    if (isInitialScene && content !== undefined) {
       try {
         const data = JSON.parse(content) as SceneData;
         setSceneData(data);
@@ -103,14 +113,20 @@ export function createSceneChannel(
       initialSceneReceived = true;
       return;
     }
+    if (isSceneChanged && content !== undefined) {
+      try {
+        const data = JSON.parse(content) as SceneData;
+        setSceneData(data);
+      } catch {}
+    }
   }
 
   const unsubscribeTransport = transport.onMessage(handleMessage);
 
   let unsubscribeOutgoing: (() => void) | undefined;
-  if (outgoing) {
+  if (subscribeToUpdates) {
     getScene();
-    unsubscribeOutgoing = outgoing.subscribeToUpdates((update: SceneUpdate) => {
+    unsubscribeOutgoing = subscribeToUpdates((update: SceneUpdate) => {
       if (!initialSceneReceived) return;
       const fullPath = [...update.path, update.key];
       const patch =
@@ -128,7 +144,8 @@ export function createSceneChannel(
       unsubscribeOutgoing?.();
     },
     sendPatch,
-    sendSceneContent,
+    sendInitialScene,
+    sendSceneChanged,
     requestInitialScene,
   };
 }

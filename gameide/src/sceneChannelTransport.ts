@@ -1,4 +1,4 @@
-export interface MessageTransport {
+export interface SceneChannelTransport {
   send(message: unknown): void;
   onMessage(handler: (message: unknown) => void): () => void;
 }
@@ -9,9 +9,9 @@ export interface PostMessageTransportOptions {
   origin?: string;
 }
 
-export function createPostMessageTransport(
+export function createSceneTransportPostMessage(
   options: PostMessageTransportOptions
-): MessageTransport {
+): SceneChannelTransport {
   const { target, source = typeof window !== "undefined" ? window : undefined, origin } = options;
   const win = source ?? (typeof globalThis !== "undefined" ? (globalThis as unknown as Window) : undefined);
 
