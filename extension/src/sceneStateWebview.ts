@@ -2,8 +2,42 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { applyScenePatch, pathToPatch } from "gameide";
 import type { SceneData } from "gameide";
-import type { ISceneDocument, SceneDocumentRegistry } from "./sceneDocumentRegistry";
+import type { SceneDocumentRegistry } from "./sceneDocumentRegistry";
 import sceneStateViewHTML from "./sceneStateView.html";
+import { Box, ChevronRight, ChevronDown } from "lucide";
+
+type IconNode = [tag: string, attrs: Record<string, string | number | undefined>][];
+
+function iconToSvg(iconNode: IconNode, size: number): string {
+  const attrs: Record<string, string | number> = {
+    xmlns: "http://www.w3.org/2000/svg",
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": 2,
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round",
+  };
+  const attrStr = (o: Record<string, string | number | undefined>) =>
+    Object.entries(o)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => `${k}="${String(v).replace(/"/g, "&quot;")}"`)
+      .join(" ");
+  const parts = iconNode.map(
+    ([tag, a]) => `<${tag} ${attrStr(a)}/>`
+  );
+  return `<svg ${attrStr(attrs)}>${parts.join("")}</svg>`;
+}
+
+const LUCIDE_ICONS_SCRIPT = `<script>
+window.LUCIDE_ICONS = {
+  folder: ${JSON.stringify(iconToSvg(Box, 12))},
+  chevronRight: ${JSON.stringify(iconToSvg(ChevronRight, 14))},
+  chevronDown: ${JSON.stringify(iconToSvg(ChevronDown, 14))}
+};
+</script>`;
 
 function getDocumentsPayload(registry: SceneDocumentRegistry): { name: string; uri: string; data: SceneData }[] {
   const doc = registry.getActiveDocument();
@@ -66,6 +100,6 @@ export class SceneStateWebviewProvider implements vscode.WebviewViewProvider {
   }
 
   private _getHtml(webview: vscode.Webview): string {
-    return sceneStateViewHTML;
+    return sceneStateViewHTML.replace("{{LUCIDE_ICONS_SCRIPT}}", LUCIDE_ICONS_SCRIPT);
   }
 }
