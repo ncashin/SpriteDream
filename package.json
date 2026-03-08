@@ -1,10 +1,7 @@
 {
   "name": "gameide-monorepo",
   "private": true,
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ncashin/gameide.git"
-  },
+
   "workspaces": [
     "gameide",
     "runtime",
