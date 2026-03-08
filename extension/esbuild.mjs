@@ -5,7 +5,7 @@ const watch = process.argv.includes("--watch");
 const ctx = await esbuild.context({
   entryPoints: ["./src/extension.ts"],
   bundle: true,
-  format: "cjs",
+  format: "esm",
   platform: "node",
   outfile: "out/extension.js",
   sourcemap: true,
