@@ -10,10 +10,29 @@
   "categories": ["Other"],
   "activationEvents": [
     "onCustomEditor:gameide.scenePreview",
+    "onView:gameide.sceneState",
     "workspaceContains:**/*.scene"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gameide",
+          "title": "Game IDE",
+          "icon": "$(file-code)"
+        }
+      ]
+    },
+    "views": {
+      "gameide": [
+        {
+          "type": "webview",
+          "id": "gameide.sceneState",
+          "name": "Scene State"
+        }
+      ]
+    },
     "customEditors": [
       {
         "viewType": "gameide.scenePreview",

@@ -13,6 +13,7 @@ const UNDOABLE_MESSAGE_TYPES = new Set<string>([
   SCENE_CHANNEL.scenePatch,
 ]);
 import type { ViteDevServer } from "./devServer";
+import type { SceneDocumentRegistry } from "./sceneDocumentRegistry";
 import sceneEditorHTML from "./sceneEditor.html";
 
 export type { SceneData };
@@ -20,12 +21,15 @@ export type { SceneData };
 export class SceneDocument implements vscode.CustomDocument {
   private _data: SceneData;
   private _webviewPanels: Set<vscode.WebviewPanel> = new Set();
+  private readonly _registry: SceneDocumentRegistry | undefined;
 
   constructor(
     public readonly uri: vscode.Uri,
-    data: SceneData
+    data: SceneData,
+    registry?: SceneDocumentRegistry
   ) {
     this._data = data;
+    this._registry = registry;
   }
 
   getData(): SceneData {
@@ -34,6 +38,7 @@ export class SceneDocument implements vscode.CustomDocument {
 
   setData(data: SceneData): void {
     this._data = data;
+    this._registry?.notifyDocumentChanged(this);
   }
 
   addWebviewPanel(panel: vscode.WebviewPanel): void {
@@ -52,10 +57,12 @@ export class SceneDocument implements vscode.CustomDocument {
 
   applyPatch(patch: SceneData): void {
     applyScenePatch(this._data, patch);
+    this._registry?.notifyDocumentChanged(this);
   }
 
   dispose(): void {
     this._webviewPanels.clear();
+    this._registry?.remove(this);
   }
 }
 
@@ -68,7 +75,8 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
 
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly devServer: ViteDevServer | null = null
+    private readonly devServer: ViteDevServer | null = null,
+    private readonly documentRegistry?: SceneDocumentRegistry
   ) {}
 
   async openCustomDocument(
@@ -101,7 +109,9 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
         data = {};
       }
     }
-    return new SceneDocument(uri, data);
+    const document = new SceneDocument(uri, data, this.documentRegistry);
+    this.documentRegistry?.add(document);
+    return document;
   }
 
   async resolveCustomEditor(
@@ -110,6 +120,14 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     _token: vscode.CancellationToken
   ): Promise<void> {
     document.addWebviewPanel(webviewPanel);
+    webviewPanel.onDidChangeViewState((e) => {
+      if (e.webviewPanel.visible) {
+        this.documentRegistry?.setActiveDocument(document);
+      }
+    });
+    if (webviewPanel.visible) {
+      this.documentRegistry?.setActiveDocument(document);
+    }
     const webview = webviewPanel.webview;
     webview.options = {
       enableScripts: true,
@@ -137,6 +155,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
           handler(message);
           if ((SCENE_MESSAGE_TYPES as Set<string>).has(message.type)) {
             document.notifyWebviews();
+            this.documentRegistry?.notifyDocumentChanged(document);
           }
           if (undoable && previous) {
             const next = document.getData();
