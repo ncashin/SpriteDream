@@ -1,4 +1,4 @@
-type SceneObject = Record<PropertyKey, unknown>;
+export type SceneObject = Record<PropertyKey, unknown>;
 
 export type SceneUpdate =
   | { type: "set"; path: PropertyKey[]; key: PropertyKey; value: unknown }

@@ -6,6 +6,7 @@ type LifecycleRegistry = {
   gameUpdate: UpdateCallback[];
   editorStart: GameCallback[];
   editorUpdate: UpdateCallback[];
+  alwaysUpdate: UpdateCallback[];
 };
 
 const lifecycle: LifecycleRegistry = {
@@ -13,6 +14,7 @@ const lifecycle: LifecycleRegistry = {
   gameUpdate: [],
   editorStart: [],
   editorUpdate: [],
+  alwaysUpdate: [],
 };
 
 let currentUpdateScope: string | undefined;
@@ -37,35 +39,35 @@ export function removeGameUpdatesForScope(scope: string): void {
   }
 }
 
-let gameRunning = false;
-let editorRunning = false;
+type RunMode = "editor" | "game";
+let runMode: RunMode = "editor";
+let frameId: number | undefined;
 
 if (typeof import.meta !== "undefined" && import.meta.hot) {
-  const data = import.meta.hot.data as {
-    gameRunning?: boolean;
-    editorRunning?: boolean;
-  };
-
-  if (data.gameRunning) gameRunning = true;
-  if (data.editorRunning) editorRunning = true;
-
+  const data = import.meta.hot.data as { runMode?: RunMode };
+  if (data.runMode) runMode = data.runMode;
   import.meta.hot.dispose(() => {
-    data.gameRunning = gameRunning;
-    data.editorRunning = editorRunning;
+    data.runMode = runMode;
   });
 }
 
 function registerCallback(list: GameCallback[], callback: GameCallback): void;
-function registerCallback(list: UpdateCallback[], callback: UpdateCallback): void;
+function registerCallback(
+  list: UpdateCallback[],
+  callback: UpdateCallback,
+): void;
 function registerCallback(
   list: GameCallback[] | UpdateCallback[],
-  callback: GameCallback | UpdateCallback
+  callback: GameCallback | UpdateCallback,
 ): void {
   (list as (GameCallback | UpdateCallback)[]).push(callback);
 
   if (typeof import.meta !== "undefined" && import.meta.hot) {
     const data = import.meta.hot.data as {
-      callbacks?: { list: (GameCallback | UpdateCallback)[]; callback: GameCallback | UpdateCallback }[];
+      callbacks?: {
+        list: (GameCallback | UpdateCallback)[];
+        callback: GameCallback | UpdateCallback;
+      }[];
     };
 
     if (!data.callbacks) data.callbacks = [];
@@ -74,7 +76,9 @@ function registerCallback(
 
     import.meta.hot.dispose(() => {
       for (const entry of data.callbacks!) {
-        const index = entry.list.indexOf(entry.callback as GameCallback & UpdateCallback);
+        const index = entry.list.indexOf(
+          entry.callback as GameCallback & UpdateCallback,
+        );
         if (index !== -1) entry.list.splice(index, 1);
       }
     });
@@ -83,25 +87,35 @@ function registerCallback(
 
 export function gameStart(callback: GameCallback): void {
   registerCallback(lifecycle.gameStart, callback);
-  callback();
 }
 
 export function gameUpdate(callback: UpdateCallback): void {
   lifecycle.gameUpdate.push(callback);
+
   if (currentUpdateScope !== undefined) {
     if (!scopeToCallbacks.has(currentUpdateScope)) {
       scopeToCallbacks.set(currentUpdateScope, []);
     }
-    scopeToCallbacks.get(currentUpdateScope)!.push(callback);
+    const callbacks = scopeToCallbacks.get(currentUpdateScope);
+    if (Array.isArray(callbacks)) {
+      callbacks.push(callback);
+    }
   }
-  if (typeof import.meta !== "undefined" && import.meta.hot) {
-    const data = import.meta.hot.data as { callbacks?: { list: UpdateCallback[]; callback: UpdateCallback }[] };
+
+  if (import.meta.hot) {
+    let data = import.meta.hot.data as {
+      callbacks?: { list: UpdateCallback[]; callback: UpdateCallback }[];
+    };
+
     if (!data.callbacks) data.callbacks = [];
     data.callbacks.push({ list: lifecycle.gameUpdate, callback });
+
     import.meta.hot.dispose(() => {
       for (const entry of data.callbacks!) {
-        const index = entry.list.indexOf(entry.callback);
-        if (index !== -1) entry.list.splice(index, 1);
+        if (Array.isArray(entry.list) && entry.callback) {
+          const index = entry.list.indexOf(entry.callback);
+          if (index !== -1) entry.list.splice(index, 1);
+        }
       }
     });
   }
@@ -109,39 +123,55 @@ export function gameUpdate(callback: UpdateCallback): void {
 
 export function editorStart(callback: GameCallback): void {
   registerCallback(lifecycle.editorStart, callback);
-  callback();
 }
 
 export function editorUpdate(callback: UpdateCallback): void {
   registerCallback(lifecycle.editorUpdate, callback);
 }
 
+export function update(callback: UpdateCallback): void {
+  registerCallback(lifecycle.alwaysUpdate, callback);
+}
+
+function runEditorStartCallbacks(): void {
+  for (const cb of lifecycle.editorStart) cb();
+}
+
+function runGameStartCallbacks(): void {
+  for (const cb of lifecycle.gameStart) cb();
+}
+
+export function setGameRunning(running: boolean): void {
+  const nextMode: RunMode = running ? "game" : "editor";
+  if (runMode === nextMode) return;
+  runMode = nextMode;
+  if (running) {
+    runGameStartCallbacks();
+  } else {
+    runEditorStartCallbacks();
+  }
+}
+
+export function isGameRunning(): boolean {
+  return runMode === "game";
+}
+
 export function startGameloop(): void {
-  if (!gameRunning) {
-    gameRunning = true;
-    let lastTime = performance.now();
+  runEditorStartCallbacks();
+  if (frameId !== undefined) return;
+  let lastTime = performance.now();
 
-    function gameFrame(now: number): void {
-      const deltaTime = (now - lastTime) / 1000; // seconds
-      lastTime = now;
+  function tick(now: number): void {
+    frameId = requestAnimationFrame(tick);
+    const deltaTime = (now - lastTime) / 1000;
+    lastTime = now;
+    for (const update of lifecycle.alwaysUpdate) update(deltaTime);
+    if (runMode === "game") {
       for (const update of lifecycle.gameUpdate) update(deltaTime);
-      requestAnimationFrame(gameFrame);
-    }
-
-    requestAnimationFrame(gameFrame);
-  }
-
-  if (!editorRunning) {
-    editorRunning = true;
-    let lastTime = performance.now();
-
-    function editorFrame(now: number): void {
-      const deltaTime = (now - lastTime) / 1000; // seconds
-      lastTime = now;
+    } else {
       for (const update of lifecycle.editorUpdate) update(deltaTime);
-      requestAnimationFrame(editorFrame);
     }
-
-    requestAnimationFrame(editorFrame);
   }
+
+  frameId = requestAnimationFrame(tick);
 }

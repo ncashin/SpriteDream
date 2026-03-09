@@ -1,10 +1,11 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
 import { pathToPatch } from "./scenePatch.js";
 import type { ScenePatch } from "./scenePatch.js";
-import type { SceneUpdate } from "./scene.js";
+import type { SceneObject, SceneUpdate } from "./scene.js";
 import { getScene } from "./scene.js";
 
-export type SceneData = Record<string, unknown>;
+/** Scene data shape; matches core scene object (from scene.ts). */
+export type SceneData = SceneObject;
 
 export interface SceneWebviewMessage {
   type: string;

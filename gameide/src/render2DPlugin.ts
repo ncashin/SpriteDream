@@ -36,6 +36,10 @@ export const render2DPlugin = definePlugin<
     resize();
     window.addEventListener("resize", resize);
 
+    const resizeObserver = new ResizeObserver(() => resize());
+    resizeObserver.observe(rootElement);
+    requestAnimationFrame(() => resize());
+
     return { ...inputContext, render2D: { canvasElement, context } };
   },
 );

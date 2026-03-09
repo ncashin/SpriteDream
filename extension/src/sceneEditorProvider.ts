@@ -4,8 +4,10 @@ import {
   createSceneChannel,
   SCENE_CHANNEL,
   SCENE_MESSAGE_TYPES,
+  type SceneChannelInMessage,
   type SceneChannelTransport,
   type SceneData,
+  type ScenePatch,
 } from "gameide";
 
 const UNDOABLE_MESSAGE_TYPES = new Set<string>([
@@ -16,7 +18,7 @@ import type { ViteDevServer } from "./devServer";
 import type { SceneDocumentRegistry } from "./sceneDocumentRegistry";
 import sceneEditorHTML from "./sceneEditor.html?raw";
 
-export type { SceneData };
+export type { SceneData, ScenePatch };
 
 export class SceneDocument implements vscode.CustomDocument {
   private _data: SceneData;
@@ -55,7 +57,7 @@ export class SceneDocument implements vscode.CustomDocument {
     }
   }
 
-  applyPatch(patch: SceneData): void {
+  applyPatch(patch: ScenePatch): void {
     applyScenePatch(this._data, patch);
     this._registry?.notifyDocumentChanged(this);
   }
@@ -148,8 +150,8 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
           webview.postMessage(m);
         }
       },
-      onMessage: (handler: (m: unknown) => void) => {
-        webview.onDidReceiveMessage((message: { type: string }) => {
+      onMessage: (handler: (m: SceneChannelInMessage) => void) => {
+        webview.onDidReceiveMessage((message: SceneChannelInMessage) => {
           const undoable = UNDOABLE_MESSAGE_TYPES.has(message.type);
           const previous = undoable ? document.getData() : null;
           handler(message);

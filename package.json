@@ -1,7 +1,11 @@
 {
   "name": "gameide-monorepo",
+  "version": "0.0.0",
   "private": true,
-
+  "engines": {
+    "node": ">=18",
+    "vscode": "^1.85.0"
+  },
   "workspaces": [
     "gameide",
     "runtime",

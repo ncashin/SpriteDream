@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
 import { applyScenePatch, pathToPatch } from "gameide";
-import type { SceneData } from "gameide";
+import type { SceneData, ScenePatch } from "gameide";
 import type { SceneDocumentRegistry } from "./sceneDocumentRegistry";
 import sceneStateViewHTML from "./sceneStateView.html?raw";
 import { Box, ChevronRight, ChevronDown } from "lucide";
@@ -80,7 +80,7 @@ export class SceneStateWebviewProvider implements vscode.WebviewViewProvider {
       if (msg.type === "edit" && msg.uri !== undefined && msg.path !== undefined && msg.value !== undefined) {
         const doc = this._registry.getActiveDocument();
         if (!doc || doc.uri.toString() !== msg.uri) return;
-        const patch = pathToPatch(msg.path, msg.value);
+        const patch: ScenePatch = pathToPatch(msg.path, msg.value);
         const previous = doc.getData();
         const updated = JSON.parse(JSON.stringify(previous)) as SceneData;
         applyScenePatch(updated, patch);

@@ -22,6 +22,8 @@ export {
   editorStart,
   editorUpdate,
   startGameloop,
+  setGameRunning,
+  isGameRunning,
   setUpdateScope,
   clearUpdateScope,
   removeGameUpdatesForScope,
@@ -33,7 +35,7 @@ export {
   subscribeToSceneUpdates,
   getRootTarget,
 } from "./scene.js";
-export type { SceneUpdate } from "./scene.js";
+export type { SceneObject, SceneUpdate } from "./scene.js";
 export { initializeGame } from "./initializeGame.js";
 export type {
   Plugin,

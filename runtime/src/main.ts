@@ -17,7 +17,7 @@ function isPlayer(obj: unknown): obj is Player {
   if (typeof obj !== "object" || obj === null) return false;
   const o = obj as Record<string, unknown>;
   return PLAYER_KEYS.every(
-    (k) => typeof o[k] === "number" && Number.isFinite(o[k] as number)
+    (k) => typeof o[k] === "number" && Number.isFinite(o[k] as number),
   );
 }
 
@@ -31,14 +31,9 @@ initializeGame({
   initialScene: JSON.parse(sceneData),
   plugins: [editorPlugin(), inputPlugin(), render2DPlugin()],
   main(gameContext) {
-    const { render2D, input, rootElement } = gameContext;
+    const { render2D, input } = gameContext;
     const { canvasElement, context } = render2D;
     const scene = getScene();
-
-    rootElement.tabIndex = 0;
-    rootElement.style.outline = "none";
-    rootElement.addEventListener("mousedown", () => rootElement.focus());
-    rootElement.focus();
 
     gameUpdate((deltaTime) => {
       const player = scene.player;
