@@ -16,7 +16,7 @@ const UNDOABLE_MESSAGE_TYPES = new Set<string>([
   SCENE_CHANNEL.scenePatch,
 ]);
 import type { ViteDevServer } from "./devServer";
-import type { SceneDocumentRegistry } from "./sceneDocumentRegistry";
+import type { SceneDocumentRegistry, ObjectDefinitionPayload } from "./sceneDocumentRegistry";
 import sceneEditorHTML from "./sceneEditor.html?raw";
 
 export type { SceneData, ScenePatch };
@@ -228,7 +228,12 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       },
       onMessage: (handler: (m: SceneChannelInMessage) => void) => {
         webview.onDidReceiveMessage((raw: unknown) => {
-          const message = raw as { type: string; mode?: string; content?: string; patch?: ScenePatch };
+          const message = raw as { type: string; mode?: string; content?: string; patch?: ScenePatch; definitions?: unknown[] };
+          if (message.type === "definitions" && Array.isArray(message.definitions)) {
+            this.documentRegistry?.setDefinitions(message.definitions as ObjectDefinitionPayload[]);
+            this.documentRegistry?.notifyStateView();
+            return;
+          }
           if (message.type === GAME_MODE_MESSAGE_TYPE && message.mode !== undefined) {
             document.setGameMode(message.mode === "game");
             return;

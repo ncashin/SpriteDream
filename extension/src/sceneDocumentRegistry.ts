@@ -22,10 +22,17 @@ export interface SceneDocumentEditEvent {
 
 export type SceneDocumentsPayload = { name: string; uri: string; data: SceneData }[];
 
+export type ObjectDefinitionPayload = {
+  name?: string;
+  description?: string;
+  schema: Record<string, string | number | boolean>;
+};
+
 export class SceneDocumentRegistry {
   private readonly _documents = new Map<string, ISceneDocument>();
   private _activeDocument: ISceneDocument | undefined;
   private _stateViewWebview: vscode.Webview | undefined;
+  private _definitions: ObjectDefinitionPayload[] = [];
   private readonly _onDidChange = new vscode.EventEmitter<void>();
   private readonly _onDocumentEdit = new vscode.EventEmitter<SceneDocumentEditEvent>();
 
@@ -46,12 +53,20 @@ export class SceneDocumentRegistry {
     ];
   }
 
-  /** Push current scene data to the state view (single place for all state view updates). */
+  setDefinitions(definitions: ObjectDefinitionPayload[]): void {
+    this._definitions = definitions;
+  }
+
+  getDefinitions(): ObjectDefinitionPayload[] {
+    return this._definitions;
+  }
+
   notifyStateView(): void {
     if (this._stateViewWebview) {
       this._stateViewWebview.postMessage({
         type: "update",
         documents: this.getDocumentsPayload(),
+        definitions: this._definitions,
       });
     }
   }

@@ -12,16 +12,20 @@ export interface DevServerOptions {
 
 export class ViteDevServer {
   private process: ChildProcess | null = null;
-  private readonly port: number;
+  private _port: number;
   private readonly runtimeDirectory: string;
 
   constructor(options: DevServerOptions) {
-    this.port = options.port ?? DEFAULT_PORT;
+    this._port = options.port ?? DEFAULT_PORT;
     this.runtimeDirectory = options.runtimeDirectory;
   }
 
+  get port(): number {
+    return this._port;
+  }
+
   getPort(): number {
-    return this.port;
+    return this._port;
   }
 
   isRunning(): boolean {
@@ -36,7 +40,7 @@ export class ViteDevServer {
     return new Promise((resolve, reject) => {
       const env = {
         ...process.env,
-        GAMEIDE_RUNTIME_PORT: String(this.port),
+        GAMEIDE_RUNTIME_PORT: String(this._port),
       };
 
       const child = spawn("npm", ["run", "dev"], {
@@ -75,10 +79,16 @@ export class ViteDevServer {
       const stdout = child.stdout;
       const stderr = child.stderr;
 
+      const capturePort = (chunk: string) => {
+        const m = chunk.match(/Local:.*http:\/\/[^:]+:(\d+)/);
+        if (m) this._port = parseInt(m[1], 10);
+      };
+
       if (stdout) {
         stdout.setEncoding("utf8");
         stdout.on("data", (chunk: string) => {
           if (!resolved && /Local:.*http:/.test(chunk)) {
+            capturePort(chunk);
             done();
           }
         });
@@ -88,6 +98,7 @@ export class ViteDevServer {
         stderr.setEncoding("utf8");
         stderr.on("data", (chunk: string) => {
           if (!resolved && /Local:.*http:/.test(chunk)) {
+            capturePort(chunk);
             done();
           }
         });

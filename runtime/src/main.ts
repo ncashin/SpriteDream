@@ -2,6 +2,8 @@ import {
   gameUpdate,
   getScene,
   createPlugins,
+  defineObject,
+  $number,
   editorPlugin,
   initializeGame,
   inputPlugin,
@@ -13,16 +15,10 @@ import "./style.css";
 import invariant from "tiny-invariant";
 import { update } from "gameide/gameloop";
 
-const PLAYER_KEYS = ["x", "y", "size", "speed"] as const;
-type Player = { x: number; y: number; size: number; speed: number };
-
-function isPlayer(obj: unknown): obj is Player {
-  if (typeof obj !== "object" || obj === null) return false;
-  const o = obj as Record<string, unknown>;
-  return PLAYER_KEYS.every(
-    (k) => typeof o[k] === "number" && Number.isFinite(o[k] as number),
-  );
-}
+const PlayerDefinition = defineObject(
+  { x: $number, y: 0, size: 24, speed: 200 },
+  { name: "Player", description: "PlayerEntity" }
+);
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
@@ -37,13 +33,13 @@ initializeGame({
     inputPlugin(inputConfig),
     render2DPlugin(),
   ]),
-  main({ render2D, input }) {
+  main({ input, render2D }) {
     const { canvasElement, context } = render2D;
     const scene = getScene();
 
     gameUpdate((deltaTime) => {
       const player = scene.player;
-      if (!isPlayer(player)) return;
+      if (!PlayerDefinition.guard(player)) return;
 
       const h = input.getAxis("Horizontal");
       const v = input.getAxis("Vertical");
@@ -60,7 +56,7 @@ initializeGame({
 
     update(() => {
       const player = scene.player;
-      if (!isPlayer(player)) return;
+      if (!PlayerDefinition.guard(player)) return;
 
       const canvasW = canvasElement.clientWidth;
       const canvasH = canvasElement.clientHeight;

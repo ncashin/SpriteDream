@@ -16,7 +16,7 @@ export default defineConfig({
   },
   server: {
     port,
-    strictPort: true,
+    strictPort: false,
     open: false,
     watch: {
       ignored: ["**/*.scene"],

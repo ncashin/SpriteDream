@@ -24,7 +24,7 @@ export function gameidePlugin(): Plugin {
       if (!id.endsWith(".scene")) return;
       const literal = jsonToObjectLiteral(JSON.parse(src));
       return {
-        code: `export default ${literal} as const;`,
+        code: `export default ${literal};`,
         map: null,
       };
     },

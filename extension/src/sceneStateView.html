@@ -60,6 +60,7 @@
     }
     .value[contenteditable="true"] { border-radius: 2px; }
     .value:focus { outline: none; box-shadow: none; }
+    .value.placeholder { color: var(--vscode-input-placeholderForeground, #6b6b6b); }
     .doc {
       font-weight: 600;
       margin: 8px 0 6px 0;
@@ -94,6 +95,52 @@
       transition: opacity 0.1s ease;
     }
     .row.expandable:hover .toggle { opacity: 0.9; }
+    .add-from-def {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 4px;
+      border: none;
+      border-radius: 3px;
+      background: var(--vscode-button-secondaryBackground, #3c3c3c);
+      color: var(--vscode-button-secondaryForeground, #ccc);
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.1s ease;
+      font-size: 14px;
+      line-height: 1;
+    }
+    .row.expandable:hover .add-from-def { opacity: 0.9; }
+    .add-from-def:hover { opacity: 1 !important; }
+    .add-from-def:disabled { opacity: 0.5; cursor: not-allowed; }
+    .def-dropdown {
+      position: absolute;
+      z-index: 100;
+      background: var(--vscode-dropdown-background);
+      border: 1px solid var(--vscode-dropdown-border);
+      border-radius: 3px;
+      padding: 4px 0;
+      min-width: 120px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .def-dropdown button {
+      display: block;
+      width: 100%;
+      padding: 4px 12px;
+      border: none;
+      background: none;
+      color: var(--vscode-foreground);
+      text-align: left;
+      cursor: pointer;
+      font-size: inherit;
+      font-family: inherit;
+    }
+    .def-dropdown button:hover {
+      background: var(--vscode-list-hoverBackground);
+    }
     .empty {
       color: var(--vscode-descriptionForeground);
       font-style: italic;
@@ -109,6 +156,7 @@
     (function () {
       const vscode = acquireVsCodeApi();
       const root = document.getElementById('root');
+      let definitions = [];
 
       function formatVal(v) {
         if (v === null) return 'null';
@@ -118,6 +166,57 @@
 
       function hasChildren(v) {
         return v !== null && typeof v === 'object' && (Array.isArray(v) || Object.keys(v).length > 0);
+      }
+
+      function isTypeToken(v) {
+        return v === '$number' || v === '$string' || v === '$boolean';
+      }
+
+      function mergeSchemaIntoObject(obj, schema) {
+        const out = obj && typeof obj === 'object' && !Array.isArray(obj) ? { ...obj } : {};
+        for (const [k, v] of Object.entries(schema)) {
+          if (!(k in out)) out[k] = isTypeToken(v) ? null : v;
+        }
+        return out;
+      }
+
+      function addPlusButton(row, path, value, uri) {
+        const btn = document.createElement('button');
+        btn.className = 'add-from-def';
+        btn.type = 'button';
+        btn.title = 'Add fields from definition';
+        btn.setAttribute('aria-label', 'Add fields from definition');
+        btn.textContent = '+';
+        if (definitions.length === 0) btn.disabled = true;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (definitions.length === 0) return;
+          const rect = btn.getBoundingClientRect();
+          const dropdown = document.createElement('div');
+          dropdown.className = 'def-dropdown';
+          dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+          dropdown.style.left = 'auto';
+          dropdown.style.top = (rect.bottom + 2) + 'px';
+          definitions.forEach((def) => {
+            const b = document.createElement('button');
+            b.textContent = def.name || 'Unnamed';
+            b.type = 'button';
+            b.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const merged = mergeSchemaIntoObject(value, def.schema);
+              vscode.postMessage({ type: 'edit', uri, path, value: merged });
+              close();
+            });
+            dropdown.appendChild(b);
+          });
+          function close() {
+            dropdown.remove();
+            document.removeEventListener('click', close);
+          }
+          document.body.appendChild(dropdown);
+          document.addEventListener('click', close);
+        });
+        row.appendChild(btn);
       }
 
       function buildEntry(key, value, path, uri, docName) {
@@ -136,19 +235,39 @@
           valueCell.textContent = Array.isArray(value) ? `[${value.length}]` : '';
           valueCell.style.cursor = 'default';
         } else {
-          valueCell.textContent = formatVal(value);
+          const isPlaceholder = value === null;
+          valueCell.textContent = isPlaceholder ? 'input here' : formatVal(value);
+          if (isPlaceholder) valueCell.classList.add('placeholder');
           valueCell.contentEditable = 'true';
           valueCell.spellcheck = false;
           valueCell.dataset.uri = uri;
           valueCell.dataset.path = JSON.stringify(path);
-          valueCell.dataset.initial = formatVal(value);
+          valueCell.dataset.initial = isPlaceholder ? 'null' : formatVal(value);
+          valueCell.dataset.isPlaceholder = isPlaceholder ? '1' : '';
           valueCell.addEventListener('click', (e) => e.stopPropagation());
+          valueCell.addEventListener('focus', () => {
+            if (valueCell.dataset.isPlaceholder === '1') {
+              valueCell.textContent = '';
+              valueCell.classList.remove('placeholder');
+            }
+          });
           valueCell.addEventListener('blur', () => {
             const raw = valueCell.textContent.trim();
             let parsed;
-            try { parsed = JSON.parse(raw); } catch { parsed = raw; }
+            if (raw === '' || valueCell.dataset.isPlaceholder === '1') {
+              parsed = null;
+            } else {
+              try { parsed = JSON.parse(raw); } catch { parsed = raw; }
+            }
             vscode.postMessage({ type: 'edit', uri, path, value: parsed });
-            valueCell.dataset.initial = formatVal(parsed);
+            valueCell.dataset.initial = parsed === null ? 'null' : formatVal(parsed);
+            valueCell.dataset.isPlaceholder = parsed === null ? '1' : '';
+            if (parsed === null) {
+              valueCell.textContent = 'input here';
+              valueCell.classList.add('placeholder');
+            } else {
+              valueCell.textContent = formatVal(parsed);
+            }
           });
           valueCell.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -156,7 +275,10 @@
               valueCell.blur();
             }
             if (e.key === 'Escape') {
-              valueCell.textContent = valueCell.dataset.initial;
+              valueCell.textContent = valueCell.dataset.initial === 'null' ? 'input here' : valueCell.dataset.initial;
+              valueCell.dataset.isPlaceholder = valueCell.dataset.initial === 'null' ? '1' : '';
+              if (valueCell.dataset.isPlaceholder === '1') valueCell.classList.add('placeholder');
+              else valueCell.classList.remove('placeholder');
               valueCell.blur();
             }
           });
@@ -177,6 +299,7 @@
         toggle.className = 'toggle';
         if (window.LUCIDE_ICONS) toggle.innerHTML = open ? window.LUCIDE_ICONS.chevronDown : window.LUCIDE_ICONS.chevronRight;
         else toggle.textContent = open ? '▼' : '▶';
+        addPlusButton(row, path, value, uri);
         row.appendChild(toggle);
         row.addEventListener('click', () => {
           ul.hidden = !ul.hidden;
@@ -207,7 +330,8 @@
         }
       }
 
-      function render(documents) {
+      function render(documents, defs) {
+        definitions = defs || [];
         root.innerHTML = '';
         if (!documents || documents.length === 0) {
           root.innerHTML = '<div class="empty">Open a .scene file to view state.</div>';
@@ -239,6 +363,7 @@
               toggle.className = 'toggle';
               if (window.LUCIDE_ICONS) toggle.innerHTML = window.LUCIDE_ICONS.chevronDown;
               else toggle.textContent = '▼';
+              addPlusButton(entry.row, path, value, doc.uri);
               entry.row.appendChild(toggle);
               entry.row.addEventListener('click', () => {
                 childUl.hidden = !childUl.hidden;
@@ -257,7 +382,7 @@
 
       window.addEventListener('message', (e) => {
         const msg = e.data;
-        if (msg.type === 'update') render(msg.documents);
+        if (msg.type === 'update') render(msg.documents, msg.definitions);
       });
 
       vscode.postMessage({ type: 'ready' });

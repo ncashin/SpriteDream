@@ -1,6 +1,7 @@
 import { createSceneTransportPostMessage } from "./sceneChannelTransport.js";
 import { createSceneChannel } from "./sceneChannel.js";
 import { applyScenePatch } from "./scenePatch.js";
+import { getDefinedObjectsForEditor } from "./objectRegistry.js";
 import { GameIDEMode, getMode, setMode, onModeChange } from "./mode.js";
 import {
   getRootTarget,
@@ -53,6 +54,15 @@ export const editorPlugin = () => (input: unknown) => {
         sceneChannel.sendSceneChanged(
           JSON.stringify(getRootTarget() ?? {}, null, 2)
         );
+        return;
+      }
+      if (message.type === "gameide.editor.requestDefinitions") {
+        setTimeout(() => {
+          window.parent.postMessage(
+            { type: "gameide.editor.definitions", definitions: getDefinedObjectsForEditor() },
+            "*"
+          );
+        }, 0);
         return;
       }
     });

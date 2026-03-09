@@ -38,6 +38,14 @@ export {
 export type { SceneObject, SceneUpdate } from "./scene.js";
 export { querySceneObjects } from "./queryScene.js";
 export type { QuerySceneCallback } from "./queryScene.js";
+export {
+  defineObject,
+  getDefinedObjectsForEditor,
+  $number,
+  $string,
+  $boolean,
+} from "./objectRegistry.js";
+export type { SchemaToType, DefinedObject, ObjectMetadata } from "./objectRegistry.js";
 export { initializeGame, createPlugins } from "./initializeGame.js";
 export type {
   Plugin,
