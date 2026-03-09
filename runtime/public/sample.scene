@@ -2,7 +2,7 @@
   "player": {
     "x": 200,
     "y": 200,
-    "size": 48,
+    "size": 24,
     "speed": 200,
     "example": {
       "test": "string"
