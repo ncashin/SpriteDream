@@ -63,3 +63,4 @@ export type {
   InputPluginOptions,
   InputContext,
 } from "./inputPlugin.js";
+export { gameidePlugin } from "./gameidePluginVite.js";

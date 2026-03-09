@@ -6,7 +6,7 @@ import {
   inputPlugin,
   render2DPlugin,
 } from "gameide";
-import sceneData from "../public/sample.scene?raw";
+import initialScene from "../public/sample.scene";
 import "./style.css";
 import invariant from "tiny-invariant";
 import { update } from "gameide/gameloop";
@@ -29,7 +29,7 @@ initializeGame({
   initialContext: {
     rootElement,
   },
-  initialScene: JSON.parse(sceneData),
+  initialScene,
   plugins: [editorPlugin(), inputPlugin(), render2DPlugin()],
   main({ render2D, input }) {
     const { canvasElement, context } = render2D;
