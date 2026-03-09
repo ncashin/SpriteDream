@@ -8,13 +8,21 @@ type UpdateCallback = (deltaTime: number) => void;
 
 let currentUpdateScope: string | undefined;
 
-const gameStartRegistry = createCallbackRegistry<StartCallback>();
+const gameStartRegistry = createCallbackRegistry<StartCallback>({
+  getCurrentScope: () => currentUpdateScope,
+});
 const gameUpdateRegistry = createCallbackRegistry<UpdateCallback>({
   getCurrentScope: () => currentUpdateScope,
 });
-const editorStartRegistry = createCallbackRegistry<StartCallback>();
-const editorUpdateRegistry = createCallbackRegistry<UpdateCallback>();
-const alwaysUpdateRegistry = createCallbackRegistry<UpdateCallback>();
+const editorStartRegistry = createCallbackRegistry<StartCallback>({
+  getCurrentScope: () => currentUpdateScope,
+});
+const editorUpdateRegistry = createCallbackRegistry<UpdateCallback>({
+  getCurrentScope: () => currentUpdateScope,
+});
+const alwaysUpdateRegistry = createCallbackRegistry<UpdateCallback>({
+  getCurrentScope: () => currentUpdateScope,
+});
 
 export function setUpdateScope(scope: string): void {
   currentUpdateScope = scope;
@@ -25,7 +33,11 @@ export function clearUpdateScope(): void {
 }
 
 export function removeGameUpdatesForScope(scope: string): void {
+  gameStartRegistry.removeScope(scope);
   gameUpdateRegistry.removeScope(scope);
+  editorStartRegistry.removeScope(scope);
+  editorUpdateRegistry.removeScope(scope);
+  alwaysUpdateRegistry.removeScope(scope);
 }
 
 let frameId: number | undefined;

@@ -31,8 +31,7 @@ initializeGame({
   },
   initialScene: JSON.parse(sceneData),
   plugins: [editorPlugin(), inputPlugin(), render2DPlugin()],
-  main(gameContext) {
-    const { render2D, input } = gameContext;
+  main({ render2D, input }) {
     const { canvasElement, context } = render2D;
     const scene = getScene();
 
@@ -64,6 +63,5 @@ initializeGame({
       context.fillStyle = "#0000ff";
       context.fillRect(player.x, player.y, player.size, player.size);
     });
-
   },
 });

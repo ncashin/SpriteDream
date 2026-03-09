@@ -51,3 +51,40 @@ export function pathToPatch(
   current[path[path.length - 1]] = isDelete ? null : value;
   return root;
 }
+
+/**
+ * Build a scene patch that transforms oldObj into newObj (diff from old to new).
+ * Useful for comparing document state vs file/saved state.
+ */
+export function buildPatchFromDiff(
+  oldObj: Record<string, unknown>,
+  newObj: Record<string, unknown>,
+  path: string[] = [],
+  acc: ScenePatch = {}
+): ScenePatch {
+  const allKeys = new Set([...Object.keys(oldObj), ...Object.keys(newObj)]);
+  const isObj = (v: unknown) =>
+    typeof v === "object" && v !== null && !Array.isArray(v);
+  for (const key of allKeys) {
+    const p = path.concat(key);
+    const oldVal = oldObj[key];
+    const newVal = newObj[key];
+    if (!(key in newObj)) {
+      applyScenePatch(acc, pathToPatch(p, undefined, true));
+      continue;
+    }
+    if (isObj(newVal)) {
+      buildPatchFromDiff(
+        (isObj(oldVal) ? oldVal : {}) as Record<string, unknown>,
+        newVal as Record<string, unknown>,
+        p,
+        acc
+      );
+      continue;
+    }
+    if (oldVal !== newVal) {
+      applyScenePatch(acc, pathToPatch(p, newVal));
+    }
+  }
+  return acc;
+}

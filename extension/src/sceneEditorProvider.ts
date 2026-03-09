@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import {
   applyScenePatch,
+  buildPatchFromDiff,
   createSceneChannel,
   SCENE_CHANNEL,
   SCENE_MESSAGE_TYPES,
@@ -23,10 +24,12 @@ export type { SceneData, ScenePatch };
 const GAME_MODE_MESSAGE_TYPE = "gameide.editor.mode";
 
 export class SceneDocument implements vscode.CustomDocument {
-  /** Live/current state shown in sidebar and webviews; updated by game when running. */
+  /** Live/current state */
   private _data: SceneData;
-  /** State persisted to disk (save/revert); only updated in Editor mode or on load/revert. */
+  /** State persisted to disk (last saved or reverted) */
   private _documentData: SceneData;
+  /** State as of last save to disk; used for diff vs file */
+  private _savedData: SceneData;
   private _webviewPanels: Set<vscode.WebviewPanel> = new Set();
   private readonly _registry: SceneDocumentRegistry | undefined;
   private _gameMode = false;
@@ -38,6 +41,7 @@ export class SceneDocument implements vscode.CustomDocument {
   ) {
     this._data = JSON.parse(JSON.stringify(data));
     this._documentData = JSON.parse(JSON.stringify(data));
+    this._savedData = JSON.parse(JSON.stringify(data));
     this._registry = registry;
   }
 
@@ -45,9 +49,26 @@ export class SceneDocument implements vscode.CustomDocument {
     return { ...this._data };
   }
 
-  /** Data to persist to disk (used by save/backup); unchanged by game runtime when in Game mode. */
   getDocumentData(): SceneData {
     return { ...this._documentData };
+  }
+
+  /** State as of last save to disk. */
+  getSavedData(): SceneData {
+    return { ...this._savedData };
+  }
+
+  /** Patch that transforms saved (file) state into current document state. */
+  getPatchFromSavedToCurrent(): ScenePatch {
+    return buildPatchFromDiff(
+      this._savedData as Record<string, unknown>,
+      this._data as Record<string, unknown>
+    );
+  }
+
+  /** Call after saving to disk so saved state matches file. */
+  markSaved(): void {
+    this._savedData = JSON.parse(JSON.stringify(this._documentData));
   }
 
   setData(data: SceneData): void {
@@ -79,6 +100,14 @@ export class SceneDocument implements vscode.CustomDocument {
     }
   }
 
+  notifyWebviewsPatch(patch: ScenePatch): void {
+    for (const panel of this._webviewPanels) {
+      if (panel.webview) {
+        panel.webview.postMessage({ type: "scenePatch", patch });
+      }
+    }
+  }
+
   applyPatch(patch: ScenePatch): void {
     applyScenePatch(this._data, patch);
     if (!this._gameMode) applyScenePatch(this._documentData, patch);
@@ -88,6 +117,7 @@ export class SceneDocument implements vscode.CustomDocument {
   revertData(data: SceneData): void {
     this._data = JSON.parse(JSON.stringify(data));
     this._documentData = JSON.parse(JSON.stringify(data));
+    this._savedData = JSON.parse(JSON.stringify(data));
     this._registry?.notifyDocumentChanged(this);
   }
 
@@ -207,7 +237,11 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
           const previous = undoable ? document.getData() : null;
           handler(message as SceneChannelInMessage);
           if ((SCENE_MESSAGE_TYPES as Set<string>).has(message.type)) {
-            document.notifyWebviews();
+            if (message.type === SCENE_CHANNEL.scenePatch && message.patch !== undefined) {
+              document.notifyWebviewsPatch(message.patch);
+            } else {
+              document.notifyWebviews();
+            }
             this.documentRegistry?.notifyDocumentChanged(document);
           }
           const isGameMode = document.getGameMode();
@@ -246,6 +280,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     cancellation: vscode.CancellationToken
   ): Promise<void> {
     await this.writeDocument(document.uri, document.getDocumentData(), cancellation);
+    document.markSaved();
   }
 
   async saveCustomDocumentAs(
