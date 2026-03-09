@@ -1,5 +1,7 @@
 import { createCallbackRegistry } from "./callbackRegistry.js";
 import { GameIDEMode, getMode, onModeChange } from "./mode.js";
+import { getRootTarget, replaceScene } from "./scene.js";
+import type { SceneObject } from "./scene.js";
 
 type StartCallback = () => void;
 type UpdateCallback = (deltaTime: number) => void;
@@ -46,12 +48,21 @@ export function editorUpdate(callback: UpdateCallback): void {
   editorUpdateRegistry.register(callback);
 }
 
-onModeChange((mode) => {
+let sceneSnapshotBeforeGame: SceneObject | undefined;
+
+onModeChange((mode, prev) => {
   switch (mode) {
     case GameIDEMode.Game:
+      sceneSnapshotBeforeGame = JSON.parse(
+        JSON.stringify(getRootTarget() ?? {}),
+      ) as SceneObject;
       gameStartRegistry.run();
       break;
     case GameIDEMode.Editor:
+      if (prev === GameIDEMode.Game && sceneSnapshotBeforeGame !== undefined) {
+        replaceScene(sceneSnapshotBeforeGame);
+        sceneSnapshotBeforeGame = undefined;
+      }
       editorStartRegistry.run();
       break;
     default:

@@ -174,7 +174,7 @@ export const inputPlugin = definePlugin(
         return { x: mouseDeltaX, y: mouseDeltaY };
       }
 
-      const input: InputContext = {
+      const input = {
         getAxis,
         getButton,
         getButtonDown,
