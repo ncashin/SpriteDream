@@ -5,110 +5,44 @@
     <meta http-equiv="Content-Security-Policy" content="{{CSP}}" />
     <title>Scene</title>
     <style>
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-      }
-      body {
-        position: relative;
-      }
-      #gameide-editor-root {
-        position: relative;
-        width: 100%;
-        height: 100%;
-      }
+      html, body { margin: 0; padding: 0; height: 100%; }
+      #gameide-editor-root { position: relative; width: 100%; height: 100%; }
       #gameide-runtime {
-        display: block;
-        width: 100%;
-        height: 100%;
-        border: none;
-        position: absolute;
-        top: 0;
-        left: 0;
-        z-index: 0;
+        display: block; width: 100%; height: 100%; border: none;
       }
-      #gameide-editor-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 100;
-        pointer-events: none;
-        visibility: visible;
-      }
-      #gameide-editor-overlay .overlay-button {
-        pointer-events: auto;
-        visibility: visible;
-      }
-      .overlay-button {
-        position: absolute;
-        top: 6px;
-        right: 6px;
-        display: inline-flex;
-        visibility: visible;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 12px 4px 6px;
-        border: none;
-        border-radius: 4px;
+      #gameide-run-button {
+        position: absolute; top: 6px; right: 6px; z-index: 1;
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 4px 12px 4px 6px; border: none; border-radius: 4px;
         background: var(--vscode-button-secondaryBackground, #3c3c3c);
         color: var(--vscode-button-secondaryForeground, #cccccc);
-        cursor: pointer;
-        font-size: 12px;
+        cursor: pointer; font-size: 12px;
         font-family: var(--vscode-font-family, inherit);
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
       }
-      .overlay-button:hover {
+      #gameide-run-button:hover {
         background: var(--vscode-button-secondaryHoverBackground, #505050);
-        color: var(--vscode-button-secondaryForeground, #e5e7eb);
       }
-      .overlay-button svg {
-        width: 12px;
-        height: 12px;
-        flex-shrink: 0;
-      }
+      #gameide-run-button svg { width: 12px; height: 12px; flex-shrink: 0; }
     </style>
   </head>
   <body>
     <div id="gameide-editor-root">
       <iframe id="gameide-runtime" src="http://localhost:{{PORT}}"></iframe>
-      <div id="gameide-editor-overlay">
-        <button
-          type="button"
-          class="overlay-button"
-          id="gameide-run-button"
-          title="Run"
-          aria-label="Run"
-          data-running="false"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-          </svg>
-          <span>Run</span>
-        </button>
-      </div>
+      <button type="button" id="gameide-run-button" title="Run" aria-label="Run" data-running="false">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span>Run</span>
+      </button>
     </div>
-    <!-- Message types (update, scenePatch, gameide.editor.*) align with gameide core SCENE_CHANNEL / scene.ts -->
     <script>
       (function () {
         const iframe = document.getElementById("gameide-runtime");
-        const vscode =
-          typeof acquireVsCodeApi !== "undefined" ? acquireVsCodeApi() : null;
-
+        const vscode = typeof acquireVsCodeApi !== "undefined" ? acquireVsCodeApi() : null;
         let gameRunning = false;
+        let pendingInitialSceneContent = null;
+
         function updateRunButton(running) {
           gameRunning = running;
           const btn = document.getElementById("gameide-run-button");
@@ -120,39 +54,27 @@
           btn.setAttribute("data-running", running ? "true" : "false");
           if (label) label.textContent = running ? "Stop" : "Run";
           if (svg) {
-            if (running) {
-              svg.innerHTML = '<rect x="6" y="6" width="12" height="12" fill="currentColor" stroke="none"/>';
-            } else {
-              svg.innerHTML = '<polygon points="5 3 19 12 5 21 5 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
-            }
+            svg.innerHTML = running
+              ? '<rect x="6" y="6" width="12" height="12" fill="currentColor" stroke="none"/>'
+              : '<polygon points="5 3 19 12 5 21 5 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
           }
         }
-        document
-          .getElementById("gameide-run-button")
-          ?.addEventListener("click", function () {
-            const running = !gameRunning;
-            updateRunButton(running);
-            iframe?.contentWindow?.postMessage(
-              { type: running ? "gameide.editor.run" : "gameide.editor.stop" },
-              "*"
-            );
-            vscode?.postMessage({ type: running ? "run" : "stop" });
-          });
-        let pendingInitialSceneContent = null;
+
+        document.getElementById("gameide-run-button").addEventListener("click", function () {
+          const running = !gameRunning;
+          updateRunButton(running);
+          iframe?.contentWindow?.postMessage({ type: running ? "gameide.editor.run" : "gameide.editor.stop" }, "*");
+          vscode?.postMessage({ type: running ? "run" : "stop" });
+        });
 
         function sendInitialSceneToIframe(content) {
           if (iframe?.contentWindow) {
-            iframe.contentWindow.postMessage(
-              { type: "gameide.editor.initialScene", content: content },
-              "*",
-            );
+            iframe.contentWindow.postMessage({ type: "gameide.editor.initialScene", content: content }, "*");
           }
         }
 
         iframe.addEventListener("load", function () {
-          if (pendingInitialSceneContent !== null) {
-            sendInitialSceneToIframe(pendingInitialSceneContent);
-          }
+          if (pendingInitialSceneContent !== null) sendInitialSceneToIframe(pendingInitialSceneContent);
         });
 
         vscode?.postMessage({ type: "requestInitialScene" });
@@ -163,42 +85,26 @@
 
           if (event.source === iframe?.contentWindow) {
             if (message.type === "gameide.editor.requestInitialScene") {
-              if (pendingInitialSceneContent !== null) {
-                sendInitialSceneToIframe(pendingInitialSceneContent);
-              } else {
-                vscode?.postMessage({ type: "requestInitialScene" });
-              }
+              if (pendingInitialSceneContent !== null) sendInitialSceneToIframe(pendingInitialSceneContent);
+              else vscode?.postMessage({ type: "requestInitialScene" });
             } else if (message.type === "run") {
               vscode?.postMessage({ type: "run" });
-            }
-          } else {
-            if (message.type === "update" && message.content !== undefined) {
-              pendingInitialSceneContent = message.content;
-              sendInitialSceneToIframe(message.content);
-            }
-            if (message.type === "scenePatch" && message.patch) {
-              iframe?.contentWindow?.postMessage(
-                { type: "gameide.editor.scenePatch", patch: message.patch },
-                "*",
-              );
             }
             return;
           }
 
-          if (message.type === "gameide.editor.scenePatch" && message.patch) {
-            vscode?.postMessage({
-              type: "gameide.editor.scenePatch",
-              patch: message.patch,
-            });
+          if (message.type === "update" && message.content !== undefined) {
+            pendingInitialSceneContent = message.content;
+            sendInitialSceneToIframe(message.content);
           }
-          if (
-            message.type === "gameide.editor.sceneChanged" &&
-            message.content !== undefined
-          ) {
-            vscode?.postMessage({
-              type: "gameide.editor.sceneChanged",
-              content: message.content,
-            });
+          if (message.type === "scenePatch" && message.patch) {
+            iframe?.contentWindow?.postMessage({ type: "gameide.editor.scenePatch", patch: message.patch }, "*");
+          }
+          if (message.type === "gameide.editor.scenePatch" && message.patch) {
+            vscode?.postMessage({ type: "gameide.editor.scenePatch", patch: message.patch });
+          }
+          if (message.type === "gameide.editor.sceneChanged" && message.content !== undefined) {
+            vscode?.postMessage({ type: "gameide.editor.sceneChanged", content: message.content });
           }
         });
       })();

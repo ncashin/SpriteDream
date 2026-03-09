@@ -38,6 +38,9 @@ body {
   align-items: stretch;
   justify-content: stretch;
 }
+#app:focus {
+  outline: none;
+}
 
 #app canvas {
   display: block;

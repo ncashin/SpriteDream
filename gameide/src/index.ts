@@ -22,8 +22,6 @@ export {
   editorStart,
   editorUpdate,
   startGameloop,
-  setGameRunning,
-  isGameRunning,
   setUpdateScope,
   clearUpdateScope,
   removeGameUpdatesForScope,
@@ -44,6 +42,12 @@ export type {
 } from "./initializeGame.js";
 export { editorPlugin } from "./editorPlugin.js";
 export type { ScenePatchMessage } from "./editorPlugin.js";
+export {
+  GameIDEMode,
+  getMode,
+  setMode,
+  onModeChange,
+} from "./mode.js";
 export { render2DPlugin } from "./render2DPlugin.js";
 export type {
   Render2DPluginRequiredContext,

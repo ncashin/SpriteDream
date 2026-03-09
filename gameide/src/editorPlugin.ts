@@ -1,7 +1,7 @@
 import { createSceneTransportPostMessage } from "./sceneChannelTransport.js";
 import { createSceneChannel } from "./sceneChannel.js";
 import { applyScenePatch } from "./scenePatch.js";
-import { setGameRunning } from "./gameloop.js";
+import { GameIDEMode, setMode } from "./mode.js";
 import {
   getRootTarget,
   replaceScene,
@@ -29,9 +29,15 @@ export const editorPlugin = () => (input: unknown) => {
 
     window.addEventListener("message", (event: MessageEvent) => {
       const message = event.data;
-      if (message && typeof message.type === "string") {
-        if (message.type === "gameide.editor.run") setGameRunning(true);
-        else if (message.type === "gameide.editor.stop") setGameRunning(false);
+      if (typeof message.type !== "string") return;
+
+      if (message.type === "gameide.editor.run") {
+        setMode(GameIDEMode.Game);
+        return;
+      }
+      if (message.type === "gameide.editor.stop") {
+        setMode(GameIDEMode.Editor);
+        return;
       }
     });
   }

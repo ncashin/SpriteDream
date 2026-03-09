@@ -9,6 +9,7 @@ import {
 import sceneData from "../public/sample.scene?raw";
 import "./style.css";
 import invariant from "tiny-invariant";
+import { update } from "gameide/gameloop";
 
 const PLAYER_KEYS = ["x", "y", "size", "speed"] as const;
 type Player = { x: number; y: number; size: number; speed: number };
@@ -37,7 +38,6 @@ initializeGame({
 
     gameUpdate((deltaTime) => {
       const player = scene.player;
-      console.log("player", player);
       if (!isPlayer(player)) return;
 
       const h = input.getAxis("Horizontal");
@@ -51,10 +51,19 @@ initializeGame({
       const maxY = canvasH - player.size;
       player.x = Math.max(0, Math.min(maxX, player.x));
       player.y = Math.max(0, Math.min(maxY, player.y));
+    });
+
+    update(() => {
+      const player = scene.player;
+      if (!isPlayer(player)) return;
+
+      const canvasW = canvasElement.clientWidth;
+      const canvasH = canvasElement.clientHeight;
 
       context.clearRect(0, 0, canvasW, canvasH);
-      context.fillStyle = "#3b82f6";
+      context.fillStyle = "#0000ff";
       context.fillRect(player.x, player.y, player.size, player.size);
     });
+
   },
 });
