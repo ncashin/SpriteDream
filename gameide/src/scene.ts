@@ -134,6 +134,31 @@ export function getRootTarget(): SceneObject | undefined {
   return rootTarget;
 }
 
+/**
+ * Read a value from the current scene at the given path without creating nodes.
+ * Uses the root target so it never mutates the scene (unlike reading through the proxy).
+ */
+export function queryScene(path: PropertyKey[]): unknown {
+  const root = rootTarget ?? initialSceneData ?? {};
+  return getValueAtPath(root as SceneObject, path);
+}
+
+/**
+ * Read a value from a plain object at the given path.
+ * Use this when you have a snapshot or plain object; for the live scene use queryScene(path).
+ */
+export function getValueAtPath(
+  obj: SceneObject,
+  path: PropertyKey[]
+): unknown {
+  let current: unknown = obj;
+  for (const key of path) {
+    if (current === null || typeof current !== "object") return undefined;
+    current = (current as Record<PropertyKey, unknown>)[key];
+  }
+  return current;
+}
+
 function copyInto(target: SceneObject, source: SceneObject): void {
   for (const key of Object.keys(target)) {
     delete target[key];

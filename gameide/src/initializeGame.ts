@@ -30,6 +30,13 @@ export type FinalContext<
   Plugins extends readonly PluginFunction[],
 > = Initial & ReducePlugins<Plugins>;
 
+/** Use so plugins array is inferred as a tuple and main() context is fully typed. */
+export function createPlugins<
+  P extends readonly [PluginFunction, ...PluginFunction[]],
+>(plugins: P): P {
+  return plugins;
+}
+
 export type InitializeGameOptions<
   Initial = unknown,
   Plugins extends readonly PluginFunction[] = readonly [],

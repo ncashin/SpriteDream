@@ -1,12 +1,14 @@
 import {
   gameUpdate,
   getScene,
+  createPlugins,
   editorPlugin,
   initializeGame,
   inputPlugin,
   render2DPlugin,
 } from "gameide";
 import initialScene from "../public/sample.scene";
+import inputConfig from "../public/input.config.json";
 import "./style.css";
 import invariant from "tiny-invariant";
 import { update } from "gameide/gameloop";
@@ -30,7 +32,11 @@ initializeGame({
     rootElement,
   },
   initialScene,
-  plugins: [editorPlugin(), inputPlugin(), render2DPlugin()],
+  plugins: createPlugins([
+    editorPlugin(),
+    inputPlugin(inputConfig),
+    render2DPlugin(),
+  ]),
   main({ render2D, input }) {
     const { canvasElement, context } = render2D;
     const scene = getScene();

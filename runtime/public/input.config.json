@@ -1,0 +1,18 @@
+{
+  "axes": {
+    "Horizontal": {
+      "negative": ["KeyA", "KeyArrowLeft"],
+      "positive": ["KeyD", "KeyArrowRight"]
+    },
+    "Vertical": {
+      "negative": ["KeyS", "KeyArrowDown"],
+      "positive": ["KeyW", "KeyArrowUp"]
+    }
+  },
+  "buttons": {
+    "Fire": ["Mouse0", "KeySpace"],
+    "Jump": ["KeySpace"],
+    "Submit": ["KeyEnter", "KeySpace"],
+    "Cancel": ["KeyEscape"]
+  }
+}

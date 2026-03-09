@@ -1,5 +1,5 @@
 import { definePlugin } from "./plugin.js";
-import { gameUpdate, update } from "./gameloop.js";
+import { update } from "./gameloop.js";
 
 export type InputBinding =
   | `Key${string}`
@@ -15,10 +15,24 @@ export type ButtonConfig = InputBinding[];
 
 export type InputPluginRequiredContext = { rootElement?: HTMLElement };
 export type InputPluginOptions = {
-  axes?: Record<string, AxisConfig>;
-  buttons?: Record<string, ButtonConfig>;
+  axes?: Record<string, { negative: string[]; positive: string[] }>;
+  buttons?: Record<string, string[]>;
   target?: HTMLElement | Document;
 };
+
+/** Inferred axis names from config (or default axes when omitted). */
+export type ExtractAxisKeys<C extends InputPluginOptions> = C extends {
+  axes: infer A extends Record<string, unknown>;
+}
+  ? keyof A
+  : keyof typeof DEFAULT_AXES;
+
+/** Inferred button names from config (or default buttons when omitted). */
+export type ExtractButtonKeys<C extends InputPluginOptions> = C extends {
+  buttons: infer B extends Record<string, unknown>;
+}
+  ? keyof B
+  : keyof typeof DEFAULT_BUTTONS;
 
 const DEFAULT_AXES: Record<string, AxisConfig> = {
   Horizontal: {
@@ -43,15 +57,18 @@ function normalizeKey(code: string): InputBinding {
   return `Key${code}` as InputBinding;
 }
 
-export type InputContext = {
-  getAxis: (axisName: string) => number;
-  getButton: (buttonName: string) => boolean;
-  getButtonDown: (buttonName: string) => boolean;
-  getButtonUp: (buttonName: string) => boolean;
+export type InputContext<
+  AxisKey extends string = string,
+  ButtonKey extends string = string,
+> = {
+  getAxis: (axisName: AxisKey) => number;
+  getButton: (buttonName: ButtonKey) => boolean;
+  getButtonDown: (buttonName: ButtonKey) => boolean;
+  getButtonUp: (buttonName: ButtonKey) => boolean;
   getMouseDelta: () => { x: number; y: number };
 };
 
-export const inputPlugin = definePlugin(
+const inputPluginImpl = definePlugin(
   (options?: InputPluginOptions) =>
     (inputContext: InputPluginRequiredContext) => {
       const axes = { ...DEFAULT_AXES, ...options?.axes };
@@ -79,7 +96,7 @@ export const inputPlugin = definePlugin(
         mouseState[String(button)] = down;
       }
 
-      function isBindingDown(binding: InputBinding): boolean {
+      function isBindingDown(binding: string): boolean {
         if (binding.startsWith("Key")) return keyState[binding] ?? false;
         if (binding.startsWith("Mouse")) {
           const n = binding.slice(5);
@@ -88,7 +105,7 @@ export const inputPlugin = definePlugin(
         return false;
       }
 
-      function wasBindingDown(binding: InputBinding): boolean {
+      function wasBindingDown(binding: string): boolean {
         if (binding.startsWith("Key"))
           return previousKeyState[binding] ?? false;
         if (binding.startsWith("Mouse")) {
@@ -185,3 +202,17 @@ export const inputPlugin = definePlugin(
       return { ...inputContext, input };
     },
 );
+
+export function inputPlugin<C extends InputPluginOptions>(
+  options?: C,
+): (
+  input: InputPluginRequiredContext,
+) => InputPluginRequiredContext & {
+  input: InputContext<ExtractAxisKeys<C>, ExtractButtonKeys<C>>;
+} {
+  return inputPluginImpl(options) as (
+    input: InputPluginRequiredContext,
+  ) => InputPluginRequiredContext & {
+    input: InputContext<ExtractAxisKeys<C>, ExtractButtonKeys<C>>;
+  };
+}

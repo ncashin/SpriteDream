@@ -32,9 +32,13 @@ export {
   replaceScene,
   subscribeToSceneUpdates,
   getRootTarget,
+  queryScene,
+  getValueAtPath,
 } from "./scene.js";
 export type { SceneObject, SceneUpdate } from "./scene.js";
-export { initializeGame } from "./initializeGame.js";
+export { querySceneObjects } from "./queryScene.js";
+export type { QuerySceneCallback } from "./queryScene.js";
+export { initializeGame, createPlugins } from "./initializeGame.js";
 export type {
   Plugin,
   FinalContext,
@@ -62,5 +66,7 @@ export type {
   InputPluginRequiredContext,
   InputPluginOptions,
   InputContext,
+  ExtractAxisKeys,
+  ExtractButtonKeys,
 } from "./inputPlugin.js";
 export { gameidePlugin } from "./gameidePluginVite.js";
