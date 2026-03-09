@@ -86,6 +86,7 @@ export class SceneStateWebviewProvider implements vscode.WebviewViewProvider {
         applyScenePatch(updated, patch);
         doc.setData(updated);
         doc.notifyWebviews();
+        this._registry.notifyDocumentEdited(doc, previous, updated);
       }
     });
   }

@@ -20,17 +20,24 @@ import sceneEditorHTML from "./sceneEditor.html?raw";
 
 export type { SceneData, ScenePatch };
 
+const GAME_MODE_MESSAGE_TYPE = "gameide.editor.mode";
+
 export class SceneDocument implements vscode.CustomDocument {
+  /** Live/current state shown in sidebar and webviews; updated by game when running. */
   private _data: SceneData;
+  /** State persisted to disk (save/revert); only updated in Editor mode or on load/revert. */
+  private _documentData: SceneData;
   private _webviewPanels: Set<vscode.WebviewPanel> = new Set();
   private readonly _registry: SceneDocumentRegistry | undefined;
+  private _gameMode = false;
 
   constructor(
     public readonly uri: vscode.Uri,
     data: SceneData,
     registry?: SceneDocumentRegistry
   ) {
-    this._data = data;
+    this._data = JSON.parse(JSON.stringify(data));
+    this._documentData = JSON.parse(JSON.stringify(data));
     this._registry = registry;
   }
 
@@ -38,9 +45,24 @@ export class SceneDocument implements vscode.CustomDocument {
     return { ...this._data };
   }
 
+  /** Data to persist to disk (used by save/backup); unchanged by game runtime when in Game mode. */
+  getDocumentData(): SceneData {
+    return { ...this._documentData };
+  }
+
   setData(data: SceneData): void {
     this._data = data;
+    if (!this._gameMode) this._documentData = JSON.parse(JSON.stringify(data));
     this._registry?.notifyDocumentChanged(this);
+  }
+
+  getGameMode(): boolean {
+    return this._gameMode;
+  }
+
+  setGameMode(gameMode: boolean): void {
+    if (this._gameMode === gameMode) return;
+    this._gameMode = gameMode;
   }
 
   addWebviewPanel(panel: vscode.WebviewPanel): void {
@@ -59,6 +81,13 @@ export class SceneDocument implements vscode.CustomDocument {
 
   applyPatch(patch: ScenePatch): void {
     applyScenePatch(this._data, patch);
+    if (!this._gameMode) applyScenePatch(this._documentData, patch);
+    this._registry?.notifyDocumentChanged(this);
+  }
+
+  revertData(data: SceneData): void {
+    this._data = JSON.parse(JSON.stringify(data));
+    this._documentData = JSON.parse(JSON.stringify(data));
     this._registry?.notifyDocumentChanged(this);
   }
 
@@ -79,7 +108,24 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     private readonly extensionUri: vscode.Uri,
     private readonly devServer: ViteDevServer | null = null,
     private readonly documentRegistry?: SceneDocumentRegistry
-  ) {}
+  ) {
+    documentRegistry?.onDocumentEdit((e) => {
+      const sceneDoc = e.document as SceneDocument;
+      if (sceneDoc.getGameMode?.() === true) return;
+      this._onDidChangeCustomDocument.fire({
+        document: sceneDoc,
+        label: "Edit",
+        undo: async () => {
+          sceneDoc.setData(e.previous);
+          sceneDoc.notifyWebviews();
+        },
+        redo: async () => {
+          sceneDoc.setData(e.next);
+          sceneDoc.notifyWebviews();
+        },
+      });
+    });
+  }
 
   async openCustomDocument(
     uri: vscode.Uri,
@@ -151,15 +197,21 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
         }
       },
       onMessage: (handler: (m: SceneChannelInMessage) => void) => {
-        webview.onDidReceiveMessage((message: SceneChannelInMessage) => {
+        webview.onDidReceiveMessage((raw: unknown) => {
+          const message = raw as { type: string; mode?: string; content?: string; patch?: ScenePatch };
+          if (message.type === GAME_MODE_MESSAGE_TYPE && message.mode !== undefined) {
+            document.setGameMode(message.mode === "game");
+            return;
+          }
           const undoable = UNDOABLE_MESSAGE_TYPES.has(message.type);
           const previous = undoable ? document.getData() : null;
-          handler(message);
+          handler(message as SceneChannelInMessage);
           if ((SCENE_MESSAGE_TYPES as Set<string>).has(message.type)) {
             document.notifyWebviews();
             this.documentRegistry?.notifyDocumentChanged(document);
           }
-          if (undoable && previous) {
+          const isGameMode = document.getGameMode();
+          if (undoable && previous && !isGameMode) {
             const next = document.getData();
             this._onDidChangeCustomDocument.fire({
               document,
@@ -185,7 +237,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       setSceneData: (data: SceneData) => document.setData(data),
       applyScenePatch,
       onRequestInitial: () =>
-        JSON.stringify(document.getData(), null, 2),
+        JSON.stringify(document.getDocumentData(), null, 2),
     });
   }
 
@@ -193,7 +245,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     document: SceneDocument,
     cancellation: vscode.CancellationToken
   ): Promise<void> {
-    await this.writeDocument(document.uri, document.getData(), cancellation);
+    await this.writeDocument(document.uri, document.getDocumentData(), cancellation);
   }
 
   async saveCustomDocumentAs(
@@ -201,7 +253,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     destination: vscode.Uri,
     cancellation: vscode.CancellationToken
   ): Promise<void> {
-    await this.writeDocument(destination, document.getData(), cancellation);
+    await this.writeDocument(destination, document.getDocumentData(), cancellation);
   }
 
   async revertCustomDocument(
@@ -210,7 +262,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
   ): Promise<void> {
     const bytes = await vscode.workspace.fs.readFile(document.uri);
     const data = JSON.parse(Buffer.from(bytes).toString("utf8")) as SceneData;
-    document.setData(data);
+    document.revertData(data);
     document.notifyWebviews();
   }
 
@@ -219,7 +271,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     context: vscode.CustomDocumentBackupContext,
     cancellation: vscode.CancellationToken
   ): Promise<vscode.CustomDocumentBackup> {
-    await this.writeDocument(context.destination, document.getData(), cancellation);
+    await this.writeDocument(context.destination, document.getDocumentData(), cancellation);
     return {
       id: context.destination.toString(),
       delete: async () => {

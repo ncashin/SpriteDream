@@ -8,12 +8,20 @@ export interface ISceneDocument {
   notifyWebviews(): void;
 }
 
+export interface SceneDocumentEditEvent {
+  document: ISceneDocument;
+  previous: SceneData;
+  next: SceneData;
+}
+
 export class SceneDocumentRegistry {
   private readonly _documents = new Map<string, ISceneDocument>();
   private _activeDocument: ISceneDocument | undefined;
   private readonly _onDidChange = new vscode.EventEmitter<void>();
+  private readonly _onDocumentEdit = new vscode.EventEmitter<SceneDocumentEditEvent>();
 
   readonly onDidChange = this._onDidChange.event;
+  readonly onDocumentEdit = this._onDocumentEdit.event;
 
   add(document: ISceneDocument): void {
     const key = document.uri.toString();
@@ -50,5 +58,9 @@ export class SceneDocumentRegistry {
 
   notifyDocumentChanged(_document: ISceneDocument): void {
     this._onDidChange.fire();
+  }
+
+  notifyDocumentEdited(document: ISceneDocument, previous: SceneData, next: SceneData): void {
+    this._onDocumentEdit.fire({ document, previous, next });
   }
 }

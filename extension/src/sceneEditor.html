@@ -89,6 +89,8 @@
               else vscode?.postMessage({ type: "requestInitialScene" });
             } else if (message.type === "run") {
               vscode?.postMessage({ type: "run" });
+            } else if (message.type === "gameide.editor.mode" && message.mode !== undefined) {
+              vscode?.postMessage({ type: "gameide.editor.mode", mode: message.mode });
             } else if (message.type === "gameide.editor.scenePatch" && message.patch) {
               vscode?.postMessage({ type: "gameide.editor.scenePatch", patch: message.patch });
             } else if (message.type === "gameide.editor.sceneChanged" && message.content !== undefined) {
