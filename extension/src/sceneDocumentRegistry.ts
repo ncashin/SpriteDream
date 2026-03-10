@@ -44,17 +44,15 @@ export class SceneDocumentRegistry {
     this._sceneViewSidebarWebview = webview;
   }
 
-  /** Payload for the scene view sidebar: active document as { name, uri, data }. */
+  /** Payload for the scene view sidebar: all open documents as { name, uri, data }. */
   getDocumentsPayload(): SceneDocumentsPayload {
-    const doc = this.getActiveDocument();
-    if (!doc) return [];
-    return [
-      {
-        name: path.basename(doc.uri.fsPath),
-        uri: doc.uri.toString(),
-        data: JSON.parse(JSON.stringify(doc.getData())),
-      },
-    ];
+    const docs = this.getDocuments();
+    if (docs.length === 0) return [];
+    return docs.map((doc) => ({
+      name: path.basename(doc.uri.fsPath),
+      uri: doc.uri.toString(),
+      data: JSON.parse(JSON.stringify(doc.getData())),
+    }));
   }
 
   setDefinitions(definitions: ObjectDefinitionPayload[]): void {

@@ -4,11 +4,6 @@ import invariant from "tiny-invariant";
 export type Render2DPluginRequiredContext = { rootElement: HTMLElement };
 export type Render2DPluginOptions = {};
 
-export type Render2DContext = {
-  canvasElement: HTMLCanvasElement;
-  context: CanvasRenderingContext2D;
-};
-
 export const render2DPlugin = definePlugin(
   (_options?: Render2DPluginOptions) =>
     (inputContext: Render2DPluginRequiredContext) => {

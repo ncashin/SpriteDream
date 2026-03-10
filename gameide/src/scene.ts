@@ -1,3 +1,6 @@
+import type { QuerySceneCallback, QuerySceneOptions, SceneWithQuery } from "./queryScene.js";
+import { querySceneObjects } from "./queryScene.js";
+
 export type SceneObject = Record<PropertyKey, unknown>;
 
 export type SceneUpdate =
@@ -12,6 +15,7 @@ function isSceneObject(value: unknown): value is SceneObject {
 
 const proxyCache = new WeakMap<object, SceneObject>();
 const pathCache = new WeakMap<object, PropertyKey[]>();
+const targetOfProxy = new WeakMap<SceneObject, SceneObject>();
 
 let subscribers: Set<SceneSubscriber>;
 let scene: SceneObject | undefined;
@@ -54,6 +58,17 @@ function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject
 
   const proxy: SceneObject = new Proxy(target, {
     get(obj, key: PropertyKey) {
+      if (key === "query") {
+        const path = pathCache.get(obj) ?? [];
+        return (callbackOrOptions: QuerySceneCallback | QuerySceneOptions) => {
+          const opts =
+            typeof callbackOrOptions === "function"
+              ? { prefix: path, callback: callbackOrOptions }
+              : { ...callbackOrOptions, prefix: path };
+          return querySceneObjects(getScene(), opts);
+        };
+      }
+
       const value = obj[key];
 
       if (value === undefined) {
@@ -105,22 +120,27 @@ function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject
   });
 
   proxyCache.set(target, proxy);
+  targetOfProxy.set(proxy, target);
   return proxy;
+}
+
+export function getTarget(obj: SceneObject): SceneObject | undefined {
+  return targetOfProxy.get(obj);
 }
 
 export function setInitialScene(data: SceneObject | undefined): void {
   initialSceneData = data;
 }
 
-export function getScene(): SceneObject {
+export function getScene(): SceneWithQuery {
   if (!scene) {
     const base = initialSceneData ?? {};
     initialSceneData = undefined;
     rootTarget = base;
-    scene = createProxy(base, []);
+    scene = createProxy(base, []) as SceneWithQuery;
   }
 
-  return scene;
+  return scene as SceneWithQuery;
 }
 
 export function subscribeToSceneUpdates(callback: SceneSubscriber): () => void {
@@ -134,19 +154,11 @@ export function getRootTarget(): SceneObject | undefined {
   return rootTarget;
 }
 
-/**
- * Read a value from the current scene at the given path without creating nodes.
- * Uses the root target so it never mutates the scene (unlike reading through the proxy).
- */
 export function queryScene(path: PropertyKey[]): unknown {
   const root = rootTarget ?? initialSceneData ?? {};
   return getValueAtPath(root as SceneObject, path);
 }
 
-/**
- * Read a value from a plain object at the given path.
- * Use this when you have a snapshot or plain object; for the live scene use queryScene(path).
- */
 export function getValueAtPath(
   obj: SceneObject,
   path: PropertyKey[]

@@ -20,14 +20,12 @@ export type InputPluginOptions = {
   target?: HTMLElement | Document;
 };
 
-/** Inferred axis names from config (or default axes when omitted). */
 export type ExtractAxisKeys<C extends InputPluginOptions> = C extends {
   axes: infer A extends Record<string, unknown>;
 }
   ? keyof A
   : keyof typeof DEFAULT_AXES;
 
-/** Inferred button names from config (or default buttons when omitted). */
 export type ExtractButtonKeys<C extends InputPluginOptions> = C extends {
   buttons: infer B extends Record<string, unknown>;
 }
@@ -203,16 +201,14 @@ const inputPluginImpl = definePlugin(
     },
 );
 
-export function inputPlugin<C extends InputPluginOptions>(
-  options?: C,
-): (
-  input: InputPluginRequiredContext,
-) => InputPluginRequiredContext & {
-  input: InputContext<ExtractAxisKeys<C>, ExtractButtonKeys<C>>;
+export function inputPlugin<Options extends InputPluginOptions>(
+  options?: Options,
+): (input: InputPluginRequiredContext) => InputPluginRequiredContext & {
+  input: InputContext<ExtractAxisKeys<Options>, ExtractButtonKeys<Options>>;
 } {
   return inputPluginImpl(options) as (
     input: InputPluginRequiredContext,
   ) => InputPluginRequiredContext & {
-    input: InputContext<ExtractAxisKeys<C>, ExtractButtonKeys<C>>;
+    input: InputContext<ExtractAxisKeys<Options>, ExtractButtonKeys<Options>>;
   };
 }

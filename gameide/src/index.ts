@@ -36,8 +36,21 @@ export {
   getValueAtPath,
 } from "./scene.js";
 export type { SceneObject, SceneUpdate } from "./scene.js";
-export { querySceneObjects } from "./queryScene.js";
-export type { QuerySceneCallback } from "./queryScene.js";
+export {
+  querySceneObjects,
+  subscribeToQuery,
+  getSceneQuery,
+  createQueryListeners,
+} from "./queryScene.js";
+export type {
+  QuerySceneCallback,
+  QuerySceneTypeGuard,
+  QuerySceneOptions,
+  QueryResultEvent,
+  SceneQuery,
+  QueryListeners,
+  SceneWithQuery,
+} from "./queryScene.js";
 export {
   defineObject,
   getDefinedObjectsForEditor,
@@ -46,12 +59,8 @@ export {
   $boolean,
 } from "./objectRegistry.js";
 export type { SchemaToType, DefinedObject, ObjectMetadata } from "./objectRegistry.js";
-export { initializeGame, createPlugins } from "./initializeGame.js";
-export type {
-  Plugin,
-  FinalContext,
-  InitializeGameOptions,
-} from "./initializeGame.js";
+export { initializeGame } from "./initializeGame.js";
+export type { Plugin, FinalContext } from "./initializeGame.js";
 export { editorPlugin } from "./editorPlugin.js";
 export type { ScenePatchMessage } from "./editorPlugin.js";
 export {
@@ -64,7 +73,6 @@ export { render2DPlugin } from "./render2DPlugin.js";
 export type {
   Render2DPluginRequiredContext,
   Render2DPluginOptions,
-  Render2DContext,
 } from "./render2DPlugin.js";
 export { inputPlugin } from "./inputPlugin.js";
 export type {

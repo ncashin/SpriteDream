@@ -20,17 +20,12 @@
       padding: 8px 4px 8px 8px;
       margin: 0;
     }
-    .tree {
-      padding-left: 0;
-      list-style: none;
-      margin: 0;
-    }
+    .tree { padding-left: 0; list-style: none; margin: 0; }
     .tree ul {
       padding-left: 16px;
       list-style: none;
       border-left: 1px solid var(--vscode-widget-border);
       margin: 2px 0;
-      border-radius: 2px;
     }
     .row {
       display: flex;
@@ -43,12 +38,7 @@
     }
     .row:hover { background: var(--vscode-list-hoverBackground); }
     .row.expandable { cursor: pointer; }
-    .row.expandable .row-icon { margin-right: 4px; }
-    .key {
-      flex-shrink: 0;
-      margin-right: 10px;
-      color: var(--vscode-foreground);
-    }
+    .key { flex-shrink: 0; margin-right: 10px; color: var(--vscode-foreground); }
     .value {
       flex: 1;
       min-width: 0;
@@ -58,8 +48,7 @@
       color: var(--vscode-descriptionForeground);
       cursor: text;
     }
-    .value[contenteditable="true"] { border-radius: 2px; }
-    .value:focus { outline: none; box-shadow: none; }
+    .value:focus { outline: none; }
     .value.placeholder { color: var(--vscode-input-placeholderForeground, #6b6b6b); }
     .doc-header {
       display: flex;
@@ -72,75 +61,40 @@
     }
     .doc-header:first-child { margin-top: 0; }
     .doc-name { flex: 1; min-width: 0; }
-    .doc-add {
-      flex-shrink: 0;
+    .icon-btn {
       width: 12px;
       height: 12px;
       min-width: 12px;
       min-height: 12px;
       padding: 0;
+      flex-shrink: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       color: var(--vscode-descriptionForeground);
-      opacity: 1;
       border: none;
       background: transparent;
       cursor: pointer;
     }
-    .doc-add svg { display: block; width: 12px; height: 12px; shape-rendering: crispEdges; }
-    .doc-add:hover { color: var(--vscode-foreground); }
-    .row-icon,
-    .toggle,
-    .add-from-def,
-    .row-delete {
-      width: 12px;
-      height: 12px;
-      min-width: 12px;
-      min-height: 12px;
-      padding: 0;
-      flex-shrink: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--vscode-descriptionForeground);
-      opacity: 1;
-      border: none;
-      border-radius: 0;
-      background: transparent;
-    }
+    .icon-btn svg { display: block; width: 12px; height: 12px; }
+    .row .icon-btn { opacity: 0; }
+    .row:hover .icon-btn { opacity: 1; }
     .row-icon { margin-right: 4px; }
-    .row-icon svg,
-    .toggle svg,
-    .add-from-def svg,
-    .row-delete svg {
-      display: block;
-      width: 12px;
-      height: 12px;
-      shape-rendering: crispEdges;
-    }
     .toggle { margin-left: auto; }
-    .add-from-def { margin-left: 2px; cursor: pointer; }
-    .add-from-def:disabled { opacity: 0.5; cursor: not-allowed; }
-    .row-delete { margin-left: 2px; cursor: pointer; }
-    .row .toggle,
-    .row .add-from-def,
-    .row .row-delete { opacity: 0; }
-    .row:hover .toggle,
-    .row:hover .add-from-def,
-    .row:hover .row-delete { opacity: 1; }
-    .row:hover .add-from-def:disabled { opacity: 0.5; }
-    .def-dropdown {
+    .add-btn { margin-left: 2px; }
+    .del-btn { margin-left: 2px; }
+    .del-btn:hover { color: var(--vscode-errorForeground, #f14c4c); }
+    .dropdown {
       position: absolute;
       z-index: 100;
       background: var(--vscode-dropdown-background);
       border: 1px solid var(--vscode-dropdown-border);
       border-radius: 3px;
       padding: 4px 0;
-      min-width: 120px;
+      min-width: 100px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
-    .def-dropdown button {
+    .dropdown button {
       display: block;
       width: 100%;
       padding: 4px 12px;
@@ -152,27 +106,12 @@
       font-size: inherit;
       font-family: inherit;
     }
-    .def-dropdown button:hover {
-      background: var(--vscode-list-hoverBackground);
-    }
-    .def-dropdown .dropdown-section {
-      padding: 4px 12px 2px;
-      font-size: 0.9em;
-      color: var(--vscode-descriptionForeground);
-    }
-    .def-dropdown .dropdown-divider {
-      height: 1px;
-      margin: 4px 0;
-      background: var(--vscode-widget-border);
-    }
-    .row-delete:hover { background: var(--vscode-inputValidation-errorBackground, rgba(255,0,0,0.1)); color: var(--vscode-errorForeground, #f14c4c); }
+    .dropdown button:hover { background: var(--vscode-list-hoverBackground); }
     .key[contenteditable="true"] { outline: none; background: var(--vscode-input-background); border-radius: 2px; padding: 0 2px; }
-    .doc + .tree { padding-left: 0; }
-    .doc + .tree > .row { padding-left: 0; }
     .empty {
       color: var(--vscode-descriptionForeground);
       font-style: italic;
-      padding: 12px 4px 12px 8px;
+      padding: 12px 8px;
       margin: 0;
     }
   </style>
@@ -184,7 +123,6 @@
     (function () {
       const vscode = acquireVsCodeApi();
       const root = document.getElementById('root');
-      let definitions = [];
 
       function formatVal(v) {
         if (v === null) return 'null';
@@ -196,151 +134,57 @@
         return v !== null && typeof v === 'object';
       }
 
-      function isTypeToken(v) {
-        return v === '$number' || v === '$string' || v === '$boolean';
-      }
-
-      function mergeSchemaIntoObject(obj, schema) {
-        const out = obj && typeof obj === 'object' && !Array.isArray(obj) ? { ...obj } : {};
-        for (const [k, v] of Object.entries(schema)) {
-          if (!(k in out)) out[k] = isTypeToken(v) ? null : v;
-        }
-        return out;
-      }
-
-      function uniqueNewKey(obj) {
+      function uniqueKey(obj) {
         if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return 'newKey';
-        let key = 'newKey';
-        let i = 0;
+        let key = 'newKey', i = 0;
         while (key in obj) key = 'newKey' + (++i);
         return key;
       }
-      function uniqueKeyForDef(obj, baseName) {
-        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return baseName || 'newKey';
-        const name = baseName || 'newKey';
-        let key = name;
-        let i = 0;
-        while (key in obj) key = name + (++i);
-        return key;
-      }
 
-      function afterSceneChange() {
+      function requestUpdate() {
         setTimeout(function () { vscode.postMessage({ type: 'requestUpdate' }); }, 50);
       }
 
-      function openAddDropdown(path, value, uri, anchorEl) {
+      const ADD_OPTIONS = [
+        { label: 'String', value: '' },
+        { label: 'Number', value: 0 },
+        { label: 'Boolean', value: false },
+        { label: 'Object', value: {} }
+      ];
+
+      function openAddMenu(path, value, uri, anchorEl) {
         const rect = anchorEl.getBoundingClientRect();
-        const dropdown = document.createElement('div');
-        dropdown.className = 'def-dropdown';
-        dropdown.style.right = (window.innerWidth - rect.right) + 'px';
-        dropdown.style.left = 'auto';
-        dropdown.style.top = (rect.bottom + 2) + 'px';
-        const primitives = [
-          { label: 'String', value: '' },
-          { label: 'Number', value: 0 },
-          { label: 'Boolean', value: false }
-        ];
-        const primSection = document.createElement('div');
-        primSection.className = 'dropdown-section';
-        primSection.textContent = 'Add primitive';
-        dropdown.appendChild(primSection);
-        primitives.forEach((p) => {
-          const b = document.createElement('button');
-          b.textContent = p.label;
-          b.type = 'button';
-          b.addEventListener('click', (e) => {
+        const menu = document.createElement('div');
+        menu.className = 'dropdown';
+        menu.style.left = rect.left + 'px';
+        menu.style.top = (rect.bottom + 2) + 'px';
+        ADD_OPTIONS.forEach(function (opt) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = opt.label;
+          btn.addEventListener('click', function (e) {
             e.stopPropagation();
-            const key = uniqueNewKey(value);
-            const pathArr = Array.isArray(path) ? path : [];
-            vscode.postMessage({ type: 'addProperty', uri: String(uri), path: pathArr, key: String(key), value: p.value });
-            afterSceneChange();
+            vscode.postMessage({
+              type: 'addProperty',
+              uri: String(uri),
+              path: Array.isArray(path) ? path : [],
+              key: uniqueKey(value),
+              value: opt.value
+            });
+            requestUpdate();
             close();
           });
-          dropdown.appendChild(b);
-        });
-        const emptyObjBtn = document.createElement('button');
-        emptyObjBtn.textContent = 'Empty object';
-        emptyObjBtn.type = 'button';
-        emptyObjBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const key = uniqueNewKey(value);
-          const pathArr = Array.isArray(path) ? path : [];
-          vscode.postMessage({ type: 'addProperty', uri: String(uri), path: pathArr, key: String(key), value: {} });
-          afterSceneChange();
-          close();
-        });
-        dropdown.appendChild(emptyObjBtn);
-        if (definitions.length > 0) {
-          const div = document.createElement('div');
-          div.className = 'dropdown-divider';
-          dropdown.appendChild(div);
-          const objSection = document.createElement('div');
-          objSection.className = 'dropdown-section';
-          objSection.textContent = 'Add object';
-          dropdown.appendChild(objSection);
-        }
-        definitions.forEach((def) => {
-          const b = document.createElement('button');
-          b.textContent = def.name || 'Unnamed';
-          b.type = 'button';
-          b.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const newObj = mergeSchemaIntoObject({}, def.schema);
-            const key = uniqueKeyForDef(value, def.name);
-            const pathArr = Array.isArray(path) ? path : [];
-            vscode.postMessage({ type: 'addProperty', uri: String(uri), path: pathArr, key: String(key), value: newObj });
-            afterSceneChange();
-            close();
-          });
-          dropdown.appendChild(b);
-        });
-        if (definitions.length > 0) {
-          const div2 = document.createElement('div');
-          div2.className = 'dropdown-divider';
-          dropdown.appendChild(div2);
-          const mergeSection = document.createElement('div');
-          mergeSection.className = 'dropdown-section';
-          mergeSection.textContent = 'Merge into current';
-          dropdown.appendChild(mergeSection);
-        }
-        definitions.forEach((def) => {
-          const b = document.createElement('button');
-          b.textContent = (def.name || 'Unnamed') + ' (merge)';
-          b.type = 'button';
-          b.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const merged = mergeSchemaIntoObject(value, def.schema);
-            const pathArr = Array.isArray(path) ? path : [];
-            vscode.postMessage({ type: 'edit', uri: String(uri), path: pathArr, value: merged });
-            afterSceneChange();
-            close();
-          });
-          dropdown.appendChild(b);
+          menu.appendChild(btn);
         });
         function close() {
-          dropdown.remove();
+          menu.remove();
           document.removeEventListener('click', close);
         }
-        document.body.appendChild(dropdown);
+        document.body.appendChild(menu);
         document.addEventListener('click', close);
       }
 
-      function addPlusButton(row, path, value, uri) {
-        const btn = document.createElement('button');
-        btn.className = 'add-from-def';
-        btn.type = 'button';
-        btn.title = 'Add fields from definition';
-        btn.setAttribute('aria-label', 'Add fields from definition');
-        if (window.LUCIDE_ICONS && window.LUCIDE_ICONS.plus) btn.innerHTML = window.LUCIDE_ICONS.plus;
-        else btn.textContent = '+';
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openAddDropdown(path, value, uri, btn);
-        });
-        row.appendChild(btn);
-      }
-
-      function buildEntry(key, value, path, uri, docName) {
+      function makeRow(key, value, path, uri) {
         const row = document.createElement('div');
         row.className = 'row' + (hasChildren(value) ? ' expandable' : '');
 
@@ -348,225 +192,202 @@
         keySpan.className = 'key';
         keySpan.textContent = key;
         keySpan.title = 'Double-click to rename';
-        keySpan.addEventListener('dblclick', (e) => {
+        keySpan.addEventListener('dblclick', function (e) {
           e.stopPropagation();
           keySpan.contentEditable = 'true';
           keySpan.focus();
-          if (window.getSelection) {
-            const sel = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(keySpan);
+          var sel = window.getSelection();
+          if (sel) {
+            var r = document.createRange();
+            r.selectNodeContents(keySpan);
             sel.removeAllRanges();
-            sel.addRange(range);
+            sel.addRange(r);
           }
         });
-        keySpan.addEventListener('blur', () => {
+        keySpan.addEventListener('blur', function () {
           if (keySpan.contentEditable !== 'true') return;
           keySpan.contentEditable = 'false';
-          const newKey = keySpan.textContent.trim();
+          var newKey = keySpan.textContent.trim();
           if (newKey && newKey !== key) {
-            vscode.postMessage({ type: 'rename', uri: String(uri), path: Array.isArray(path) ? path : [], newKey });
-            afterSceneChange();
+            vscode.postMessage({ type: 'rename', uri: String(uri), path: path.slice(), newKey: newKey });
+            requestUpdate();
           } else {
             keySpan.textContent = key;
           }
         });
-        keySpan.addEventListener('keydown', (e) => {
+        keySpan.addEventListener('keydown', function (e) {
           if (keySpan.contentEditable !== 'true') return;
           if (e.key === 'Enter') { e.preventDefault(); keySpan.blur(); }
-          if (e.key === 'Escape') {
-            keySpan.textContent = key;
-            keySpan.contentEditable = 'false';
-            keySpan.blur();
-          }
+          if (e.key === 'Escape') { keySpan.textContent = key; keySpan.contentEditable = 'false'; keySpan.blur(); }
         });
-        keySpan.addEventListener('click', (e) => e.stopPropagation());
+        keySpan.addEventListener('click', function (e) { e.stopPropagation(); });
         row.appendChild(keySpan);
 
-        const valueCell = document.createElement('span');
-        valueCell.className = 'value';
-
+        const valueSpan = document.createElement('span');
+        valueSpan.className = 'value';
         if (hasChildren(value)) {
-          valueCell.textContent = Array.isArray(value) ? `[${value.length}]` : '';
-          valueCell.style.cursor = 'default';
+          valueSpan.textContent = Array.isArray(value) ? '[' + value.length + ']' : '';
+          valueSpan.style.cursor = 'default';
         } else {
-          const isPlaceholder = value === null;
-          valueCell.textContent = isPlaceholder ? 'input here' : formatVal(value);
-          if (isPlaceholder) valueCell.classList.add('placeholder');
-          valueCell.contentEditable = 'true';
-          valueCell.spellcheck = false;
-          valueCell.dataset.uri = uri;
-          valueCell.dataset.path = JSON.stringify(path);
-          valueCell.dataset.initial = isPlaceholder ? 'null' : formatVal(value);
-          valueCell.dataset.isPlaceholder = isPlaceholder ? '1' : '';
-          valueCell.addEventListener('click', (e) => e.stopPropagation());
-          valueCell.addEventListener('focus', () => {
-            if (valueCell.dataset.isPlaceholder === '1') {
-              valueCell.textContent = '';
-              valueCell.classList.remove('placeholder');
-            }
+          var isPlaceholder = value === null;
+          valueSpan.textContent = isPlaceholder ? '…' : formatVal(value);
+          if (isPlaceholder) valueSpan.classList.add('placeholder');
+          valueSpan.contentEditable = 'true';
+          valueSpan.spellcheck = false;
+          valueSpan.dataset.path = JSON.stringify(path);
+          valueSpan.dataset.initial = isPlaceholder ? 'null' : formatVal(value);
+          valueSpan.dataset.placeholder = isPlaceholder ? '1' : '';
+          valueSpan.addEventListener('click', function (e) { e.stopPropagation(); });
+          valueSpan.addEventListener('focus', function () {
+            if (valueSpan.dataset.placeholder === '1') { valueSpan.textContent = ''; valueSpan.classList.remove('placeholder'); }
           });
-          valueCell.addEventListener('blur', () => {
-            const raw = valueCell.textContent.trim();
-            let parsed;
-            if (raw === '' || valueCell.dataset.isPlaceholder === '1') {
-              parsed = null;
-            } else {
-              try { parsed = JSON.parse(raw); } catch { parsed = raw; }
-            }
-            vscode.postMessage({ type: 'edit', uri: String(uri), path: Array.isArray(path) ? path : [], value: parsed });
-            afterSceneChange();
-            valueCell.dataset.initial = parsed === null ? 'null' : formatVal(parsed);
-            valueCell.dataset.isPlaceholder = parsed === null ? '1' : '';
-            if (parsed === null) {
-              valueCell.textContent = 'input here';
-              valueCell.classList.add('placeholder');
-            } else {
-              valueCell.textContent = formatVal(parsed);
-            }
+          valueSpan.addEventListener('blur', function () {
+            var raw = valueSpan.textContent.trim();
+            var parsed = (raw === '' || valueSpan.dataset.placeholder === '1') ? null : (function () { try { return JSON.parse(raw); } catch (_) { return raw; } })();
+            vscode.postMessage({ type: 'edit', uri: String(uri), path: path.slice(), value: parsed });
+            requestUpdate();
+            valueSpan.dataset.initial = parsed === null ? 'null' : formatVal(parsed);
+            valueSpan.dataset.placeholder = parsed === null ? '1' : '';
+            valueSpan.textContent = parsed === null ? '…' : formatVal(parsed);
+            if (parsed === null) valueSpan.classList.add('placeholder'); else valueSpan.classList.remove('placeholder');
           });
-          valueCell.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              valueCell.blur();
-            }
+          valueSpan.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); valueSpan.blur(); }
             if (e.key === 'Escape') {
-              valueCell.textContent = valueCell.dataset.initial === 'null' ? 'input here' : valueCell.dataset.initial;
-              valueCell.dataset.isPlaceholder = valueCell.dataset.initial === 'null' ? '1' : '';
-              if (valueCell.dataset.isPlaceholder === '1') valueCell.classList.add('placeholder');
-              else valueCell.classList.remove('placeholder');
-              valueCell.blur();
+              valueSpan.textContent = valueSpan.dataset.initial === 'null' ? '…' : valueSpan.dataset.initial;
+              valueSpan.dataset.placeholder = valueSpan.dataset.initial === 'null' ? '1' : '';
+              valueSpan.classList.toggle('placeholder', valueSpan.dataset.placeholder === '1');
+              valueSpan.blur();
             }
           });
         }
-        row.appendChild(valueCell);
+        row.appendChild(valueSpan);
 
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'row-delete';
-        deleteBtn.type = 'button';
-        deleteBtn.title = 'Delete property';
-        deleteBtn.setAttribute('aria-label', 'Delete property');
-        if (window.LUCIDE_ICONS && window.LUCIDE_ICONS.trash) deleteBtn.innerHTML = window.LUCIDE_ICONS.trash;
-        else deleteBtn.textContent = '×';
-        deleteBtn.addEventListener('click', (e) => {
+        var addBtn = document.createElement('button');
+        addBtn.className = 'icon-btn add-btn';
+        addBtn.type = 'button';
+        addBtn.title = 'Add property';
+        addBtn.setAttribute('aria-label', 'Add property');
+        if (window.LUCIDE_ICONS && window.LUCIDE_ICONS.plus) addBtn.innerHTML = window.LUCIDE_ICONS.plus;
+        else addBtn.textContent = '+';
+        addBtn.addEventListener('click', function (e) { e.stopPropagation(); openAddMenu(path, value, uri, addBtn); });
+        row.appendChild(addBtn);
+
+        var delBtn = document.createElement('button');
+        delBtn.className = 'icon-btn del-btn';
+        delBtn.type = 'button';
+        delBtn.title = 'Delete';
+        delBtn.setAttribute('aria-label', 'Delete');
+        if (window.LUCIDE_ICONS && window.LUCIDE_ICONS.trash) delBtn.innerHTML = window.LUCIDE_ICONS.trash;
+        else delBtn.textContent = '×';
+        delBtn.addEventListener('click', function (e) {
           e.stopPropagation();
-          vscode.postMessage({ type: 'edit', uri, path, delete: true });
+          vscode.postMessage({ type: 'edit', uri: String(uri), path: path.slice(), delete: true });
         });
-        row.appendChild(deleteBtn);
-        return { row, valueCell, keySpan };
+        row.appendChild(delBtn);
+
+        return { row: row, valueSpan: valueSpan, keySpan: keySpan };
       }
 
-      function appendExpandableRow(entry, value, path, uri, docName, container, open) {
-        const { row } = entry;
-        const ul = document.createElement('ul');
-        const icon = document.createElement('span');
-        icon.className = 'row-icon';
-        icon.setAttribute('aria-hidden', 'true');
-        if (window.LUCIDE_ICONS) icon.innerHTML = window.LUCIDE_ICONS.folder;
-        row.insertBefore(icon, row.firstChild);
-        const toggle = document.createElement('span');
-        toggle.className = 'toggle';
-        if (window.LUCIDE_ICONS) toggle.innerHTML = open ? window.LUCIDE_ICONS.chevronDown : window.LUCIDE_ICONS.chevronRight;
-        else toggle.textContent = open ? '▼' : '▶';
-        addPlusButton(row, path, value, uri);
-        row.appendChild(toggle);
-        row.addEventListener('click', () => {
-          ul.hidden = !ul.hidden;
-          if (window.LUCIDE_ICONS) toggle.innerHTML = ul.hidden ? window.LUCIDE_ICONS.chevronRight : window.LUCIDE_ICONS.chevronDown;
-          else toggle.textContent = ul.hidden ? '▶' : '▼';
-        });
-        container.appendChild(row);
-        container.appendChild(ul);
-        ul.hidden = !open;
-        renderNode(value, path, uri, docName, ul, true);
-      }
-
-      function renderNode(value, path, uri, docName, container, open) {
+      function renderTree(container, value, path, uri, open) {
         if (Array.isArray(value)) {
-          value.forEach((item, i) => {
-            const p = [...path, String(i)];
-            const entry = buildEntry(String(i), item, p, uri, docName);
-            hasChildren(item) ? appendExpandableRow(entry, item, p, uri, docName, container, open) : container.appendChild(entry.row);
+          value.forEach(function (item, i) {
+            var p = path.concat(String(i));
+            var entry = makeRow(String(i), item, p, uri);
+            if (hasChildren(item)) {
+              var icon = document.createElement('span');
+              icon.className = 'icon-btn row-icon';
+              icon.setAttribute('aria-hidden', 'true');
+              if (window.LUCIDE_ICONS && window.LUCIDE_ICONS.folder) icon.innerHTML = window.LUCIDE_ICONS.folder;
+              entry.row.insertBefore(icon, entry.row.firstChild);
+              var toggle = document.createElement('span');
+              toggle.className = 'icon-btn toggle';
+              if (window.LUCIDE_ICONS) toggle.innerHTML = open ? window.LUCIDE_ICONS.chevronDown : window.LUCIDE_ICONS.chevronRight;
+              else toggle.textContent = open ? '▼' : '▶';
+              entry.row.appendChild(toggle);
+              var ul = document.createElement('ul');
+              entry.row.addEventListener('click', function () {
+                ul.hidden = !ul.hidden;
+                if (window.LUCIDE_ICONS) toggle.innerHTML = ul.hidden ? window.LUCIDE_ICONS.chevronRight : window.LUCIDE_ICONS.chevronDown;
+                else toggle.textContent = ul.hidden ? '▶' : '▼';
+              });
+              container.appendChild(entry.row);
+              container.appendChild(ul);
+              ul.hidden = !open;
+              renderTree(ul, item, p, uri, true);
+            } else {
+              container.appendChild(entry.row);
+            }
           });
           return;
         }
         if (value !== null && typeof value === 'object') {
-          Object.entries(value).forEach(([k, v]) => {
-            const p = [...path, k];
-            const entry = buildEntry(k, v, p, uri, docName);
-            hasChildren(v) ? appendExpandableRow(entry, v, p, uri, docName, container, open) : container.appendChild(entry.row);
+          Object.keys(value).forEach(function (k) {
+            var p = path.concat(k);
+            var v = value[k];
+            var entry = makeRow(k, v, p, uri);
+            if (hasChildren(v)) {
+              var icon = document.createElement('span');
+              icon.className = 'icon-btn row-icon';
+              icon.setAttribute('aria-hidden', 'true');
+              if (window.LUCIDE_ICONS && window.LUCIDE_ICONS.folder) icon.innerHTML = window.LUCIDE_ICONS.folder;
+              entry.row.insertBefore(icon, entry.row.firstChild);
+              var toggle = document.createElement('span');
+              toggle.className = 'icon-btn toggle';
+              if (window.LUCIDE_ICONS) toggle.innerHTML = open ? window.LUCIDE_ICONS.chevronDown : window.LUCIDE_ICONS.chevronRight;
+              else toggle.textContent = open ? '▼' : '▶';
+              entry.row.appendChild(toggle);
+              var ul = document.createElement('ul');
+              entry.row.addEventListener('click', function () {
+                ul.hidden = !ul.hidden;
+                if (window.LUCIDE_ICONS) toggle.innerHTML = ul.hidden ? window.LUCIDE_ICONS.chevronRight : window.LUCIDE_ICONS.chevronDown;
+                else toggle.textContent = ul.hidden ? '▶' : '▼';
+              });
+              container.appendChild(entry.row);
+              container.appendChild(ul);
+              ul.hidden = !open;
+              renderTree(ul, v, p, uri, true);
+            } else {
+              container.appendChild(entry.row);
+            }
           });
         }
       }
 
-      function render(documents, defs) {
-        definitions = defs || [];
+      function render(documents) {
         root.innerHTML = '';
         if (!documents || documents.length === 0) {
           root.innerHTML = '<div class="empty">Open a .scene file to view state.</div>';
           return;
         }
-
-        documents.forEach((doc) => {
-          const data = doc.data || {};
-          const docHeader = document.createElement('div');
-          docHeader.className = 'doc-header';
-          const docName = document.createElement('span');
-          docName.className = 'doc-name';
-          docName.textContent = doc.name;
-          docHeader.appendChild(docName);
-          const docAddBtn = document.createElement('button');
-          docAddBtn.className = 'doc-add';
-          docAddBtn.type = 'button';
-          docAddBtn.title = 'Add top-level property';
-          docAddBtn.setAttribute('aria-label', 'Add top-level property');
-          if (window.LUCIDE_ICONS && window.LUCIDE_ICONS.plus) docAddBtn.innerHTML = window.LUCIDE_ICONS.plus;
-          else docAddBtn.textContent = '+';
-          docAddBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openAddDropdown([], data, doc.uri, docAddBtn);
-          });
-          docHeader.appendChild(docAddBtn);
-          root.appendChild(docHeader);
-
-          const ul = document.createElement('ul');
+        documents.forEach(function (doc) {
+          var data = doc.data || {};
+          var header = document.createElement('div');
+          header.className = 'doc-header';
+          var nameEl = document.createElement('span');
+          nameEl.className = 'doc-name';
+          nameEl.textContent = doc.name;
+          header.appendChild(nameEl);
+          var addBtn = document.createElement('button');
+          addBtn.className = 'icon-btn';
+          addBtn.type = 'button';
+          addBtn.title = 'Add property';
+          addBtn.setAttribute('aria-label', 'Add property');
+          if (window.LUCIDE_ICONS && window.LUCIDE_ICONS.plus) addBtn.innerHTML = window.LUCIDE_ICONS.plus;
+          else addBtn.textContent = '+';
+          addBtn.addEventListener('click', function (e) { e.stopPropagation(); openAddMenu([], data, doc.uri, addBtn); });
+          header.appendChild(addBtn);
+          root.appendChild(header);
+          var ul = document.createElement('ul');
           ul.className = 'tree';
           root.appendChild(ul);
-          Object.entries(data).forEach(([key, value]) => {
-            const path = [key];
-            const entry = buildEntry(key, value, path, doc.uri, doc.name);
-            if (hasChildren(value)) {
-              const childUl = document.createElement('ul');
-              const icon = document.createElement('span');
-              icon.className = 'row-icon';
-              icon.setAttribute('aria-hidden', 'true');
-              if (window.LUCIDE_ICONS) icon.innerHTML = window.LUCIDE_ICONS.folder;
-              entry.row.insertBefore(icon, entry.row.firstChild);
-              const toggle = document.createElement('span');
-              toggle.className = 'toggle';
-              if (window.LUCIDE_ICONS) toggle.innerHTML = window.LUCIDE_ICONS.chevronDown;
-              else toggle.textContent = '▼';
-              addPlusButton(entry.row, path, value, doc.uri);
-              entry.row.appendChild(toggle);
-              entry.row.addEventListener('click', () => {
-                childUl.hidden = !childUl.hidden;
-                if (window.LUCIDE_ICONS) toggle.innerHTML = childUl.hidden ? window.LUCIDE_ICONS.chevronRight : window.LUCIDE_ICONS.chevronDown;
-                else toggle.textContent = childUl.hidden ? '▶' : '▼';
-              });
-              ul.appendChild(entry.row);
-              ul.appendChild(childUl);
-              childUl.hidden = false;
-              renderNode(value, path, doc.uri, doc.name, childUl, true);
-            } else {
-              ul.appendChild(entry.row);
-            }
-          });
+          renderTree(ul, data, [], doc.uri, true);
         });
       }
 
-      window.addEventListener('message', (e) => {
-        const msg = e.data;
-        if (msg.type === 'update') render(msg.documents, msg.definitions);
+      window.addEventListener('message', function (e) {
+        var msg = e.data;
+        if (msg.type === 'update') render(msg.documents || []);
       });
 
       vscode.postMessage({ type: 'ready' });

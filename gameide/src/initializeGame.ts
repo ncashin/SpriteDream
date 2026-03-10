@@ -6,73 +6,43 @@ import {
 } from "./gameloop.js";
 import { setInitialScene } from "./scene.js";
 
-export type Plugin<T = unknown> = (input: T) => T;
+export type Plugin = (input: any) => any;
 
-type PluginFunction = (input: any) => any;
-
-type PluginAdds<P> = P extends (input: infer I) => infer O
-  ? Omit<O, keyof I>
+type ContextAddedByPlugin<PluginFunction> = PluginFunction extends (input: infer In) => infer Out
+  ? Omit<Out, keyof In>
   : never;
 
-type ReducePlugins<Ps extends readonly PluginFunction[]> = Ps extends readonly [
-  infer P,
-  ...infer Rest,
-]
-  ? P extends PluginFunction
-    ? Rest extends readonly PluginFunction[]
-      ? PluginAdds<P> & ReducePlugins<Rest>
-      : PluginAdds<P>
-    : unknown
-  : unknown;
+type ReducedContext<PluginList extends readonly Plugin[]> =
+  PluginList extends readonly [infer First, ...infer Rest]
+    ? Rest extends readonly Plugin[]
+      ? ContextAddedByPlugin<First> & ReducedContext<Rest>
+      : ContextAddedByPlugin<First>
+    : unknown;
 
 export type FinalContext<
-  Initial,
-  Plugins extends readonly PluginFunction[],
-> = Initial & ReducePlugins<Plugins>;
-
-/** Use so plugins array is inferred as a tuple and main() context is fully typed. */
-export function createPlugins<
-  P extends readonly [PluginFunction, ...PluginFunction[]],
->(plugins: P): P {
-  return plugins;
-}
-
-export type InitializeGameOptions<
-  Initial = unknown,
-  Plugins extends readonly PluginFunction[] = readonly [],
-> = {
-  plugins?: Plugins;
-  initialContext: Initial;
-  initialScene?: Record<string, unknown>;
-  main: (context: FinalContext<Initial, Plugins>) => void;
-};
+  InitialContext,
+  PluginList extends readonly Plugin[],
+> = InitialContext & ReducedContext<PluginList>;
 
 const MAIN_SCOPE = "main";
 
 function initializeGame<
-  Initial,
-  const Plugins extends readonly [PluginFunction, ...PluginFunction[]],
+  InitialContext,
+  const PluginList extends readonly Plugin[] = readonly [],
 >(options: {
-  initialContext: Initial;
-  plugins: Plugins;
+  initialContext: InitialContext;
+  plugins?: PluginList;
   initialScene?: Record<string, unknown>;
-  main: (context: FinalContext<Initial, Plugins>) => void;
-}): FinalContext<Initial, Plugins>;
-function initializeGame<Initial>(options: {
-  initialContext: Initial;
-  initialScene?: Record<string, unknown>;
-  main: (context: Initial) => void;
-}): Initial;
-function initializeGame<Initial, Plugins extends readonly PluginFunction[]>(
-  options: InitializeGameOptions<Initial, Plugins>,
-): FinalContext<Initial, Plugins> | Initial {
-  let result: FinalContext<Initial, Plugins> | Initial;
+  main: (context: FinalContext<InitialContext, PluginList>) => void;
+}): FinalContext<InitialContext, PluginList> {
+  type ResultContext = FinalContext<InitialContext, PluginList>;
+  let result: ResultContext;
 
   if (import.meta.hot && import.meta.hot.data?.context !== undefined) {
     result = import.meta.hot.data.context;
     removeGameUpdatesForScope(import.meta.hot.data.mainScope);
     setUpdateScope(MAIN_SCOPE);
-    options.main(result as FinalContext<Initial, Plugins>);
+    options.main(result);
     clearUpdateScope();
     import.meta.hot.data.context = result;
     return result;
@@ -82,13 +52,12 @@ function initializeGame<Initial, Plugins extends readonly PluginFunction[]>(
     setInitialScene(options.initialScene);
   }
 
-  result = options.initialContext as FinalContext<Initial, Plugins> | Initial;
+  result = options.initialContext as ResultContext;
   if (Array.isArray(options.plugins)) {
-    for (const plugin of options.plugins) {
-      if (typeof plugin === "function") {
-        result = plugin(result) as FinalContext<Initial, Plugins> | Initial;
-      }
-    }
+    result = options.plugins.reduce(
+      (ctx, plugin) => (typeof plugin === "function" ? plugin(ctx) : ctx),
+      result
+    ) as ResultContext;
   }
 
   if (import.meta.hot) {
@@ -97,7 +66,7 @@ function initializeGame<Initial, Plugins extends readonly PluginFunction[]>(
   startGameloop();
 
   setUpdateScope(MAIN_SCOPE);
-  options.main(result as FinalContext<Initial, Plugins>);
+  options.main(result);
   clearUpdateScope();
   if (import.meta.hot) {
     import.meta.hot.data.context = result;
