@@ -21,16 +21,18 @@ const PlayerDefinition = defineObject(
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
+const plugins = [
+  editorPlugin(),
+  inputPlugin(inputConfig),
+  render2DPlugin(),
+] as const;
+
 initializeGame({
   initialContext: {
     rootElement,
   },
   initialScene,
-  plugins: [
-    editorPlugin(),
-    inputPlugin(inputConfig),
-    render2DPlugin(),
-  ],
+  plugins,
   main({ input, render2D }) {
     const { canvasElement, context } = render2D;
     const scene = getScene();
@@ -60,8 +62,9 @@ initializeGame({
       const canvasW = canvasElement.clientWidth;
       const canvasH = canvasElement.clientHeight;
 
+      context.clearRect(0, 0, canvasW, canvasH);
+
       players.forEach((player) => {
-        context.clearRect(0, 0, canvasW, canvasH);
         context.fillStyle = "#0000ff";
         context.fillRect(player.x, player.y, player.size, player.size);
       });

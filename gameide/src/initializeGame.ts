@@ -28,10 +28,10 @@ const MAIN_SCOPE = "main";
 
 function initializeGame<
   InitialContext,
-  const PluginList extends readonly Plugin[] = readonly [],
+  const PluginList extends readonly Plugin[],
 >(options: {
   initialContext: InitialContext;
-  plugins?: PluginList;
+  plugins: PluginList;
   initialScene?: Record<string, unknown>;
   main: (context: FinalContext<InitialContext, PluginList>) => void;
 }): FinalContext<InitialContext, PluginList> {
