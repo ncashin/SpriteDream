@@ -20,24 +20,6 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "gameide",
-          "title": "GameIDE",
-          "icon": "$(file-code)"
-        }
-      ]
-    },
-    "views": {
-      "gameide": [
-        {
-          "type": "webview",
-          "id": "gameide.sceneViewSidebar",
-          "name": "Scene View Sidebar"
-        }
-      ]
-    },
     "customEditors": [
       {
         "viewType": "gameide.sceneEditor",
@@ -76,7 +58,6 @@
     "vite": "^6.0.0"
   },
   "dependencies": {
-    "gameide": "*",
-    "lucide": "^0.577.0"
+    "gameide": "*"
   }
 }

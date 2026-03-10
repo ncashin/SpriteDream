@@ -13,7 +13,7 @@ const nodeBuiltins = [
 
 export default defineConfig({
   ssr: {
-    noExternal: true, // bundle gameide, lucide, etc. so the extension is self-contained
+    noExternal: true, // bundle gameide so the extension is self-contained
   },
   build: {
     ssr: path.resolve(__dirname, "src/extension.ts"),

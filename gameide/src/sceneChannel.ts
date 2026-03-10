@@ -40,6 +40,8 @@ export interface CreateSceneChannelOptions {
   getSceneData(): SceneData;
   setSceneData(data: SceneData): void;
   applyScenePatch: (scene: SceneData, patch: ScenePatch) => void;
+  /** When true, incoming scene data is not applied (e.g. game mode to avoid persisting). */
+  getPaused?: () => boolean;
   subscribeToUpdates?: (callback: (update: SceneUpdate) => void) => () => void;
   onRequestInitial?: () => string;
 }
@@ -55,7 +57,8 @@ export interface SceneChannel {
 export function createSceneChannel(
   options: CreateSceneChannelOptions
 ): SceneChannel {
-  const { transport, getSceneData, setSceneData, applyScenePatch: applyPatch, subscribeToUpdates, onRequestInitial } = options;
+  const { transport, getSceneData, setSceneData, applyScenePatch: applyPatch, getPaused, subscribeToUpdates, onRequestInitial } = options;
+  const isPaused = () => getPaused?.() === true;
 
   let initialSceneReceived = false;
 
@@ -88,6 +91,7 @@ export function createSceneChannel(
       type === "requestInitialScene";
     const isInitialScene =
       type === SCENE_CHANNEL.initialScene ||
+      type === "scene" ||
       type === "setSceneContent" ||
       type === "sceneUpdate";
     const isScenePatch =
@@ -99,6 +103,8 @@ export function createSceneChannel(
       sendInitialScene(onRequestInitial());
       return;
     }
+
+    if (isPaused()) return;
 
     if (isInitialScene && content !== undefined) {
       try {
@@ -131,7 +137,7 @@ export function createSceneChannel(
   if (subscribeToUpdates) {
     getScene();
     unsubscribeOutgoing = subscribeToUpdates((update: SceneUpdate) => {
-      if (!initialSceneReceived) return;
+      if (!initialSceneReceived || isPaused()) return;
       const fullPath = [...update.path, update.key];
       const patch =
         update.type === "set"

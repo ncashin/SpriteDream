@@ -197,3 +197,33 @@ export function replaceScene(data: SceneObject | undefined): void {
     scene = createProxy(rootTarget, []);
   }
 }
+
+/** Set a value at path through the scene proxy so subscribers are notified. */
+export function setSceneAtPath(path: PropertyKey[], value: unknown): void {
+  const s = getScene() as Record<PropertyKey, unknown>;
+  if (path.length === 0) return;
+  let cur: Record<PropertyKey, unknown> = s;
+  for (let i = 0; i < path.length - 1; i++) {
+    const key = path[i];
+    let next = cur[key];
+    if (next === undefined || next === null || typeof next !== "object") {
+      next = {};
+      cur[key] = next;
+    }
+    cur = next as Record<PropertyKey, unknown>;
+  }
+  cur[path[path.length - 1]] = value;
+}
+
+/** Delete the key at path through the scene proxy so subscribers are notified. */
+export function deleteSceneAtPath(path: PropertyKey[]): void {
+  const s = getScene() as Record<PropertyKey, unknown>;
+  if (path.length === 0) return;
+  let cur: Record<PropertyKey, unknown> = s;
+  for (let i = 0; i < path.length - 1; i++) {
+    const next = cur[path[i]];
+    if (next === undefined || next === null || typeof next !== "object") return;
+    cur = next as Record<PropertyKey, unknown>;
+  }
+  delete cur[path[path.length - 1]];
+}

@@ -1,15 +1,12 @@
 import { createSceneTransportPostMessage } from "./sceneChannelTransport.js";
 import { createSceneChannel } from "./sceneChannel.js";
 import { applyScenePatch } from "./scenePatch.js";
-import { getDefinedObjectsForEditor } from "./objectRegistry.js";
-import { GameIDEMode, getMode, setMode, onModeChange } from "./mode.js";
 import {
   getRootTarget,
   replaceScene,
   subscribeToSceneUpdates,
 } from "./scene.js";
-
-export const EDITOR_MODE_MESSAGE_TYPE = "gameide.editor.mode";
+import { getMode, GameIDEMode } from "./mode.js";
 
 export type ScenePatchMessage = Record<string, unknown>;
 
@@ -19,53 +16,20 @@ export const editorPlugin = () => (input: unknown) => {
     typeof window !== "undefined" &&
     window.self !== window.top
   ) {
-    const sceneChannel = createSceneChannel({
-      transport: createSceneTransportPostMessage({
-        target: window.parent,
-        source: window,
-      }),
-      getSceneData: () => JSON.parse(JSON.stringify(getRootTarget() ?? {})),
-      setSceneData: (data) => replaceScene(data),
-      applyScenePatch,
-      subscribeToUpdates: subscribeToSceneUpdates,
-    });
-
-    onModeChange((mode) => {
-      window.parent.postMessage(
-        { type: EDITOR_MODE_MESSAGE_TYPE, mode },
-        "*"
-      );
-    });
-    window.parent.postMessage(
-      { type: EDITOR_MODE_MESSAGE_TYPE, mode: getMode() },
-      "*"
-    );
-
-    window.addEventListener("message", (event: MessageEvent) => {
-      const message = event.data;
-      if (typeof message.type !== "string") return;
-
-      if (message.type === "gameide.editor.run") {
-        setMode(GameIDEMode.Game);
-        return;
-      }
-      if (message.type === "gameide.editor.stop") {
-        setMode(GameIDEMode.Editor);
-        sceneChannel.sendSceneChanged(
-          JSON.stringify(getRootTarget() ?? {}, null, 2)
-        );
-        return;
-      }
-      if (message.type === "gameide.editor.requestDefinitions") {
-        setTimeout(() => {
-          window.parent.postMessage(
-            { type: "gameide.editor.definitions", definitions: getDefinedObjectsForEditor() },
-            "*"
-          );
-        }, 0);
-        return;
-      }
-    });
+    return input;
   }
+  
+  createSceneChannel({
+    transport: createSceneTransportPostMessage({
+      target: window.parent,
+      source: window,
+    }),
+    getSceneData: () => JSON.parse(JSON.stringify(getRootTarget() ?? {})),
+    setSceneData: (data) => replaceScene(data),
+    applyScenePatch,
+    subscribeToUpdates: subscribeToSceneUpdates,
+    getPaused: () => getMode() !== GameIDEMode.Editor,
+  });
+
   return input;
 };

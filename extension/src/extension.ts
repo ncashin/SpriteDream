@@ -1,9 +1,8 @@
 import * as vscode from "vscode";
-import { buildPatchFromDiff, type SceneData } from "gameide";
+import type { SceneData } from "gameide";
 import { ViteDevServer, resolveRuntimeDir } from "./devServer";
 import { SceneDocumentRegistry } from "./sceneDocumentRegistry";
 import { SceneEditorProvider } from "./sceneEditorProvider";
-import { SceneViewSidebarWebviewProvider } from "./sceneViewSidebarWebview";
 
 const SCENE_FILE_DEBOUNCE_MS = 150;
 
@@ -33,13 +32,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     )
   );
 
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(
-      "gameide.sceneViewSidebar",
-      new SceneViewSidebarWebviewProvider(context.extensionUri, sceneDocumentRegistry)
-    )
-  );
-
   const sceneWatcher = vscode.workspace.createFileSystemWatcher("**/*.scene");
   const pendingUri = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -49,15 +41,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     try {
       const bytes = await vscode.workspace.fs.readFile(uri);
       const newData = JSON.parse(Buffer.from(bytes).toString("utf8")) as SceneData;
-      const lastFromDisk = doc.getDocumentData();
-      const patch = buildPatchFromDiff(
-        lastFromDisk as Record<string, unknown>,
-        newData as Record<string, unknown>
-      );
       doc.revertData(newData);
-      if (Object.keys(patch).length > 0) {
-        doc.notifyWebviewsPatch(patch);
-      }
     } catch {
       // Ignore read/parse errors (e.g. invalid JSON while saving)
     }

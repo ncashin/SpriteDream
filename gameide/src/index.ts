@@ -31,6 +31,8 @@ export {
   getRootTarget,
   queryScene,
   getValueAtPath,
+  setSceneAtPath,
+  deleteSceneAtPath,
 } from "./scene.js";
 export type { SceneObject, SceneUpdate } from "./scene.js";
 export {
