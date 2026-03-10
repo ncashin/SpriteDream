@@ -187,6 +187,28 @@ function copyInto(target: SceneObject, source: SceneObject): void {
   }
 }
 
+/** Copy source into target, reusing existing nested objects so object references stay valid. */
+function copyIntoPreservingRefs(target: SceneObject, source: SceneObject): void {
+  for (const key of Object.keys(target)) {
+    if (!(key in source)) delete target[key];
+  }
+  for (const key of Object.keys(source)) {
+    const value = source[key];
+    if (isSceneObject(value)) {
+      const existing = target[key];
+      if (isSceneObject(existing)) {
+        copyIntoPreservingRefs(existing, value as SceneObject);
+      } else {
+        const child: SceneObject = {};
+        target[key] = child;
+        copyInto(child, value as SceneObject);
+      }
+    } else {
+      target[key] = value;
+    }
+  }
+}
+
 export function replaceScene(data: SceneObject | undefined): void {
   const base = (data ?? {}) as SceneObject;
   if (rootTarget) {
@@ -196,6 +218,15 @@ export function replaceScene(data: SceneObject | undefined): void {
     copyInto(rootTarget, base);
     scene = createProxy(rootTarget, []);
   }
+}
+
+/** Restore scene from snapshot in-place so existing scene object references remain valid. */
+export function restoreSceneSnapshot(data: SceneObject): void {
+  if (!rootTarget) {
+    replaceScene(data);
+    return;
+  }
+  copyIntoPreservingRefs(rootTarget, data);
 }
 
 /** Set a value at path through the scene proxy so subscribers are notified. */

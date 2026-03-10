@@ -13,16 +13,17 @@ export function createEditorUI(): void {
   runButton.type = "button";
   runButton.style.cssText = `
     position: absolute;
-    bottom: 16px;
-    right: 16px;
+    top: 1rem;
+    right: 1rem;
     pointer-events: auto;
-    padding: 8px 16px;
-    font-size: 14px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
     cursor: pointer;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background: #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid var(--vscode-button-border, transparent);
+    border-radius: 0.25rem;
+    background: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #fff);
+    font-family: var(--vscode-font-family, inherit);
   `;
 
   function updateLabel(): void {
