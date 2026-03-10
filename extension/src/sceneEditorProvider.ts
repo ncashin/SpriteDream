@@ -15,129 +15,110 @@ const UNDOABLE_MESSAGE_TYPES = new Set<string>([
   SCENE_CHANNEL.initialScene,
   SCENE_CHANNEL.scenePatch,
 ]);
-import type { ViteDevServer } from "./devServer";
-import type { SceneDocumentRegistry } from "./sceneDocumentRegistry";
+import type { ViteDevServer } from "./viteDevServer";
 import sceneEditorHTML from "./sceneEditor.html?raw";
 
 export type { SceneData, ScenePatch };
 
 export class SceneDocument implements vscode.CustomDocument {
-  private _data: SceneData;
-  private _documentData: SceneData;
-  private _savedData: SceneData;
-  private _webviewPanels: Set<vscode.WebviewPanel> = new Set();
-  private readonly _registry: SceneDocumentRegistry | undefined;
+  private data: SceneData;
+  private documentData: SceneData;
+  private savedData: SceneData;
+  private broadcastHandler: ((content: string) => void) | undefined;
+  private readonly onDispose: ((doc: SceneDocument) => void) | undefined;
 
   constructor(
     public readonly uri: vscode.Uri,
-    data: SceneData,
-    registry?: SceneDocumentRegistry,
+    initialData: SceneData,
+    onDispose?: (doc: SceneDocument) => void,
   ) {
-    this._data = JSON.parse(JSON.stringify(data));
-    this._documentData = JSON.parse(JSON.stringify(data));
-    this._savedData = JSON.parse(JSON.stringify(data));
-    this._registry = registry;
+    this.data = JSON.parse(JSON.stringify(initialData));
+    this.documentData = JSON.parse(JSON.stringify(initialData));
+    this.savedData = JSON.parse(JSON.stringify(initialData));
+    this.onDispose = onDispose;
   }
 
   getData(): SceneData {
-    return { ...this._data };
+    return { ...this.data };
   }
 
   getDocumentData(): SceneData {
-    return { ...this._documentData };
+    return { ...this.documentData };
   }
 
   getSavedData(): SceneData {
-    return { ...this._savedData };
+    return { ...this.savedData };
   }
 
   getPatchFromSavedToCurrent(): ScenePatch {
     return buildPatchFromDiff(
-      this._savedData as Record<string, unknown>,
-      this._data as Record<string, unknown>,
+      this.savedData as Record<string, unknown>,
+      this.data as Record<string, unknown>,
     );
   }
 
   markSaved(): void {
-    this._savedData = JSON.parse(JSON.stringify(this._documentData));
+    this.savedData = JSON.parse(JSON.stringify(this.documentData));
   }
 
   setData(data: SceneData): void {
-    this._data = data;
-    this._documentData = JSON.parse(JSON.stringify(data));
-    this._registry?.notifyDocumentChanged(this);
+    this.data = data;
+    this.documentData = JSON.parse(JSON.stringify(data));
     this.broadcastScene();
   }
 
-  addWebviewPanel(panel: vscode.WebviewPanel): void {
-    this._webviewPanels.add(panel);
-    panel.onDidDispose(() => this._webviewPanels.delete(panel));
+  setBroadcastScene(handler: ((content: string) => void) | undefined): void {
+    this.broadcastHandler = handler;
   }
 
-  /** Push current scene to all consumers (editor panels, then sidebar via registry). */
   broadcastScene(): void {
-    const content = JSON.stringify(this._data, null, 2);
-    for (const panel of this._webviewPanels) {
-      if (panel.webview) {
-        panel.webview.postMessage({ type: "scene", content });
-      }
-    }
+    this.broadcastHandler?.(JSON.stringify(this.data, null, 2));
   }
 
   applyPatch(patch: ScenePatch): void {
-    applyScenePatch(this._data, patch);
-    applyScenePatch(this._documentData, patch);
-    this._registry?.notifyDocumentChanged(this);
+    applyScenePatch(this.data, patch);
+    applyScenePatch(this.documentData, patch);
     this.broadcastScene();
   }
 
   revertData(data: SceneData): void {
-    this._data = JSON.parse(JSON.stringify(data));
-    this._documentData = JSON.parse(JSON.stringify(data));
-    this._savedData = JSON.parse(JSON.stringify(data));
-    this._registry?.notifyDocumentChanged(this);
+    this.data = JSON.parse(JSON.stringify(data));
+    this.documentData = JSON.parse(JSON.stringify(data));
+    this.savedData = JSON.parse(JSON.stringify(data));
     this.broadcastScene();
   }
 
   dispose(): void {
-    this._webviewPanels.clear();
-    this._registry?.remove(this);
+    this.broadcastHandler = undefined;
+    this.onDispose?.(this);
   }
 }
 
 export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDocument> {
-  private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<
+  private readonly didChangeCustomDocumentEmitter = new vscode.EventEmitter<
     vscode.CustomDocumentEditEvent<SceneDocument>
   >();
-  private readonly _webviewToDocument = new Map<
+  private readonly webviewToDocument = new Map<
     vscode.Webview,
     SceneDocument
   >();
+  private readonly documents = new Map<string, SceneDocument>();
 
-  readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
+  readonly onDidChangeCustomDocument = this.didChangeCustomDocumentEmitter.event;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly devServer: ViteDevServer | null = null,
-    private readonly documentRegistry?: SceneDocumentRegistry,
-  ) {
-    documentRegistry?.onDocumentEdit((e) => {
-      const sceneDoc = e.document as SceneDocument;
-      const previous = JSON.parse(JSON.stringify(e.previous)) as SceneData;
-      const next = JSON.parse(JSON.stringify(e.next)) as SceneData;
-      this._onDidChangeCustomDocument.fire({
-        document: sceneDoc,
-        label: "Edit",
-        undo: async () => sceneDoc.setData(previous),
-        redo: async () => sceneDoc.setData(next),
-      });
-    });
+  ) {}
+
+  getDocumentByUri(uri: vscode.Uri): SceneDocument | undefined {
+    return this.documents.get(uri.toString());
   }
 
   async openCustomDocument(
     uri: vscode.Uri,
     openContext: vscode.CustomDocumentOpenContext,
-    _token: vscode.CancellationToken,
+    token: vscode.CancellationToken,
   ): Promise<SceneDocument> {
     let data: SceneData = {};
     if (openContext.backupId) {
@@ -164,29 +145,30 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
         data = {};
       }
     }
-    const document = new SceneDocument(uri, data, this.documentRegistry);
-    this.documentRegistry?.add(document);
+    const onDispose = (doc: SceneDocument) => {
+      this.documents.delete(doc.uri.toString());
+    };
+    const document = new SceneDocument(uri, data, onDispose);
+    this.documents.set(uri.toString(), document);
     return document;
   }
 
   async resolveCustomEditor(
     document: SceneDocument,
     webviewPanel: vscode.WebviewPanel,
-    _token: vscode.CancellationToken,
+    token: vscode.CancellationToken,
   ): Promise<void> {
-    document.addWebviewPanel(webviewPanel);
-    this._webviewToDocument.set(webviewPanel.webview, document);
-    webviewPanel.onDidDispose(() =>
-      this._webviewToDocument.delete(webviewPanel.webview),
-    );
-    webviewPanel.onDidChangeViewState((e) => {
-      if (e.webviewPanel.visible) {
-        this.documentRegistry?.setActiveDocument(document);
-      }
+    document.setBroadcastScene((content) => {
+      webviewPanel.webview.postMessage({ type: "scene", content });
     });
-    if (webviewPanel.visible) {
-      this.documentRegistry?.setActiveDocument(document);
-    }
+    webviewPanel.onDidDispose(() => {
+      document.setBroadcastScene(undefined);
+      this.webviewToDocument.delete(webviewPanel.webview);
+    });
+    this.webviewToDocument.set(webviewPanel.webview, document);
+    webviewPanel.onDidChangeViewState(() => {
+      // View state changed (e.g. tab visibility)
+    });
     const webview = webviewPanel.webview;
     webview.options = {
       enableScripts: true,
@@ -196,40 +178,53 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     webview.html = html;
 
     const transport: SceneChannelTransport = {
-      send: (m: unknown) => {
-        const msg = m as { type: string; content?: string };
-        if (msg.content !== undefined) {
-          webview.postMessage({ type: "scene", content: msg.content });
+      send: (message: unknown): void => {
+        const castMessage = message as { type: string; content?: string };
+        if (typeof castMessage.content !== "undefined") {
+          webview.postMessage({
+            type: "scene",
+            content: castMessage.content,
+          });
         }
       },
-      onMessage: (handler: (m: SceneChannelInMessage) => void) => {
-        webview.onDidReceiveMessage((raw: unknown) => {
+      onMessage: (
+        handler: (message: SceneChannelInMessage) => void
+      ): () => void => {
+        const disposable = webview.onDidReceiveMessage((raw: unknown) => {
           const message = raw as {
             type: string;
             content?: string;
             patch?: ScenePatch;
           };
-          const undoable = UNDOABLE_MESSAGE_TYPES.has(message.type);
-          const previous = undoable
-            ? JSON.parse(JSON.stringify(document.getData()))
-            : null;
+          const isUndoable = UNDOABLE_MESSAGE_TYPES.has(message.type);
+          let previous: SceneData | null = null;
+          if (isUndoable) {
+            previous = JSON.parse(JSON.stringify(document.getData()));
+          }
           handler(message as SceneChannelInMessage);
           if ((SCENE_MESSAGE_TYPES as Set<string>).has(message.type)) {
-            this.documentRegistry?.notifyDocumentChanged(document);
+            document.broadcastScene();
           }
-          if (undoable && previous) {
+          if (isUndoable && previous) {
             const next = JSON.parse(JSON.stringify(document.getData()));
-            this._onDidChangeCustomDocument.fire({
-              document,
-              label: "Edit",
-              undo: async () => document.setData(previous),
-              redo: async () => document.setData(next),
-            });
+            const actuallyChanged =
+              JSON.stringify(previous) !== JSON.stringify(next);
+            if (actuallyChanged) {
+              this.didChangeCustomDocumentEmitter.fire({
+                document,
+                label: "Edit",
+                undo: async () => document.setData(previous!),
+                redo: async () => document.setData(next),
+              });
+            }
           }
         });
-        return () => {};
+        return () => {
+          disposable.dispose();
+        };
       },
     };
+
 
     createSceneChannel({
       transport,
@@ -267,10 +262,10 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
 
   async revertCustomDocument(
     document: SceneDocument,
-    _cancellation: vscode.CancellationToken,
+    cancellation: vscode.CancellationToken,
   ): Promise<void> {
     const bytes = await vscode.workspace.fs.readFile(document.uri);
-    const data = JSON.parse(Buffer.from(bytes).toString("utf8")) as SceneData;
+    const data = JSON.parse(Buffer.from(bytes).toString("utf8"));
     document.revertData(data);
   }
 
@@ -306,7 +301,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     await vscode.workspace.fs.writeFile(uri, bytes);
   }
 
-  private getHTMLForWebview(_webview: vscode.Webview): string {
+  private getHTMLForWebview(webview: vscode.Webview): string {
     const port = this.devServer
       ? this.devServer.getPort()
       : parseInt(process.env.GAMEIDE_RUNTIME_PORT ?? "38472", 10) || 38472;

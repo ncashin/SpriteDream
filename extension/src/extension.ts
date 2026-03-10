@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import type { SceneData } from "gameide";
-import { ViteDevServer, resolveRuntimeDir } from "./devServer";
-import { SceneDocumentRegistry } from "./sceneDocumentRegistry";
+import { ViteDevServer, resolveRuntimeDir } from "./viteDevServer";
 import { SceneEditorProvider } from "./sceneEditorProvider";
 
 const SCENE_FILE_DEBOUNCE_MS = 150;
@@ -16,15 +15,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await devServer.start();
   }
 
-  const sceneDocumentRegistry = new SceneDocumentRegistry();
+  const sceneEditorProvider = new SceneEditorProvider(
+    context.extensionUri,
+    devServer
+  );
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(
       "gameide.sceneEditor",
-      new SceneEditorProvider(
-        context.extensionUri,
-        devServer,
-        sceneDocumentRegistry
-      ),
+      sceneEditorProvider,
       {
         webviewOptions: { retainContextWhenHidden: true },
         supportsMultipleEditorsPerDocument: true,
@@ -36,7 +34,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const pendingUri = new Map<string, ReturnType<typeof setTimeout>>();
 
   async function syncSceneFromDisk(uri: vscode.Uri): Promise<void> {
-    const doc = sceneDocumentRegistry.getDocumentByUri(uri);
+    const doc = sceneEditorProvider.getDocumentByUri(uri);
     if (!doc) return;
     try {
       const bytes = await vscode.workspace.fs.readFile(uri);

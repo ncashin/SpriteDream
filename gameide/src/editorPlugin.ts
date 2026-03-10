@@ -8,17 +8,12 @@ import {
   subscribeToSceneUpdates,
 } from "./scene.js";
 import { GameIDEMode, onModeChange } from "./mode.js";
+import { createEditorUI } from "./editorUI.js";
 
 export type ScenePatchMessage = Record<string, unknown>;
 
 export const editorPlugin = () => (input: unknown) => {
-  if (
-    import.meta.env.DEV &&
-    typeof window !== "undefined" &&
-    window.self !== window.top
-  ) {
-    return input;
-  }
+  createEditorUI();
 
   const channel = createSceneChannel({
     transport: createSceneTransportPostMessage({
