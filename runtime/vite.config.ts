@@ -8,6 +8,7 @@ const port = parseInt(process.env.GAMEIDE_RUNTIME_PORT ?? "38472") || 38472;
 
 export default defineConfig({
   base: "/",
+  publicDir: "assets",
   plugins: [gameidePlugin()],
   resolve: {
     alias: {

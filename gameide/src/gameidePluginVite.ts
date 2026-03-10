@@ -17,16 +17,28 @@ function jsonToObjectLiteral(value: unknown): string {
   return "undefined";
 }
 
+const HMR_ACCEPT = `if (import.meta.hot) {
+  import.meta.hot.accept();
+}
+`;
+
 export function gameidePlugin(): Plugin {
   return {
     name: "gameide-scene-to-const",
-    transform(src, id) {
-      if (!id.endsWith(".scene")) return;
-      const literal = jsonToObjectLiteral(JSON.parse(src));
-      return {
-        code: `export default ${literal};`,
-        map: null,
-      };
+    transform(source, id) {
+      if (id.endsWith(".scene")) {
+        const literal = jsonToObjectLiteral(JSON.parse(source));
+        return {
+          code: `export default ${literal};`,
+          map: null,
+        };
+      }
+      if (source.includes("initializeGame")) {
+        return {
+          code: source + HMR_ACCEPT,
+          map: null,
+        };
+      }
     },
   };
 }
