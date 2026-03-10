@@ -1,21 +1,21 @@
-import { createSceneTransportPostMessage } from "./sceneChannelTransport.js";
-import { createSceneChannel } from "./sceneChannel.js";
-import { applyScenePatch } from "./scenePatch.js";
-import type { SceneObject } from "./scene.js";
+import { createSceneTransportPostMessage } from "../sceneChannelTransport.js";
+import { createSceneChannel } from "../sceneChannel.js";
+import { applyScenePatch } from "../scenePatch.js";
+import type { SceneObject } from "../scene.js";
 import {
   getScene,
   getRootTarget,
   replaceScene,
   restoreSceneSnapshot,
   subscribeToSceneUpdates,
-} from "./scene.js";
-import { GameIDEMode, getMode, onModeChange } from "./mode.js";
+} from "../scene.js";
+import { GameIDEMode, getMode, onModeChange } from "../mode.js";
 import { createEditorUI } from "./editorUI.js";
 
 export type ScenePatchMessage = Record<string, unknown>;
 
 export const editorPlugin = () => (input: unknown) => {
-  createEditorUI(); 
+  createEditorUI();
 
   const channel = createSceneChannel({
     transport: createSceneTransportPostMessage({
@@ -56,7 +56,6 @@ export const editorPlugin = () => (input: unknown) => {
         break;
     }
   });
-
 
   return input;
 };

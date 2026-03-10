@@ -60,8 +60,8 @@ export {
 export type { SchemaToType, DefinedObject, ObjectMetadata } from "./objectRegistry.js";
 export { initializeGame } from "./initializeGame.js";
 export type { Plugin, FinalContext } from "./initializeGame.js";
-export { editorPlugin } from "./editorPlugin.js";
-export type { ScenePatchMessage } from "./editorPlugin.js";
+export { editorPlugin } from "./editor/editorPlugin.js";
+export type { ScenePatchMessage } from "./editor/editorPlugin.js";
 export {
   GameIDEMode,
   getMode,

@@ -1,4 +1,4 @@
-import { GameIDEMode, getMode, setMode, onModeChange } from "./mode.js";
+import { GameIDEMode, getMode, setMode, onModeChange } from "../mode.js";
 
 export function createEditorUI(): void {
   const overlay = document.createElement("div");
