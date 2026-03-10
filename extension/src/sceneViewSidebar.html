@@ -61,61 +61,75 @@
     .value[contenteditable="true"] { border-radius: 2px; }
     .value:focus { outline: none; box-shadow: none; }
     .value.placeholder { color: var(--vscode-input-placeholderForeground, #6b6b6b); }
-    .doc {
+    .doc-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       font-weight: 600;
       margin: 8px 0 6px 0;
       padding: 2px 4px 2px 0;
       color: var(--vscode-foreground);
     }
-    .doc:first-child { margin-top: 0; }
-    .row-icon {
+    .doc-header:first-child { margin-top: 0; }
+    .doc-name { flex: 1; min-width: 0; }
+    .doc-add {
+      flex-shrink: 0;
       width: 12px;
       height: 12px;
-      flex-shrink: 0;
+      min-width: 12px;
+      min-height: 12px;
+      padding: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       color: var(--vscode-descriptionForeground);
-      opacity: 0.8;
-      margin-right: 8px;
-    }
-    .row-icon svg { display: block; }
-    .toggle svg { display: block; }
-    .toggle {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--vscode-descriptionForeground);
-      margin-left: auto;
-      color: var(--vscode-descriptionForeground);
-      opacity: 0;
-      transition: opacity 0.1s ease;
-    }
-    .row.expandable:hover .toggle { opacity: 0.9; }
-    .add-from-def {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-left: 4px;
+      opacity: 1;
       border: none;
-      border-radius: 3px;
-      background: var(--vscode-button-secondaryBackground, #3c3c3c);
-      color: var(--vscode-button-secondaryForeground, #ccc);
+      background: transparent;
       cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.1s ease;
-      font-size: 14px;
-      line-height: 1;
     }
-    .row.expandable:hover .add-from-def { opacity: 0.9; }
-    .add-from-def:hover { opacity: 1 !important; }
+    .doc-add svg { display: block; width: 12px; height: 12px; shape-rendering: crispEdges; }
+    .doc-add:hover { color: var(--vscode-foreground); }
+    .row-icon,
+    .toggle,
+    .add-from-def,
+    .row-delete {
+      width: 12px;
+      height: 12px;
+      min-width: 12px;
+      min-height: 12px;
+      padding: 0;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--vscode-descriptionForeground);
+      opacity: 1;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .row-icon { margin-right: 4px; }
+    .row-icon svg,
+    .toggle svg,
+    .add-from-def svg,
+    .row-delete svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+      shape-rendering: crispEdges;
+    }
+    .toggle { margin-left: auto; }
+    .add-from-def { margin-left: 2px; cursor: pointer; }
     .add-from-def:disabled { opacity: 0.5; cursor: not-allowed; }
+    .row-delete { margin-left: 2px; cursor: pointer; }
+    .row .toggle,
+    .row .add-from-def,
+    .row .row-delete { opacity: 0; }
+    .row:hover .toggle,
+    .row:hover .add-from-def,
+    .row:hover .row-delete { opacity: 1; }
+    .row:hover .add-from-def:disabled { opacity: 0.5; }
     .def-dropdown {
       position: absolute;
       z-index: 100;
@@ -141,6 +155,20 @@
     .def-dropdown button:hover {
       background: var(--vscode-list-hoverBackground);
     }
+    .def-dropdown .dropdown-section {
+      padding: 4px 12px 2px;
+      font-size: 0.9em;
+      color: var(--vscode-descriptionForeground);
+    }
+    .def-dropdown .dropdown-divider {
+      height: 1px;
+      margin: 4px 0;
+      background: var(--vscode-widget-border);
+    }
+    .row-delete:hover { background: var(--vscode-inputValidation-errorBackground, rgba(255,0,0,0.1)); color: var(--vscode-errorForeground, #f14c4c); }
+    .key[contenteditable="true"] { outline: none; background: var(--vscode-input-background); border-radius: 2px; padding: 0 2px; }
+    .doc + .tree { padding-left: 0; }
+    .doc + .tree > .row { padding-left: 0; }
     .empty {
       color: var(--vscode-descriptionForeground);
       font-style: italic;
@@ -165,7 +193,7 @@
       }
 
       function hasChildren(v) {
-        return v !== null && typeof v === 'object' && (Array.isArray(v) || Object.keys(v).length > 0);
+        return v !== null && typeof v === 'object';
       }
 
       function isTypeToken(v) {
@@ -180,41 +208,134 @@
         return out;
       }
 
+      function uniqueNewKey(obj) {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return 'newKey';
+        let key = 'newKey';
+        let i = 0;
+        while (key in obj) key = 'newKey' + (++i);
+        return key;
+      }
+      function uniqueKeyForDef(obj, baseName) {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return baseName || 'newKey';
+        const name = baseName || 'newKey';
+        let key = name;
+        let i = 0;
+        while (key in obj) key = name + (++i);
+        return key;
+      }
+
+      function afterSceneChange() {
+        setTimeout(function () { vscode.postMessage({ type: 'requestUpdate' }); }, 50);
+      }
+
+      function openAddDropdown(path, value, uri, anchorEl) {
+        const rect = anchorEl.getBoundingClientRect();
+        const dropdown = document.createElement('div');
+        dropdown.className = 'def-dropdown';
+        dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+        dropdown.style.left = 'auto';
+        dropdown.style.top = (rect.bottom + 2) + 'px';
+        const primitives = [
+          { label: 'String', value: '' },
+          { label: 'Number', value: 0 },
+          { label: 'Boolean', value: false }
+        ];
+        const primSection = document.createElement('div');
+        primSection.className = 'dropdown-section';
+        primSection.textContent = 'Add primitive';
+        dropdown.appendChild(primSection);
+        primitives.forEach((p) => {
+          const b = document.createElement('button');
+          b.textContent = p.label;
+          b.type = 'button';
+          b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const key = uniqueNewKey(value);
+            const pathArr = Array.isArray(path) ? path : [];
+            vscode.postMessage({ type: 'addProperty', uri: String(uri), path: pathArr, key: String(key), value: p.value });
+            afterSceneChange();
+            close();
+          });
+          dropdown.appendChild(b);
+        });
+        const emptyObjBtn = document.createElement('button');
+        emptyObjBtn.textContent = 'Empty object';
+        emptyObjBtn.type = 'button';
+        emptyObjBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const key = uniqueNewKey(value);
+          const pathArr = Array.isArray(path) ? path : [];
+          vscode.postMessage({ type: 'addProperty', uri: String(uri), path: pathArr, key: String(key), value: {} });
+          afterSceneChange();
+          close();
+        });
+        dropdown.appendChild(emptyObjBtn);
+        if (definitions.length > 0) {
+          const div = document.createElement('div');
+          div.className = 'dropdown-divider';
+          dropdown.appendChild(div);
+          const objSection = document.createElement('div');
+          objSection.className = 'dropdown-section';
+          objSection.textContent = 'Add object';
+          dropdown.appendChild(objSection);
+        }
+        definitions.forEach((def) => {
+          const b = document.createElement('button');
+          b.textContent = def.name || 'Unnamed';
+          b.type = 'button';
+          b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const newObj = mergeSchemaIntoObject({}, def.schema);
+            const key = uniqueKeyForDef(value, def.name);
+            const pathArr = Array.isArray(path) ? path : [];
+            vscode.postMessage({ type: 'addProperty', uri: String(uri), path: pathArr, key: String(key), value: newObj });
+            afterSceneChange();
+            close();
+          });
+          dropdown.appendChild(b);
+        });
+        if (definitions.length > 0) {
+          const div2 = document.createElement('div');
+          div2.className = 'dropdown-divider';
+          dropdown.appendChild(div2);
+          const mergeSection = document.createElement('div');
+          mergeSection.className = 'dropdown-section';
+          mergeSection.textContent = 'Merge into current';
+          dropdown.appendChild(mergeSection);
+        }
+        definitions.forEach((def) => {
+          const b = document.createElement('button');
+          b.textContent = (def.name || 'Unnamed') + ' (merge)';
+          b.type = 'button';
+          b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const merged = mergeSchemaIntoObject(value, def.schema);
+            const pathArr = Array.isArray(path) ? path : [];
+            vscode.postMessage({ type: 'edit', uri: String(uri), path: pathArr, value: merged });
+            afterSceneChange();
+            close();
+          });
+          dropdown.appendChild(b);
+        });
+        function close() {
+          dropdown.remove();
+          document.removeEventListener('click', close);
+        }
+        document.body.appendChild(dropdown);
+        document.addEventListener('click', close);
+      }
+
       function addPlusButton(row, path, value, uri) {
         const btn = document.createElement('button');
         btn.className = 'add-from-def';
         btn.type = 'button';
         btn.title = 'Add fields from definition';
         btn.setAttribute('aria-label', 'Add fields from definition');
-        btn.textContent = '+';
-        if (definitions.length === 0) btn.disabled = true;
+        if (window.LUCIDE_ICONS && window.LUCIDE_ICONS.plus) btn.innerHTML = window.LUCIDE_ICONS.plus;
+        else btn.textContent = '+';
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (definitions.length === 0) return;
-          const rect = btn.getBoundingClientRect();
-          const dropdown = document.createElement('div');
-          dropdown.className = 'def-dropdown';
-          dropdown.style.right = (window.innerWidth - rect.right) + 'px';
-          dropdown.style.left = 'auto';
-          dropdown.style.top = (rect.bottom + 2) + 'px';
-          definitions.forEach((def) => {
-            const b = document.createElement('button');
-            b.textContent = def.name || 'Unnamed';
-            b.type = 'button';
-            b.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const merged = mergeSchemaIntoObject(value, def.schema);
-              vscode.postMessage({ type: 'edit', uri, path, value: merged });
-              close();
-            });
-            dropdown.appendChild(b);
-          });
-          function close() {
-            dropdown.remove();
-            document.removeEventListener('click', close);
-          }
-          document.body.appendChild(dropdown);
-          document.addEventListener('click', close);
+          openAddDropdown(path, value, uri, btn);
         });
         row.appendChild(btn);
       }
@@ -226,6 +347,40 @@
         const keySpan = document.createElement('span');
         keySpan.className = 'key';
         keySpan.textContent = key;
+        keySpan.title = 'Double-click to rename';
+        keySpan.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          keySpan.contentEditable = 'true';
+          keySpan.focus();
+          if (window.getSelection) {
+            const sel = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(keySpan);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        });
+        keySpan.addEventListener('blur', () => {
+          if (keySpan.contentEditable !== 'true') return;
+          keySpan.contentEditable = 'false';
+          const newKey = keySpan.textContent.trim();
+          if (newKey && newKey !== key) {
+            vscode.postMessage({ type: 'rename', uri: String(uri), path: Array.isArray(path) ? path : [], newKey });
+            afterSceneChange();
+          } else {
+            keySpan.textContent = key;
+          }
+        });
+        keySpan.addEventListener('keydown', (e) => {
+          if (keySpan.contentEditable !== 'true') return;
+          if (e.key === 'Enter') { e.preventDefault(); keySpan.blur(); }
+          if (e.key === 'Escape') {
+            keySpan.textContent = key;
+            keySpan.contentEditable = 'false';
+            keySpan.blur();
+          }
+        });
+        keySpan.addEventListener('click', (e) => e.stopPropagation());
         row.appendChild(keySpan);
 
         const valueCell = document.createElement('span');
@@ -259,7 +414,8 @@
             } else {
               try { parsed = JSON.parse(raw); } catch { parsed = raw; }
             }
-            vscode.postMessage({ type: 'edit', uri, path, value: parsed });
+            vscode.postMessage({ type: 'edit', uri: String(uri), path: Array.isArray(path) ? path : [], value: parsed });
+            afterSceneChange();
             valueCell.dataset.initial = parsed === null ? 'null' : formatVal(parsed);
             valueCell.dataset.isPlaceholder = parsed === null ? '1' : '';
             if (parsed === null) {
@@ -284,6 +440,19 @@
           });
         }
         row.appendChild(valueCell);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'row-delete';
+        deleteBtn.type = 'button';
+        deleteBtn.title = 'Delete property';
+        deleteBtn.setAttribute('aria-label', 'Delete property');
+        if (window.LUCIDE_ICONS && window.LUCIDE_ICONS.trash) deleteBtn.innerHTML = window.LUCIDE_ICONS.trash;
+        else deleteBtn.textContent = '×';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          vscode.postMessage({ type: 'edit', uri, path, delete: true });
+        });
+        row.appendChild(deleteBtn);
         return { row, valueCell, keySpan };
       }
 
@@ -309,7 +478,7 @@
         container.appendChild(row);
         container.appendChild(ul);
         ul.hidden = !open;
-        renderNode(value, path, uri, docName, ul, false);
+        renderNode(value, path, uri, docName, ul, true);
       }
 
       function renderNode(value, path, uri, docName, container, open) {
@@ -339,16 +508,30 @@
         }
 
         documents.forEach((doc) => {
-          const docDiv = document.createElement('div');
-          docDiv.className = 'doc';
-          docDiv.textContent = doc.name;
-          root.appendChild(docDiv);
+          const data = doc.data || {};
+          const docHeader = document.createElement('div');
+          docHeader.className = 'doc-header';
+          const docName = document.createElement('span');
+          docName.className = 'doc-name';
+          docName.textContent = doc.name;
+          docHeader.appendChild(docName);
+          const docAddBtn = document.createElement('button');
+          docAddBtn.className = 'doc-add';
+          docAddBtn.type = 'button';
+          docAddBtn.title = 'Add top-level property';
+          docAddBtn.setAttribute('aria-label', 'Add top-level property');
+          if (window.LUCIDE_ICONS && window.LUCIDE_ICONS.plus) docAddBtn.innerHTML = window.LUCIDE_ICONS.plus;
+          else docAddBtn.textContent = '+';
+          docAddBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openAddDropdown([], data, doc.uri, docAddBtn);
+          });
+          docHeader.appendChild(docAddBtn);
+          root.appendChild(docHeader);
 
           const ul = document.createElement('ul');
           ul.className = 'tree';
           root.appendChild(ul);
-
-          const data = doc.data || {};
           Object.entries(data).forEach(([key, value]) => {
             const path = [key];
             const entry = buildEntry(key, value, path, doc.uri, doc.name);
@@ -372,6 +555,7 @@
               });
               ul.appendChild(entry.row);
               ul.appendChild(childUl);
+              childUl.hidden = false;
               renderNode(value, path, doc.uri, doc.name, childUl, true);
             } else {
               ul.appendChild(entry.row);

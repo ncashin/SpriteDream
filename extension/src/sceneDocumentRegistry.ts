@@ -31,7 +31,7 @@ export type ObjectDefinitionPayload = {
 export class SceneDocumentRegistry {
   private readonly _documents = new Map<string, ISceneDocument>();
   private _activeDocument: ISceneDocument | undefined;
-  private _stateViewWebview: vscode.Webview | undefined;
+  private _sceneViewSidebarWebview: vscode.Webview | undefined;
   private _definitions: ObjectDefinitionPayload[] = [];
   private readonly _onDidChange = new vscode.EventEmitter<void>();
   private readonly _onDocumentEdit = new vscode.EventEmitter<SceneDocumentEditEvent>();
@@ -39,17 +39,21 @@ export class SceneDocumentRegistry {
   readonly onDidChange = this._onDidChange.event;
   readonly onDocumentEdit = this._onDocumentEdit.event;
 
-  /** Register the state view webview so the registry can push scene updates to it. */
-  setStateViewWebview(webview: vscode.Webview | undefined): void {
-    this._stateViewWebview = webview;
+  /** Register the scene view sidebar webview so the registry can push scene updates to it. */
+  setSceneViewSidebarWebview(webview: vscode.Webview | undefined): void {
+    this._sceneViewSidebarWebview = webview;
   }
 
-  /** Payload for the state view: active document as { name, uri, data }. */
+  /** Payload for the scene view sidebar: active document as { name, uri, data }. */
   getDocumentsPayload(): SceneDocumentsPayload {
     const doc = this.getActiveDocument();
     if (!doc) return [];
     return [
-      { name: path.basename(doc.uri.fsPath), uri: doc.uri.toString(), data: doc.getData() },
+      {
+        name: path.basename(doc.uri.fsPath),
+        uri: doc.uri.toString(),
+        data: JSON.parse(JSON.stringify(doc.getData())),
+      },
     ];
   }
 
@@ -61,9 +65,9 @@ export class SceneDocumentRegistry {
     return this._definitions;
   }
 
-  notifyStateView(): void {
-    if (this._stateViewWebview) {
-      this._stateViewWebview.postMessage({
+  notifySceneViewSidebar(): void {
+    if (this._sceneViewSidebarWebview) {
+      this._sceneViewSidebarWebview.postMessage({
         type: "update",
         documents: this.getDocumentsPayload(),
         definitions: this._definitions,
@@ -76,7 +80,7 @@ export class SceneDocumentRegistry {
     if (this._documents.has(key)) return;
     this._documents.set(key, document);
     this._onDidChange.fire();
-    this.notifyStateView();
+    this.notifySceneViewSidebar();
   }
 
   remove(document: ISceneDocument): void {
@@ -85,7 +89,7 @@ export class SceneDocumentRegistry {
         this._activeDocument = undefined;
       }
       this._onDidChange.fire();
-      this.notifyStateView();
+      this.notifySceneViewSidebar();
     }
   }
 
@@ -108,12 +112,12 @@ export class SceneDocumentRegistry {
     if (this._activeDocument === document) return;
     this._activeDocument = document;
     this._onDidChange.fire();
-    this.notifyStateView();
+    this.notifySceneViewSidebar();
   }
 
   notifyDocumentChanged(_document: ISceneDocument): void {
     this._onDidChange.fire();
-    this.notifyStateView();
+    this.notifySceneViewSidebar();
   }
 
   notifyDocumentEdited(document: ISceneDocument, previous: SceneData, next: SceneData): void {

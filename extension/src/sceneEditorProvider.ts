@@ -231,7 +231,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
           const message = raw as { type: string; mode?: string; content?: string; patch?: ScenePatch; definitions?: unknown[] };
           if (message.type === "definitions" && Array.isArray(message.definitions)) {
             this.documentRegistry?.setDefinitions(message.definitions as ObjectDefinitionPayload[]);
-            this.documentRegistry?.notifyStateView();
+            this.documentRegistry?.notifySceneViewSidebar();
             return;
           }
           if (message.type === GAME_MODE_MESSAGE_TYPE && message.mode !== undefined) {

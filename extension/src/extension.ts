@@ -3,7 +3,7 @@ import { buildPatchFromDiff, type SceneData } from "gameide";
 import { ViteDevServer, resolveRuntimeDir } from "./devServer";
 import { SceneDocumentRegistry } from "./sceneDocumentRegistry";
 import { SceneEditorProvider } from "./sceneEditorProvider";
-import { SceneStateWebviewProvider } from "./sceneStateWebview";
+import { SceneViewSidebarWebviewProvider } from "./sceneViewSidebarWebview";
 
 const SCENE_FILE_DEBOUNCE_MS = 150;
 
@@ -35,8 +35,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
-      "gameide.sceneState",
-      new SceneStateWebviewProvider(context.extensionUri, sceneDocumentRegistry)
+      "gameide.sceneViewSidebar",
+      new SceneViewSidebarWebviewProvider(context.extensionUri, sceneDocumentRegistry)
     )
   );
 
