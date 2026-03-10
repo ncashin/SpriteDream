@@ -22,9 +22,6 @@ export {
   editorStart,
   editorUpdate,
   startGameloop,
-  setUpdateScope,
-  clearUpdateScope,
-  removeGameUpdatesForScope,
 } from "./gameloop.js";
 export {
   getScene,

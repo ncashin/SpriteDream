@@ -1,7 +1,6 @@
 import {
-  clearUpdateScope,
-  removeGameUpdatesForScope,
-  setUpdateScope,
+  removeCallbacksForToken,
+  runWithToken,
   startGameloop,
 } from "./gameloop.js";
 import { setInitialScene } from "./scene.js";
@@ -24,8 +23,6 @@ export type FinalContext<
   PluginList extends readonly Plugin[],
 > = InitialContext & ReducedContext<PluginList>;
 
-const MAIN_SCOPE = "main";
-
 function initializeGame<
   InitialContext,
   const PluginList extends readonly Plugin[],
@@ -36,41 +33,36 @@ function initializeGame<
   main: (context: FinalContext<InitialContext, PluginList>) => void;
 }): FinalContext<InitialContext, PluginList> {
   type ResultContext = FinalContext<InitialContext, PluginList>;
+  const hot = import.meta.hot;
   let result: ResultContext;
 
-  if (import.meta.hot && import.meta.hot.data?.context !== undefined) {
-    result = import.meta.hot.data.context;
-    removeGameUpdatesForScope(import.meta.hot.data.mainScope);
-    setUpdateScope(MAIN_SCOPE);
-    options.main(result);
-    clearUpdateScope();
-    import.meta.hot.data.context = result;
-    return result;
+  if (hot?.data?.context !== undefined) {
+    result = hot.data.context as ResultContext;
+  } else {
+    if (import.meta.env.PROD) {
+      setInitialScene(options.initialScene);
+    }
+    result = options.initialContext as ResultContext;
+    if (Array.isArray(options.plugins)) {
+      result = options.plugins.reduce(
+        (ctx, plugin) => (typeof plugin === "function" ? plugin(ctx) : ctx),
+        result
+      ) as ResultContext;
+    }
+    startGameloop();
   }
 
-  if (import.meta.env.PROD) {
-    setInitialScene(options.initialScene);
+  if (hot) {
+    if (hot.data.runToken !== undefined) {
+      removeCallbacksForToken(hot.data.runToken as string);
+    }
+    const token = runWithToken(() => options.main(result));
+    hot.data.runToken = token;
+    hot.data.context = result;
+  } else {
+    runWithToken(() => options.main(result));
   }
 
-  result = options.initialContext as ResultContext;
-  if (Array.isArray(options.plugins)) {
-    result = options.plugins.reduce(
-      (ctx, plugin) => (typeof plugin === "function" ? plugin(ctx) : ctx),
-      result
-    ) as ResultContext;
-  }
-
-  if (import.meta.hot) {
-    import.meta.hot.data.mainScope = MAIN_SCOPE;
-  }
-  startGameloop();
-
-  setUpdateScope(MAIN_SCOPE);
-  options.main(result);
-  clearUpdateScope();
-  if (import.meta.hot) {
-    import.meta.hot.data.context = result;
-  }
   return result;
 }
 

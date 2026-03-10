@@ -6,38 +6,54 @@ import type { SceneObject } from "./scene.js";
 type StartCallback = () => void;
 type UpdateCallback = (deltaTime: number) => void;
 
-let currentUpdateScope: string | undefined;
+let runId = 0;
+let currentRunToken: string | undefined;
+
+function nextRunToken(): string {
+  return `run-${++runId}`;
+}
+
+function setRunToken(token: string): void {
+  currentRunToken = token;
+}
+
+function clearRunToken(): void {
+  currentRunToken = undefined;
+}
 
 const gameStartRegistry = createCallbackRegistry<StartCallback>({
-  getCurrentScope: () => currentUpdateScope,
+  getCurrentScope: () => currentRunToken,
 });
 const gameUpdateRegistry = createCallbackRegistry<UpdateCallback>({
-  getCurrentScope: () => currentUpdateScope,
+  getCurrentScope: () => currentRunToken,
 });
 const editorStartRegistry = createCallbackRegistry<StartCallback>({
-  getCurrentScope: () => currentUpdateScope,
+  getCurrentScope: () => currentRunToken,
 });
 const editorUpdateRegistry = createCallbackRegistry<UpdateCallback>({
-  getCurrentScope: () => currentUpdateScope,
+  getCurrentScope: () => currentRunToken,
 });
 const alwaysUpdateRegistry = createCallbackRegistry<UpdateCallback>({
-  getCurrentScope: () => currentUpdateScope,
+  getCurrentScope: () => currentRunToken,
 });
 
-export function setUpdateScope(scope: string): void {
-  currentUpdateScope = scope;
+export function runWithToken(fn: () => void): string {
+  const token = nextRunToken();
+  setRunToken(token);
+  try {
+    fn();
+    return token;
+  } finally {
+    clearRunToken();
+  }
 }
 
-export function clearUpdateScope(): void {
-  currentUpdateScope = undefined;
-}
-
-export function removeGameUpdatesForScope(scope: string): void {
-  gameStartRegistry.removeScope(scope);
-  gameUpdateRegistry.removeScope(scope);
-  editorStartRegistry.removeScope(scope);
-  editorUpdateRegistry.removeScope(scope);
-  alwaysUpdateRegistry.removeScope(scope);
+export function removeCallbacksForToken(token: string): void {
+  gameStartRegistry.removeScope(token);
+  gameUpdateRegistry.removeScope(token);
+  editorStartRegistry.removeScope(token);
+  editorUpdateRegistry.removeScope(token);
+  alwaysUpdateRegistry.removeScope(token);
 }
 
 let frameId: number | undefined;
