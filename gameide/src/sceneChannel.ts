@@ -40,14 +40,14 @@ export interface CreateSceneChannelOptions {
   getSceneData(): SceneData;
   setSceneData(data: SceneData): void;
   applyScenePatch: (scene: SceneData, patch: ScenePatch) => void;
-  /** When true, incoming scene data is not applied (e.g. game mode to avoid persisting). */
-  getPaused?: () => boolean;
   subscribeToUpdates?: (callback: (update: SceneUpdate) => void) => () => void;
   onRequestInitial?: () => string;
 }
 
 export interface SceneChannel {
   dispose(): void;
+  pause(): void;
+  unpause(): void;
   sendPatch(patch: ScenePatch): void;
   sendInitialScene(content: string): void;
   sendSceneChanged(content: string): void;
@@ -57,8 +57,8 @@ export interface SceneChannel {
 export function createSceneChannel(
   options: CreateSceneChannelOptions
 ): SceneChannel {
-  const { transport, getSceneData, setSceneData, applyScenePatch: applyPatch, getPaused, subscribeToUpdates, onRequestInitial } = options;
-  const isPaused = () => getPaused?.() === true;
+  const { transport, getSceneData, setSceneData, applyScenePatch: applyPatch, subscribeToUpdates, onRequestInitial } = options;
+  let paused = false;
 
   let initialSceneReceived = false;
 
@@ -104,7 +104,7 @@ export function createSceneChannel(
       return;
     }
 
-    if (isPaused()) return;
+    if (paused) return;
 
     if (isInitialScene && content !== undefined) {
       try {
@@ -137,7 +137,7 @@ export function createSceneChannel(
   if (subscribeToUpdates) {
     getScene();
     unsubscribeOutgoing = subscribeToUpdates((update: SceneUpdate) => {
-      if (!initialSceneReceived || isPaused()) return;
+      if (!initialSceneReceived || paused) return;
       const fullPath = [...update.path, update.key];
       const patch =
         update.type === "set"
@@ -152,6 +152,12 @@ export function createSceneChannel(
     dispose() {
       unsubscribeTransport();
       unsubscribeOutgoing?.();
+    },
+    pause() {
+      paused = true;
+    },
+    unpause() {
+      paused = false;
     },
     sendPatch,
     sendInitialScene,
