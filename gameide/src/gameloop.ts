@@ -31,6 +31,9 @@ const editorStartRegistry = createCallbackRegistry<StartCallback>({
 const editorUpdateRegistry = createCallbackRegistry<UpdateCallback>({
   getCurrentScope: () => currentRunToken,
 });
+const alwaysStartRegistry = createCallbackRegistry<StartCallback>({
+  getCurrentScope: () => currentRunToken,
+});
 const alwaysUpdateRegistry = createCallbackRegistry<UpdateCallback>({
   getCurrentScope: () => currentRunToken,
 });
@@ -51,11 +54,15 @@ export function removeCallbacksForToken(token: string): void {
   gameUpdateRegistry.removeScope(token);
   editorStartRegistry.removeScope(token);
   editorUpdateRegistry.removeScope(token);
+  alwaysStartRegistry.removeScope(token);
   alwaysUpdateRegistry.removeScope(token);
 }
 
 let frameId: number | undefined;
 
+export function start(callback: StartCallback): void {
+  alwaysStartRegistry.register(callback);
+}
 export function update(callback: UpdateCallback): void {
   alwaysUpdateRegistry.register(callback);
 }
@@ -75,6 +82,7 @@ export function editorUpdate(callback: UpdateCallback): void {
 }
 
 onModeChange((mode) => {
+  alwaysStartRegistry.run();
   switch (mode) {
     case GameIDEMode.Game:
       gameStartRegistry.run();
@@ -89,6 +97,7 @@ onModeChange((mode) => {
 
 export function startGameloop(): void {
   const initialMode = getMode();
+  alwaysStartRegistry.run();
   switch (initialMode) {
     case GameIDEMode.Game:
       gameStartRegistry.run();

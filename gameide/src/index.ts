@@ -17,6 +17,8 @@ export type {
 
 export { definePlugin } from "./plugin.js";
 export {
+  start,
+  update,
   gameStart,
   gameUpdate,
   editorStart,

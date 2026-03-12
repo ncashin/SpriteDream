@@ -5,9 +5,10 @@ import {
   editorPlugin,
   initializeGame,
   inputPlugin,
+  type Plugin,
   render2DPlugin,
 } from "gameide";
-import initialScene from "./sample.scene";
+import sampleScene from "./sample.scene";
 import inputConfig from "./input.config.json";
 import "./style.css";
 import invariant from "tiny-invariant";
@@ -21,18 +22,19 @@ const PlayerDefinition = defineObject(
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-const plugins = [
-  editorPlugin(),
-  inputPlugin(inputConfig),
-  render2DPlugin(),
-] as const;
+const gameidePlugins = <const Plugins extends readonly Plugin[]>(plugins: Plugins) =>
+  plugins;
 
 initializeGame({
   initialContext: {
     rootElement,
   },
-  initialScene,
-  plugins,
+  initialScene: sampleScene,
+  plugins: gameidePlugins([
+    editorPlugin(),
+    inputPlugin(inputConfig),
+    render2DPlugin(),
+  ]),
   main({ input, render2D }) {
     const { canvasElement, context } = render2D;
     const scene = getScene();
