@@ -2,6 +2,11 @@ import * as vscode from "vscode";
 import type { SceneData } from "gameide";
 import { ViteDevServer, resolveRuntimeDir } from "./viteDevServer";
 import { SceneEditorProvider } from "./sceneEditorProvider";
+import {
+  deleteSceneDeclaration,
+  syncAllSceneDeclarations,
+  syncSceneDeclaration,
+} from "./sceneTypeDeclarations";
 
 const SCENE_FILE_DEBOUNCE_MS = 150;
 
@@ -33,7 +38,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const sceneWatcher = vscode.workspace.createFileSystemWatcher("**/*.scene");
   const pendingUri = new Map<string, ReturnType<typeof setTimeout>>();
 
+  await syncAllSceneDeclarations();
+
   async function syncSceneFromDisk(uri: vscode.Uri): Promise<void> {
+    try {
+      await syncSceneDeclaration(uri);
+    } catch {
+      // Ignore read/parse errors (e.g. invalid JSON while saving)
+    }
+
     const doc = sceneEditorProvider.getDocumentByUri(uri);
     if (!doc) return;
     try {
@@ -60,6 +73,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(
     sceneWatcher.onDidChange((uri) => scheduleSync(uri)),
+    sceneWatcher.onDidCreate((uri) => scheduleSync(uri)),
+    sceneWatcher.onDidDelete((uri) => {
+      const key = uri.toString();
+      const pending = pendingUri.get(key);
+      if (pending) clearTimeout(pending);
+      pendingUri.delete(key);
+      void deleteSceneDeclaration(uri);
+    }),
     sceneWatcher,
     { dispose: () => pendingUri.forEach((t) => clearTimeout(t)) }
   );

@@ -7,7 +7,7 @@ import {
   inputPlugin,
   render2DPlugin,
 } from "gameide";
-import initialScene from "../scenes/sample.scene";
+import initialScene from "./sample.scene";
 import inputConfig from "./input.config.json";
 import "./style.css";
 import invariant from "tiny-invariant";

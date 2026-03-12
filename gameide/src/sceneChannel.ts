@@ -4,7 +4,6 @@ import type { ScenePatch } from "./scenePatch.js";
 import type { SceneObject, SceneUpdate } from "./scene.js";
 import { getScene } from "./scene.js";
 
-/** Scene data shape; matches core scene object (from scene.ts). */
 export type SceneData = SceneObject;
 
 export interface SceneWebviewMessage {

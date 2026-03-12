@@ -28,4 +28,5 @@ out
 *.vsix
 
 .env
+.gameide-types
 
