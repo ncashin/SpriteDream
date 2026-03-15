@@ -3,7 +3,7 @@ export function definePlugin<
   TInput = object,
   TOutput extends TInput = TInput,
 >(
-  factory: (options?: TOptions) => (input: TInput) => TOutput,
-): (options?: TOptions) => (input: TInput) => TOutput {
+  factory: (options?: TOptions) => (input: TInput) => TOutput | Promise<TOutput>,
+): (options?: TOptions) => (input: TInput) => TOutput | Promise<TOutput> {
   return factory;
 }

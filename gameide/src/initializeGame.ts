@@ -5,10 +5,14 @@ import {
 } from "./gameloop.js";
 import { setInitialScene } from "./scene.js";
 
-export type Plugin = (input: any) => any;
+export type Plugin = (input: any) => any | Promise<any>;
 
-type ContextAddedByPlugin<PluginFunction> = PluginFunction extends (input: infer In) => infer Out
-  ? Omit<Out, keyof In>
+type ContextAddedByPlugin<PluginFunction> = PluginFunction extends (
+  input: infer In,
+) => infer Out
+  ? Out extends Promise<infer R>
+    ? Omit<R, keyof In>
+    : Omit<Out, keyof In>
   : never;
 
 type ReducedContext<PluginList extends readonly Plugin[]> =
@@ -18,12 +22,16 @@ type ReducedContext<PluginList extends readonly Plugin[]> =
       : ContextAddedByPlugin<First>
     : unknown;
 
+export const gameidePlugins = <const Plugins extends readonly Plugin[]>(
+  plugins: Plugins,
+) => plugins;
+
 export type FinalContext<
   InitialContext,
   PluginList extends readonly Plugin[],
 > = InitialContext & ReducedContext<PluginList>;
 
-function initializeGame<
+async function initializeGame<
   InitialContext,
   const PluginList extends readonly Plugin[],
 >(options: {
@@ -31,7 +39,7 @@ function initializeGame<
   plugins: PluginList;
   initialScene?: Record<string, unknown>;
   main: (context: FinalContext<InitialContext, PluginList>) => void;
-}): FinalContext<InitialContext, PluginList> {
+}): Promise<FinalContext<InitialContext, PluginList>> {
   type ResultContext = FinalContext<InitialContext, PluginList>;
   const hot = import.meta.hot;
   let result: ResultContext;
@@ -44,10 +52,11 @@ function initializeGame<
     }
     result = options.initialContext as ResultContext;
     if (Array.isArray(options.plugins)) {
-      result = options.plugins.reduce(
-        (ctx, plugin) => (typeof plugin === "function" ? plugin(ctx) : ctx),
-        result
-      ) as ResultContext;
+      for (const plugin of options.plugins) {
+        const fn =
+          typeof plugin === "function" ? plugin : (ctx: unknown) => ctx;
+        result = (await Promise.resolve(fn(result))) as ResultContext;
+      }
     }
     startGameloop();
   }

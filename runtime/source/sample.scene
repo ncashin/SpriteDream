@@ -1,14 +1,28 @@
 {
   "test": {
+    "x": 24,
     "y": 200,
+    "rotation": 0,
+    "scaleX": 1,
+    "scaleY": 1,
     "size": 24,
-    "speed": 200,
-    "x": 24
+    "speed": 200
   },
   "player2": {
     "x": 100,
     "y": 0,
+    "rotation": 0,
+    "scaleX": 1,
+    "scaleY": 1,
     "size": 24,
     "speed": 200
+  },
+  "sprite1": {
+    "x": 200,
+    "y": 150,
+    "rotation": 0,
+    "scaleX": 32,
+    "scaleY": 32,
+    "image": ""
   }
 }

@@ -60,6 +60,7 @@ export {
   $boolean,
 } from "./objectRegistry.js";
 export type { SchemaToType, DefinedObject, ObjectMetadata } from "./objectRegistry.js";
+export { TransformDefinition as transform } from "./transform.js";
 export { initializeGame } from "./initializeGame.js";
 export type { Plugin, FinalContext } from "./initializeGame.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
@@ -74,6 +75,7 @@ export { render2DPlugin } from "./render2DPlugin.js";
 export type {
   Render2DPluginRequiredContext,
   Render2DPluginOptions,
+  Render2DContext,
 } from "./render2DPlugin.js";
 export { inputPlugin } from "./inputPlugin.js";
 export type {
