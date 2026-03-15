@@ -1,5 +1,7 @@
 import type { QuerySceneCallback, QuerySceneOptions, SceneWithQuery } from "./queryScene.js";
 import { querySceneObjects } from "./queryScene.js";
+import { SCENE_HMR_EVENT_NAME, type SceneHMRPayload } from "./sceneHMR.js";
+import { applyScenePatch, buildPatchFromDiff } from "./scenePatch.js";
 
 export type SceneObject = Record<PropertyKey, unknown>;
 
@@ -21,20 +23,33 @@ let subscribers: Set<SceneSubscriber>;
 let scene: SceneObject | undefined;
 let rootTarget: SceneObject | undefined;
 let initialSceneData: SceneObject | undefined;
+let loadedSceneSnapshot: Record<string, unknown> | undefined;
 
 if (typeof import.meta !== "undefined" && import.meta.hot) {
   const hotData = import.meta.hot.data as {
     scene?: SceneObject;
     rootTarget?: SceneObject;
     subscribers?: Set<SceneSubscriber>;
+    loadedSceneSnapshot?: Record<string, unknown>;
   };
   subscribers = hotData.subscribers ?? new Set();
   if (hotData.scene) scene = hotData.scene;
   if (hotData.rootTarget) rootTarget = hotData.rootTarget;
+  if (hotData.loadedSceneSnapshot) loadedSceneSnapshot = hotData.loadedSceneSnapshot;
+  import.meta.hot.on(SCENE_HMR_EVENT_NAME, (payload: SceneHMRPayload) => {
+    const root = rootTarget ?? hotData.rootTarget;
+    if (!root) return;
+    const before = payload.previousSceneData ?? loadedSceneSnapshot ?? hotData.loadedSceneSnapshot ?? {};
+    const patch = buildPatchFromDiff(before, payload.sceneData);
+    applyScenePatch(root, patch);
+    loadedSceneSnapshot = payload.sceneData;
+    hotData.loadedSceneSnapshot = loadedSceneSnapshot;
+  });
   import.meta.hot.dispose(() => {
     hotData.scene = scene;
     hotData.rootTarget = rootTarget;
     hotData.subscribers = subscribers;
+    hotData.loadedSceneSnapshot = loadedSceneSnapshot;
   });
 } else {
   subscribers = new Set();
@@ -137,6 +152,11 @@ export function getScene(): SceneWithQuery {
     const base = initialSceneData ?? {};
     initialSceneData = undefined;
     rootTarget = base;
+    loadedSceneSnapshot = structuredClone(base) as Record<string, unknown>;
+    if (typeof import.meta !== "undefined" && import.meta.hot) {
+      (import.meta.hot.data as { loadedSceneSnapshot?: Record<string, unknown> }).loadedSceneSnapshot =
+        loadedSceneSnapshot;
+    }
     scene = createProxy(base, []) as SceneWithQuery;
   }
 

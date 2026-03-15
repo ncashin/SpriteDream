@@ -88,3 +88,5 @@ export type {
   ExtractButtonKeys,
 } from "./inputPlugin.js";
 export { gameidePlugin } from "./gameidePluginVite.js";
+export { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
+export type { SceneHMRPayload } from "./sceneHMR.js";

@@ -1,4 +1,4 @@
-import { defineObject } from "./objectRegistry";
+import { defineObject } from "./objectRegistry.js";
 
 export const TransformDefinition = defineObject({
   x: 0,

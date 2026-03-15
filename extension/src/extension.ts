@@ -12,12 +12,20 @@ const SCENE_FILE_DEBOUNCE_MS = 150;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const runtimeDir = resolveRuntimeDir(context.extensionUri);
-  const devServer = runtimeDir
+  let devServer: ViteDevServer | null = runtimeDir
     ? new ViteDevServer({ runtimeDirectory: runtimeDir })
     : null;
   if (devServer) {
-    context.subscriptions.push(devServer);
-    await devServer.start();
+    try {
+      context.subscriptions.push(devServer);
+      await devServer.start();
+    } catch (err) {
+      console.error(
+        "[GameIDE] Failed to start vite dev server:",
+        err instanceof Error ? err.message : err
+      );
+      devServer = null;
+    }
   }
 
   const sceneEditorProvider = new SceneEditorProvider(
