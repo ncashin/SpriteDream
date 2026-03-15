@@ -75,7 +75,6 @@ export { render2DPlugin } from "./render2DPlugin.js";
 export type {
   Render2DPluginRequiredContext,
   Render2DPluginOptions,
-  Render2DContext,
 } from "./render2DPlugin.js";
 export { inputPlugin } from "./inputPlugin.js";
 export type {
