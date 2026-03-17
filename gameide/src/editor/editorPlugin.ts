@@ -15,8 +15,17 @@ import type { ComponentType } from "react";
 
 export type ScenePatchMessage = Record<string, unknown>;
 
-export const editorPlugin = (Editor: ComponentType) => (input: unknown) => {
-  createEditorUI(Editor);
+export const editorPlugin =
+  (Editor: ComponentType) =>
+  (input: { rootElement?: HTMLElement } | unknown) => {
+  const rootElement =
+    typeof window !== "undefined"
+      ? (document.getElementById("app") as HTMLElement | null)
+      : null;
+
+  if (rootElement) {
+    createEditorUI(Editor, rootElement);
+  }
 
   const channel = createSceneChannel({
     transport: createSceneTransportPostMessage({
