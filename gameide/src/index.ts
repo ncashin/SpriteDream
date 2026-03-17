@@ -2,7 +2,10 @@ export type { ScenePatch } from "./scenePatch.js";
 export type { SceneData, SceneWebviewMessage } from "./sceneChannel.js";
 export { applyScenePatch, pathToPatch, buildPatchFromDiff } from "./scenePatch.js";
 export { createSceneTransportPostMessage as createPostMessageTransport } from "./sceneChannelTransport.js";
-  export type { SceneChannelTransport, PostMessageTransportOptions } from "./sceneChannelTransport.js";
+export type {
+  SceneChannelTransport,
+  PostMessageTransportOptions,
+} from "./sceneChannelTransport.js";
 export {
   createSceneChannel,
   SCENE_CHANNEL,
@@ -65,8 +68,15 @@ export { initializeGame } from "./initializeGame.js";
 export type { Plugin, FinalContext } from "./initializeGame.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
 export type { ScenePatchMessage } from "./editor/editorPlugin.js";
-export { Editor } from "./editor/Editor.js";
+export { DefaultEditor } from "./editor/DefaultEditor.js";
+export { EditorRoot } from "./editor/EditorRoot.js";
+export { SceneTree } from "./editor/SceneTree.js";
+export { Sidebar } from "./editor/Sidebar.js";
+export { GameView } from "./editor/GameView.js";
+export { OverlayButton } from "./editor/OverlayButton.js";
+export { OverlayInput } from "./editor/OverlayInput.js";
 export { useScene } from "./editor/useScene.js";
+export { useGameIDEMode } from "./editor/useGameIDEMode.js";
 export {
   GameIDEMode,
   getMode,

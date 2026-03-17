@@ -12,13 +12,14 @@ import {
 import { GameIDEMode, getMode, onModeChange } from "../mode.js";
 import { createEditorUI } from "./createEditorUI.js";
 import type { ComponentType } from "react";
+import { DefaultEditor } from "./DefaultEditor.js";
 
 export type ScenePatchMessage = Record<string, unknown>;
 
 export const editorPlugin =
-  (Editor: ComponentType) => (input: { rootElement: HTMLElement }) => {
+  (Editor?: ComponentType) => (input: { rootElement: HTMLElement }) => {
     const { rootElement } = input;
-    createEditorUI(Editor, rootElement);
+    createEditorUI(Editor ?? DefaultEditor, rootElement);
 
     const channel = createSceneChannel({
       transport: createSceneTransportPostMessage({

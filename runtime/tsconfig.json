@@ -12,6 +12,7 @@
       "gameide": ["../gameide/src"],
       "gameide/*": ["../gameide/src/*"]
     },
+    "jsx": "react-jsx",
 
     /* Bundler mode */
     "moduleResolution": "bundler",

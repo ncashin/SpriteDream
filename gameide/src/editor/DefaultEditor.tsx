@@ -11,7 +11,7 @@ import { useGameIDEMode } from "./useGameIDEMode.js";
 import { useScene } from "./useScene.js";
 import { EditorRoot } from "./EditorRoot.js";
 
-export function Editor() {
+export function DefaultEditor() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const mode = useGameIDEMode();
   const isRunning = mode === GameIDEMode.Game;
@@ -26,7 +26,7 @@ export function Editor() {
       <div className="relative flex-1 min-w-0 overflow-hidden">
         <GameView className="h-full" />
 
-        <div className="absolute top-3 inset-x-0 flex justify-between px-3 items-center gap-3">
+        <div className="absolute top-3 flex items-center justify-between px-3 gap-3">
           <OverlayButton
             onClick={() => setSidebarOpen((o) => !o)}
             title={sidebarOpen ? "Close scene" : "Open scene"}
@@ -44,17 +44,15 @@ export function Editor() {
             )}
           </OverlayButton>
 
-          <div className="flex-1 flex justify-center">
-            <OverlayInput
-              value={
-                typeof sceneName === "string" && sceneName.length > 0
-                  ? sceneName
-                  : ""
-              }
-              onChange={(next) => setSceneName(next)}
-              placeholder="Untitled Scene"
-            />
-          </div>
+          <OverlayInput
+            value={
+              typeof sceneName === "string" && sceneName.length > 0
+                ? sceneName
+                : ""
+            }
+            onChange={(next) => setSceneName(next)}
+            placeholder="Untitled Scene"
+          />
 
           <OverlayButton
             variant={isRunning ? "danger" : "default"}
