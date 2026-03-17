@@ -13,7 +13,10 @@
         "health": 100,
         "mana": 50
       },
-      "tags": ["enemy", "demo"]
+      "tags": [
+        "enemy",
+        "demo"
+      ]
     }
   },
   "player2": {
@@ -24,5 +27,6 @@
     "scaleY": 1,
     "size": 24,
     "speed": 200
-  }
+  },
+  "name": "asdasdasd skda;fksa ;ldfka;sldfk;asdf"
 }

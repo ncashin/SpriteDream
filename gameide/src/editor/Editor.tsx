@@ -1,45 +1,82 @@
 import { useState } from "react";
 import { SceneTree } from "./SceneTree.js";
-import { RunButton } from "./RunButton.js";
-import { SidebarToggleButton } from "./SidebarToggleButton.js";
 import { GameView } from "./GameView.js";
+import { Sidebar } from "./Sidebar.js";
 import { cn } from "../utils/cn.js";
+import { OverlayButton } from "./OverlayButton.js";
+import { OverlayInput } from "./OverlayInput.js";
+import { Cuboid, MoveLeft, Play, Square } from "lucide-react";
+import { GameIDEMode, setMode } from "../mode.js";
+import { useGameIDEMode } from "./useGameIDEMode.js";
+import { useScene } from "./useScene.js";
+import { EditorRoot } from "./EditorRoot.js";
 
 export function Editor() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const mode = useGameIDEMode();
+  const isRunning = mode === GameIDEMode.Game;
+  const [sceneName, setSceneName] = useScene(["name"]);
 
   return (
-    <div className="fixed inset-0 pointer-events-none">
-      <div className="pointer-events-auto fixed inset-0">
-        <div
-          className={cn(
-            "fixed left-0 top-0 bottom-0 w-[17.5rem] max-w-[85vw] bg-[var(--vscode-editor-background)] border-r border-[var(--vscode-panel-border)] overflow-auto z-[2147483646] transition-transform duration-200 ease-out",
-            sidebarOpen ? "translate-x-0" : "-translate-x-full",
-          )}
-        >
-          <SceneTree />
-        </div>
+    <EditorRoot>
+      <Sidebar open={sidebarOpen}>
+        <SceneTree />
+      </Sidebar>
 
-        <div
-          className={cn(
-            "relative h-full ml-0 transition-[margin-left] duration-200 ease-out",
-            sidebarOpen && "ml-[17.5rem]",
-          )}
-        >
-          <GameView />
+      <div className="relative flex-1 min-w-0 overflow-hidden">
+        <GameView className="h-full" />
 
-          <div className="absolute top-3 left-3 z-[2147483647]">
-            <SidebarToggleButton
-              open={sidebarOpen}
-              onToggle={() => setSidebarOpen((o) => !o)}
+        <div className="absolute top-3 inset-x-0 flex justify-between px-3 items-center gap-3">
+          <OverlayButton
+            onClick={() => setSidebarOpen((o) => !o)}
+            title={sidebarOpen ? "Close scene" : "Open scene"}
+          >
+            {sidebarOpen ? (
+              <>
+                <MoveLeft size={12} aria-hidden />
+                Scene View
+              </>
+            ) : (
+              <>
+                <Cuboid size={12} aria-hidden />
+                Scene View
+              </>
+            )}
+          </OverlayButton>
+
+          <div className="flex-1 flex justify-center">
+            <OverlayInput
+              value={
+                typeof sceneName === "string" && sceneName.length > 0
+                  ? sceneName
+                  : ""
+              }
+              onChange={(next) => setSceneName(next)}
+              placeholder="Untitled Scene"
             />
           </div>
 
-          <div className="absolute top-3 right-3 z-[2147483647]">
-            <RunButton />
-          </div>
+          <OverlayButton
+            variant={isRunning ? "danger" : "default"}
+            onClick={() =>
+              setMode(isRunning ? GameIDEMode.Editor : GameIDEMode.Game)
+            }
+            title={isRunning ? "Stop" : "Run"}
+          >
+            {isRunning ? (
+              <>
+                <Square size={12} aria-hidden />
+                Stop
+              </>
+            ) : (
+              <>
+                <Play size={12} aria-hidden />
+                Run
+              </>
+            )}
+          </OverlayButton>
         </div>
       </div>
-    </div>
+    </EditorRoot>
   );
 }
