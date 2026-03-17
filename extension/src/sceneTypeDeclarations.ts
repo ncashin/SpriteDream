@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
-const GENERATED_SCENE_DECLARATION_HEADER = `// This file is generated from the matching .scene file.
+const GENERATED_SCENE_DECLARATION_HEADER = `
+// This file is generated from the matching .scene file.
 // Do not edit directly.
 
 `;

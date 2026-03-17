@@ -162,9 +162,6 @@ function pruneStaleSceneDeclarations(rootDir: string): void {
   walk(generatedRoot);
 }
 
-/** Cache of last-known scene file content for HMR before/after diff. */
-const sceneFileCache = new Map<string, Record<string, unknown>>();
-
 export function gameidePlugin(): Plugin {
   let config: ResolvedConfig | undefined;
 
@@ -185,8 +182,7 @@ export function gameidePlugin(): Plugin {
       if (!cleanId.endsWith(".scene")) return;
       if (config) syncSceneDeclaration(cleanId, config.root);
       const raw = fs.readFileSync(cleanId, "utf8");
-      const data = JSON.parse(raw) as Record<string, unknown>;
-      sceneFileCache.set(cleanId, data);
+      const data = JSON.parse(raw) as unknown;
       return createSceneModuleCode(data);
     },
     transform(source) {
@@ -201,14 +197,12 @@ export function gameidePlugin(): Plugin {
       if (context.file.endsWith(".scene") && config) {
         syncSceneDeclaration(context.file, config.root);
         try {
-          const previousSceneData = sceneFileCache.get(context.file);
           const raw = await context.read();
           const sceneData = JSON.parse(raw) as Record<string, unknown>;
-          sceneFileCache.set(context.file, sceneData);
           context.server.ws.send({
             type: "custom",
             event: SCENE_HMR_EVENT_NAME,
-            data: { path: context.file, previousSceneData, sceneData },
+            data: { path: context.file, sceneData },
           });
           return [];
         } catch {}

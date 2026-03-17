@@ -65,6 +65,8 @@ export { initializeGame } from "./initializeGame.js";
 export type { Plugin, FinalContext } from "./initializeGame.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
 export type { ScenePatchMessage } from "./editor/editorPlugin.js";
+export { Editor } from "./editor/Editor.js";
+export { useScene } from "./editor/useScene.js";
 export {
   GameIDEMode,
   getMode,

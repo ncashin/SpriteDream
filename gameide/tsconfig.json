@@ -2,6 +2,7 @@
   "compilerOptions": {
     "types": ["vite/client"],
     "target": "ES2020",
+    "jsx": "react-jsx",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2020", "DOM"],
@@ -11,7 +12,7 @@
     "rootDir": "src",
     "strict": true,
     "skipLibCheck": true,
-    "noEmit": false
+    "noEmit": true
   },
   "include": ["src"]
 }

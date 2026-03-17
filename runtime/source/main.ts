@@ -2,6 +2,7 @@ import {
   gameUpdate,
   getScene,
   defineObject,
+  Editor,
   editorPlugin,
   initializeGame,
   inputPlugin,
@@ -28,10 +29,10 @@ const gameidePlugins = <const Plugins extends readonly Plugin[]>(plugins: Plugin
 initializeGame({
   initialContext: {
     rootElement,
-  },
+},
   initialScene: sampleScene,
   plugins: gameidePlugins([
-    editorPlugin(),
+    editorPlugin(Editor),
     inputPlugin(inputConfig),
     render2DPlugin(),
   ]),

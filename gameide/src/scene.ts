@@ -1,6 +1,6 @@
 import type { QuerySceneCallback, QuerySceneOptions, SceneWithQuery } from "./queryScene.js";
 import { querySceneObjects } from "./queryScene.js";
-import { SCENE_HMR_EVENT_NAME, type SceneHMRPayload } from "./sceneHMR.js";
+import { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
 import { applyScenePatch, buildPatchFromDiff } from "./scenePatch.js";
 
 export type SceneObject = Record<PropertyKey, unknown>;
@@ -36,11 +36,11 @@ if (typeof import.meta !== "undefined" && import.meta.hot) {
   if (hotData.scene) scene = hotData.scene;
   if (hotData.rootTarget) rootTarget = hotData.rootTarget;
   if (hotData.loadedSceneSnapshot) loadedSceneSnapshot = hotData.loadedSceneSnapshot;
-  import.meta.hot.on(SCENE_HMR_EVENT_NAME, (payload: SceneHMRPayload) => {
+  import.meta.hot.on(SCENE_HMR_EVENT_NAME, (payload: { path: string; sceneData: Record<string, unknown> }) => {
     const root = rootTarget ?? hotData.rootTarget;
     if (!root) return;
-    const before = payload.previousSceneData ?? loadedSceneSnapshot ?? hotData.loadedSceneSnapshot ?? {};
-    const patch = buildPatchFromDiff(before, payload.sceneData);
+    const snapshot = loadedSceneSnapshot ?? hotData.loadedSceneSnapshot ?? {};
+    const patch = buildPatchFromDiff(snapshot, payload.sceneData);
     applyScenePatch(root, patch);
     loadedSceneSnapshot = payload.sceneData;
     hotData.loadedSceneSnapshot = loadedSceneSnapshot;
@@ -207,7 +207,6 @@ function copyInto(target: SceneObject, source: SceneObject): void {
   }
 }
 
-/** Copy source into target, reusing existing nested objects so object references stay valid. */
 function copyIntoPreservingRefs(target: SceneObject, source: SceneObject): void {
   for (const key of Object.keys(target)) {
     if (!(key in source)) delete target[key];
@@ -240,7 +239,6 @@ export function replaceScene(data: SceneObject | undefined): void {
   }
 }
 
-/** Restore scene from snapshot in-place so existing scene object references remain valid. */
 export function restoreSceneSnapshot(data: SceneObject): void {
   if (!rootTarget) {
     replaceScene(data);
@@ -249,7 +247,6 @@ export function restoreSceneSnapshot(data: SceneObject): void {
   copyIntoPreservingRefs(rootTarget, data);
 }
 
-/** Set a value at path through the scene proxy so subscribers are notified. */
 export function setSceneAtPath(path: PropertyKey[], value: unknown): void {
   const s = getScene() as Record<PropertyKey, unknown>;
   if (path.length === 0) return;

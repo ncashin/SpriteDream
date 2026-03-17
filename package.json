@@ -10,5 +10,9 @@
     "gameide",
     "runtime",
     "extension"
-  ]
+  ],
+  "scripts": {
+    "watch": "npm run watch -w gameide -w extension",
+    "watch:gameide": "npm run watch -w gameide"
+  }
 }
