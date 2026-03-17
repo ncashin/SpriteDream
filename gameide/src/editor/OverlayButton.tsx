@@ -12,11 +12,11 @@ export function OverlayButton({
     <button
       type="button"
       className={cn(
-        "flex items-center gap-0.5 py-0.5 px-1.5 text-xs cursor-pointer border border-solid rounded font-[var(--vscode-font-family,inherit)]",
+        "flex items-center gap-1 py-0.5 px-1.5 text-xs cursor-pointer border border-solid rounded font-[var(--vscode-font-family)]",
         variant === "default" &&
-          "bg-[var(--vscode-button-background,#0e639c)] text-[var(--vscode-button-foreground,#fff)] border-[var(--vscode-button-background,#0e639c)]",
+          "bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)] border-[var(--vscode-button-background)]",
         variant === "danger" &&
-          "bg-[var(--vscode-errorForeground,#f14c4c)] text-[var(--vscode-button-foreground,#fff)] border-[var(--vscode-errorForeground,#f14c4c)]",
+          "bg-[var(--vscode-errorForeground)] text-[var(--vscode-button-foreground)] border-[var(--vscode-errorForeground)]",
         className
       )}
       {...props}

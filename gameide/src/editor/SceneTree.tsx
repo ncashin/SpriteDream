@@ -1,5 +1,5 @@
 import { ChevronRight, Box } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import type { SceneObject } from "../scene.js";
 import { useScene } from "./useScene.js";
 import { cn } from "../utils/cn.js";
@@ -10,7 +10,7 @@ function isExpandable(value: unknown): value is Record<string, unknown> {
 
 function formatValue(value: unknown): string {
   if (value == null) return String(value);
-  if (typeof value === "string") return `"${value}"`;
+  if (typeof value === "string") return value;
   if (Array.isArray(value)) return `[${value.length}]`;
   return String(value);
 }
@@ -26,16 +26,11 @@ function parseInput(s: string): unknown {
 }
 
 const textSize = "text-xs";
-const font = "font-[var(--vscode-font-family,monospace)]";
-const rowClass = `flex flex-row items-center w-full min-w-0 h-6 ${textSize} ${font} overflow-hidden`;
-const muted = "text-[var(--vscode-descriptionForeground,#6e7681)]";
-const fg = "text-[var(--vscode-editor-foreground,#ccc)]";
-const hover = "hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.08))]";
-
-const depthPl = ["pl-0", "pl-4", "pl-8", "pl-12", "pl-16", "pl-20", "pl-24", "pl-28", "pl-32", "pl-36", "pl-40"] as const;
-function plForDepth(depth: number): string {
-  return depthPl[Math.min(depth, depthPl.length - 1)] ?? "pl-40";
-}
+const font = "font-[var(--vscode-font-family)]";
+const rowClass = `flex flex-row items-center w-full min-w-0 py-1.5 pr-1.5 ${textSize} ${font} overflow-hidden`;
+const muted = "text-[var(--vscode-descriptionForeground)]";
+const foreground = "text-[var(--vscode-editor-foreground)]";
+const hover = "hover:bg-[var(--vscode-list-hoverBackground)]";
 
 type TreeNodeProps = { name: string; depth: number; path: PropertyKey[] };
 
@@ -47,7 +42,6 @@ function TreeNode({ name, depth, path }: TreeNodeProps) {
   const expandable = isExpandable(value);
   const obj = expandable ? (value as SceneObject) : null;
   const keys = obj ? Object.keys(obj) : [];
-  const hasChildren = keys.length > 0;
 
   useEffect(() => {
     setEditText(formatValue(value));
@@ -55,12 +49,19 @@ function TreeNode({ name, depth, path }: TreeNodeProps) {
 
   const commitEdit = () => setValue(parseInput(editText));
 
-  const pad = { paddingLeft: `${depth}rem` };
+  const leftPadding = { paddingLeft: `calc(0.375rem + ${depth}rem)` };
+  const stickyStyle =
+    expandable && open
+      ? {
+          top: `calc(${depth} * var(--scene-tree-row-height))`,
+          zIndex: 10 + depth,
+        }
+      : {};
   const inputClass = `w-full min-w-0 flex-1 py-0 border-0 bg-transparent text-inherit ${textSize} font-[inherit] outline-none`;
 
   if (!expandable) {
     return (
-      <div className={cn(rowClass, "gap-1 justify-start")} style={pad}>
+      <div className={cn(rowClass, "gap-1 justify-start")} style={leftPadding}>
         <span className={cn(muted, "shrink-0")}>{name}:</span>
         <input
           type="text"
@@ -89,8 +90,16 @@ function TreeNode({ name, depth, path }: TreeNodeProps) {
             setOpen((o) => !o);
           }
         }}
-        className={cn(rowClass, "cursor-pointer", fg, hover, "outline-none gap-1 justify-between flex flex-row")}
-        style={pad}
+        className={cn(
+          rowClass,
+          "cursor-pointer",
+          foreground,
+          "outline-none gap-1 justify-between flex flex-row",
+          expandable && open
+            ? "sticky top-0 bg-[var(--vscode-editor-background)] hover:bg-[var(--vscode-editor-background)]"
+            : hover
+        )}
+        style={{ ...leftPadding, ...stickyStyle }}
       >
         <div className="flex flex-row items-center gap-1 min-w-0 flex-1">
           <Box size={12} className="shrink-0 opacity-80" />
@@ -109,17 +118,20 @@ export function SceneTree() {
 
   if (!rootObj || Object.keys(rootObj).length === 0) {
     return (
-      <div className={cn("w-full p-3 flex items-center", textSize, font, muted)}>
+      <div className={cn("w-full flex items-center", textSize, font, muted)}>
         {!rootObj ? "No scene data" : "Scene is empty"}
       </div>
     );
   }
 
   return (
-    <div className="w-full min-w-0 py-2">
-      {Object.keys(rootObj).map((k) => (
-        <TreeNode name={k} depth={0} path={[]} key={k} />
-      ))}
+    <div className="w-full h-full min-w-0 flex flex-col gap-0">
+      <header className={cn("font-bold text-base py-1.5 pl-1.5 pt-3.5 text-xs", font)}>Scene View</header>
+      <div className="flex-1 min-h-0 overflow-auto relative" style={{ "--scene-tree-row-height": "1.5rem" } as CSSProperties}>
+        {Object.keys(rootObj).map((k) => (
+          <TreeNode name={k} depth={0} path={[]} key={k} />
+        ))}
+      </div>
     </div>
   );
 }

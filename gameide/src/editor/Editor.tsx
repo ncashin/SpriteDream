@@ -13,7 +13,7 @@ export function Editor() {
       <div className="pointer-events-auto fixed inset-0">
         <div
           className={cn(
-            "fixed left-0 top-0 bottom-0 w-[17.5rem] max-w-[85vw] bg-[var(--vscode-editor-background,#1e1e1e)] border-r border-[var(--vscode-panel-border,rgba(255,255,255,0.1))] shadow-[0.125rem_0_0.75rem_rgba(0,0,0,0.3)] overflow-auto transition-transform duration-200 ease-out z-[2147483646]",
+            "fixed left-0 top-0 bottom-0 w-[17.5rem] max-w-[85vw] bg-[var(--vscode-editor-background)] border-r border-[var(--vscode-panel-border)] overflow-auto transition-transform duration-200 ease-out z-[2147483646]",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >

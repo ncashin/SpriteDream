@@ -20,7 +20,7 @@ export function SidebarToggleButton({
       {open ? (
         <>
           <MoveLeft size={12} aria-hidden />
-          Close
+          Scene View
         </>
       ) : (
         <>
