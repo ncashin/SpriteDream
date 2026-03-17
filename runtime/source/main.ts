@@ -7,14 +7,13 @@ import {
   initializeGame,
   inputPlugin,
   type Plugin,
-  render2DPlugin,
+  renderPlugin2D,
+  update,
 } from "gameide";
 import sampleScene from "./sample.scene";
 import inputConfig from "./input.config.json";
 import "./style.css";
 import invariant from "tiny-invariant";
-import { update } from "gameide/gameloop";
-
 const PlayerDefinition = defineObject(
   { x: 0, y: 0, size: 24, speed: 200 },
   { name: "Player", description: "PlayerEntity" },
@@ -34,7 +33,7 @@ initializeGame({
   plugins: gameidePlugins([
     editorPlugin(Editor),
     inputPlugin(inputConfig),
-    render2DPlugin(),
+    renderPlugin2D(),
   ]),
   main({ input, render2D }) {
     const { canvasElement, context } = render2D;

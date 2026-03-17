@@ -73,11 +73,11 @@ export {
   setMode,
   onModeChange,
 } from "./mode.js";
-export { render2DPlugin } from "./render2DPlugin.js";
+export { renderPlugin2D } from "./renderPlugin2D.js";
 export type {
   Render2DPluginRequiredContext,
   Render2DPluginOptions,
-} from "./render2DPlugin.js";
+} from "./renderPlugin2D.js";
 export { inputPlugin } from "./inputPlugin.js";
 export type {
   InputBinding,

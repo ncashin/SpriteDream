@@ -16,56 +16,49 @@ import type { ComponentType } from "react";
 export type ScenePatchMessage = Record<string, unknown>;
 
 export const editorPlugin =
-  (Editor: ComponentType) =>
-  (input: { rootElement?: HTMLElement } | unknown) => {
-  const rootElement =
-    typeof window !== "undefined"
-      ? (document.getElementById("app") as HTMLElement | null)
-      : null;
-
-  if (rootElement) {
+  (Editor: ComponentType) => (input: { rootElement: HTMLElement }) => {
+    const { rootElement } = input;
     createEditorUI(Editor, rootElement);
-  }
 
-  const channel = createSceneChannel({
-    transport: createSceneTransportPostMessage({
-      target: window.parent,
-      source: window,
-    }),
-    getSceneData: () => structuredClone(getRootTarget() ?? {}),
-    setSceneData: (data) => replaceScene(data),
-    applyScenePatch,
-    subscribeToUpdates: subscribeToSceneUpdates,
-  });
+    const channel = createSceneChannel({
+      transport: createSceneTransportPostMessage({
+        target: window.parent,
+        source: window,
+      }),
+      getSceneData: () => structuredClone(getRootTarget() ?? {}),
+      setSceneData: (data) => replaceScene(data),
+      applyScenePatch,
+      subscribeToUpdates: subscribeToSceneUpdates,
+    });
 
-  let sceneSnapshot: SceneObject | undefined;
+    let sceneSnapshot: SceneObject | undefined;
 
-  if (getMode() === GameIDEMode.Editor) {
-    const root = getRootTarget() ?? {};
-    sceneSnapshot = structuredClone(root);
-  }
-
-  onModeChange((mode) => {
-    switch (mode) {
-      case GameIDEMode.Editor:
-        if (sceneSnapshot !== undefined) {
-          restoreSceneSnapshot(sceneSnapshot);
-          sceneSnapshot = undefined;
-        }
-        channel.unpause();
-        break;
-
-      case GameIDEMode.Game:
-        getScene();
-        const root = getRootTarget() ?? {};
-        sceneSnapshot = structuredClone(root);
-        channel.pause();
-        break;
-
-      default:
-        break;
+    if (getMode() === GameIDEMode.Editor) {
+      const root = getRootTarget() ?? {};
+      sceneSnapshot = structuredClone(root);
     }
-  });
 
-  return input;
-};
+    onModeChange((mode) => {
+      switch (mode) {
+        case GameIDEMode.Editor:
+          if (sceneSnapshot !== undefined) {
+            restoreSceneSnapshot(sceneSnapshot);
+            sceneSnapshot = undefined;
+          }
+          channel.unpause();
+          break;
+
+        case GameIDEMode.Game:
+          getScene();
+          const root = getRootTarget() ?? {};
+          sceneSnapshot = structuredClone(root);
+          channel.pause();
+          break;
+
+        default:
+          break;
+      }
+    });
+
+    return input;
+  };
