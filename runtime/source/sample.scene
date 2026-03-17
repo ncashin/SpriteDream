@@ -1,9 +1,9 @@
 {
   "test": {
-    "x": 200,
+    "x": 300,
     "y": 200,
     "rotation": 0,
-    "scaleX": 1,
+    "scaleX": "\"\"\"test\"\"\"",
     "scaleY": 1,
     "size": 24,
     "speed": 200
