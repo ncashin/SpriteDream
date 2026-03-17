@@ -2,18 +2,21 @@ import {
   gameUpdate,
   getScene,
   defineObject,
-  editorPlugin,
+  gameUIPlugin,
   initializeGame,
   inputPlugin,
   type Plugin,
   renderPlugin2D,
   update,
+  editorPlugin,
 } from "gameide";
 import sampleScene from "./sample.scene";
 import inputConfig from "./input.config.json";
 import "./style.css";
 import invariant from "tiny-invariant";
 import { Editor } from "./Editor";
+import { GameUI } from "./GameUI";
+
 const PlayerDefinition = defineObject(
   { x: 0, y: 0, size: 24, speed: 200 },
   { name: "Player", description: "PlayerEntity" },
@@ -32,6 +35,7 @@ initializeGame({
   initialScene: sampleScene,
   plugins: gameidePlugins([
     editorPlugin(Editor),
+    gameUIPlugin(GameUI),
     inputPlugin(inputConfig),
     renderPlugin2D(),
   ]),

@@ -42,7 +42,7 @@ export function OverlayInput({
         placeholder={placeholder}
         className={cn(
           "absolute inset-0 py-0.5 px-1.5 text-xs text-[var(--vscode-editor-foreground)]",
-          "bg-[var(--vscode-editor-background)]/80 hover:bg-[var(--vscode-editor-background)]",
+          "bg-[var(--vscode-editor-background)] hover:bg-[var(--vscode-editor-background)]",
           "border-none rounded outline-none font-[var(--vscode-font-family)]",
           "truncate",
         )}

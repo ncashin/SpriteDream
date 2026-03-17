@@ -1,12 +1,13 @@
 import { createRoot } from "react-dom/client";
+import { Game } from "./Game.js";
 import type { ComponentType } from "react";
 
-export function createEditorUI(
-  Editor: ComponentType,
+export function createGameUI(
+  GameUI: ComponentType,
   rootElement: HTMLElement,
 ): void {
   const overlay = document.createElement("div");
-  overlay.id = "gameide-editor-overlay";
+  overlay.id = "gameide-game-overlay";
   overlay.style.position = "fixed";
   overlay.style.inset = "0";
   overlay.style.pointerEvents = "none";
@@ -14,10 +15,10 @@ export function createEditorUI(
   document.body.appendChild(overlay);
 
   const root = createRoot(overlay);
-  root.render(<Editor />);
+  root.render(<GameUI />);
 
   requestAnimationFrame(() => {
-    const gameRootContainer = document.getElementById("gameide-editor-gameview");
+    const gameRootContainer = document.getElementById("gameide-gameui-game");
     if (!gameRootContainer) return;
 
     const currentParent = rootElement.parentElement;
@@ -30,3 +31,4 @@ export function createEditorUI(
     rootElement.style.height = "100%";
   });
 }
+
