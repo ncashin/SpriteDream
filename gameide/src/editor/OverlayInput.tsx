@@ -23,7 +23,7 @@ export function OverlayInput({
   return (
     <div
       className={cn(
-        "relative inline-flex items-stretch justify-center",
+        "relative inline-flex items-stretch justify-center rounded font-[var(--vscode-font-family)]",
         className,
       )}
     >
