@@ -4,8 +4,8 @@ import {
   defineObject,
   gameUIPlugin,
   initializeGame,
+  initializePlugins,
   inputPlugin,
-  type Plugin,
   renderPlugin2D,
   update,
   editorPlugin,
@@ -25,15 +25,11 @@ const PlayerDefinition = defineObject(
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-const gameidePlugins = <const Plugins extends readonly Plugin[]>(plugins: Plugins) =>
-  plugins;
-
 initializeGame({
-  initialContext: {
-    rootElement,
-},
+  rootElement,
+  initialContext: {},
   initialScene: sampleScene,
-  plugins: gameidePlugins([
+  plugins: initializePlugins([
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
     inputPlugin(inputConfig),

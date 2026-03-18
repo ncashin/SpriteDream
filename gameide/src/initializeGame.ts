@@ -22,7 +22,7 @@ type ReducedContext<PluginList extends readonly Plugin[]> =
       : ContextAddedByPlugin<First>
     : unknown;
 
-export const gameidePlugins = <const Plugins extends readonly Plugin[]>(
+export const initializePlugins = <const Plugins extends readonly Plugin[]>(
   plugins: Plugins,
 ) => plugins;
 
@@ -31,16 +31,21 @@ export type FinalContext<
   PluginList extends readonly Plugin[],
 > = InitialContext & ReducedContext<PluginList>;
 
+type RootContext = {
+  rootElement: HTMLElement;
+};
+
 async function initializeGame<
   InitialContext,
   const PluginList extends readonly Plugin[],
 >(options: {
+  rootElement: HTMLElement;
   initialContext: InitialContext;
   plugins: PluginList;
   initialScene?: Record<string, unknown>;
-  main: (context: FinalContext<InitialContext, PluginList>) => void;
-}): Promise<FinalContext<InitialContext, PluginList>> {
-  type ResultContext = FinalContext<InitialContext, PluginList>;
+  main: (context: FinalContext<InitialContext & RootContext, PluginList>) => void;
+}): Promise<FinalContext<InitialContext & RootContext, PluginList>> {
+  type ResultContext = FinalContext<InitialContext & RootContext, PluginList>;
   const hot = import.meta.hot;
   let result: ResultContext;
 
@@ -50,7 +55,10 @@ async function initializeGame<
     if (import.meta.env.PROD) {
       setInitialScene(options.initialScene);
     }
-    result = options.initialContext as ResultContext;
+    result = {
+      ...options.initialContext,
+      rootElement: options.rootElement,
+    } as ResultContext;
     if (Array.isArray(options.plugins)) {
       for (const plugin of options.plugins) {
         const fn =
