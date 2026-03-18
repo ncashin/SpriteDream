@@ -9,7 +9,7 @@
     },
     "sprite": {
       "image": "/vite.svg",
-      "tint": "rgba(255, 128, 64, 0.9)"
+      "tint": "rgba(255, 255, 255, 1)"
     },
     "speed": 200
   },

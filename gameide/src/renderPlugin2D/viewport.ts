@@ -22,6 +22,9 @@ export function initializeViewport(
   app: Application,
   input: Pick<InputContext, "getButton" | "getMousePosition">,
 ): Viewport {
+  // Make world-space Y increase upward (Pixi screen-space Y increases downward).
+  app.stage.scale.set(1, -1);
+
   const state: ViewportState = {
     x: 0,
     y: 0,

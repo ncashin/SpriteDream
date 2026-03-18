@@ -52,7 +52,7 @@ initializeGame({
 
       players.forEach((player) => {
         player.transform2D.x += h * player.speed * deltaTime;
-        player.transform2D.y -= v * player.speed * deltaTime;
+        player.transform2D.y += v * player.speed * deltaTime;
       });
     });
   },

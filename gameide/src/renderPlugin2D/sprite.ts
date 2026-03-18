@@ -19,30 +19,7 @@ export function initializeSpriteRendering(app: Application): void {
   const isSpriteRenderable = createObjectGuard(SpriteDefinition);
   const scene = getScene();
   const spriteRegistry = new Map<object, Sprite>();
-  const textureRegistry = new Map<string, Texture>();
-  const loadingTextures = new Map<string, Promise<Texture>>();
-
-  function getTexture(image: string): Promise<Texture> {
-    const cachedTexture = textureRegistry.get(image);
-    if (cachedTexture) return Promise.resolve(cachedTexture);
-
-    const cachedLoad = loadingTextures.get(image);
-    if (cachedLoad) return cachedLoad;
-
-    const load = Assets.load<Texture>(image)
-      .then((texture) => {
-        textureRegistry.set(image, texture);
-        loadingTextures.delete(image);
-        return texture;
-      })
-      .catch(() => {
-        textureRegistry.set(image, Texture.EMPTY);
-        loadingTextures.delete(image);
-        return Texture.EMPTY;
-      });
-    loadingTextures.set(image, load);
-    return load;
-  }
+  const requestedAssetKeyByObject = new Map<object, string>();
 
   update(() => {
     const activeSprites = new Set<object>();
@@ -54,6 +31,7 @@ export function initializeSpriteRendering(app: Application): void {
       let sprite = spriteRegistry.get(renderable);
       if (!sprite) {
         sprite = new Sprite(Texture.WHITE);
+        sprite.anchor.set(0.5, 0.5);
         spriteRegistry.set(renderable, sprite);
         app.stage.addChild(sprite);
       }
@@ -68,30 +46,38 @@ export function initializeSpriteRendering(app: Application): void {
           : "rgba(255,255,255,1)";
       if (!image) {
         sprite.texture = Texture.EMPTY;
+        requestedAssetKeyByObject.delete(renderable);
       } else {
-        const cachedTexture = textureRegistry.get(image);
-        if (cachedTexture) {
-          sprite.texture = cachedTexture;
-        } else {
+        const cacheKey = image;
+
+        const lastRequestedKey = requestedAssetKeyByObject.get(renderable);
+        if (lastRequestedKey !== cacheKey) {
+          requestedAssetKeyByObject.set(renderable, cacheKey);
           sprite.texture = Texture.EMPTY;
-          void getTexture(image).then((texture) => {
-            if (spriteRegistry.get(renderable) === sprite) {
+
+          void (async () => {
+            const texture = await Assets.load<Texture>(image);
+            if (spriteRegistry.get(renderable) === sprite && requestedAssetKeyByObject.get(renderable) === cacheKey) {
               sprite.texture = texture;
             }
-          });
+          })();
         }
       }
 
+      const scaleX = renderable.transform2D.scaleX ?? 1;
+      const scaleY = renderable.transform2D.scaleY ?? 1;
+
       sprite.position.set(renderable.transform2D.x, renderable.transform2D.y);
       sprite.rotation = renderable.transform2D.rotation ?? 0;
-      sprite.width = sprite.texture.width * (renderable.transform2D.scaleX ?? 1);
-      sprite.height = sprite.texture.height * (renderable.transform2D.scaleY ?? 1);
+
+      sprite.scale.set(scaleX, -scaleY);
     }
 
     for (const [object, sprite] of spriteRegistry) {
       if (activeSprites.has(object)) continue;
       sprite.destroy();
       spriteRegistry.delete(object);
+      requestedAssetKeyByObject.delete(object);
     }
   });
 }
