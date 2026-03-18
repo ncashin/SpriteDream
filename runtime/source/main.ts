@@ -32,7 +32,7 @@ invariant(rootElement);
 
 initializeGame({
   rootElement,
-  initialContext: {},
+  initialContext: {}, 
   initialScene: sampleScene,
   plugins: initializePlugins([
     editorPlugin(Editor),

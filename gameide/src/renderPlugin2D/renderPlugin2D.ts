@@ -19,6 +19,7 @@ export const renderPlugin2D = definePlugin(
 
       await app.init({
         resizeTo: rootElement,
+        resolution: window?.devicePixelRatio,
         autoDensity: true,
         antialias: true,
       });

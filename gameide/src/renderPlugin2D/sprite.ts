@@ -20,6 +20,10 @@ export function initializeSpriteRendering(app: Application): void {
   const scene = getScene();
   const spriteRegistry = new Map<object, Sprite>();
   const requestedAssetKeyByObject = new Map<object, string>();
+  const svgResolution =
+    typeof window !== "undefined" && typeof window.devicePixelRatio === "number"
+      ? Math.max(2, window.devicePixelRatio)
+      : 2;
 
   update(() => {
     const activeSprites = new Set<object>();
@@ -37,11 +41,13 @@ export function initializeSpriteRendering(app: Application): void {
       }
 
       const image =
-        typeof renderable.sprite?.image === "string" && renderable.sprite.image.length > 0
+        typeof renderable.sprite?.image === "string" &&
+        renderable.sprite.image.length > 0
           ? renderable.sprite.image
           : "";
       sprite.tint =
-        typeof renderable.sprite?.tint === "string" && renderable.sprite.tint.length > 0
+        typeof renderable.sprite?.tint === "string" &&
+        renderable.sprite.tint.length > 0
           ? renderable.sprite.tint
           : "rgba(255,255,255,1)";
       if (!image) {
@@ -55,9 +61,14 @@ export function initializeSpriteRendering(app: Application): void {
           requestedAssetKeyByObject.set(renderable, cacheKey);
           sprite.texture = Texture.EMPTY;
 
+          const isSvg = cacheKey.split("?")[0].toLowerCase().endsWith(".svg");
+          const loadTarget = isSvg
+            ? { src: cacheKey, data: { resolution: svgResolution } }
+            : cacheKey;
+
           void (async () => {
-            const texture = await Assets.load<Texture>(image);
-            if (spriteRegistry.get(renderable) === sprite && requestedAssetKeyByObject.get(renderable) === cacheKey) {
+            const texture = await Assets.load<Texture>(loadTarget);
+            if (spriteRegistry.get(renderable) === sprite && renderable.sprite?.image === cacheKey) {
               sprite.texture = texture;
             }
           })();
