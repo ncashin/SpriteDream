@@ -18,6 +18,23 @@ export type InputPluginOptions = {
   axes?: Record<string, { negative: string[]; positive: string[] }>;
   buttons?: Record<string, string[]>;
   target?: HTMLElement | Document;
+  /**
+   * Controls cursor appearance for click+drag interactions.
+   * Only applies when the input target is an HTMLElement.
+   */
+  dragCursor?: {
+    /** MouseEvent.button values to treat as "draggable" (defaults to [0]). */
+    buttons?: number[];
+    /** Cursor while the button is down but movement hasn't started yet. */
+    down?: string;
+    /** Cursor while moving with a draggable button held down. */
+    dragging?: string;
+    /**
+     * Cursor to restore on mouse up. If omitted, restores the element's
+     * previous inline `style.cursor`.
+     */
+    idle?: string;
+  };
 };
 
 export type ExtractAxisKeys<C extends InputPluginOptions> = C extends {
@@ -64,6 +81,7 @@ export type InputContext<
   getButtonDown: (buttonName: ButtonKey) => boolean;
   getButtonUp: (buttonName: ButtonKey) => boolean;
   getMouseDelta: () => { x: number; y: number };
+  getMousePosition: () => { x: number; y: number } | null;
 };
 
 const inputPluginImpl = definePlugin(
@@ -76,6 +94,12 @@ const inputPluginImpl = definePlugin(
       // TODO: This is an ugly way to ensure editor iframe receives keyboard input
       if (target instanceof HTMLElement) target.tabIndex = 0;
 
+      const cursorTarget = target instanceof HTMLElement ? target : null;
+      const dragCursorConfig = options?.dragCursor;
+      const dragCursorButtons = dragCursorConfig?.buttons ?? [0];
+      const originalInlineCursor = cursorTarget ? cursorTarget.style.cursor : "";
+      let dragCursorActive = false;
+
       const keyState: Record<string, boolean> = {};
       const mouseState: Record<string, boolean> = {};
       const previousKeyState: Record<string, boolean> = {};
@@ -83,6 +107,9 @@ const inputPluginImpl = definePlugin(
 
       let mouseDeltaX = 0;
       let mouseDeltaY = 0;
+      let mouseX = 0;
+      let mouseY = 0;
+      let hasMousePosition = false;
 
       function setKey(binding: InputBinding, down: boolean) {
         if (binding.startsWith("Key")) {
@@ -133,6 +160,19 @@ const inputPluginImpl = definePlugin(
           x: ev.clientX,
           y: ev.clientY,
         });
+
+        if (
+          cursorTarget &&
+          dragCursorConfig &&
+          dragCursorButtons.includes(ev.button)
+        ) {
+          dragCursorActive = true;
+          cursorTarget.style.cursor = dragCursorConfig.down ?? "grab";
+        }
+
+        mouseX = ev.clientX;
+        mouseY = ev.clientY;
+        hasMousePosition = true;
         setMouse(ev.button, true);
         ev.preventDefault();
       });
@@ -142,6 +182,19 @@ const inputPluginImpl = definePlugin(
           x: ev.clientX,
           y: ev.clientY,
         });
+
+        if (
+          cursorTarget &&
+          dragCursorConfig &&
+          dragCursorButtons.includes(ev.button)
+        ) {
+          dragCursorActive = false;
+          cursorTarget.style.cursor = dragCursorConfig.idle ?? originalInlineCursor;
+        }
+
+        mouseX = ev.clientX;
+        mouseY = ev.clientY;
+        hasMousePosition = true;
         setMouse(ev.button, false);
         ev.preventDefault();
       });
@@ -149,6 +202,18 @@ const inputPluginImpl = definePlugin(
         const ev = e as MouseEvent;
         mouseDeltaX += ev.movementX;
         mouseDeltaY += ev.movementY;
+        mouseX = ev.clientX;
+        mouseY = ev.clientY;
+        hasMousePosition = true;
+
+        if (
+          cursorTarget &&
+          dragCursorConfig &&
+          dragCursorActive &&
+          (ev.movementX !== 0 || ev.movementY !== 0)
+        ) {
+          cursorTarget.style.cursor = dragCursorConfig.dragging ?? "grabbing";
+        }
       });
 
       update(() => {
@@ -189,12 +254,18 @@ const inputPluginImpl = definePlugin(
         return { x: mouseDeltaX, y: mouseDeltaY };
       }
 
+      function getMousePosition() {
+        if (!hasMousePosition) return null;
+        return { x: mouseX, y: mouseY };
+      }
+
       const input = {
         getAxis,
         getButton,
         getButtonDown,
         getButtonUp,
         getMouseDelta,
+        getMousePosition,
       };
 
       return { ...inputContext, input };

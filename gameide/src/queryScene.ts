@@ -48,6 +48,10 @@ export interface SceneWithQuery extends SceneObject {
   query<TObject extends SceneObject = SceneObject>(
     callbackOrOptions: QuerySceneCallbackOrGuard<TObject> | QuerySceneOptions<TObject>
   ): TObject[];
+  onQueryChange<TObject extends SceneObject = SceneObject>(
+    callbackOrOptions: QuerySceneCallbackOrGuard<TObject> | QuerySceneOptions<TObject>,
+    listener: (result: TObject[], event: QueryResultEvent<TObject>) => void
+  ): () => void;
 }
 
 const defaultCallback: QuerySceneCallback = () => true;

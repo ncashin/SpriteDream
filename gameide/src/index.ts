@@ -57,13 +57,15 @@ export type {
 } from "./queryScene.js";
 export {
   defineObject,
+  createObjectGuard,
   getDefinedObjectsForEditor,
   $number,
   $string,
   $boolean,
 } from "./objectRegistry.js";
-export type { SchemaToType, DefinedObject, ObjectMetadata } from "./objectRegistry.js";
-export { TransformDefinition as transform } from "./transform.js";
+export type { SchemaToType, ObjectMetadata } from "./objectRegistry.js";
+export { SpriteDefinition } from "./renderPlugin2D/sprite.js";
+export { TransformDefinition2D } from "./renderPlugin2D/transform.js";
 export {
   initializeGame,
   initializePlugins,
@@ -89,11 +91,11 @@ export {
   setMode,
   onModeChange,
 } from "./mode.js";
-export { renderPlugin2D } from "./renderPlugin2D.js";
+export { renderPlugin2D } from "./renderPlugin2D/renderPlugin2D.js";
 export type {
   Render2DPluginRequiredContext,
   Render2DPluginOptions,
-} from "./renderPlugin2D.js";
+} from "./renderPlugin2D/renderPlugin2D.js";
 export { inputPlugin } from "./inputPlugin.js";
 export type {
   InputBinding,

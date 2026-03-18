@@ -1,34 +1,31 @@
 {
   "test": {
-    "x": 200,
-    "y": 200,
-    "rotation": 0,
-    "scaleX": 1,
-    "scaleY": 1,
-    "size": 20,
-    "speed": 200,
-    "metadata": {
-      "type": "npc",
-      "stats": {
-        "health": 100,
-        "mana": 50
-      },
-      "tags": [
-        "enemy",
-        "demo"
-      ]
-    }
-  },
-  "player2": {
-    "x": 400,
-    "y": 0,
-    "rotation": 0,
-    "scaleX": 1,
-    "scaleY": 1,
-    "size": 24,
+    "transform2D": {
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1
+    },
+    "sprite": {
+      "image": "/vite.svg",
+      "tint": "rgba(255, 128, 64, 0.9)"
+    },
     "speed": 200
   },
-  "name": "asdasdasd skda;fksa ;ldfka;sldfk;asdf",
+  "player2": {
+    "transform2D": {
+      "x": 400,
+      "y": 200,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1
+    },
+    "sprite": {
+      "image": ""
+    },
+    "speed": 200
+  },
   "__metadata": {
     "name": "Example Scene"
   }

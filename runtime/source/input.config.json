@@ -14,5 +14,10 @@
     "Jump": ["KeySpace"],
     "Submit": ["KeyEnter", "KeySpace"],
     "Cancel": ["KeyEscape"]
+  },
+  "dragCursor": {
+    "buttons": [0],
+    "down": "grab",
+    "dragging": "grabbing"
   }
 }
