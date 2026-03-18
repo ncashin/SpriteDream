@@ -54,7 +54,7 @@ function TreeNode({ name, depth, path }: TreeNodeProps) {
     expandable && open
       ? {
           top: `calc(${depth} * var(--scene-tree-row-height))`,
-          zIndex: 10 + depth,
+          zIndex: 100 - depth,
         }
       : {};
   const inputClass = `w-full min-w-0 flex-1 py-0 border-0 bg-transparent text-inherit ${textSize} font-[inherit] outline-none`;
@@ -81,31 +81,33 @@ function TreeNode({ name, depth, path }: TreeNodeProps) {
   return (
     <div className="min-w-0">
       <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setOpen((o) => !o);
-          }
-        }}
         className={cn(
           rowClass,
-          "cursor-pointer",
-          foreground,
-          "outline-none gap-1 justify-between flex flex-row",
-          expandable && open
-            ? "sticky top-0 bg-[var(--vscode-editor-background)] hover:bg-[var(--vscode-editor-background)]"
-            : hover
+          "gap-1 justify-between",
+          expandable && open && "sticky top-0 bg-[var(--vscode-editor-background)]"
         )}
         style={{ ...leftPadding, ...stickyStyle }}
       >
-        <div className="flex flex-row items-center gap-1 min-w-0 flex-1">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpen((o) => !o)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setOpen((o) => !o);
+            }
+          }}
+          className={cn(
+            "flex flex-row items-center gap-1 min-w-0 flex-1 rounded py-1 px-1.5 -my-1 cursor-pointer outline-none",
+            foreground,
+            hover
+          )}
+        >
           <Box size={12} className="shrink-0 opacity-80" />
           <span className="min-w-0 flex-1 truncate">{name}</span>
+          <ChevronRight size={12} className={cn("shrink-0 transition-transform", open && "rotate-90")} />
         </div>
-        <ChevronRight size={12} className={cn("shrink-0 transition-transform", open && "rotate-90")} />
       </div>
       {open && keys.map((k) => <TreeNode name={k} depth={depth + 1} path={fullPath} key={k} />)}
     </div>
