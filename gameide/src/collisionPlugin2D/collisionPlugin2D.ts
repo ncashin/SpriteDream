@@ -24,9 +24,7 @@ type CollisionBody2D = SchemaToType<typeof collisionBody2D>;
 type ColliderEntity2D = Transform2D & Collider2D & CollisionBody2D;
 
 export type CollisionPlugin2DOptions = {
-  // Default: no gravity (collisions only).
   gravityY?: number;
-  // Prevent large dt spikes from destabilizing the solver.
   maxDeltaSeconds?: number;
 };
 
@@ -42,8 +40,8 @@ const isTransform2D = createObjectGuard(TransformDefinition2D);
 const isCollider2D = createObjectGuard(collider2D);
 const isCollisionBody2D = createObjectGuard(collisionBody2D);
 
-const isColliderEntity2D = (obj: SceneObject): obj is ColliderEntity2D =>
-  isTransform2D(obj) && isCollider2D(obj) && isCollisionBody2D(obj);
+const isColliderEntity2D = (sceneObject: SceneObject): sceneObject is ColliderEntity2D =>
+  isTransform2D(sceneObject) && isCollider2D(sceneObject) && isCollisionBody2D(sceneObject);
 
 const collisionCallbacks = createCallbackRegistry<(event: Collision2DEvent) => void>();
 
@@ -52,7 +50,6 @@ export function onCollision(callback: (event: Collision2DEvent) => void): () => 
 }
 
 function toMatterPosition(worldYUp: number): number {
-  // Our scene uses y-up coordinates; Matter uses y-down screen coordinates.
   return -worldYUp;
 }
 
@@ -61,7 +58,6 @@ function fromMatterPosition(matterYDown: number): number {
 }
 
 function toMatterAngle(worldRotationRadians: number): number {
-  // Reflecting across the X-axis flips rotation direction.
   return -worldRotationRadians;
 }
 
@@ -69,58 +65,57 @@ function fromMatterAngle(matterAngleRadians: number): number {
   return -matterAngleRadians;
 }
 
-function colliderSettingsKey(obj: ColliderEntity2D): string {
-  // Used to detect when we need to rebuild a Matter body.
-  const c = obj.collider2D;
-  const b = obj.collisionBody2D;
+function colliderSettingsKey(colliderEntity: ColliderEntity2D): string {
+  const collider2D = colliderEntity.collider2D;
+  const collisionBody2D = colliderEntity.collisionBody2D;
   return JSON.stringify({
-    shape: c.shape,
-    radius: c.radius,
-    width: c.width,
-    height: c.height,
-    isSensor: c.isSensor,
-    category: c.category,
-    mask: c.mask,
-    group: c.group,
-    isStatic: b.isStatic,
-    mass: b.mass,
-    friction: b.friction,
-    frictionAir: b.frictionAir,
-    restitution: b.restitution,
+    shape: collider2D.shape,
+    radius: collider2D.radius,
+    width: collider2D.width,
+    height: collider2D.height,
+    isSensor: collider2D.isSensor,
+    category: collider2D.category,
+    mask: collider2D.mask,
+    group: collider2D.group,
+    isStatic: collisionBody2D.isStatic,
+    mass: collisionBody2D.mass,
+    friction: collisionBody2D.friction,
+    frictionAir: collisionBody2D.frictionAir,
+    restitution: collisionBody2D.restitution,
   });
 }
 
-function createMatterBodyFromObject(obj: ColliderEntity2D): Matter.Body {
-  const { x, y, rotation } = obj.transform2D;
+function createMatterBodyFromColliderEntity(colliderEntity: ColliderEntity2D): Matter.Body {
+  const { x, y, rotation } = colliderEntity.transform2D;
   const matterX = x;
   const matterY = toMatterPosition(y);
   const matterAngle = toMatterAngle(rotation);
 
-  const c = obj.collider2D;
-  const b = obj.collisionBody2D;
+  const collider2D = colliderEntity.collider2D;
+  const collisionBody2D = colliderEntity.collisionBody2D;
 
-  const options: Matter.IBodyDefinition = {
-    isStatic: b.isStatic,
-    mass: b.mass,
-    friction: b.friction,
-    frictionAir: b.frictionAir,
-    restitution: b.restitution,
-    isSensor: c.isSensor,
+  const options: Matter.IChamferableBodyDefinition = {
+    isStatic: collisionBody2D.isStatic,
+    mass: collisionBody2D.mass,
+    friction: collisionBody2D.friction,
+    frictionAir: collisionBody2D.frictionAir,
+    restitution: collisionBody2D.restitution,
+    isSensor: collider2D.isSensor,
     collisionFilter: {
-      category: c.category,
-      mask: c.mask,
-      group: c.group,
+      category: collider2D.category,
+      mask: collider2D.mask,
+      group: collider2D.group,
     },
     render: { visible: false },
   };
 
-  const body =
-    c.shape === "circle"
-      ? Matter.Bodies.circle(matterX, matterY, c.radius, options)
-      : Matter.Bodies.rectangle(matterX, matterY, c.width, c.height, options);
+  const matterBody =
+    collider2D.shape === "circle"
+      ? Matter.Bodies.circle(matterX, matterY, collider2D.radius, options)
+      : Matter.Bodies.rectangle(matterX, matterY, collider2D.width, collider2D.height, options);
 
-  Matter.Body.setAngle(body, matterAngle);
-  return body;
+  Matter.Body.setAngle(matterBody, matterAngle);
+  return matterBody;
 }
 
 export type CollisionPlugin2DContext = {
@@ -141,17 +136,14 @@ export const collisionPlugin2D = definePlugin<
     const engine = Matter.Engine.create();
     engine.gravity.x = 0;
     engine.gravity.y = gravityY;
-    // Keep the simulation active even when bodies sleep.
     engine.enableSleeping = false;
 
     const world = engine.world;
 
-    // Map scene objects to Matter bodies.
-    const bodyByObject = new Map<ColliderEntity2D, Matter.Body>();
-    const objectByBody = new Map<Matter.Body, ColliderEntity2D>();
-    const lastSettingsKeyByObject = new Map<ColliderEntity2D, string>();
+    const matterBodyByColliderEntity = new Map<ColliderEntity2D, Matter.Body>();
+    const colliderEntityByMatterBody = new Map<Matter.Body, ColliderEntity2D>();
+    const lastSettingsKeyByColliderEntity = new Map<ColliderEntity2D, string>();
 
-    // Collision events are pushed here during Engine.update, then drained after we sync transforms.
     const pendingCollisions: Collision2DEvent[] = [];
 
     Matter.Events.on(engine, "collisionStart", (event: Matter.IEventCollision<Matter.Engine>) => {
@@ -159,13 +151,13 @@ export const collisionPlugin2D = definePlugin<
       for (const pair of pairs) {
         const bodyA = pair.bodyA as Matter.Body;
         const bodyB = pair.bodyB as Matter.Body;
-        const a = objectByBody.get(bodyA);
-        const b = objectByBody.get(bodyB);
-        if (!a || !b) continue;
+        const sceneObjectA = colliderEntityByMatterBody.get(bodyA);
+        const sceneObjectB = colliderEntityByMatterBody.get(bodyB);
+        if (!sceneObjectA || !sceneObjectB) continue;
 
         pendingCollisions.push({
-          a,
-          b,
+          a: sceneObjectA,
+          b: sceneObjectB,
           bodyA,
           bodyB,
           pair,
@@ -175,75 +167,81 @@ export const collisionPlugin2D = definePlugin<
 
     gameUpdate((deltaTime) => {
       const scene = getScene();
-      const activeObjects = scene.query(isColliderEntity2D);
-      const activeSet = new Set(activeObjects);
+      const colliderEntities = scene.query({
+        callback: isColliderEntity2D,
+        cacheKey: "collision2d-entities",
+      });
+      const colliderEntitySet = new Set(colliderEntities);
 
-      // Create or rebuild bodies for active objects.
-      for (const obj of activeObjects) {
-        const settingsKey = colliderSettingsKey(obj);
-        const existing = bodyByObject.get(obj);
+      for (const colliderEntity of colliderEntities) {
+        const settingsKey = colliderSettingsKey(colliderEntity);
+        const existingMatterBody = matterBodyByColliderEntity.get(colliderEntity);
 
-        if (!existing) {
-          const body = createMatterBodyFromObject(obj);
-          bodyByObject.set(obj, body);
-          objectByBody.set(body, obj);
-          lastSettingsKeyByObject.set(obj, settingsKey);
-          Matter.World.add(world, body);
+        if (!existingMatterBody) {
+          const matterBody = createMatterBodyFromColliderEntity(colliderEntity);
+          matterBodyByColliderEntity.set(colliderEntity, matterBody);
+          colliderEntityByMatterBody.set(matterBody, colliderEntity);
+          lastSettingsKeyByColliderEntity.set(colliderEntity, settingsKey);
+          Matter.World.add(world, matterBody);
           continue;
         }
 
-        if (lastSettingsKeyByObject.get(obj) !== settingsKey) {
-          // Rebuild the body when collider/body settings change.
-          const oldBody = existing;
-          Matter.World.remove(world, oldBody);
-          objectByBody.delete(oldBody);
+        if (lastSettingsKeyByColliderEntity.get(colliderEntity) !== settingsKey) {
+          Matter.World.remove(world, existingMatterBody);
+          colliderEntityByMatterBody.delete(existingMatterBody);
 
-          const body = createMatterBodyFromObject(obj);
-          bodyByObject.set(obj, body);
-          objectByBody.set(body, obj);
-          lastSettingsKeyByObject.set(obj, settingsKey);
-          Matter.World.add(world, body);
+          const matterBody = createMatterBodyFromColliderEntity(colliderEntity);
+          matterBodyByColliderEntity.set(colliderEntity, matterBody);
+          colliderEntityByMatterBody.set(matterBody, colliderEntity);
+          lastSettingsKeyByColliderEntity.set(colliderEntity, settingsKey);
+          Matter.World.add(world, matterBody);
         }
 
-        // Sync pose from transform for static bodies so editor-driven movement stays consistent.
-        const isStatic = obj.collisionBody2D.isStatic;
+        const isStatic = colliderEntity.collisionBody2D.isStatic;
         if (isStatic) {
-          const body = bodyByObject.get(obj);
-          if (!body) continue;
-          Matter.Body.setPosition(body, {
-            x: obj.transform2D.x,
-            y: toMatterPosition(obj.transform2D.y),
+          const matterBody = matterBodyByColliderEntity.get(colliderEntity);
+          if (!matterBody) continue;
+          Matter.Body.setPosition(matterBody, {
+            x: colliderEntity.transform2D.x,
+            y: toMatterPosition(colliderEntity.transform2D.y),
           });
-          Matter.Body.setAngle(body, toMatterAngle(obj.transform2D.rotation));
-          Matter.Body.setVelocity(body, { x: 0, y: 0 });
-          Matter.Body.setAngularVelocity(body, 0);
+          Matter.Body.setAngle(matterBody, toMatterAngle(colliderEntity.transform2D.rotation));
+          Matter.Body.setVelocity(matterBody, { x: 0, y: 0 });
+          Matter.Body.setAngularVelocity(matterBody, 0);
         }
       }
 
-      // Remove bodies for deleted objects.
-      for (const [obj, body] of bodyByObject.entries()) {
-        if (activeSet.has(obj)) continue;
-        Matter.World.remove(world, body);
-        objectByBody.delete(body);
-        bodyByObject.delete(obj);
-        lastSettingsKeyByObject.delete(obj);
+      for (const [colliderEntity, matterBody] of matterBodyByColliderEntity.entries()) {
+        if (colliderEntitySet.has(colliderEntity)) continue;
+        Matter.World.remove(world, matterBody);
+        colliderEntityByMatterBody.delete(matterBody);
+        matterBodyByColliderEntity.delete(colliderEntity);
+        lastSettingsKeyByColliderEntity.delete(colliderEntity);
+      }
+
+      for (const colliderEntity of colliderEntities) {
+        if (colliderEntity.collisionBody2D.isStatic) continue;
+        const matterBody = matterBodyByColliderEntity.get(colliderEntity);
+        if (!matterBody) continue;
+        Matter.Body.setPosition(matterBody, {
+          x: colliderEntity.transform2D.x,
+          y: toMatterPosition(colliderEntity.transform2D.y),
+        });
+        Matter.Body.setAngle(matterBody, toMatterAngle(colliderEntity.transform2D.rotation));
       }
 
       pendingCollisions.length = 0;
 
-      // Advance physics.
       const dt = Math.min(deltaTime, maxDeltaSeconds);
       Matter.Engine.update(engine, dt * 1000);
 
-      // Sync transform from physics for dynamic bodies.
-      for (const [obj, body] of bodyByObject.entries()) {
-        if (obj.collisionBody2D.isStatic) continue;
-        obj.transform2D.x = body.position.x;
-        obj.transform2D.y = fromMatterPosition(body.position.y);
-        obj.transform2D.rotation = fromMatterAngle(body.angle);
+      for (const [colliderEntity, matterBody] of matterBodyByColliderEntity.entries()) {
+        if (colliderEntity.collisionBody2D.isStatic) continue;
+        colliderEntity.transform2D.x = matterBody.position.x;
+        colliderEntity.transform2D.y = fromMatterPosition(matterBody.position.y);
+        colliderEntity.transform2D.rotation = fromMatterAngle(matterBody.angle);
       }
 
-      // Drain collision events after pose sync, so callbacks can read transform2D values.
       if (pendingCollisions.length > 0) {
         for (const event of pendingCollisions) collisionCallbacks.run(event);
       }

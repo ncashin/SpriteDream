@@ -226,6 +226,8 @@ export function subscribeToQuery<TObject extends SceneObject = SceneObject>(
   const scene = getScene();
   const initial = runQuery(scene, prefix, callback);
 
+  queryCache.set(cacheKey, { prefix, results: initial });
+
   const sub: QuerySubscription = {
     prefix,
     callback,

@@ -2,29 +2,67 @@
   "test": {
     "transform2D": {
       "x": 0,
-      "y": 0,
+      "y": 120,
       "rotation": 0,
       "scaleX": 1,
       "scaleY": 1
     },
     "sprite": {
       "image": "/vite.svg",
-      "tint": "rgba(255, 255, 255, 1)"
+      "tint": "rgba(255, 255, 255, 1)",
+      "width": 56,
+      "height": 56
     },
-    "speed": 200
+    "speed": 200,
+    "collider2D": {
+      "shape": "circle",
+      "radius": 28,
+      "width": 10,
+      "height": 10,
+      "isSensor": false,
+      "category": 1,
+      "mask": 65535,
+      "group": 0
+    },
+    "collisionBody2D": {
+      "isStatic": false,
+      "mass": 1,
+      "friction": 0.2,
+      "frictionAir": 0.02,
+      "restitution": 0.1
+    }
   },
-  "player2": {
+  "floor": {
     "transform2D": {
-      "x": 400,
-      "y": 200,
+      "x": 0,
+      "y": -220,
       "rotation": 0,
       "scaleX": 1,
       "scaleY": 1
     },
     "sprite": {
-      "image": ""
+      "image": "/vite.svg",
+      "tint": "rgba(120, 140, 200, 0.35)",
+      "width": 720,
+      "height": 48
     },
-    "speed": 200
+    "collider2D": {
+      "shape": "box",
+      "radius": 10,
+      "width": 720,
+      "height": 48,
+      "isSensor": false,
+      "category": 1,
+      "mask": 65535,
+      "group": 0
+    },
+    "collisionBody2D": {
+      "isStatic": true,
+      "mass": 1,
+      "friction": 0.4,
+      "frictionAir": 0,
+      "restitution": 0
+    }
   },
   "__metadata": {
     "name": "Example Scene"

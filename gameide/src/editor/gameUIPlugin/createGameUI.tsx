@@ -17,18 +17,16 @@ export function createGameUI(
   const root = createRoot(overlay);
   root.render(<GameUI />);
 
-  requestAnimationFrame(() => {
-    const gameRootContainer = document.getElementById("gameide-gameui-game");
-    if (!gameRootContainer) return;
+  const gameRootContainer = document.getElementById("gameide-gameui-game");
+  if (!gameRootContainer) return;
 
-    const currentParent = rootElement.parentElement;
-    if (!currentParent) return;
+  const currentParent = rootElement.parentElement;
+  if (!currentParent) return;
 
-    currentParent.removeChild(rootElement);
-    gameRootContainer.appendChild(rootElement);
+  currentParent.removeChild(rootElement);
+  gameRootContainer.appendChild(rootElement);
 
-    rootElement.style.width = "100%";
-    rootElement.style.height = "100%";
-  });
+  rootElement.style.width = "100%";
+  rootElement.style.height = "100%";
 }
 

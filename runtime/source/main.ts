@@ -1,4 +1,5 @@
 import {
+  definePlugin,
   gameUpdate,
   getScene,
   defineObject,
@@ -11,6 +12,9 @@ import {
   editorPlugin,
   SpriteDefinition,
   TransformDefinition2D,
+  collider2D,
+  collisionBody2D,
+  collisionPlugin2D,
 } from "gameide";
 import sampleScene from "./sample.scene";
 import inputConfig from "./input.config.json";
@@ -20,7 +24,7 @@ import { Editor } from "./Editor";
 import { GameUI } from "./GameUI";
 
 const PlayerDefinition = defineObject(
-  [TransformDefinition2D, SpriteDefinition, { speed: 200 }],
+  [TransformDefinition2D, SpriteDefinition, collider2D, collisionBody2D, { speed: 200 }],
   {
     name: "Player",
     description: "PlayerEntity",
@@ -38,6 +42,7 @@ initializeGame({
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
     inputPlugin(inputConfig),
+    collisionPlugin2D({ gravityY: 1 }),
     renderPlugin2D(),
   ]),
   main({ input }) {
@@ -48,11 +53,9 @@ initializeGame({
       const players = scene.query(isPlayer);
 
       const h = input.getAxis("Horizontal");
-      const v = input.getAxis("Vertical");
 
       players.forEach((player) => {
         player.transform2D.x += h * player.speed * deltaTime;
-        player.transform2D.y += v * player.speed * deltaTime;
       });
     });
   },

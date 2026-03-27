@@ -1,6 +1,6 @@
 import { Application } from "pixi.js";
 import { update } from "../gameloop.js";
-import { GameIDEMode, getMode } from "../mode.js";
+import { GameIDEMode, getMode, onModeChange } from "../mode.js";
 import type { InputContext } from "../inputPlugin.js";
 
 export type Viewport = {
@@ -22,13 +22,17 @@ export function initializeViewport(
   app: Application,
   input: Pick<InputContext, "getButton" | "getMousePosition">,
 ): Viewport {
-  // Make world-space Y increase upward (Pixi screen-space Y increases downward).
   app.stage.scale.set(1, -1);
 
   const state: ViewportState = {
     x: 0,
     y: 0,
   };
+
+  onModeChange(() => {
+    state.x = 0;
+    state.y = 0;
+  });
 
   const viewport = new Proxy(state as Viewport, {
     get(target, key, receiver) {
