@@ -23,7 +23,6 @@ export type {
   SceneChannelOutMessage,
 } from "./scene/sceneChannel.js";
 
-export { definePlugin } from "./plugin.js";
 export {
   start,
   update,
@@ -64,8 +63,6 @@ export {
   $boolean,
 } from "./objectRegistry.js";
 export type { SchemaToType, ObjectMetadata } from "./objectRegistry.js";
-export { SpriteDefinition } from "./renderPlugin2D/sprite.js";
-export { TransformDefinition2D } from "./renderPlugin2D/transform.js";
 export {
   initializeGame,
   initializePlugins,
@@ -91,11 +88,6 @@ export {
   setMode,
   onModeChange,
 } from "./mode.js";
-export { renderPlugin2D } from "./renderPlugin2D/renderPlugin2D.js";
-export type {
-  Render2DPluginRequiredContext,
-  Render2DPluginOptions,
-} from "./renderPlugin2D/renderPlugin2D.js";
 export { inputPlugin } from "./inputPlugin.js";
 export type {
   InputBinding,
@@ -103,9 +95,6 @@ export type {
   ButtonConfig,
   InputPluginRequiredContext,
   InputPluginOptions,
-  InputContext,
-  ExtractAxisKeys,
-  ExtractButtonKeys,
 } from "./inputPlugin.js";
 export { gameidePlugin } from "./gameidePluginVite.js";
 export { SCENE_HMR_EVENT_NAME } from "./scene/sceneHMR.js";

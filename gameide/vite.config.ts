@@ -19,7 +19,6 @@ export default defineConfig({
       external: [
         "react",
         "react-dom",
-        "pixi.js",
         "clsx",
         "lucide-react",
         "tailwind-merge",
@@ -33,7 +32,6 @@ export default defineConfig({
         globals: {
           react: "React",
           "react-dom": "ReactDOM",
-          "pixi.js": "PIXI",
         },
       },
     },

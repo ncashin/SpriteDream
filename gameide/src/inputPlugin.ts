@@ -1,4 +1,3 @@
-import { definePlugin } from "./plugin.js";
 import { update } from "./gameloop.js";
 
 export type InputBinding =
@@ -15,20 +14,20 @@ export type ButtonConfig = InputBinding[];
 
 export type InputPluginRequiredContext = { rootElement?: HTMLElement };
 export type InputPluginOptions = {
-  axes?: Record<string, { negative: string[]; positive: string[] }>;
-  buttons?: Record<string, string[]>;
+  axes: Record<string, { negative: string[]; positive: string[] }>;
+  buttons: Record<string, string[]>;
   target?: HTMLElement | Document;
   /**
    * Controls cursor appearance for click+drag interactions.
    * Only applies when the input target is an HTMLElement.
    */
   dragCursor?: {
-    /** MouseEvent.button values to treat as "draggable" (defaults to [0]). */
-    buttons?: number[];
+    /** MouseEvent.button values to treat as "draggable". */
+    buttons: number[];
     /** Cursor while the button is down but movement hasn't started yet. */
-    down?: string;
+    down: string;
     /** Cursor while moving with a draggable button held down. */
-    dragging?: string;
+    dragging: string;
     /**
      * Cursor to restore on mouse up. If omitted, restores the element's
      * previous inline `style.cursor`.
@@ -37,34 +36,28 @@ export type InputPluginOptions = {
   };
 };
 
-export type ExtractAxisKeys<C extends InputPluginOptions> = C extends {
-  axes: infer A extends Record<string, unknown>;
-}
-  ? keyof A
-  : keyof typeof DEFAULT_AXES;
+type AxisKeys<Options extends InputPluginOptions> = keyof Options["axes"] &
+  string;
+type ButtonKeys<Options extends InputPluginOptions> = keyof Options["buttons"] &
+  string;
 
-export type ExtractButtonKeys<C extends InputPluginOptions> = C extends {
-  buttons: infer B extends Record<string, unknown>;
-}
-  ? keyof B
-  : keyof typeof DEFAULT_BUTTONS;
-
-const DEFAULT_AXES: Record<string, AxisConfig> = {
-  Horizontal: {
-    negative: ["KeyA", "KeyArrowLeft"],
-    positive: ["KeyD", "KeyArrowRight"],
-  },
-  Vertical: {
-    negative: ["KeyS", "KeyArrowDown"],
-    positive: ["KeyW", "KeyArrowUp"],
-  },
-};
-
-const DEFAULT_BUTTONS: Record<string, ButtonConfig> = {
-  Fire: ["Mouse0", "KeySpace"],
-  Jump: ["KeySpace"],
-  Submit: ["KeyEnter", "KeySpace"],
-  Cancel: ["KeyEscape"],
+/** Mirrors the public `input` field shape (not exported). */
+type InputSnapshot<Options extends InputPluginOptions> = {
+  axes: { [K in keyof Options["axes"] & string]: number };
+  buttons: {
+    [K in keyof Options["buttons"] & string]: {
+      /** True while the binding is currently down (this frame). */
+      held: boolean;
+      /** True on the frame the binding became down (pressed this frame). */
+      pressed: boolean;
+      /** True on the frame the binding became up (released this frame). */
+      released: boolean;
+    };
+  };
+  mouse: {
+    delta: { x: number; y: number };
+    position: { x: number; y: number } | null;
+  };
 };
 
 function normalizeKey(code: string): InputBinding {
@@ -72,214 +65,225 @@ function normalizeKey(code: string): InputBinding {
   return `Key${code}` as InputBinding;
 }
 
-export type InputContext<
-  AxisKey extends string = string,
-  ButtonKey extends string = string,
-> = {
-  getAxis: (axisName: AxisKey) => number;
-  getButton: (buttonName: ButtonKey) => boolean;
-  getButtonDown: (buttonName: ButtonKey) => boolean;
-  getButtonUp: (buttonName: ButtonKey) => boolean;
-  getMouseDelta: () => { x: number; y: number };
-  getMousePosition: () => { x: number; y: number } | null;
-};
-
-const inputPluginImpl = definePlugin(
-  (options?: InputPluginOptions) =>
-    (inputContext: InputPluginRequiredContext) => {
-      const axes = { ...DEFAULT_AXES, ...options?.axes };
-      const buttons = { ...DEFAULT_BUTTONS, ...options?.buttons };
-      const target = options?.target ?? inputContext.rootElement ?? document;
-
-      // TODO: This is an ugly way to ensure editor iframe receives keyboard input
-      if (target instanceof HTMLElement) target.tabIndex = 0;
-
-      const cursorTarget = target instanceof HTMLElement ? target : null;
-      const dragCursorConfig = options?.dragCursor;
-      const dragCursorButtons = dragCursorConfig?.buttons ?? [0];
-      const originalInlineCursor = cursorTarget ? cursorTarget.style.cursor : "";
-      let dragCursorActive = false;
-
-      const keyState: Record<string, boolean> = {};
-      const mouseState: Record<string, boolean> = {};
-      const previousKeyState: Record<string, boolean> = {};
-      const previousMouseState: Record<string, boolean> = {};
-
-      let mouseDeltaX = 0;
-      let mouseDeltaY = 0;
-      let mouseX = 0;
-      let mouseY = 0;
-      let hasMousePosition = false;
-
-      function setKey(binding: InputBinding, down: boolean) {
-        if (binding.startsWith("Key")) {
-          keyState[binding] = down;
-        }
-      }
-
-      function setMouse(button: number, down: boolean) {
-        mouseState[String(button)] = down;
-      }
-
-      function isBindingDown(binding: string): boolean {
-        if (binding.startsWith("Key")) return keyState[binding] ?? false;
-        if (binding.startsWith("Mouse")) {
-          const n = binding.slice(5);
-          return mouseState[n] ?? false;
-        }
-        return false;
-      }
-
-      function wasBindingDown(binding: string): boolean {
-        if (binding.startsWith("Key"))
-          return previousKeyState[binding] ?? false;
-        if (binding.startsWith("Mouse")) {
-          const n = binding.slice(5);
-          return previousMouseState[n] ?? false;
-        }
-        return false;
-      }
-
-      target.addEventListener("keydown", (e: Event) => {
-        const ev = e as KeyboardEvent;
-        console.log("[input] keydown", ev.code, ev.key);
-        setKey(normalizeKey(ev.code), true);
-        ev.preventDefault();
-      });
-      target.addEventListener("keyup", (e: Event) => {
-        const ev = e as KeyboardEvent;
-        console.log("[input] keyup", ev.code, ev.key);
-        setKey(normalizeKey(ev.code), false);
-        ev.preventDefault();
-      });
-      target.addEventListener("mousedown", (e: Event) => {
-        const ev = e as MouseEvent;
-        // TODO: This is an ugly way to ensure editor iframe receives keyboard input
-        if (target instanceof HTMLElement) target.focus();
-        console.log("[input] mousedown", ev.button, {
-          x: ev.clientX,
-          y: ev.clientY,
-        });
-
-        if (
-          cursorTarget &&
-          dragCursorConfig &&
-          dragCursorButtons.includes(ev.button)
-        ) {
-          dragCursorActive = true;
-          cursorTarget.style.cursor = dragCursorConfig.down ?? "grab";
-        }
-
-        mouseX = ev.clientX;
-        mouseY = ev.clientY;
-        hasMousePosition = true;
-        setMouse(ev.button, true);
-        ev.preventDefault();
-      });
-      target.addEventListener("mouseup", (e: Event) => {
-        const ev = e as MouseEvent;
-        console.log("[input] mouseup", ev.button, {
-          x: ev.clientX,
-          y: ev.clientY,
-        });
-
-        if (
-          cursorTarget &&
-          dragCursorConfig &&
-          dragCursorButtons.includes(ev.button)
-        ) {
-          dragCursorActive = false;
-          cursorTarget.style.cursor = dragCursorConfig.idle ?? originalInlineCursor;
-        }
-
-        mouseX = ev.clientX;
-        mouseY = ev.clientY;
-        hasMousePosition = true;
-        setMouse(ev.button, false);
-        ev.preventDefault();
-      });
-      target.addEventListener("mousemove", (e: Event) => {
-        const ev = e as MouseEvent;
-        mouseDeltaX += ev.movementX;
-        mouseDeltaY += ev.movementY;
-        mouseX = ev.clientX;
-        mouseY = ev.clientY;
-        hasMousePosition = true;
-
-        if (
-          cursorTarget &&
-          dragCursorConfig &&
-          dragCursorActive &&
-          (ev.movementX !== 0 || ev.movementY !== 0)
-        ) {
-          cursorTarget.style.cursor = dragCursorConfig.dragging ?? "grabbing";
-        }
-      });
-
-      update(() => {
-        Object.assign(previousKeyState, keyState);
-        Object.assign(previousMouseState, mouseState);
-        mouseDeltaX = 0;
-        mouseDeltaY = 0;
-      });
-
-      function getAxis(axisName: string) {
-        const config = axes[axisName];
-        if (!config) return 0;
-        let value = 0;
-        for (const b of config.negative) if (isBindingDown(b)) value -= 1;
-        for (const b of config.positive) if (isBindingDown(b)) value += 1;
-        return Math.max(-1, Math.min(1, value));
-      }
-
-      function getButton(buttonName: string) {
-        const bindings = buttons[buttonName];
-        if (!bindings) return false;
-        return bindings.some((b) => isBindingDown(b));
-      }
-
-      function getButtonDown(buttonName: string) {
-        const bindings = buttons[buttonName];
-        if (!bindings) return false;
-        return bindings.some((b) => isBindingDown(b) && !wasBindingDown(b));
-      }
-
-      function getButtonUp(buttonName: string) {
-        const bindings = buttons[buttonName];
-        if (!bindings) return false;
-        return bindings.some((b) => !isBindingDown(b) && wasBindingDown(b));
-      }
-
-      function getMouseDelta() {
-        return { x: mouseDeltaX, y: mouseDeltaY };
-      }
-
-      function getMousePosition() {
-        if (!hasMousePosition) return null;
-        return { x: mouseX, y: mouseY };
-      }
-
-      const input = {
-        getAxis,
-        getButton,
-        getButtonDown,
-        getButtonUp,
-        getMouseDelta,
-        getMousePosition,
-      };
-
-      return { ...inputContext, input };
-    },
-);
-
 export function inputPlugin<Options extends InputPluginOptions>(
-  options?: Options,
+  options: Options,
 ): (input: InputPluginRequiredContext) => InputPluginRequiredContext & {
-  input: InputContext<ExtractAxisKeys<Options>, ExtractButtonKeys<Options>>;
+  input: {
+    axes: { [K in keyof Options["axes"] & string]: number };
+    buttons: {
+      [K in keyof Options["buttons"] & string]: {
+        /** True while the binding is currently down (this frame). */
+        held: boolean;
+        /** True on the frame the binding became down (pressed this frame). */
+        pressed: boolean;
+        /** True on the frame the binding became up (released this frame). */
+        released: boolean;
+      };
+    };
+    mouse: {
+      delta: { x: number; y: number };
+      position: { x: number; y: number } | null;
+    };
+  };
 } {
-  return inputPluginImpl(options) as (
-    input: InputPluginRequiredContext,
-  ) => InputPluginRequiredContext & {
-    input: InputContext<ExtractAxisKeys<Options>, ExtractButtonKeys<Options>>;
+  return (inputContext: InputPluginRequiredContext) => {
+    const axesConfig = options.axes;
+    const buttonsConfig = options.buttons;
+    const target = options.target ?? inputContext.rootElement ?? document;
+
+    // TODO: This is an ugly way to ensure editor iframe receives keyboard input
+    if (target instanceof HTMLElement) target.tabIndex = 0;
+
+    const cursorTarget = target instanceof HTMLElement ? target : null;
+    const dragCursorConfig = options.dragCursor;
+    const originalInlineCursor = cursorTarget ? cursorTarget.style.cursor : "";
+    let dragCursorActive = false;
+
+    const keyState: Record<string, boolean> = {};
+    const mouseState: Record<string, boolean> = {};
+    const previousKeyState: Record<string, boolean> = {};
+    const previousMouseState: Record<string, boolean> = {};
+
+    let mouseDeltaX = 0;
+    let mouseDeltaY = 0;
+    let mouseX = 0;
+    let mouseY = 0;
+    let hasMousePosition = false;
+
+    const axisKeys = Object.keys(axesConfig) as AxisKeys<Options>[];
+    const buttonKeys = Object.keys(buttonsConfig) as ButtonKeys<Options>[];
+
+    const axes = Object.fromEntries(
+      axisKeys.map((k) => [k, 0]),
+    ) as InputSnapshot<Options>["axes"];
+
+    const buttons = Object.fromEntries(
+      buttonKeys.map((k) => [
+        k,
+        { held: false, pressed: false, released: false },
+      ]),
+    ) as InputSnapshot<Options>["buttons"];
+
+    const mouse: InputSnapshot<Options>["mouse"] = {
+      delta: { x: 0, y: 0 },
+      position: null,
+    };
+
+    function setKey(binding: InputBinding, down: boolean) {
+      if (binding.startsWith("Key")) {
+        keyState[binding] = down;
+      }
+    }
+
+    function setMouse(button: number, down: boolean) {
+      mouseState[String(button)] = down;
+    }
+
+    function isBindingDown(binding: string): boolean {
+      if (binding.startsWith("Key")) return keyState[binding] ?? false;
+      if (binding.startsWith("Mouse")) {
+        const n = binding.slice(5);
+        return mouseState[n] ?? false;
+      }
+      return false;
+    }
+
+    function wasBindingDown(binding: string): boolean {
+      if (binding.startsWith("Key"))
+        return previousKeyState[binding] ?? false;
+      if (binding.startsWith("Mouse")) {
+        const n = binding.slice(5);
+        return previousMouseState[n] ?? false;
+      }
+      return false;
+    }
+
+    function axisValue(axisName: AxisKeys<Options>): number {
+      const config = axesConfig[axisName];
+      if (!config) return 0;
+      let value = 0;
+      for (const b of config.negative) if (isBindingDown(b)) value -= 1;
+      for (const b of config.positive) if (isBindingDown(b)) value += 1;
+      return Math.max(-1, Math.min(1, value));
+    }
+
+    function buttonHeld(buttonName: ButtonKeys<Options>): boolean {
+      const bindings = buttonsConfig[buttonName];
+      if (!bindings) return false;
+      return bindings.some((b) => isBindingDown(b));
+    }
+
+    function buttonPressed(buttonName: ButtonKeys<Options>): boolean {
+      const bindings = buttonsConfig[buttonName];
+      if (!bindings) return false;
+      return bindings.some((b) => isBindingDown(b) && !wasBindingDown(b));
+    }
+
+    function buttonReleased(buttonName: ButtonKeys<Options>): boolean {
+      const bindings = buttonsConfig[buttonName];
+      if (!bindings) return false;
+      return bindings.some((b) => !isBindingDown(b) && wasBindingDown(b));
+    }
+
+    target.addEventListener("keydown", (e: Event) => {
+      const ev = e as KeyboardEvent;
+      console.log("[input] keydown", ev.code, ev.key);
+      setKey(normalizeKey(ev.code), true);
+      ev.preventDefault();
+    });
+    target.addEventListener("keyup", (e: Event) => {
+      const ev = e as KeyboardEvent;
+      console.log("[input] keyup", ev.code, ev.key);
+      setKey(normalizeKey(ev.code), false);
+      ev.preventDefault();
+    });
+    target.addEventListener("mousedown", (e: Event) => {
+      const ev = e as MouseEvent;
+      // TODO: This is an ugly way to ensure editor iframe receives keyboard input
+      if (target instanceof HTMLElement) target.focus();
+      console.log("[input] mousedown", ev.button, {
+        x: ev.clientX,
+        y: ev.clientY,
+      });
+
+      if (
+        cursorTarget &&
+        dragCursorConfig &&
+        dragCursorConfig.buttons.includes(ev.button)
+      ) {
+        dragCursorActive = true;
+        cursorTarget.style.cursor = dragCursorConfig.down;
+      }
+
+      mouseX = ev.clientX;
+      mouseY = ev.clientY;
+      hasMousePosition = true;
+      setMouse(ev.button, true);
+      ev.preventDefault();
+    });
+    target.addEventListener("mouseup", (e: Event) => {
+      const ev = e as MouseEvent;
+      console.log("[input] mouseup", ev.button, {
+        x: ev.clientX,
+        y: ev.clientY,
+      });
+
+      if (
+        cursorTarget &&
+        dragCursorConfig &&
+        dragCursorConfig.buttons.includes(ev.button)
+      ) {
+        dragCursorActive = false;
+        cursorTarget.style.cursor =
+          dragCursorConfig.idle ?? originalInlineCursor;
+      }
+
+      mouseX = ev.clientX;
+      mouseY = ev.clientY;
+      hasMousePosition = true;
+      setMouse(ev.button, false);
+      ev.preventDefault();
+    });
+    target.addEventListener("mousemove", (e: Event) => {
+      const ev = e as MouseEvent;
+      mouseDeltaX += ev.movementX;
+      mouseDeltaY += ev.movementY;
+      mouseX = ev.clientX;
+      mouseY = ev.clientY;
+      hasMousePosition = true;
+
+      if (
+        cursorTarget &&
+        dragCursorConfig &&
+        dragCursorActive &&
+        (ev.movementX !== 0 || ev.movementY !== 0)
+      ) {
+        cursorTarget.style.cursor = dragCursorConfig.dragging;
+      }
+    });
+
+    update(() => {
+      for (const k of axisKeys) {
+        axes[k] = axisValue(k);
+      }
+      for (const k of buttonKeys) {
+        const b = buttons[k];
+        b.held = buttonHeld(k);
+        b.pressed = buttonPressed(k);
+        b.released = buttonReleased(k);
+      }
+      mouse.delta.x = mouseDeltaX;
+      mouse.delta.y = mouseDeltaY;
+      mouse.position = hasMousePosition ? { x: mouseX, y: mouseY } : null;
+
+      Object.assign(previousKeyState, keyState);
+      Object.assign(previousMouseState, mouseState);
+      mouseDeltaX = 0;
+      mouseDeltaY = 0;
+    });
+
+    const input: InputSnapshot<Options> = { axes, buttons, mouse };
+
+    return { ...inputContext, input };
   };
 }

@@ -33,7 +33,6 @@
   "dependencies": {
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
-    "pixi.js": "^8.17.0",
     "planck": "^1.4.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

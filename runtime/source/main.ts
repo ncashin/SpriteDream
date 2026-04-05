@@ -8,20 +8,31 @@ import {
   initializeGame,
   initializePlugins,
   inputPlugin,
-  renderPlugin2D,
   editorPlugin,
-  SpriteDefinition,
-  TransformDefinition2D,
 } from "gameide";
 import sampleScene from "./sample.scene";
-import inputConfig from "./input.config.json";
 import "./style.css";
 import invariant from "tiny-invariant";
 import { Editor } from "./Editor";
 import { GameUI } from "./GameUI";
 
 const PlayerDefinition = defineObject(
-  [TransformDefinition2D, SpriteDefinition, { speed: 200 }],
+  {
+    transform2D: {
+      x: 0,
+      y: 0,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+    },
+    sprite: {
+      image: "",
+      tint: "rgba(255,255,255,1)",
+      width: 0,
+      height: 0,
+    },
+    speed: 200,
+  },
   {
     name: "Player",
     description: "PlayerEntity",
@@ -38,8 +49,21 @@ initializeGame({
   plugins: initializePlugins([
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
-    inputPlugin(inputConfig),
-    renderPlugin2D(),
+    inputPlugin({
+      axes: {
+        Horizontal: {
+          negative: ["KeyA", "KeyArrowLeft"],
+          positive: ["KeyD", "KeyArrowRight"],
+        },
+        Vertical: {
+          negative: ["KeyS", "KeyArrowDown"],
+          positive: ["KeyW", "KeyArrowUp"],
+        },
+      },
+      buttons: {
+        Jump: ["KeySpace"],
+      },
+    }),
   ]),
   main({ input }) {
     const scene = getScene();
@@ -48,7 +72,7 @@ initializeGame({
     gameUpdate((deltaTime) => {
       const players = queryObject(scene, isPlayer);
 
-      const h = input.getAxis("Horizontal");
+      const h = input.axes.Horizontal;
 
       players.forEach((player) => {
         player.transform2D.x += h * player.speed * deltaTime;

@@ -5,7 +5,11 @@ import {
 } from "./gameloop.js";
 import { setScene } from "./scene/scene.js";
 
-export type Plugin = (input: any) => any | Promise<any>;
+/**
+ * Loose plugin signature for documentation; `initializePlugins` keeps the
+ * concrete tuple so `FinalContext` can merge each plugin’s real return type.
+ */
+export type Plugin = (input: object) => object | Promise<object>;
 
 type ContextAddedByPlugin<PluginFunction> = PluginFunction extends (
   input: infer In,
@@ -15,20 +19,20 @@ type ContextAddedByPlugin<PluginFunction> = PluginFunction extends (
     : Omit<Out, keyof In>
   : never;
 
-type ReducedContext<PluginList extends readonly Plugin[]> =
+type ReducedContext<PluginList extends readonly unknown[]> =
   PluginList extends readonly [infer First, ...infer Rest]
-    ? Rest extends readonly Plugin[]
+    ? Rest extends readonly unknown[]
       ? ContextAddedByPlugin<First> & ReducedContext<Rest>
       : ContextAddedByPlugin<First>
     : unknown;
 
-export const initializePlugins = <const Plugins extends readonly Plugin[]>(
+export const initializePlugins = <const Plugins extends readonly unknown[]>(
   plugins: Plugins,
 ) => plugins;
 
 export type FinalContext<
   InitialContext,
-  PluginList extends readonly Plugin[],
+  PluginList extends readonly unknown[],
 > = InitialContext & ReducedContext<PluginList>;
 
 type RootContext = {
@@ -37,7 +41,7 @@ type RootContext = {
 
 async function initializeGame<
   InitialContext,
-  const PluginList extends readonly Plugin[],
+  const PluginList extends readonly unknown[],
 >(options: {
   rootElement: HTMLElement;
   initialContext: InitialContext;
