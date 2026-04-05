@@ -1,5 +1,3 @@
-import type { QuerySceneCallback, QuerySceneOptions, SceneWithQuery } from "./queryScene.js";
-import { querySceneObjects } from "./queryScene.js";
 import { getValueAtPath } from "./scenePath.js";
 import { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
 import { applyScenePatch, buildScenePatchFromDiff } from "./scenePatch.js";
@@ -82,17 +80,6 @@ function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject
 
   const proxy: SceneObject = new Proxy(target, {
     get(obj, key: PropertyKey) {
-      if (key === "query") {
-        const path = pathCache.get(obj) ?? [];
-        return (callbackOrOptions: QuerySceneCallback | QuerySceneOptions) => {
-          const opts =
-            typeof callbackOrOptions === "function"
-              ? { prefix: path, callback: callbackOrOptions }
-              : { ...callbackOrOptions, prefix: path };
-          return querySceneObjects(getScene(), opts);
-        };
-      }
-
       const value = obj[key];
 
       if (value === undefined) {
@@ -160,7 +147,7 @@ export function setScene(data: SceneObject | undefined): void {
   }
 }
 
-export function getScene(): SceneWithQuery {
+export function getScene(): SceneObject {
   if (!scene) {
     const base = initialSceneData ?? {};
     initialSceneData = undefined;
@@ -170,10 +157,10 @@ export function getScene(): SceneWithQuery {
       (import.meta.hot.data as { loadedSceneSnapshot?: Record<string, unknown> }).loadedSceneSnapshot =
         loadedSceneSnapshot;
     }
-    scene = createProxy(base, []) as SceneWithQuery;
+    scene = createProxy(base, []);
   }
 
-  return scene as SceneWithQuery;
+  return scene;
 }
 
 export function onSceneChange(callback: SceneSubscriber): () => void {

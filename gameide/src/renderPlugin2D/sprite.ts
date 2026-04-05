@@ -1,6 +1,7 @@
 import { Application, Assets, Sprite, Texture } from "pixi.js";
 import { update } from "../gameloop.js";
 import { createObjectGuard, defineObject } from "../objectRegistry.js";
+import { collectSceneObjects } from "../scene/query.js";
 import { getScene } from "../scene/scene.js";
 import { TransformDefinition2D } from "./transform.js";
 
@@ -58,10 +59,7 @@ export function initializeSpriteRendering(app: Application): void {
   }
 
   update(() => {
-    const renderables = scene.query({
-      callback: isSpriteRenderable,
-      cacheKey: "render2d-sprites",
-    });
+    const renderables = collectSceneObjects(scene, isSpriteRenderable);
     const next = new Set<object>(renderables);
     for (const [obj] of registry) {
       if (!next.has(obj)) detach(obj);

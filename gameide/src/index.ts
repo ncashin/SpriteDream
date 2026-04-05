@@ -33,6 +33,7 @@ export {
   editorUpdate,
   startGameloop,
 } from "./gameloop.js";
+export { collectSceneObjects } from "./scene/query.js";
 export {
   getScene,
   setScene,
@@ -54,21 +55,6 @@ export {
   pathsSharePrefix,
   setValueAtPathInObject,
 } from "./scene/scenePath.js";
-export {
-  querySceneObjects,
-  subscribeToQuery,
-  getSceneQuery,
-  createQueryListeners,
-} from "./scene/queryScene.js";
-export type {
-  QuerySceneCallback,
-  QuerySceneTypeGuard,
-  QuerySceneOptions,
-  QueryResultEvent,
-  SceneQuery,
-  QueryListeners,
-  SceneWithQuery,
-} from "./scene/queryScene.js";
 export {
   defineObject,
   createObjectGuard,

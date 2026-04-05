@@ -1,4 +1,5 @@
 export type { SceneObject, SceneUpdate } from "./scene.js";
+export { collectSceneObjects } from "./query.js";
 export {
   getSceneRaw,
   getScene,
@@ -8,23 +9,6 @@ export {
   setScene,
   onSceneChange,
 } from "./scene.js";
-
-export type {
-  QuerySceneCallback,
-  QuerySceneCallbackOrGuard,
-  QuerySceneOptions,
-  QuerySceneTypeGuard,
-  QueryResultEvent,
-  QueryListeners,
-  SceneQuery,
-  SceneWithQuery,
-} from "./queryScene.js";
-export {
-  createQueryListeners,
-  getSceneQuery,
-  querySceneObjects,
-  subscribeToQuery,
-} from "./queryScene.js";
 
 export { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
 export type { SceneHMRPayload } from "./sceneHMR.js";

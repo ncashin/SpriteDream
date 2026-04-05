@@ -1,4 +1,5 @@
 import {
+  collectSceneObjects,
   gameUpdate,
   getScene,
   defineObject,
@@ -45,7 +46,7 @@ initializeGame({
     const isPlayer = createObjectGuard(PlayerDefinition);
 
     gameUpdate((deltaTime) => {
-      const players = scene.query(isPlayer);
+      const players = collectSceneObjects(scene, isPlayer);
 
       const h = input.getAxis("Horizontal");
 
