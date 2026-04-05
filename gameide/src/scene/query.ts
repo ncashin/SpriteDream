@@ -45,15 +45,15 @@ function walkSceneRawCollect(
   }
 }
 
-export function collectSceneObjects<T extends SceneObject>(
+export function queryObject<T extends SceneObject>(
   scene: SceneObject,
   predicate: (object: SceneObject) => object is T,
 ): T[];
-export function collectSceneObjects(
+export function queryObject(
   scene: SceneObject,
   predicate: (object: SceneObject) => boolean,
 ): SceneObject[];
-export function collectSceneObjects(
+export function queryObject(
   scene: SceneObject,
   predicate: (object: SceneObject) => boolean,
 ): SceneObject[] {

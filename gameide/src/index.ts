@@ -33,7 +33,7 @@ export {
   editorUpdate,
   startGameloop,
 } from "./gameloop.js";
-export { collectSceneObjects } from "./scene/query.js";
+export { queryObject } from "./scene/query.js";
 export {
   getScene,
   setScene,

@@ -1,5 +1,5 @@
 export type { SceneObject, SceneUpdate } from "./scene.js";
-export { collectSceneObjects } from "./query.js";
+export { queryObject } from "./query.js";
 export {
   getSceneRaw,
   getScene,
