@@ -1,22 +1,22 @@
-export type { ScenePatch } from "./scenePatch.js";
-export type { SceneData, SceneWebviewMessage } from "./sceneChannel.js";
-export { applyScenePatch, pathToPatch, buildPatchFromDiff } from "./scenePatch.js";
-export { createSceneTransportPostMessage as createPostMessageTransport } from "./sceneChannelTransport.js";
+export type { ScenePatch } from "./scene/scenePatch.js";
+export type { SceneData, SceneWebviewMessage } from "./scene/sceneChannel.js";
+export { applyScenePatch, pathToPatch, buildPatchFromDiff } from "./scene/scenePatch.js";
+export { createSceneTransportPostMessage as createPostMessageTransport } from "./scene/sceneChannelTransport.js";
 export type {
   SceneChannelTransport,
   PostMessageTransportOptions,
-} from "./sceneChannelTransport.js";
+} from "./scene/sceneChannelTransport.js";
 export {
   createSceneChannel,
   SCENE_CHANNEL,
   SCENE_MESSAGE_TYPES,
-} from "./sceneChannel.js";
+} from "./scene/sceneChannel.js";
 export type {
   CreateSceneChannelOptions,
   SceneChannel,
   SceneChannelInMessage,
   SceneChannelOutMessage,
-} from "./sceneChannel.js";
+} from "./scene/sceneChannel.js";
 
 export { definePlugin } from "./plugin.js";
 export {
@@ -38,14 +38,14 @@ export {
   getValueAtPath,
   setSceneAtPath,
   deleteSceneAtPath,
-} from "./scene.js";
-export type { SceneObject, SceneUpdate } from "./scene.js";
+} from "./scene/scene.js";
+export type { SceneObject, SceneUpdate } from "./scene/scene.js";
 export {
   querySceneObjects,
   subscribeToQuery,
   getSceneQuery,
   createQueryListeners,
-} from "./queryScene.js";
+} from "./scene/queryScene.js";
 export type {
   QuerySceneCallback,
   QuerySceneTypeGuard,
@@ -54,7 +54,7 @@ export type {
   SceneQuery,
   QueryListeners,
   SceneWithQuery,
-} from "./queryScene.js";
+} from "./scene/queryScene.js";
 export {
   defineObject,
   createObjectGuard,
@@ -108,5 +108,5 @@ export type {
   ExtractButtonKeys,
 } from "./inputPlugin.js";
 export { gameidePlugin } from "./gameidePluginVite.js";
-export { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
-export type { SceneHMRPayload } from "./sceneHMR.js";
+export { SCENE_HMR_EVENT_NAME } from "./scene/sceneHMR.js";
+export type { SceneHMRPayload } from "./scene/sceneHMR.js";

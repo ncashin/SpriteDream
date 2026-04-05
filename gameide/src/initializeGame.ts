@@ -3,7 +3,7 @@ import {
   runWithToken,
   startGameloop,
 } from "./gameloop.js";
-import { setInitialScene } from "./scene.js";
+import { setInitialScene } from "./scene/scene.js";
 
 export type Plugin = (input: any) => any | Promise<any>;
 

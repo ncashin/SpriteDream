@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { SceneHMRPayload } from "./sceneHMR.js";
+import type { SceneHMRPayload } from "./scene/sceneHMR.js";
 
 declare module "vite/types/customEvent" {
   interface CustomEventMap {

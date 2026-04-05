@@ -1,14 +1,14 @@
-import { createSceneTransportPostMessage } from "../sceneChannelTransport.js";
-import { createSceneChannel } from "../sceneChannel.js";
-import { applyScenePatch } from "../scenePatch.js";
-import type { SceneObject } from "../scene.js";
+import { createSceneTransportPostMessage } from "../scene/sceneChannelTransport.js";
+import { createSceneChannel } from "../scene/sceneChannel.js";
+import { applyScenePatch } from "../scene/scenePatch.js";
+import type { SceneObject } from "../scene/scene.js";
 import {
   getScene,
   getRootTarget,
   replaceScene,
   restoreSceneSnapshot,
   subscribeToSceneUpdates,
-} from "../scene.js";
+} from "../scene/scene.js";
 import { GameIDEMode, getMode, onModeChange } from "../mode.js";
 import { createEditorUI } from "./createEditorUI.js";
 import type { ComponentType } from "react";

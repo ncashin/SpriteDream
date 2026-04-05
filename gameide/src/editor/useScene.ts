@@ -4,7 +4,7 @@ import {
   setSceneAtPath,
   subscribeToSceneUpdates,
   type SceneUpdate,
-} from "../scene.js";
+} from "../scene/scene.js";
 
 function pathEquals(firstPath: PropertyKey[], secondPath: PropertyKey[]): boolean {
   if (firstPath.length !== secondPath.length) return false;

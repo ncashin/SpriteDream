@@ -1,6 +1,6 @@
 import { ChevronRight, Box } from "lucide-react";
 import { useState, useEffect, type CSSProperties } from "react";
-import type { SceneObject } from "../scene.js";
+import type { SceneObject } from "../scene/scene.js";
 import { useScene } from "./useScene.js";
 import { cn } from "../utils/cn.js";
 

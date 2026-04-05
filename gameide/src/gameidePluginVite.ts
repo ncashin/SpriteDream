@@ -1,7 +1,7 @@
 import type { Plugin, ResolvedConfig } from "vite";
 import fs from "node:fs";
 import path from "node:path";
-import { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
+import { SCENE_HMR_EVENT_NAME } from "./scene/sceneHMR.js";
 
 const HMR_ACCEPT = `
 if (import.meta.hot) {

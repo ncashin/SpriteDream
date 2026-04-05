@@ -1,5 +1,5 @@
 import type { QuerySceneCallback, QuerySceneOptions, SceneWithQuery } from "./queryScene.js";
-import { querySceneObjects, subscribeToQuery } from "./queryScene.js";
+import { querySceneObjects } from "./queryScene.js";
 import { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
 import { applyScenePatch, buildPatchFromDiff } from "./scenePatch.js";
 
@@ -81,20 +81,6 @@ function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject
               ? { prefix: path, callback: callbackOrOptions }
               : { ...callbackOrOptions, prefix: path };
           return querySceneObjects(getScene(), opts);
-        };
-      }
-
-      if (key === "onQueryChange") {
-        const path = pathCache.get(obj) ?? [];
-        return (
-          callbackOrOptions: QuerySceneCallback | QuerySceneOptions,
-          listener: (result: SceneObject[], event: { added: SceneObject[]; removed: SceneObject[] }) => void
-        ) => {
-          const opts =
-            typeof callbackOrOptions === "function"
-              ? { prefix: path, callback: callbackOrOptions }
-              : { ...callbackOrOptions, prefix: path };
-          return subscribeToQuery(opts, listener);
         };
       }
 
@@ -277,7 +263,6 @@ export function setSceneAtPath(path: PropertyKey[], value: unknown): void {
   cur[path[path.length - 1]] = value;
 }
 
-/** Delete the key at path through the scene proxy so subscribers are notified. */
 export function deleteSceneAtPath(path: PropertyKey[]): void {
   const s = getScene() as Record<PropertyKey, unknown>;
   if (path.length === 0) return;
