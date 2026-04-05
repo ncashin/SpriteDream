@@ -226,7 +226,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     };
 
 
-    createSceneChannel({
+    await createSceneChannel({
       transport,
       getSceneData: () => document.getData(),
       setSceneData: (data: SceneData) => document.setData(data),

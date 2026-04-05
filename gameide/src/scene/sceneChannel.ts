@@ -53,13 +53,21 @@ export interface SceneChannel {
   requestInitialScene(): void;
 }
 
-export function createSceneChannel(
+export async function createSceneChannel(
   options: CreateSceneChannelOptions
-): SceneChannel {
+): Promise<SceneChannel> {
   const { transport, getSceneData, setSceneData, applyScenePatch: applyPatch, subscribeToUpdates, onRequestInitial } = options;
   let paused = false;
 
   let initialSceneReceived = false;
+
+  let markReady = () => {};
+  const readyPromise =
+    subscribeToUpdates !== undefined
+      ? new Promise<void>((resolve) => {
+          markReady = () => resolve();
+        })
+      : Promise.resolve();
 
   function sendPatch(patch: ScenePatch): void {
     transport.send({ type: SCENE_CHANNEL.scenePatch, patch });
@@ -110,6 +118,7 @@ export function createSceneChannel(
         const data = JSON.parse(content) as SceneData;
         setSceneData(data);
         initialSceneReceived = true;
+        markReady();
       } catch {}
       return;
     }
@@ -120,6 +129,7 @@ export function createSceneChannel(
       applyPatch(updated, patch);
       setSceneData(updated);
       initialSceneReceived = true;
+      markReady();
       return;
     }
     if (isSceneChange && content !== undefined) {
@@ -134,6 +144,10 @@ export function createSceneChannel(
 
   let unsubscribeOutgoing: (() => void) | undefined;
   if (subscribeToUpdates) {
+    const embedded =
+      typeof window !== "undefined" && window.parent !== window;
+    if (!embedded) markReady();
+
     getScene();
     unsubscribeOutgoing = subscribeToUpdates((update: SceneUpdate) => {
       if (!initialSceneReceived || paused) return;
@@ -144,8 +158,12 @@ export function createSceneChannel(
           : patchAtPath(fullPath, undefined, true);
       sendPatch(patch);
     });
-    requestInitialScene();
+    queueMicrotask(() => {
+      requestInitialScene();
+    });
   }
+
+  await readyPromise;
 
   return {
     dispose() {

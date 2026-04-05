@@ -42,7 +42,7 @@ function TreeNode({ name, depth, path }: TreeNodeProps) {
   const expandable = isExpandable(value);
   const obj = expandable ? (value as SceneObject) : null;
   const keys = obj ? Object.keys(obj) : [];
-
+  console.log("VALUE: ", value)
   useEffect(() => {
     setEditText(formatValue(value));
   }, [value]);

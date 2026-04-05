@@ -1,14 +1,12 @@
 import {
-  queryObject,
-  gameUpdate,
   getScene,
-  defineObject,
-  createObjectGuard,
   gameUIPlugin,
   initializeGame,
   initializePlugins,
   inputPlugin,
   editorPlugin,
+  gameUpdate,
+  update,
 } from "gameide";
 import sampleScene from "./sample.scene";
 import "./style.css";
@@ -16,35 +14,14 @@ import invariant from "tiny-invariant";
 import { Editor } from "./Editor";
 import { GameUI } from "./GameUI";
 
-const PlayerDefinition = defineObject(
-  {
-    transform2D: {
-      x: 0,
-      y: 0,
-      rotation: 0,
-      scaleX: 1,
-      scaleY: 1,
-    },
-    sprite: {
-      image: "",
-      tint: "rgba(255,255,255,1)",
-      width: 0,
-      height: 0,
-    },
-    speed: 200,
-  },
-  {
-    name: "Player",
-    description: "PlayerEntity",
-  },
-);
+type Player = { x: number; y: number; speed: number };
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
 initializeGame({
   rootElement,
-  initialContext: {}, 
+  initialContext: {},
   initialScene: sampleScene,
   plugins: initializePlugins([
     editorPlugin(Editor),
@@ -66,17 +43,44 @@ initializeGame({
     }),
   ]),
   main({ input }) {
+    const canvas = document.createElement("canvas");
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.width = rootElement.clientWidth;
+    canvas.height = rootElement.clientHeight;
+    canvas.style.display = "block";
+    rootElement.appendChild(canvas);
+
+    const context = canvas.getContext("2d");
+    invariant(context);
+
+    window.addEventListener("resize", () => {
+      canvas.width = rootElement.clientWidth;
+      canvas.height = rootElement.clientHeight;
+    });
+
     const scene = getScene();
-    const isPlayer = createObjectGuard(PlayerDefinition);
+
+    const playerSize = 32;
+
+    update(() => {
+      const player = scene.player as Player;
+
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      const px = canvas.width / 2 + player.x;
+      const py = canvas.height / 2 - player.y;
+      context.fillStyle = "#4ecca3";
+      const half = playerSize / 2;
+      context.fillRect(px - half, py - half, playerSize, playerSize);
+    });
 
     gameUpdate((deltaTime) => {
-      const players = queryObject(scene, isPlayer);
+      const player = scene.player as Player;
 
       const h = input.axes.Horizontal;
-
-      players.forEach((player) => {
-        player.transform2D.x += h * player.speed * deltaTime;
-      });
+      const v = input.axes.Vertical;
+      player.x += h * player.speed * deltaTime;
+      player.y += v * player.speed * deltaTime;
     });
   },
 });

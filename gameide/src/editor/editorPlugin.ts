@@ -17,11 +17,10 @@ import { DefaultEditor } from "./DefaultEditor.js";
 export type ScenePatchMessage = Record<string, unknown>;
 
 export const editorPlugin =
-  (Editor?: ComponentType) => (input: { rootElement: HTMLElement }) => {
-    const { rootElement } = input;
-    createEditorUI(Editor ?? DefaultEditor, rootElement);
+  (Editor?: ComponentType) => async (input: { rootElement: HTMLElement }) => {
+   
 
-    const channel = createSceneChannel({
+    const channel = await createSceneChannel({
       transport: createSceneTransportPostMessage({
         target: window.parent,
         source: window,
@@ -31,6 +30,9 @@ export const editorPlugin =
       applyScenePatch,
       subscribeToUpdates: onSceneChange,
     });
+
+    const { rootElement } = input;
+    createEditorUI(Editor ?? DefaultEditor, rootElement);
 
     if (getMode() === GameIDEMode.Editor) {
       saveSceneSnapshot();

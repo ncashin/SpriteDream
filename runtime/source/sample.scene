@@ -1,36 +1,7 @@
 {
-  "test": {
-    "transform2D": {
-      "x": 0,
-      "y": 0,
-      "rotation": 0,
-      "scaleX": 1,
-      "scaleY": 1
-    },
-    "sprite": {
-      "image": "/vite.svg",
-      "tint": "rgba(255, 255, 255, 1)",
-      "width": 56,
-      "height": 56
-    },
+  "player": {
+    "x": 200,
+    "y": 0,
     "speed": 200
-  },
-  "floor": {
-    "transform2D": {
-      "x": 0,
-      "y": -220,
-      "rotation": 0,
-      "scaleX": 1,
-      "scaleY": 1
-    },
-    "sprite": {
-      "image": "/vite.svg",
-      "tint": "rgba(120, 140, 200, 0.35)",
-      "width": 720,
-      "height": 48
-    }
-  },
-  "__metadata": {
-    "name": "Example Scene"
   }
 }

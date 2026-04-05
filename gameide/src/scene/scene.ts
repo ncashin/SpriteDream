@@ -174,8 +174,11 @@ export function getSceneRaw(): SceneObject | undefined {
   return rootTarget;
 }
 
+/** Stable identity for snapshots before the scene exists (useSyncExternalStore). */
+const emptySceneRoot: SceneObject = {};
+
 export function getSceneValueAtPath(path: PropertyKey[]): unknown {
-  const root = rootTarget ?? initialSceneData ?? {};
+  const root = rootTarget ?? initialSceneData ?? emptySceneRoot;
   return getValueAtPath(root as SceneObject, path);
 }
 
