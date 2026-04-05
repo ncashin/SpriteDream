@@ -187,13 +187,11 @@ export function inputPlugin<Options extends InputPluginOptions>(
 
     target.addEventListener("keydown", (e: Event) => {
       const ev = e as KeyboardEvent;
-      console.log("[input] keydown", ev.code, ev.key);
       setKey(normalizeKey(ev.code), true);
       ev.preventDefault();
     });
     target.addEventListener("keyup", (e: Event) => {
       const ev = e as KeyboardEvent;
-      console.log("[input] keyup", ev.code, ev.key);
       setKey(normalizeKey(ev.code), false);
       ev.preventDefault();
     });
@@ -201,10 +199,6 @@ export function inputPlugin<Options extends InputPluginOptions>(
       const ev = e as MouseEvent;
       // TODO: This is an ugly way to ensure editor iframe receives keyboard input
       if (target instanceof HTMLElement) target.focus();
-      console.log("[input] mousedown", ev.button, {
-        x: ev.clientX,
-        y: ev.clientY,
-      });
 
       if (
         cursorTarget &&
@@ -223,10 +217,6 @@ export function inputPlugin<Options extends InputPluginOptions>(
     });
     target.addEventListener("mouseup", (e: Event) => {
       const ev = e as MouseEvent;
-      console.log("[input] mouseup", ev.button, {
-        x: ev.clientX,
-        y: ev.clientY,
-      });
 
       if (
         cursorTarget &&

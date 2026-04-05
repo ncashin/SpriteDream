@@ -27,6 +27,8 @@
         const vscode =
           typeof acquireVsCodeApi !== "undefined" ? acquireVsCodeApi() : null;
         let pendingSceneContent = null;
+        /** True after iframe has sent gameide.editor.requestInitialScene */
+        let runtimeRequestedInitialScene = false;
 
         function postToVscode(payload) {
           vscode?.postMessage(payload);
@@ -42,13 +44,6 @@
           });
         }
 
-        iframe.addEventListener("load", function () {
-          if (pendingSceneContent !== null)
-            sendInitialSceneToIframe(pendingSceneContent);
-        });
-
-        postToVscode({ type: "requestInitialScene" });
-
         window.addEventListener("message", function (event) {
           var message = event.data?.data ?? event.data;
           if (!message || typeof message.type !== "string") return;
@@ -58,9 +53,10 @@
           if (fromIframe) {
             switch (message.type) {
               case "gameide.editor.requestInitialScene":
-                pendingSceneContent !== null
-                  ? sendInitialSceneToIframe(pendingSceneContent)
-                  : postToVscode({ type: "requestInitialScene" });
+                runtimeRequestedInitialScene = true;
+                if (pendingSceneContent !== null)
+                  sendInitialSceneToIframe(pendingSceneContent);
+                else postToVscode({ type: "requestInitialScene" });
                 break;
               case "gameide.editor.scenePatch":
                 if (message.patch)
@@ -82,7 +78,8 @@
 
           if (message.type === "scene" && message.content !== undefined) {
             pendingSceneContent = message.content;
-            sendInitialSceneToIframe(message.content);
+            if (runtimeRequestedInitialScene)
+              sendInitialSceneToIframe(message.content);
             if (message.stopAfter)
               postToIframe({ type: "gameide.editor.stop" });
           }

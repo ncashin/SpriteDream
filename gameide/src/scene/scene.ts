@@ -43,9 +43,9 @@ if (typeof import.meta !== "undefined" && import.meta.hot) {
     if (!root) return;
     const snapshot = loadedSceneSnapshot ?? hotData.loadedSceneSnapshot ?? {};
     const patch = buildScenePatchFromDiff(snapshot, payload.sceneData);
-    applyScenePatch(root as Record<string, unknown>, patch);
+    applyScenePatch(root, patch);
     if (savedSceneSnapshot) {
-      applyScenePatch(savedSceneSnapshot as Record<string, unknown>, patch);
+      applyScenePatch(savedSceneSnapshot, patch);
     }
     loadedSceneSnapshot = payload.sceneData;
     hotData.loadedSceneSnapshot = loadedSceneSnapshot;
@@ -179,7 +179,6 @@ export function getSceneRaw(): SceneObject | undefined {
   return rootTarget;
 }
 
-/** Stable identity for snapshots before the scene exists (useSyncExternalStore). */
 const emptySceneRoot: SceneObject = {};
 
 export function getSceneValueAtPath(path: PropertyKey[]): unknown {

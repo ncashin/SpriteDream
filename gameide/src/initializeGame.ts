@@ -5,10 +5,6 @@ import {
 } from "./gameloop.js";
 import { setScene } from "./scene/scene.js";
 
-/**
- * Loose plugin signature for documentation; `initializePlugins` keeps the
- * concrete tuple so `FinalContext` can merge each plugin’s real return type.
- */
 export type Plugin = (input: object) => object | Promise<object>;
 
 type ContextAddedByPlugin<PluginFunction> = PluginFunction extends (
@@ -47,35 +43,39 @@ async function initializeGame<
   initialContext: InitialContext;
   plugins: PluginList;
   initialScene?: Record<string, unknown>;
-  main: (context: FinalContext<InitialContext & RootContext, PluginList>) => void;
+  main: (
+    context: FinalContext<InitialContext & RootContext, PluginList>,
+  ) => void;
 }): Promise<FinalContext<InitialContext & RootContext, PluginList>> {
   type ResultContext = FinalContext<InitialContext & RootContext, PluginList>;
   const hot = import.meta.hot;
   let result: ResultContext;
 
-  if (hot?.data?.context !== undefined) {
-    result = hot.data.context as ResultContext;
-  } else {
-    if (import.meta.env.PROD) {
+  result = {
+    ...options.initialContext,
+    rootElement: options.rootElement,
+  } as ResultContext;
+
+  if (hot?.data?.context) {
+    result = hot.data.context;
+  }
+  if (!hot?.data?.context) {
+    if (options.initialScene !== undefined) {
       setScene(options.initialScene);
     }
-    result = {
-      ...options.initialContext,
-      rootElement: options.rootElement,
-    } as ResultContext;
-    if (Array.isArray(options.plugins)) {
-      for (const plugin of options.plugins) {
-        const fn =
-          typeof plugin === "function" ? plugin : (ctx: unknown) => ctx;
-        result = (await Promise.resolve(fn(result))) as ResultContext;
-      }
+
+    for (const plugin of options.plugins ?? []) {
+      result = (await Promise.resolve(
+        typeof plugin === "function" ? plugin(result) : result,
+      )) as ResultContext;
     }
+
     startGameloop();
   }
 
   if (hot) {
     if (hot.data.runToken !== undefined) {
-      removeCallbacksForToken(hot.data.runToken as string);
+      removeCallbacksForToken(hot.data.runToken);
     }
     const token = runWithToken(() => options.main(result));
     hot.data.runToken = token;

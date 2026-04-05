@@ -61,23 +61,24 @@ initializeGame({
 
     const playerSize = 32;
 
-    update(() => {
-      const player = getScene().player as Player;
+    const player = (): Player => getScene().player as Player;
 
+    update(() => {
+      const p = player();
       context.clearRect(0, 0, canvas.width, canvas.height);
-      const px = canvas.width / 2 + player.x;
-      const py = canvas.height / 2 - player.y;
+      const px = canvas.width / 2 + p.x;
+      const py = canvas.height / 2 - p.y;
       context.fillStyle = "#4ecca3";
       const half = playerSize / 2;
       context.fillRect(px - half, py - half, playerSize, playerSize);
     });
 
     gameUpdate((deltaTime) => {
-      const player = getScene().player as Player;
+      const p = player();
       const h = input.axes.Horizontal;
       const v = input.axes.Vertical;
-      player.x += h * player.speed * deltaTime;
-      player.y += v * player.speed * deltaTime;
+      p.x += h * p.speed * deltaTime;
+      p.y += v * p.speed * deltaTime;
     });
   },
 });

@@ -19,15 +19,14 @@ export type ScenePatchMessage = Record<string, unknown>;
 
 export const editorPlugin =
   (Editor?: ComponentType) => async (input: { rootElement: HTMLElement }) => {
-   
-
+    
     const channel = await createSceneChannel({
       transport: createSceneTransportPostMessage({
         target: window.parent,
         source: window,
       }),
-      getSceneData: () => getScene(),
-      setSceneData: (data) => setScene(data),
+      getSceneData: getScene,
+      setSceneData: setScene,
       applyScenePatch,
       subscribeToUpdates: onSceneChange,
     });

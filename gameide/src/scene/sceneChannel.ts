@@ -90,7 +90,9 @@ export async function createSceneChannel(
   }
 
   function handleMessage(msg: unknown): void {
-    if (!msg || typeof (msg as { type?: string }).type !== "string") return;
+    if (!msg || typeof (msg as { type?: string }).type !== "string") {
+      return;
+    }
     const { type, content, patch } = msg as {
       type: string;
       content?: string;
@@ -115,7 +117,9 @@ export async function createSceneChannel(
       return;
     }
 
-    if (paused) return;
+    if (paused) {
+      return;
+    }
 
     if (isInitialScene && content !== undefined) {
       try {
@@ -127,7 +131,9 @@ export async function createSceneChannel(
       return;
     }
     if (isScenePatch && patch !== undefined) {
-      if (typeof patch !== "object" || Array.isArray(patch)) return;
+      if (typeof patch !== "object" || Array.isArray(patch)) {
+        return;
+      }
       applyPatch(getSceneData(), patch);
       return;
     }

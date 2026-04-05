@@ -9,19 +9,15 @@ import {
   type SceneData,
   type ScenePatch,
 } from "gameide";
-
-const UNDOABLE_MESSAGE_TYPES = new Set<string>([
-  SCENE_CHANNEL.initialScene,
-  SCENE_CHANNEL.scenePatch,
-]);
 import type { ViteDevServer } from "./viteDevServer";
 import sceneEditorHTML from "./sceneEditor.html?raw";
+
+const UNDOABLE_MESSAGE_TYPES = new Set<string>([SCENE_CHANNEL.scenePatch]);
 
 export type { SceneData, ScenePatch };
 
 export class SceneDocument implements vscode.CustomDocument {
-  private data: SceneData;
-  private documentData: SceneData;
+  private scene: SceneData;
   private savedData: SceneData;
   private broadcastHandler: ((content: string) => void) | undefined;
   private readonly onDispose: ((doc: SceneDocument) => void) | undefined;
@@ -31,47 +27,44 @@ export class SceneDocument implements vscode.CustomDocument {
     initialData: SceneData,
     onDispose?: (doc: SceneDocument) => void,
   ) {
-    this.data = JSON.parse(JSON.stringify(initialData));
-    this.documentData = JSON.parse(JSON.stringify(initialData));
+    this.scene = JSON.parse(JSON.stringify(initialData));
     this.savedData = JSON.parse(JSON.stringify(initialData));
     this.onDispose = onDispose;
   }
 
   getData(): SceneData {
-    return { ...this.data };
+    return { ...this.scene };
   }
 
   getDocumentData(): SceneData {
-    return { ...this.documentData };
+    return { ...this.scene };
   }
 
   getSavedData(): SceneData {
     return { ...this.savedData };
   }
 
-  /** Mutable scene root for in-place patches (same reference as document data). */
   getSceneRoot(): SceneData {
-    return this.data;
+    return this.scene;
   }
 
   getPatchFromSavedToCurrent(): ScenePatch {
     return buildScenePatchFromDiff(
       this.savedData as Record<string, unknown>,
-      this.data as Record<string, unknown>,
+      this.scene as Record<string, unknown>,
     );
   }
 
   markSaved(): void {
-    this.savedData = JSON.parse(JSON.stringify(this.documentData));
+    this.savedData = JSON.parse(JSON.stringify(this.scene));
   }
 
   setData(data: SceneData): void {
     const patch = buildScenePatchFromDiff(
-      this.data as Record<string, unknown>,
+      this.scene as Record<string, unknown>,
       data as Record<string, unknown>,
     );
-    applyScenePatch(this.data, patch);
-    applyScenePatch(this.documentData, patch);
+    applyScenePatch(this.scene, patch);
     this.broadcastScene();
   }
 
@@ -80,60 +73,25 @@ export class SceneDocument implements vscode.CustomDocument {
   }
 
   broadcastScene(): void {
-    this.broadcastHandler?.(JSON.stringify(this.data, null, 2));
+    this.broadcastHandler?.(JSON.stringify(this.scene, null, 2));
   }
 
   applyPatch(patch: ScenePatch): void {
-    applyScenePatch(this.data, patch);
-    applyScenePatch(this.documentData, patch);
-    this.broadcastScene();
+    applyScenePatch(this.scene, patch);
   }
 
-  /**
-   * Apply a patch that already originated from the game iframe. Do not broadcast
-   * back to the iframe — that would re-send the full scene as initialScene and
-   * re-merge JSON on the runtime, breaking stable object references.
-   */
-  applyPatchFromRuntime(patch: ScenePatch): void {
-    applyScenePatch(this.data, patch);
-    applyScenePatch(this.documentData, patch);
-  }
-
-  /**
-   * Merge full scene JSON from the iframe without echoing back (same rationale
-   * as applyPatchFromRuntime).
-   */
   mergeSceneFromRuntime(data: SceneData): void {
     const patch = buildScenePatchFromDiff(
-      this.data as Record<string, unknown>,
+      this.scene as Record<string, unknown>,
       data as Record<string, unknown>,
     );
-    applyScenePatch(this.data, patch);
-    applyScenePatch(this.documentData, patch);
+    applyScenePatch(this.scene, patch);
   }
 
   revertData(data: SceneData): void {
-    applyScenePatch(
-      this.data,
-      buildScenePatchFromDiff(
-        this.data as Record<string, unknown>,
-        data as Record<string, unknown>,
-      ),
-    );
-    applyScenePatch(
-      this.documentData,
-      buildScenePatchFromDiff(
-        this.documentData as Record<string, unknown>,
-        data as Record<string, unknown>,
-      ),
-    );
-    applyScenePatch(
-      this.savedData,
-      buildScenePatchFromDiff(
-        this.savedData as Record<string, unknown>,
-        data as Record<string, unknown>,
-      ),
-    );
+    const snapshot = JSON.parse(JSON.stringify(data)) as SceneData;
+    this.scene = snapshot;
+    this.savedData = JSON.parse(JSON.stringify(snapshot));
     this.broadcastScene();
   }
 
@@ -215,9 +173,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       this.webviewToDocument.delete(webviewPanel.webview);
     });
     this.webviewToDocument.set(webviewPanel.webview, document);
-    webviewPanel.onDidChangeViewState(() => {
-      // View state changed (e.g. tab visibility)
-    });
+    webviewPanel.onDidChangeViewState(() => {});
     const webview = webviewPanel.webview;
     webview.options = {
       enableScripts: true,
@@ -277,7 +233,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       getSceneData: () => document.getSceneRoot(),
       setSceneData: (data: SceneData) => document.mergeSceneFromRuntime(data),
       applyScenePatch: (_scene: SceneData, patch: ScenePatch) =>
-        document.applyPatchFromRuntime(patch),
+        document.applyPatch(patch),
       onRequestInitial: () =>
         JSON.stringify(document.getDocumentData(), null, 2),
     });
@@ -331,9 +287,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       delete: async () => {
         try {
           await vscode.workspace.fs.delete(context.destination);
-        } catch {
-          // Ignore
-        }
+        } catch {}
       },
     };
   }
