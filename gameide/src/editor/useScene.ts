@@ -1,10 +1,26 @@
 import { useSyncExternalStore, useRef, useCallback, useMemo } from "react";
 import {
+  getScene,
   queryScene,
-  setSceneAtPath,
-  subscribeToSceneUpdates,
+  onSceneChange,
   type SceneUpdate,
 } from "../scene/scene.js";
+
+function setValueAtPath(path: PropertyKey[], value: unknown): void {
+  const s = getScene() as Record<PropertyKey, unknown>;
+  if (path.length === 0) return;
+  let cur: Record<PropertyKey, unknown> = s;
+  for (let i = 0; i < path.length - 1; i++) {
+    const key = path[i];
+    let next = cur[key];
+    if (next === undefined || next === null || typeof next !== "object") {
+      next = {};
+      cur[key] = next;
+    }
+    cur = next as Record<PropertyKey, unknown>;
+  }
+  cur[path[path.length - 1]] = value;
+}
 
 function pathEquals(firstPath: PropertyKey[], secondPath: PropertyKey[]): boolean {
   if (firstPath.length !== secondPath.length) return false;
@@ -28,7 +44,7 @@ function createPathScopedSubscribe(
   pathRef: { current: PropertyKey[] }
 ): (onStoreChange: () => void) => () => void {
   return (onStoreChange) => {
-    return subscribeToSceneUpdates((update: SceneUpdate) => {
+    return onSceneChange((update: SceneUpdate) => {
       const changedPath = update.path.concat(update.key);
       if (updateAffectsPath(changedPath, pathRef.current)) {
         onStoreChange();
@@ -52,7 +68,7 @@ export function useScene(path: PropertyKey[]): [unknown, (value: unknown) => voi
   const value = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const setValue = useCallback(
-    (value: unknown) => setSceneAtPath(pathRef.current, value),
+    (value: unknown) => setValueAtPath(pathRef.current, value),
     []
   );
 

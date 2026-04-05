@@ -3,7 +3,7 @@ import {
   runWithToken,
   startGameloop,
 } from "./gameloop.js";
-import { setInitialScene } from "./scene/scene.js";
+import { setScene } from "./scene/scene.js";
 
 export type Plugin = (input: any) => any | Promise<any>;
 
@@ -53,7 +53,7 @@ async function initializeGame<
     result = hot.data.context as ResultContext;
   } else {
     if (import.meta.env.PROD) {
-      setInitialScene(options.initialScene);
+      setScene(options.initialScene);
     }
     result = {
       ...options.initialContext,

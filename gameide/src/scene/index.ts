@@ -1,17 +1,12 @@
 export type { SceneObject, SceneUpdate } from "./scene.js";
 export {
-  deleteSceneAtPath,
-  getRootTarget,
+  getSceneRaw,
   getScene,
-  getTarget,
-  getValueAtPath,
   queryScene,
-  replaceScene,
   restoreSceneSnapshot,
   saveSceneSnapshot,
-  setInitialScene,
-  setSceneAtPath,
-  subscribeToSceneUpdates,
+  setScene,
+  onSceneChange,
 } from "./scene.js";
 
 export type {

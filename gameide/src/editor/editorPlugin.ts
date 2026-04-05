@@ -3,11 +3,11 @@ import { createSceneChannel } from "../scene/sceneChannel.js";
 import { applyScenePatch } from "../scene/scenePatch.js";
 import {
   getScene,
-  getRootTarget,
-  replaceScene,
+  getSceneRaw,
+  setScene,
   restoreSceneSnapshot,
   saveSceneSnapshot,
-  subscribeToSceneUpdates,
+  onSceneChange,
 } from "../scene/scene.js";
 import { GameIDEMode, getMode, onModeChange } from "../mode.js";
 import { createEditorUI } from "./createEditorUI.js";
@@ -26,10 +26,10 @@ export const editorPlugin =
         target: window.parent,
         source: window,
       }),
-      getSceneData: () => structuredClone(getRootTarget() ?? {}),
-      setSceneData: (data) => replaceScene(data),
+      getSceneData: () => structuredClone(getSceneRaw() ?? {}),
+      setSceneData: (data) => setScene(data),
       applyScenePatch,
-      subscribeToUpdates: subscribeToSceneUpdates,
+      subscribeToUpdates: onSceneChange,
     });
 
     if (getMode() === GameIDEMode.Editor) {

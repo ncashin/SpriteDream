@@ -1,10 +1,10 @@
 import type { SceneObject, SceneUpdate } from "./scene.js";
 import {
-  getRootTarget,
+  getSceneRaw,
   getScene,
   getTarget,
   getValueAtPath,
-  subscribeToSceneUpdates,
+  onSceneChange,
 } from "./scene.js";
 
 function isSceneObject(value: unknown): value is SceneObject {
@@ -120,7 +120,7 @@ function runQuery(
   prefix: PropertyKey[],
   callback: QuerySceneCallback
 ): SceneObject[] {
-  let rawRoot = getRootTarget();
+  let rawRoot = getSceneRaw();
   if (rawRoot === undefined) {
     rawRoot = getTarget(scene) ?? scene;
   }
@@ -156,7 +156,7 @@ let sceneUnsubscribe: (() => void) | undefined;
 
 function ensureSceneSubscription(): void {
   if (sceneUnsubscribe) return;
-  sceneUnsubscribe = subscribeToSceneUpdates((update: SceneUpdate) => {
+  sceneUnsubscribe = onSceneChange((update: SceneUpdate) => {
     const updatePath = [...update.path, update.key];
     for (const [key, entry] of queryCache.entries()) {
       if (pathTouchesPrefix(updatePath, entry.prefix)) {

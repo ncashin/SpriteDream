@@ -30,16 +30,12 @@ export {
 } from "./gameloop.js";
 export {
   getScene,
-  setInitialScene,
-  replaceScene,
+  setScene,
   saveSceneSnapshot,
   restoreSceneSnapshot,
-  subscribeToSceneUpdates,
-  getRootTarget,
+  onSceneChange,
+  getSceneRaw,
   queryScene,
-  getValueAtPath,
-  setSceneAtPath,
-  deleteSceneAtPath,
 } from "./scene/scene.js";
 export type { SceneObject, SceneUpdate } from "./scene/scene.js";
 export {

@@ -24,7 +24,6 @@ let scene: SceneObject | undefined;
 let rootTarget: SceneObject | undefined;
 let initialSceneData: SceneObject | undefined;
 let loadedSceneSnapshot: Record<string, unknown> | undefined;
-/** Plain clone for editor/game mode restore; patched on HMR alongside live scene. */
 let savedSceneSnapshot: SceneObject | undefined;
 
 if (typeof import.meta !== "undefined" && import.meta.hot) {
@@ -152,8 +151,12 @@ export function getTarget(obj: SceneObject): SceneObject | undefined {
   return targetOfProxy.get(obj);
 }
 
-export function setInitialScene(data: SceneObject | undefined): void {
-  initialSceneData = data;
+export function setScene(data: SceneObject | undefined): void {
+  if (rootTarget) {
+    copyInto(rootTarget, (data ?? {}) as SceneObject);
+  } else {
+    initialSceneData = data;
+  }
 }
 
 export function getScene(): SceneWithQuery {
@@ -172,14 +175,14 @@ export function getScene(): SceneWithQuery {
   return scene as SceneWithQuery;
 }
 
-export function subscribeToSceneUpdates(callback: SceneSubscriber): () => void {
+export function onSceneChange(callback: SceneSubscriber): () => void {
   subscribers.add(callback);
   return () => {
     subscribers.delete(callback);
   };
 }
 
-export function getRootTarget(): SceneObject | undefined {
+export function getSceneRaw(): SceneObject | undefined {
   return rootTarget;
 }
 
@@ -216,7 +219,7 @@ function copyInto(target: SceneObject, source: SceneObject): void {
   }
 }
 
-function copyIntoPreservingRefs(target: SceneObject, source: SceneObject): void {
+function mergeInto(target: SceneObject, source: SceneObject): void {
   for (const key of Object.keys(target)) {
     if (!(key in source)) delete target[key];
   }
@@ -225,7 +228,7 @@ function copyIntoPreservingRefs(target: SceneObject, source: SceneObject): void 
     if (isSceneObject(value)) {
       const existing = target[key];
       if (isSceneObject(existing)) {
-        copyIntoPreservingRefs(existing, value as SceneObject);
+        mergeInto(existing, value as SceneObject);
       } else {
         const child: SceneObject = {};
         target[key] = child;
@@ -237,19 +240,8 @@ function copyIntoPreservingRefs(target: SceneObject, source: SceneObject): void 
   }
 }
 
-export function replaceScene(data: SceneObject | undefined): void {
-  const base = (data ?? {}) as SceneObject;
-  if (rootTarget) {
-    copyInto(rootTarget, base);
-  } else {
-    rootTarget = {};
-    copyInto(rootTarget, base);
-    scene = createProxy(rootTarget, []);
-  }
-}
-
 export function saveSceneSnapshot(): void {
-  savedSceneSnapshot = structuredClone(getRootTarget() ?? {}) as SceneObject;
+  savedSceneSnapshot = structuredClone(getSceneRaw() ?? {}) as SceneObject;
   if (typeof import.meta !== "undefined" && import.meta.hot) {
     (import.meta.hot.data as { savedSceneSnapshot?: SceneObject }).savedSceneSnapshot = savedSceneSnapshot;
   }
@@ -263,36 +255,8 @@ export function restoreSceneSnapshot(): void {
     (import.meta.hot.data as { savedSceneSnapshot?: SceneObject }).savedSceneSnapshot = undefined;
   }
   if (!rootTarget) {
-    replaceScene(data);
+    setScene(data);
     return;
   }
-  copyIntoPreservingRefs(rootTarget, data);
-}
-
-export function setSceneAtPath(path: PropertyKey[], value: unknown): void {
-  const s = getScene() as Record<PropertyKey, unknown>;
-  if (path.length === 0) return;
-  let cur: Record<PropertyKey, unknown> = s;
-  for (let i = 0; i < path.length - 1; i++) {
-    const key = path[i];
-    let next = cur[key];
-    if (next === undefined || next === null || typeof next !== "object") {
-      next = {};
-      cur[key] = next;
-    }
-    cur = next as Record<PropertyKey, unknown>;
-  }
-  cur[path[path.length - 1]] = value;
-}
-
-export function deleteSceneAtPath(path: PropertyKey[]): void {
-  const s = getScene() as Record<PropertyKey, unknown>;
-  if (path.length === 0) return;
-  let cur: Record<PropertyKey, unknown> = s;
-  for (let i = 0; i < path.length - 1; i++) {
-    const next = cur[path[i]];
-    if (next === undefined || next === null || typeof next !== "object") return;
-    cur = next as Record<PropertyKey, unknown>;
-  }
-  delete cur[path[path.length - 1]];
+  mergeInto(rootTarget, data);
 }
