@@ -1,6 +1,11 @@
 export type { ScenePatch } from "./scene/scenePatch.js";
 export type { SceneData, SceneWebviewMessage } from "./scene/sceneChannel.js";
-export { applyScenePatch, pathToPatch, buildPatchFromDiff } from "./scene/scenePatch.js";
+export {
+  applyScenePatchesInOrder,
+  applyScenePatch,
+  buildScenePatchFromDiff,
+  patchAtPath,
+} from "./scene/scenePatch.js";
 export { createSceneTransportPostMessage as createPostMessageTransport } from "./scene/sceneChannelTransport.js";
 export type {
   SceneChannelTransport,
@@ -35,9 +40,20 @@ export {
   restoreSceneSnapshot,
   onSceneChange,
   getSceneRaw,
-  queryScene,
+  getSceneValueAtPath,
 } from "./scene/scene.js";
 export type { SceneObject, SceneUpdate } from "./scene/scene.js";
+export type { ScenePath } from "./scene/scenePath.js";
+export {
+  appendKeyToPath,
+  getPathKey,
+  getValueAtPath,
+  isPathPrefixOf,
+  pathUpdateAffectsPath,
+  pathsEqual,
+  pathsSharePrefix,
+  setValueAtPathInObject,
+} from "./scene/scenePath.js";
 export {
   querySceneObjects,
   subscribeToQuery,

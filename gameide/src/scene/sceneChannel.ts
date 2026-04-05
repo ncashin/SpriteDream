@@ -1,6 +1,6 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
-import { pathToPatch } from "./scenePatch.js";
-import type { ScenePatch } from "./scenePatch.js";
+import { patchAtPath, type ScenePatch } from "./scenePatch.js";
+import { appendKeyToPath } from "./scenePath.js";
 import type { SceneObject, SceneUpdate } from "./scene.js";
 import { getScene } from "./scene.js";
 
@@ -16,13 +16,13 @@ export const SCENE_CHANNEL = {
   requestInitialScene: "gameide.editor.requestInitialScene",
   initialScene: "gameide.editor.initialScene",
   scenePatch: "gameide.editor.scenePatch",
-  sceneChanged: "gameide.editor.sceneChanged",
+  sceneChange: "gameide.editor.sceneChange",
 } as const;
 
 export const SCENE_MESSAGE_TYPES = new Set([
   SCENE_CHANNEL.initialScene,
   SCENE_CHANNEL.scenePatch,
-  SCENE_CHANNEL.sceneChanged,
+  SCENE_CHANNEL.sceneChange,
 ]);
 
 export type SceneChannelInMessage =
@@ -32,7 +32,7 @@ export type SceneChannelInMessage =
 export type SceneChannelOutMessage =
   | { type: typeof SCENE_CHANNEL.requestInitialScene }
   | { type: typeof SCENE_CHANNEL.scenePatch; patch: ScenePatch }
-  | { type: typeof SCENE_CHANNEL.sceneChanged; content: string };
+  | { type: typeof SCENE_CHANNEL.sceneChange; content: string };
 
 export interface CreateSceneChannelOptions {
   transport: SceneChannelTransport;
@@ -49,7 +49,7 @@ export interface SceneChannel {
   unpause(): void;
   sendPatch(patch: ScenePatch): void;
   sendInitialScene(content: string): void;
-  sendSceneChanged(content: string): void;
+  sendSceneChange(content: string): void;
   requestInitialScene(): void;
 }
 
@@ -69,8 +69,8 @@ export function createSceneChannel(
     transport.send({ type: SCENE_CHANNEL.initialScene, content });
   }
 
-  function sendSceneChanged(content: string): void {
-    transport.send({ type: SCENE_CHANNEL.sceneChanged, content });
+  function sendSceneChange(content: string): void {
+    transport.send({ type: SCENE_CHANNEL.sceneChange, content });
   }
 
   function requestInitialScene(): void {
@@ -95,8 +95,8 @@ export function createSceneChannel(
       type === "sceneUpdate";
     const isScenePatch =
       type === SCENE_CHANNEL.scenePatch || type === "scenePatch";
-    const isSceneChanged =
-      type === SCENE_CHANNEL.sceneChanged || type === "sceneChanged";
+    const isSceneChange =
+      type === SCENE_CHANNEL.sceneChange || type === "sceneChange";
 
     if (isRequestInitial && onRequestInitial) {
       sendInitialScene(onRequestInitial());
@@ -122,7 +122,7 @@ export function createSceneChannel(
       initialSceneReceived = true;
       return;
     }
-    if (isSceneChanged && content !== undefined) {
+    if (isSceneChange && content !== undefined) {
       try {
         const data = JSON.parse(content) as SceneData;
         setSceneData(data);
@@ -137,11 +137,11 @@ export function createSceneChannel(
     getScene();
     unsubscribeOutgoing = subscribeToUpdates((update: SceneUpdate) => {
       if (!initialSceneReceived || paused) return;
-      const fullPath = [...update.path, update.key];
+      const fullPath = appendKeyToPath(update.path, update.key);
       const patch =
         update.type === "set"
-          ? pathToPatch(fullPath, update.value)
-          : pathToPatch(fullPath, undefined, true);
+          ? patchAtPath(fullPath, update.value)
+          : patchAtPath(fullPath, undefined, true);
       sendPatch(patch);
     });
     requestInitialScene();
@@ -160,7 +160,7 @@ export function createSceneChannel(
     },
     sendPatch,
     sendInitialScene,
-    sendSceneChanged,
+    sendSceneChange,
     requestInitialScene,
   };
 }

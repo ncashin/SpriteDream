@@ -2,7 +2,7 @@ export type { SceneObject, SceneUpdate } from "./scene.js";
 export {
   getSceneRaw,
   getScene,
-  queryScene,
+  getSceneValueAtPath,
   restoreSceneSnapshot,
   saveSceneSnapshot,
   setScene,
@@ -42,8 +42,25 @@ export type {
   SceneChannelOutMessage,
 } from "./sceneChannel.js";
 
+export type { ScenePath } from "./scenePath.js";
+export {
+  appendKeyToPath,
+  getPathKey,
+  getValueAtPath,
+  isPathPrefixOf,
+  pathUpdateAffectsPath,
+  pathsEqual,
+  pathsSharePrefix,
+  setValueAtPathInObject,
+} from "./scenePath.js";
+
 export type { ScenePatch } from "./scenePatch.js";
-export { applyScenePatch, buildPatchFromDiff, pathToPatch } from "./scenePatch.js";
+export {
+  applyScenePatchesInOrder,
+  applyScenePatch,
+  buildScenePatchFromDiff,
+  patchAtPath,
+} from "./scenePatch.js";
 
 export type {
   PostMessageTransportOptions,

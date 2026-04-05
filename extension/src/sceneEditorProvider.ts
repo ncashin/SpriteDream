@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import {
   applyScenePatch,
-  buildPatchFromDiff,
+  buildScenePatchFromDiff,
   createSceneChannel,
   SCENE_CHANNEL,
   SCENE_MESSAGE_TYPES,
@@ -51,7 +51,7 @@ export class SceneDocument implements vscode.CustomDocument {
   }
 
   getPatchFromSavedToCurrent(): ScenePatch {
-    return buildPatchFromDiff(
+    return buildScenePatchFromDiff(
       this.savedData as Record<string, unknown>,
       this.data as Record<string, unknown>,
     );

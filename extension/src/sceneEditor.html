@@ -69,10 +69,10 @@
                     patch: message.patch,
                   });
                 break;
-              case "gameide.editor.sceneChanged":
+              case "gameide.editor.sceneChange":
                 if (message.content !== undefined)
                   postToVscode({
-                    type: "gameide.editor.sceneChanged",
+                    type: "gameide.editor.sceneChange",
                     content: message.content,
                   });
                 break;

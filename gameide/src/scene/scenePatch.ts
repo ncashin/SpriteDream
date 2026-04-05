@@ -1,6 +1,6 @@
 export type ScenePatch = Record<PropertyKey, unknown>;
 
-function isMergeable(
+function isPlainObjectForPatch(
   value: unknown
 ): value is Record<PropertyKey, unknown> {
   return (
@@ -19,9 +19,9 @@ export function applyScenePatch(
 
     if (patchValue === null) {
       delete scene[key];
-    } else if (isMergeable(patchValue)) {
+    } else if (isPlainObjectForPatch(patchValue)) {
       const existing = scene[key];
-      if (existing !== undefined && isMergeable(existing)) {
+      if (existing !== undefined && isPlainObjectForPatch(existing)) {
         applyScenePatch(existing, patchValue);
       } else {
         const created: Record<PropertyKey, unknown> = {};
@@ -34,57 +34,62 @@ export function applyScenePatch(
   }
 }
 
-export function pathToPatch(
-  path: PropertyKey[],
+export function applyScenePatchesInOrder(
+  scene: Record<PropertyKey, unknown>,
+  patches: ScenePatch[]
+): void {
+  for (const patch of patches) {
+    applyScenePatch(scene, patch);
+  }
+}
+
+export function patchAtPath(
+  pathSegments: PropertyKey[],
   value?: unknown,
-  isDelete?: boolean
+  deleteKey?: boolean
 ): ScenePatch {
-  if (path.length === 0) return {};
+  if (pathSegments.length === 0) return {};
   let current: ScenePatch = {};
   const root = current;
-  for (let i = 0; i < path.length - 1; i++) {
-    const key = path[i];
+  for (let i = 0; i < pathSegments.length - 1; i++) {
+    const segment = pathSegments[i];
     const next: ScenePatch = {};
-    current[key] = next;
+    current[segment] = next;
     current = next;
   }
-  current[path[path.length - 1]] = isDelete ? null : value;
+  current[pathSegments[pathSegments.length - 1]] = deleteKey ? null : value;
   return root;
 }
 
-/**
- * Build a scene patch that transforms oldObj into newObj (diff from old to new).
- * Useful for comparing document state vs file/saved state.
- */
-export function buildPatchFromDiff(
+export function buildScenePatchFromDiff(
   oldObj: Record<string, unknown>,
   newObj: Record<string, unknown>,
-  path: string[] = [],
-  acc: ScenePatch = {}
+  pathPrefix: PropertyKey[] = [],
+  mergedPatch: ScenePatch = {}
 ): ScenePatch {
   const allKeys = new Set([...Object.keys(oldObj), ...Object.keys(newObj)]);
-  const isObj = (v: unknown) =>
+  const isPlainObject = (v: unknown) =>
     typeof v === "object" && v !== null && !Array.isArray(v);
   for (const key of allKeys) {
-    const p = path.concat(key);
+    const pathWithKey = pathPrefix.concat(key);
     const oldVal = oldObj[key];
     const newVal = newObj[key];
     if (!(key in newObj)) {
-      applyScenePatch(acc, pathToPatch(p, undefined, true));
+      applyScenePatch(mergedPatch, patchAtPath(pathWithKey, undefined, true));
       continue;
     }
-    if (isObj(newVal)) {
-      buildPatchFromDiff(
-        (isObj(oldVal) ? oldVal : {}) as Record<string, unknown>,
+    if (isPlainObject(newVal)) {
+      buildScenePatchFromDiff(
+        (isPlainObject(oldVal) ? oldVal : {}) as Record<string, unknown>,
         newVal as Record<string, unknown>,
-        p,
-        acc
+        pathWithKey,
+        mergedPatch
       );
       continue;
     }
     if (oldVal !== newVal) {
-      applyScenePatch(acc, pathToPatch(p, newVal));
+      applyScenePatch(mergedPatch, patchAtPath(pathWithKey, newVal));
     }
   }
-  return acc;
+  return mergedPatch;
 }

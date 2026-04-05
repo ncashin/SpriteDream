@@ -3,9 +3,14 @@ import {
   getSceneRaw,
   getScene,
   getTarget,
-  getValueAtPath,
   onSceneChange,
 } from "./scene.js";
+import {
+  appendKeyToPath,
+  getPathKey,
+  getValueAtPath,
+  pathsSharePrefix,
+} from "./scenePath.js";
 
 function isSceneObject(value: unknown): value is SceneObject {
   return typeof value === "object" && value !== null;
@@ -51,28 +56,6 @@ export interface SceneWithQuery extends SceneObject {
 }
 
 const defaultCallback: QuerySceneCallback = () => true;
-
-function prefixToKey(prefix: PropertyKey[]): string {
-  return prefix.length === 0 ? "" : JSON.stringify(prefix);
-}
-
-function pathTouchesPrefix(updatePath: PropertyKey[], prefix: PropertyKey[]): boolean {
-  if (prefix.length === 0) return true;
-  const minLen = Math.min(updatePath.length, prefix.length);
-  for (let i = 0; i < minLen; i++) {
-    if (updatePath[i] !== prefix[i]) return false;
-  }
-  return true;
-}
-
-function getSubtree(scene: SceneObject, prefix: PropertyKey[]): SceneObject | null {
-  let current: unknown = scene;
-  for (const key of prefix) {
-    if (current === null || typeof current !== "object") return null;
-    current = (current as Record<PropertyKey, unknown>)[key];
-  }
-  return isSceneObject(current) ? current : null;
-}
 
 function walkSceneRaw(
   rawRoot: SceneObject,
@@ -157,9 +140,9 @@ let sceneUnsubscribe: (() => void) | undefined;
 function ensureSceneSubscription(): void {
   if (sceneUnsubscribe) return;
   sceneUnsubscribe = onSceneChange((update: SceneUpdate) => {
-    const updatePath = [...update.path, update.key];
+    const updatePath = appendKeyToPath(update.path, update.key);
     for (const [key, entry] of queryCache.entries()) {
-      if (pathTouchesPrefix(updatePath, entry.prefix)) {
+      if (pathsSharePrefix(updatePath, entry.prefix)) {
         queryCache.delete(key);
         notifyQueryListeners(key);
       }
@@ -169,7 +152,7 @@ function ensureSceneSubscription(): void {
 
 function getCacheKey(options: QuerySceneOptions): string {
   if (options.cacheKey !== undefined) return options.cacheKey;
-  return prefixToKey(options.prefix ?? []);
+  return getPathKey(options.prefix ?? []);
 }
 
 function notifyQueryListeners(cacheKey: string): void {

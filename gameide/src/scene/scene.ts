@@ -1,7 +1,8 @@
 import type { QuerySceneCallback, QuerySceneOptions, SceneWithQuery } from "./queryScene.js";
 import { querySceneObjects } from "./queryScene.js";
+import { getValueAtPath } from "./scenePath.js";
 import { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
-import { applyScenePatch, buildPatchFromDiff } from "./scenePatch.js";
+import { applyScenePatch, buildScenePatchFromDiff } from "./scenePatch.js";
 
 export type SceneObject = Record<PropertyKey, unknown>;
 
@@ -43,7 +44,7 @@ if (typeof import.meta !== "undefined" && import.meta.hot) {
     const root = rootTarget ?? hotData.rootTarget;
     if (!root) return;
     const snapshot = loadedSceneSnapshot ?? hotData.loadedSceneSnapshot ?? {};
-    const patch = buildPatchFromDiff(snapshot, payload.sceneData);
+    const patch = buildScenePatchFromDiff(snapshot, payload.sceneData);
     applyScenePatch(root as Record<string, unknown>, patch);
     if (savedSceneSnapshot) {
       applyScenePatch(savedSceneSnapshot as Record<string, unknown>, patch);
@@ -186,21 +187,9 @@ export function getSceneRaw(): SceneObject | undefined {
   return rootTarget;
 }
 
-export function queryScene(path: PropertyKey[]): unknown {
+export function getSceneValueAtPath(path: PropertyKey[]): unknown {
   const root = rootTarget ?? initialSceneData ?? {};
   return getValueAtPath(root as SceneObject, path);
-}
-
-export function getValueAtPath(
-  obj: SceneObject,
-  path: PropertyKey[]
-): unknown {
-  let current: unknown = obj;
-  for (const key of path) {
-    if (current === null || typeof current !== "object") return undefined;
-    current = (current as Record<PropertyKey, unknown>)[key];
-  }
-  return current;
 }
 
 function copyInto(target: SceneObject, source: SceneObject): void {
