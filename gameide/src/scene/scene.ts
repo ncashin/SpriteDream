@@ -24,6 +24,8 @@ let scene: SceneObject | undefined;
 let rootTarget: SceneObject | undefined;
 let initialSceneData: SceneObject | undefined;
 let loadedSceneSnapshot: Record<string, unknown> | undefined;
+/** Plain clone for editor/game mode restore; patched on HMR alongside live scene. */
+let savedSceneSnapshot: SceneObject | undefined;
 
 if (typeof import.meta !== "undefined" && import.meta.hot) {
   const hotData = import.meta.hot.data as {
@@ -31,25 +33,32 @@ if (typeof import.meta !== "undefined" && import.meta.hot) {
     rootTarget?: SceneObject;
     subscribers?: Set<SceneSubscriber>;
     loadedSceneSnapshot?: Record<string, unknown>;
+    savedSceneSnapshot?: SceneObject;
   };
   subscribers = hotData.subscribers ?? new Set();
   if (hotData.scene) scene = hotData.scene;
   if (hotData.rootTarget) rootTarget = hotData.rootTarget;
   if (hotData.loadedSceneSnapshot) loadedSceneSnapshot = hotData.loadedSceneSnapshot;
+  if (hotData.savedSceneSnapshot) savedSceneSnapshot = hotData.savedSceneSnapshot;
   import.meta.hot.on(SCENE_HMR_EVENT_NAME, (payload: { path: string; sceneData: Record<string, unknown> }) => {
     const root = rootTarget ?? hotData.rootTarget;
     if (!root) return;
     const snapshot = loadedSceneSnapshot ?? hotData.loadedSceneSnapshot ?? {};
     const patch = buildPatchFromDiff(snapshot, payload.sceneData);
-    applyScenePatch(root, patch);
+    applyScenePatch(root as Record<string, unknown>, patch);
+    if (savedSceneSnapshot) {
+      applyScenePatch(savedSceneSnapshot as Record<string, unknown>, patch);
+    }
     loadedSceneSnapshot = payload.sceneData;
     hotData.loadedSceneSnapshot = loadedSceneSnapshot;
+    hotData.savedSceneSnapshot = savedSceneSnapshot;
   });
   import.meta.hot.dispose(() => {
     hotData.scene = scene;
     hotData.rootTarget = rootTarget;
     hotData.subscribers = subscribers;
     hotData.loadedSceneSnapshot = loadedSceneSnapshot;
+    hotData.savedSceneSnapshot = savedSceneSnapshot;
   });
 } else {
   subscribers = new Set();
@@ -239,7 +248,20 @@ export function replaceScene(data: SceneObject | undefined): void {
   }
 }
 
-export function restoreSceneSnapshot(data: SceneObject): void {
+export function saveSceneSnapshot(): void {
+  savedSceneSnapshot = structuredClone(getRootTarget() ?? {}) as SceneObject;
+  if (typeof import.meta !== "undefined" && import.meta.hot) {
+    (import.meta.hot.data as { savedSceneSnapshot?: SceneObject }).savedSceneSnapshot = savedSceneSnapshot;
+  }
+}
+
+export function restoreSceneSnapshot(): void {
+  if (!savedSceneSnapshot) return;
+  const data = savedSceneSnapshot;
+  savedSceneSnapshot = undefined;
+  if (typeof import.meta !== "undefined" && import.meta.hot) {
+    (import.meta.hot.data as { savedSceneSnapshot?: SceneObject }).savedSceneSnapshot = undefined;
+  }
   if (!rootTarget) {
     replaceScene(data);
     return;

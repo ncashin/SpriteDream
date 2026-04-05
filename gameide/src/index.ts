@@ -32,6 +32,8 @@ export {
   getScene,
   setInitialScene,
   replaceScene,
+  saveSceneSnapshot,
+  restoreSceneSnapshot,
   subscribeToSceneUpdates,
   getRootTarget,
   queryScene,

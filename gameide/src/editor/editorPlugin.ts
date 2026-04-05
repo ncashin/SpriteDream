@@ -1,12 +1,12 @@
 import { createSceneTransportPostMessage } from "../scene/sceneChannelTransport.js";
 import { createSceneChannel } from "../scene/sceneChannel.js";
 import { applyScenePatch } from "../scene/scenePatch.js";
-import type { SceneObject } from "../scene/scene.js";
 import {
   getScene,
   getRootTarget,
   replaceScene,
   restoreSceneSnapshot,
+  saveSceneSnapshot,
   subscribeToSceneUpdates,
 } from "../scene/scene.js";
 import { GameIDEMode, getMode, onModeChange } from "../mode.js";
@@ -32,27 +32,20 @@ export const editorPlugin =
       subscribeToUpdates: subscribeToSceneUpdates,
     });
 
-    let sceneSnapshot: SceneObject | undefined;
-
     if (getMode() === GameIDEMode.Editor) {
-      const root = getRootTarget() ?? {};
-      sceneSnapshot = structuredClone(root);
+      saveSceneSnapshot();
     }
 
     onModeChange((mode) => {
       switch (mode) {
         case GameIDEMode.Editor:
-          if (sceneSnapshot !== undefined) {
-            restoreSceneSnapshot(sceneSnapshot);
-            sceneSnapshot = undefined;
-          }
+          restoreSceneSnapshot();
           channel.unpause();
           break;
 
         case GameIDEMode.Game:
           getScene();
-          const root = getRootTarget() ?? {};
-          sceneSnapshot = structuredClone(root);
+          saveSceneSnapshot();
           channel.pause();
           break;
 
