@@ -1,6 +1,7 @@
 import { createSceneTransportPostMessage } from "../scene/sceneChannelTransport.js";
 import { createSceneChannel } from "../scene/sceneChannel.js";
 import { applyScenePatch } from "../scene/scenePatch.js";
+import type { SceneObject } from "../scene/scene.js";
 import {
   getScene,
   getSceneRaw,
@@ -25,7 +26,7 @@ export const editorPlugin =
         target: window.parent,
         source: window,
       }),
-      getSceneData: () => structuredClone(getSceneRaw() ?? {}),
+      getSceneData: () => getScene(),
       setSceneData: (data) => setScene(data),
       applyScenePatch,
       subscribeToUpdates: onSceneChange,

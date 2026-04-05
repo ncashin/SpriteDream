@@ -141,7 +141,12 @@ export function getTarget(obj: SceneObject): SceneObject | undefined {
 
 export function setScene(data: SceneObject | undefined): void {
   if (rootTarget) {
-    copyInto(rootTarget, (data ?? {}) as SceneObject);
+    const next = (data ?? {}) as SceneObject;
+    const patch = buildScenePatchFromDiff(
+      rootTarget as Record<string, unknown>,
+      next as Record<string, unknown>,
+    );
+    applyScenePatch(rootTarget as Record<string, unknown>, patch);
   } else {
     initialSceneData = data;
   }
@@ -182,43 +187,6 @@ export function getSceneValueAtPath(path: PropertyKey[]): unknown {
   return getValueAtPath(root as SceneObject, path);
 }
 
-function copyInto(target: SceneObject, source: SceneObject): void {
-  for (const key of Object.keys(target)) {
-    delete target[key];
-  }
-  for (const key of Object.keys(source)) {
-    const value = source[key];
-    if (isSceneObject(value)) {
-      const child: SceneObject = {};
-      target[key] = child;
-      copyInto(child, value as SceneObject);
-    } else {
-      target[key] = value;
-    }
-  }
-}
-
-function mergeInto(target: SceneObject, source: SceneObject): void {
-  for (const key of Object.keys(target)) {
-    if (!(key in source)) delete target[key];
-  }
-  for (const key of Object.keys(source)) {
-    const value = source[key];
-    if (isSceneObject(value)) {
-      const existing = target[key];
-      if (isSceneObject(existing)) {
-        mergeInto(existing, value as SceneObject);
-      } else {
-        const child: SceneObject = {};
-        target[key] = child;
-        copyInto(child, value as SceneObject);
-      }
-    } else {
-      target[key] = value;
-    }
-  }
-}
-
 export function saveSceneSnapshot(): void {
   savedSceneSnapshot = structuredClone(getSceneRaw() ?? {}) as SceneObject;
   if (typeof import.meta !== "undefined" && import.meta.hot) {
@@ -237,5 +205,9 @@ export function restoreSceneSnapshot(): void {
     setScene(data);
     return;
   }
-  mergeInto(rootTarget, data);
+  const patch = buildScenePatchFromDiff(
+    rootTarget as Record<string, unknown>,
+    data as Record<string, unknown>,
+  );
+  applyScenePatch(rootTarget as Record<string, unknown>, patch);
 }

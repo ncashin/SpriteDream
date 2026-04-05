@@ -4,7 +4,6 @@ import {
   buildScenePatchFromDiff,
   createSceneChannel,
   SCENE_CHANNEL,
-  SCENE_MESSAGE_TYPES,
   type SceneChannelInMessage,
   type SceneChannelTransport,
   type SceneData,
@@ -50,6 +49,11 @@ export class SceneDocument implements vscode.CustomDocument {
     return { ...this.savedData };
   }
 
+  /** Mutable scene root for in-place patches (same reference as document data). */
+  getSceneRoot(): SceneData {
+    return this.data;
+  }
+
   getPatchFromSavedToCurrent(): ScenePatch {
     return buildScenePatchFromDiff(
       this.savedData as Record<string, unknown>,
@@ -62,8 +66,12 @@ export class SceneDocument implements vscode.CustomDocument {
   }
 
   setData(data: SceneData): void {
-    this.data = data;
-    this.documentData = JSON.parse(JSON.stringify(data));
+    const patch = buildScenePatchFromDiff(
+      this.data as Record<string, unknown>,
+      data as Record<string, unknown>,
+    );
+    applyScenePatch(this.data, patch);
+    applyScenePatch(this.documentData, patch);
     this.broadcastScene();
   }
 
@@ -81,10 +89,51 @@ export class SceneDocument implements vscode.CustomDocument {
     this.broadcastScene();
   }
 
+  /**
+   * Apply a patch that already originated from the game iframe. Do not broadcast
+   * back to the iframe — that would re-send the full scene as initialScene and
+   * re-merge JSON on the runtime, breaking stable object references.
+   */
+  applyPatchFromRuntime(patch: ScenePatch): void {
+    applyScenePatch(this.data, patch);
+    applyScenePatch(this.documentData, patch);
+  }
+
+  /**
+   * Merge full scene JSON from the iframe without echoing back (same rationale
+   * as applyPatchFromRuntime).
+   */
+  mergeSceneFromRuntime(data: SceneData): void {
+    const patch = buildScenePatchFromDiff(
+      this.data as Record<string, unknown>,
+      data as Record<string, unknown>,
+    );
+    applyScenePatch(this.data, patch);
+    applyScenePatch(this.documentData, patch);
+  }
+
   revertData(data: SceneData): void {
-    this.data = JSON.parse(JSON.stringify(data));
-    this.documentData = JSON.parse(JSON.stringify(data));
-    this.savedData = JSON.parse(JSON.stringify(data));
+    applyScenePatch(
+      this.data,
+      buildScenePatchFromDiff(
+        this.data as Record<string, unknown>,
+        data as Record<string, unknown>,
+      ),
+    );
+    applyScenePatch(
+      this.documentData,
+      buildScenePatchFromDiff(
+        this.documentData as Record<string, unknown>,
+        data as Record<string, unknown>,
+      ),
+    );
+    applyScenePatch(
+      this.savedData,
+      buildScenePatchFromDiff(
+        this.savedData as Record<string, unknown>,
+        data as Record<string, unknown>,
+      ),
+    );
     this.broadcastScene();
   }
 
@@ -202,9 +251,6 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
             previous = JSON.parse(JSON.stringify(document.getData()));
           }
           handler(message as SceneChannelInMessage);
-          if ((SCENE_MESSAGE_TYPES as Set<string>).has(message.type)) {
-            document.broadcastScene();
-          }
           if (isUndoable && previous) {
             const next = JSON.parse(JSON.stringify(document.getData()));
             const actuallyChanged =
@@ -228,9 +274,10 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
 
     await createSceneChannel({
       transport,
-      getSceneData: () => document.getData(),
-      setSceneData: (data: SceneData) => document.setData(data),
-      applyScenePatch,
+      getSceneData: () => document.getSceneRoot(),
+      setSceneData: (data: SceneData) => document.mergeSceneFromRuntime(data),
+      applyScenePatch: (_scene: SceneData, patch: ScenePatch) =>
+        document.applyPatchFromRuntime(patch),
       onRequestInitial: () =>
         JSON.stringify(document.getDocumentData(), null, 2),
     });

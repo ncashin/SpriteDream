@@ -59,12 +59,10 @@ initializeGame({
       canvas.height = rootElement.clientHeight;
     });
 
-    const scene = getScene();
-
     const playerSize = 32;
 
     update(() => {
-      const player = scene.player as Player;
+      const player = getScene().player as Player;
 
       context.clearRect(0, 0, canvas.width, canvas.height);
       const px = canvas.width / 2 + player.x;
@@ -75,8 +73,7 @@ initializeGame({
     });
 
     gameUpdate((deltaTime) => {
-      const player = scene.player as Player;
-
+      const player = getScene().player as Player;
       const h = input.axes.Horizontal;
       const v = input.axes.Vertical;
       player.x += h * player.speed * deltaTime;

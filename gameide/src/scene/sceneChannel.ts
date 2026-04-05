@@ -85,6 +85,10 @@ export async function createSceneChannel(
     transport.send({ type: SCENE_CHANNEL.requestInitialScene });
   }
 
+  if (subscribeToUpdates) {
+    getScene();
+  }
+
   function handleMessage(msg: unknown): void {
     if (!msg || typeof (msg as { type?: string }).type !== "string") return;
     const { type, content, patch } = msg as {
@@ -124,12 +128,7 @@ export async function createSceneChannel(
     }
     if (isScenePatch && patch !== undefined) {
       if (typeof patch !== "object" || Array.isArray(patch)) return;
-      const previous = getSceneData();
-      const updated = JSON.parse(JSON.stringify(previous)) as SceneData;
-      applyPatch(updated, patch);
-      setSceneData(updated);
-      initialSceneReceived = true;
-      markReady();
+      applyPatch(getSceneData(), patch);
       return;
     }
     if (isSceneChange && content !== undefined) {
@@ -146,9 +145,7 @@ export async function createSceneChannel(
   if (subscribeToUpdates) {
     const embedded =
       typeof window !== "undefined" && window.parent !== window;
-    if (!embedded) markReady();
 
-    getScene();
     unsubscribeOutgoing = subscribeToUpdates((update: SceneUpdate) => {
       if (!initialSceneReceived || paused) return;
       const fullPath = appendKeyToPath(update.path, update.key);
@@ -160,6 +157,12 @@ export async function createSceneChannel(
     });
     queueMicrotask(() => {
       requestInitialScene();
+      if (!embedded) {
+        handleMessage({
+          type: SCENE_CHANNEL.initialScene,
+          content: JSON.stringify(getSceneData()),
+        });
+      }
     });
   }
 
