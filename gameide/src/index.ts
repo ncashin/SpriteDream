@@ -96,9 +96,6 @@ export type {
   Render2DPluginRequiredContext,
   Render2DPluginOptions,
 } from "./renderPlugin2D/renderPlugin2D.js";
-export { collisionPlugin2D, onCollision } from "./collisionPlugin2D/collisionPlugin2D.js";
-export { collider2D } from "./collisionPlugin2D/collider2D.js";
-export { collisionBody2D } from "./collisionPlugin2D/collisionBody2D.js";
 export { inputPlugin } from "./inputPlugin.js";
 export type {
   InputBinding,

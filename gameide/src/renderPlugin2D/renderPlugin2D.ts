@@ -1,6 +1,5 @@
 import { Application } from "pixi.js";
 import { definePlugin } from "../plugin.js";
-import { initializeColliderDebugRendering } from "./colliderDebug.js";
 import { initializeGridRendering } from "./grid.js";
 import { initializeSpriteRendering } from "./sprite.js";
 import { initializeViewport } from "./viewport.js";
@@ -29,7 +28,6 @@ export const renderPlugin2D = definePlugin(
       rootElement.appendChild(app.canvas);
       initializeGridRendering(app, viewport);
       initializeSpriteRendering(app);
-      initializeColliderDebugRendering(app);
 
       return {
         ...inputContext,
