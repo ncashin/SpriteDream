@@ -15,13 +15,8 @@ import {
 } from "./scene/scene.js";
 import type { SceneUpdate } from "./scene/scene.js";
 
-/** Set on networked objects so outgoing patches skip remote-owned subtrees. */
 export const SCENE_OWNER_ID = "__ownerId" as const;
 
-/**
- * Path to the object that carries {@link SCENE_OWNER_ID} for this update, or null if the
- * update is not under an owner-filtered subtree (emit as before).
- */
 function objectPathForOwnerCheck(update: SceneUpdate): PropertyKey[] | null {
   const updatePath = update.path;
   if (updatePath.length === 0) return null;
@@ -50,37 +45,14 @@ function shouldEmitSceneUpdateForNetworking(
 }
 
 export type NetworkingPluginOptions = {
-  /**
-   * Stable id for this tab; defaults to a random value. Two peers compare ids to decide who sends the WebRTC offer.
-   */
   peerId?: string;
-  /**
-   * Signaling channel for SDP and ICE. Defaults to {@link createBroadcastChannelSignaling}
-   * with `roomId` (or `"default"`).
-   */
   signaling?: WebRTCSignaling;
-  /** Used with the default BroadcastChannel signaling (default `"default"`). */
   roomId?: string;
   iceServers?: RTCIceServer[];
-  /**
-   * If set to a positive number, plugin init resolves after this many milliseconds even when no peer has connected yet
-   * (scene runs locally; WebRTC keeps listening). Omit or pass `0` to block until a peer’s data channel is open.
-   */
-  peerConnectTimeoutMs?: number;
-  /**
-   * When a remote peer sends `requestInitialScene` over the WebRTC data channel, this
-   * serializes the full local scene to send back. Defaults to
-   * `JSON.stringify(getSceneRaw() ?? {})`.
-   */
+  peerConnectTimeoutMilliseconds?: number;
   onRequestInitial?: () => string;
 };
 
-/**
- * Syncs the scene with a remote peer over WebRTC using {@link createSceneChannel}.
- * Peers are symmetric: no host/guest — the smaller `peerId` (lexicographic) creates the data channel and offer.
- *
- * With default {@link createBroadcastChannelSignaling}, open two same-origin tabs with the same `roomId`.
- */
 export const networkingPlugin =
   (options: NetworkingPluginOptions) =>
   async (input: { rootElement: HTMLElement }) => {
@@ -90,16 +62,17 @@ export const networkingPlugin =
 
     const peerId = options.peerId ?? createNetworkingPeerId();
 
-    const peerConnectTimeoutMs =
-      options.peerConnectTimeoutMs != null && options.peerConnectTimeoutMs > 0
-        ? options.peerConnectTimeoutMs
+    const peerConnectTimeoutMilliseconds =
+      options.peerConnectTimeoutMilliseconds != null &&
+      options.peerConnectTimeoutMilliseconds > 0
+        ? options.peerConnectTimeoutMilliseconds
         : undefined;
 
     const transport = await createSceneTransportWebRTC({
       peerId,
       signaling,
       iceServers: options.iceServers,
-      peerConnectTimeoutMilliseconds: peerConnectTimeoutMs,
+      peerConnectTimeoutMilliseconds,
     });
 
     const serializeSceneForPeer =

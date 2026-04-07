@@ -68,6 +68,7 @@ initializeGame({
     }),
   ]),
   main({ input, networking }) {
+    console.log()
     const players = (getScene() as { players: ScenePlayers }).players;
     players[networking.peerId] = {
       x: 0,
