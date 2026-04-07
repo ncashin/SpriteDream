@@ -26,9 +26,9 @@ export function createSceneTransportPostMessage(
 
   const listener = (event: MessageEvent): void => {
     if (origin != null && event.origin !== origin) return;
-    const msg = event.data;
-    if (msg == null || typeof msg !== "object") return;
-    for (const h of handlers) h(msg);
+    const message = event.data;
+    if (message == null || typeof message !== "object") return;
+    for (const handler of handlers) handler(message);
   };
 
   return {

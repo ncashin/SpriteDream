@@ -5,6 +5,8 @@ import {
   initializePlugins,
   inputPlugin,
   editorPlugin,
+  networkingPlugin,
+  SCENE_OWNER_ID,
   gameUpdate,
   update,
 } from "gameide";
@@ -14,10 +16,32 @@ import invariant from "tiny-invariant";
 import { Editor } from "./Editor";
 import { GameUI } from "./GameUI";
 
-type Player = { x: number; y: number; speed: number };
+type Player = {
+  [SCENE_OWNER_ID]?: string;
+  x: number;
+  y: number;
+  speed: number;
+};
+
+type ScenePlayers = Record<string, Player>;
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
+
+const networkRoomId =
+  new URLSearchParams(window.location.search).get("room") ?? "default";
+
+function hashHue(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (h * 31 + id.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h) % 360;
+}
+
+function playerColor(id: string): string {
+  return `hsl(${hashHue(id)} 55% 52%)`;
+}
 
 initializeGame({
   rootElement,
@@ -26,6 +50,7 @@ initializeGame({
   plugins: initializePlugins([
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
+    networkingPlugin({ roomId: networkRoomId }),
     inputPlugin({
       axes: {
         Horizontal: {
@@ -42,7 +67,16 @@ initializeGame({
       },
     }),
   ]),
-  main({ input }) {
+  main({ input, networking }) {
+    const players = (getScene() as { players: ScenePlayers }).players;
+    players[networking.peerId] = {
+      x: 0,
+      y: 0,
+      speed: 200,
+      [SCENE_OWNER_ID]: networking.peerId,
+    };
+    const local = players[networking.peerId];
+
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
     canvas.style.height = "100%";
@@ -60,25 +94,24 @@ initializeGame({
     });
 
     const playerSize = 32;
-
-    const player = (): Player => getScene().player as Player;
+    const half = playerSize / 2;
 
     update(() => {
-      const p = player();
       context.clearRect(0, 0, canvas.width, canvas.height);
-      const px = canvas.width / 2 + p.x;
-      const py = canvas.height / 2 - p.y;
-      context.fillStyle = "#4ecca3";
-      const half = playerSize / 2;
-      context.fillRect(px - half, py - half, playerSize, playerSize);
+      for (const id of Object.keys(players)) {
+        const p = players[id];
+        const px = canvas.width / 2 + p.x;
+        const py = canvas.height / 2 - p.y;
+        context.fillStyle = playerColor(id);
+        context.fillRect(px - half, py - half, playerSize, playerSize);
+      }
     });
 
     gameUpdate((deltaTime) => {
-      const p = player();
       const h = input.axes.Horizontal;
       const v = input.axes.Vertical;
-      p.x += h * p.speed * deltaTime;
-      p.y += v * p.speed * deltaTime;
+      local.x += h * local.speed * deltaTime;
+      local.y += v * local.speed * deltaTime;
     });
   },
 });

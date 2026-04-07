@@ -40,6 +40,11 @@ export interface CreateSceneChannelOptions {
   setSceneData(data: SceneData): void;
   applyScenePatch: (scene: SceneData, patch: ScenePatch) => void;
   subscribeToUpdates?: (callback: (update: SceneUpdate) => void) => () => void;
+  /**
+   * If set, only scene updates for which this returns true are sent on the transport.
+   * Use with `__ownerId` on scene objects to avoid echoing remote patches back.
+   */
+  shouldEmitSceneUpdate?: (update: SceneUpdate) => boolean;
   onRequestInitial?: () => string;
 }
 
@@ -56,7 +61,15 @@ export interface SceneChannel {
 export async function createSceneChannel(
   options: CreateSceneChannelOptions
 ): Promise<SceneChannel> {
-  const { transport, getSceneData, setSceneData, applyScenePatch: applyPatch, subscribeToUpdates, onRequestInitial } = options;
+  const {
+    transport,
+    getSceneData,
+    setSceneData,
+    applyScenePatch: applyPatch,
+    subscribeToUpdates,
+    onRequestInitial,
+    shouldEmitSceneUpdate,
+  } = options;
   let paused = false;
 
   let initialSceneReceived = false;
@@ -154,6 +167,7 @@ export async function createSceneChannel(
 
     unsubscribeOutgoing = subscribeToUpdates((update: SceneUpdate) => {
       if (!initialSceneReceived || paused) return;
+      if (shouldEmitSceneUpdate && !shouldEmitSceneUpdate(update)) return;
       const fullPath = appendKeyToPath(update.path, update.key);
       const patch =
         update.type === "set"

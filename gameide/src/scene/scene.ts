@@ -72,7 +72,13 @@ function notifySubscribers(update: SceneUpdate): void {
   });
 }
 
+/** Plain object backing a scene proxy — never wrap a proxy with another proxy. */
+function unwrapSceneTarget(obj: SceneObject): SceneObject {
+  return targetOfProxy.get(obj) ?? obj;
+}
+
 function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject {
+  target = unwrapSceneTarget(target);
   const cached = proxyCache.get(target);
   if (cached) return cached;
 
@@ -80,7 +86,13 @@ function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject
 
   const proxy: SceneObject = new Proxy(target, {
     get(obj, key: PropertyKey) {
+      obj = unwrapSceneTarget(obj);
       const value = obj[key];
+
+   
+      if (value === undefined && key === "toJSON") {
+        return undefined;
+      }
 
       if (value === undefined) {
         const child: SceneObject = {};
@@ -91,15 +103,17 @@ function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject
       }
 
       if (isSceneObject(value)) {
+        const raw = unwrapSceneTarget(value as SceneObject);
         const childPath = path.concat(key);
-        if (!pathCache.has(value)) pathCache.set(value, childPath);
-        return createProxy(value, childPath);
+        if (!pathCache.has(raw)) pathCache.set(raw, childPath);
+        return createProxy(raw, childPath);
       }
 
       return value;
     },
 
     set(obj, key: PropertyKey, value: unknown) {
+      obj = unwrapSceneTarget(obj);
       const prev = obj[key];
       if (prev === value) return true;
       obj[key] = value;
@@ -116,6 +130,7 @@ function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject
     },
 
     deleteProperty(obj, key: PropertyKey) {
+      obj = unwrapSceneTarget(obj);
       if (!Object.prototype.hasOwnProperty.call(obj, key)) return true;
       delete obj[key];
       const targetPath = pathCache.get(obj);

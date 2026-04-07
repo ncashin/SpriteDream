@@ -69,6 +69,20 @@ export {
 } from "./initializeGame.js";
 export type { Plugin, FinalContext } from "./initializeGame.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
+export {
+  networkingPlugin,
+  SCENE_OWNER_ID,
+  createBroadcastChannelSignaling,
+  createNetworkingPeerId,
+  createSceneTransportWebRTC,
+} from "./networkingPlugin.js";
+export type { NetworkingPluginOptions } from "./networkingPlugin.js";
+export type {
+  WebRTCSignaling,
+  WebRTCSignal,
+  CreateSceneTransportWebRTCOptions,
+  SceneTransportWebRTC,
+} from "./networkingPlugin.js";
 export type { ScenePatchMessage } from "./editor/editorPlugin.js";
 export { gameUIPlugin } from "./editor/gameUIPlugin/gameUIPlugin.js";
 export { ExampleGameUI } from "./editor/gameUIPlugin/ExampleGameUI.js";
