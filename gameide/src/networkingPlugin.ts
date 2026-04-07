@@ -87,6 +87,7 @@ export const networkingPlugin =
       shouldEmitSceneUpdate: (update) =>
         shouldEmitSceneUpdateForNetworking(update, peerId),
       onRequestInitial: serializeSceneForPeer,
+      initialSceneBootstrap: true,
     });
 
     return {

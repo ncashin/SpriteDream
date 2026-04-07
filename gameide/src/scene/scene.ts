@@ -77,6 +77,44 @@ function unwrapSceneTarget(obj: SceneObject): SceneObject {
   return targetOfProxy.get(obj) ?? obj;
 }
 
+function toPlainSceneTree(value: unknown, seen: WeakSet<object> = new WeakSet()): unknown {
+  if (value === null || typeof value !== "object") return value;
+  const raw = unwrapSceneTarget(value as SceneObject);
+  if (seen.has(raw)) {
+    throw new Error("[scene] createObject: cyclic object graph");
+  }
+  seen.add(raw);
+  if (Array.isArray(raw)) {
+    return raw.map((item) => toPlainSceneTree(item, seen));
+  }
+  const out: SceneObject = {};
+  for (const k of Reflect.ownKeys(raw)) {
+    out[k as PropertyKey] = toPlainSceneTree(raw[k as PropertyKey], seen);
+  }
+  return out;
+}
+
+/** Eagerly wrap every nested scene object with proxies (sets pathCache via createProxy) and return the root proxy. */
+function ensureSubtreeProxies(node: SceneObject, nodePath: PropertyKey[]): SceneObject {
+  const raw = unwrapSceneTarget(node);
+  if (Array.isArray(raw)) {
+    for (let i = 0; i < raw.length; i++) {
+      const v = raw[i];
+      if (isSceneObject(v)) {
+        ensureSubtreeProxies(v as SceneObject, nodePath.concat(i));
+      }
+    }
+  } else {
+    for (const k of Reflect.ownKeys(raw)) {
+      const v = raw[k as PropertyKey];
+      if (isSceneObject(v)) {
+        ensureSubtreeProxies(v as SceneObject, nodePath.concat(k));
+      }
+    }
+  }
+  return createProxy(raw, nodePath);
+}
+
 function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject {
   target = unwrapSceneTarget(target);
   const cached = proxyCache.get(target);
@@ -87,6 +125,27 @@ function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject
   const proxy: SceneObject = new Proxy(target, {
     get(obj, key: PropertyKey) {
       obj = unwrapSceneTarget(obj);
+
+      if (key === "createObject") {
+        return (name: PropertyKey, object: SceneObject): SceneObject => {
+          const parent = unwrapSceneTarget(obj);
+          const plain = toPlainSceneTree(object) as SceneObject;
+          parent[name] = plain;
+          const childPath = path.concat(name);
+          const wrapped = ensureSubtreeProxies(plain, childPath);
+          const parentPath = pathCache.get(parent);
+          if (parentPath !== undefined) {
+            notifySubscribers({
+              type: "set",
+              path: parentPath,
+              key: name,
+              value: plain,
+            });
+          }
+          return wrapped;
+        };
+      }
+
       const value = obj[key];
 
    

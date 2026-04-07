@@ -16,15 +16,6 @@ import invariant from "tiny-invariant";
 import { Editor } from "./Editor";
 import { GameUI } from "./GameUI";
 
-type Player = {
-  [SCENE_OWNER_ID]?: string;
-  x: number;
-  y: number;
-  speed: number;
-};
-
-type ScenePlayers = Record<string, Player>;
-
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
@@ -50,7 +41,10 @@ initializeGame({
   plugins: initializePlugins([
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
-    networkingPlugin({ roomId: networkRoomId }),
+    networkingPlugin({
+      roomId: networkRoomId,
+      peerConnectTimeoutMilliseconds: 1000,
+    }),
     inputPlugin({
       axes: {
         Horizontal: {
@@ -68,15 +62,18 @@ initializeGame({
     }),
   ]),
   main({ input, networking }) {
-    console.log()
-    const players = (getScene() as { players: ScenePlayers }).players;
-    players[networking.peerId] = {
+    const scene = getScene() as any;
+    if(!scene.players) {
+      scene.players = [];
+    }
+    const players = scene.players;
+    const localPlayer = players.createObject(networking.peerId, {
+      [SCENE_OWNER_ID]: networking.peerId,
       x: 0,
       y: 0,
       speed: 200,
-      [SCENE_OWNER_ID]: networking.peerId,
-    };
-    const local = players[networking.peerId];
+    })
+ 
 
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
@@ -100,9 +97,9 @@ initializeGame({
     update(() => {
       context.clearRect(0, 0, canvas.width, canvas.height);
       for (const id of Object.keys(players)) {
-        const p = players[id];
-        const px = canvas.width / 2 + p.x;
-        const py = canvas.height / 2 - p.y;
+        const player = players[id];
+        const px = canvas.width / 2 + player.x;
+        const py = canvas.height / 2 - player.y;
         context.fillStyle = playerColor(id);
         context.fillRect(px - half, py - half, playerSize, playerSize);
       }
@@ -111,8 +108,8 @@ initializeGame({
     gameUpdate((deltaTime) => {
       const h = input.axes.Horizontal;
       const v = input.axes.Vertical;
-      local.x += h * local.speed * deltaTime;
-      local.y += v * local.speed * deltaTime;
+      localPlayer.x += h * localPlayer.speed * deltaTime;
+      localPlayer.y += v * localPlayer.speed * deltaTime;
     });
   },
 });

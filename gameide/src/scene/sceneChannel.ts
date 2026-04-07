@@ -46,6 +46,15 @@ export interface CreateSceneChannelOptions {
    */
   shouldEmitSceneUpdate?: (update: SceneUpdate) => boolean;
   onRequestInitial?: () => string;
+  /**
+   * When `subscribeToUpdates` is set, the channel waits for an initial scene before
+   * emitting patches. By default we synthesize one from {@link getSceneData} only in
+   * non-embedded pages (`window.parent === window`), because embedded hosts usually
+   * send the authoritative scene over the transport. Set `initialSceneBootstrap`
+   * to true for transports that may never reply when solo (e.g. WebRTC with no peer
+   * after connect timeout).
+   */
+  initialSceneBootstrap?: boolean;
 }
 
 export interface SceneChannel {
@@ -69,8 +78,13 @@ export async function createSceneChannel(
     subscribeToUpdates,
     onRequestInitial,
     shouldEmitSceneUpdate,
+    initialSceneBootstrap,
   } = options;
   let paused = false;
+
+  const embedded =
+    typeof window !== "undefined" && window.parent !== window;
+  const useInitialSceneBootstrap = initialSceneBootstrap ?? !embedded;
 
   let initialSceneReceived = false;
 
@@ -162,9 +176,6 @@ export async function createSceneChannel(
 
   let unsubscribeOutgoing: (() => void) | undefined;
   if (subscribeToUpdates) {
-    const embedded =
-      typeof window !== "undefined" && window.parent !== window;
-
     unsubscribeOutgoing = subscribeToUpdates((update: SceneUpdate) => {
       if (!initialSceneReceived || paused) return;
       if (shouldEmitSceneUpdate && !shouldEmitSceneUpdate(update)) return;
@@ -177,7 +188,7 @@ export async function createSceneChannel(
     });
     queueMicrotask(() => {
       requestInitialScene();
-      if (!embedded) {
+      if (useInitialSceneBootstrap) {
         handleMessage({
           type: SCENE_CHANNEL.initialScene,
           content: JSON.stringify(getSceneData()),
