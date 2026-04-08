@@ -32,14 +32,14 @@ export default function Home() {
         <h1>GameIDE</h1>
         <Form method="post">
           <label>
-            Game title{" "}
+            Game title
             <input
               type="text"
               name="title"
               placeholder="Untitled Game"
               maxLength={100}
             />
-          </label>{" "}
+          </label>
           <button type="submit">Create Game</button>
         </Form>
         <ul >

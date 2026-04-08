@@ -27,6 +27,10 @@ ul {
   @apply flex flex-col;
 }
 
+form {
+  @apply flex flex-col;
+}
+
 h1 {
   @apply font-semibold text-xl;
 }
