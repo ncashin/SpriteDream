@@ -35,6 +35,7 @@ export default function Game() {
           width="800"
           height="450"
         />
+  
         <p>
           <a href="/">Back</a>
         </p>

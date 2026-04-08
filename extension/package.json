@@ -20,6 +20,22 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "gameide.uploadGame",
+        "title": "Upload Game",
+        "category": "GameIDE"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "gameide.uploadGame",
+          "group": "navigation@50",
+          "when": "explorerResourceIsFolder || explorerResourceIsFile"
+        }
+      ]
+    },
     "customEditors": [
       {
         "viewType": "gameide.sceneEditor",

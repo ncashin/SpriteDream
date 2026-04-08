@@ -28,10 +28,38 @@ function getContentType(filePath: string) {
   }
 }
 
+function injectBaseHREFIfHTML(
+  content: Uint8Array | Buffer,
+  requestUrl: string,
+): Buffer {
+  const html = Buffer.from(content).toString("utf8");
+  const lower = html.toLowerCase();
+  if (!lower.includes("<html")) {
+    return Buffer.from(content);
+  }
+  if (lower.includes("<base ")) {
+    return Buffer.from(content);
+  }
+
+  const baseHREF = new URL("./", requestUrl).toString();
+  const baseTag = `<base href="${baseHREF}">`;
+
+  if (/<head(\s[^>]*)?>/i.test(html)) {
+    return Buffer.from(
+      html.replace(/<head(\s[^>]*)?>/i, (match) => `${match}\n    ${baseTag}`),
+      "utf8",
+    );
+  }
+
+  return Buffer.from(`${baseTag}\n${html}`, "utf8");
+}
+
 export async function loader({
   params,
+  request,
 }: {
   params: { gameId?: string; "*": string | undefined };
+  request: Request;
 }) {
   if (!params.gameId) {
     throw new Response("Game not found", { status: 404 });
@@ -42,9 +70,16 @@ export async function loader({
     throw new Response("File not found", { status: 404 });
   }
 
-  return new Response(file.content, {
+  const contentType = getContentType(file.absolutePath);
+  const content: Buffer =
+    contentType === "text/html; charset=utf-8"
+      ? injectBaseHREFIfHTML(file.content, request.url)
+      : Buffer.from(file.content);
+  const body = new Uint8Array(content);
+
+  return new Response(body, {
     headers: {
-      "content-type": getContentType(file.absolutePath),
+      "content-type": contentType,
       "cache-control": "public, max-age=60",
     },
   });

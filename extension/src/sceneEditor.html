@@ -27,7 +27,6 @@
         const vscode =
           typeof acquireVsCodeApi !== "undefined" ? acquireVsCodeApi() : null;
         let pendingSceneContent = null;
-        /** True after iframe has sent gameide.editor.requestInitialScene */
         let runtimeRequestedInitialScene = false;
 
         function postToVscode(payload) {

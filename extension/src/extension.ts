@@ -7,6 +7,7 @@ import {
   syncAllSceneDeclarations,
   syncSceneDeclaration,
 } from "./sceneTypeDeclarations";
+import { registerUploadGameCommand } from "./uploadGame";
 
 const SCENE_FILE_DEBOUNCE_MS = 150;
 
@@ -52,7 +53,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     try {
       await syncSceneDeclaration(uri);
     } catch {
-      // Ignore read/parse errors (e.g. invalid JSON while saving)
     }
 
     const doc = sceneEditorProvider.getDocumentByUri(uri);
@@ -62,7 +62,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const newData = JSON.parse(Buffer.from(bytes).toString("utf8")) as SceneData;
       doc.revertData(newData);
     } catch {
-      // Ignore read/parse errors (e.g. invalid JSON while saving)
     }
   }
 
@@ -92,6 +91,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     sceneWatcher,
     { dispose: () => pendingUri.forEach((t) => clearTimeout(t)) }
   );
+
+  registerUploadGameCommand(context);
 }
 
 export function deactivate(): void {}

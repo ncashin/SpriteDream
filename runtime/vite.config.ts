@@ -2,20 +2,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
-import { gameidePlugin } from "gameide";
+import { gameidePlugin } from "gameide/vite";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const port = parseInt(process.env.GAMEIDE_RUNTIME_PORT ?? "38472") || 38472;
 
 export default defineConfig({
-  base: "/",
+  base: "./",
   publicDir: "assets",
   plugins: [tailwindcss(), gameidePlugin()],
-  resolve: {
-    alias: {
-      gameide: path.resolve(__dirname, "../gameide/src"),
-    },
-  },
   server: {
     port,
     strictPort: false,

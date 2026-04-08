@@ -11,13 +11,18 @@
       "import": "./dist/gameide.es.js",
       "require": "./dist/gameide.umd.js",
       "default": "./dist/gameide.es.js"
+    },
+    "./vite": {
+      "types": "./dist/gameidePluginVite.d.ts",
+      "import": "./dist/vite.js",
+      "default": "./dist/vite.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.plugin.config.ts",
     "watch": "vite build --watch",
     "prepare": "npm run build"
   },

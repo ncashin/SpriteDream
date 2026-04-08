@@ -110,6 +110,5 @@ export type {
   InputPluginRequiredContext,
   InputPluginOptions,
 } from "./inputPlugin.js";
-export { gameidePlugin } from "./gameidePluginVite.js";
 export { SCENE_HMR_EVENT_NAME } from "./scene/sceneHMR.js";
 export type { SceneHMRPayload } from "./scene/sceneHMR.js";

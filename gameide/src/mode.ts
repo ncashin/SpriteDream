@@ -3,7 +3,10 @@ export enum GameIDEMode {
   Game = "game",
 }
 
-let currentMode: GameIDEMode = GameIDEMode.Editor;
+let currentMode: GameIDEMode =
+  process.env.NODE_ENV === "development"
+    ? GameIDEMode.Editor
+    : GameIDEMode.Game;
 
 if (import.meta.hot) {
   const data = import.meta.hot.data;
