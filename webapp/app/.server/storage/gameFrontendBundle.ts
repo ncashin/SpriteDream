@@ -76,7 +76,7 @@ export function getDefaultFrontendBundle(
     <title>${gameTitle}</title>
   </head>
   <body>
-    <div id="root">Placeholder Game</div>
+    <div id="root">GameIDE Placeholder</div>
   </body>
 </html>
 `,

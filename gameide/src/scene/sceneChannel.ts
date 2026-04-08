@@ -40,21 +40,9 @@ export interface CreateSceneChannelOptions {
   setSceneData(data: SceneData): void;
   applyScenePatch: (scene: SceneData, patch: ScenePatch) => void;
   subscribeToUpdates?: (callback: (update: SceneUpdate) => void) => () => void;
-  /**
-   * If set, only scene updates for which this returns true are sent on the transport.
-   * Use with `__ownerId` on scene objects to avoid echoing remote patches back.
-   */
   shouldEmitSceneUpdate?: (update: SceneUpdate) => boolean;
   onRequestInitial?: () => string;
-  /**
-   * When `subscribeToUpdates` is set, the channel waits for an initial scene before
-   * emitting patches. By default we synthesize one from {@link getSceneData} only in
-   * non-embedded pages (`window.parent === window`), because embedded hosts usually
-   * send the authoritative scene over the transport. Set `initialSceneBootstrap`
-   * to true for transports that may never reply when solo (e.g. WebRTC with no peer
-   * after connect timeout).
-   */
-  initialSceneBootstrap?: boolean;
+  skipSceneInitialization?: boolean;
 }
 
 export interface SceneChannel {
@@ -78,15 +66,11 @@ export async function createSceneChannel(
     subscribeToUpdates,
     onRequestInitial,
     shouldEmitSceneUpdate,
-    initialSceneBootstrap,
+    skipSceneInitialization = true,
   } = options;
   let paused = false;
 
-  const embedded =
-    typeof window !== "undefined" && window.parent !== window;
-  const useInitialSceneBootstrap = initialSceneBootstrap ?? !embedded;
-
-  let initialSceneReceived = false;
+  let initialSceneReceived = skipSceneInitialization;
 
   let markReady = () => {};
   const readyPromise =
@@ -114,13 +98,16 @@ export async function createSceneChannel(
 
   if (subscribeToUpdates) {
     getScene();
+    if (initialSceneReceived) {
+      markReady();
+    }
   }
 
-  function handleMessage(msg: unknown): void {
-    if (!msg || typeof (msg as { type?: string }).type !== "string") {
+  function handleMessage(message: unknown): void {
+    if (!message || typeof (message as { type?: string }).type !== "string") {
       return;
     }
-    const { type, content, patch } = msg as {
+    const { type, content, patch } = message as {
       type: string;
       content?: string;
       patch?: ScenePatch;
@@ -149,6 +136,9 @@ export async function createSceneChannel(
     }
 
     if (isInitialScene && content !== undefined) {
+      if (initialSceneReceived) {
+        return;
+      }
       try {
         const data = JSON.parse(content) as SceneData;
         setSceneData(data);
@@ -187,13 +177,8 @@ export async function createSceneChannel(
       sendPatch(patch);
     });
     queueMicrotask(() => {
+      if (initialSceneReceived) return;
       requestInitialScene();
-      if (useInitialSceneBootstrap) {
-        handleMessage({
-          type: SCENE_CHANNEL.initialScene,
-          content: JSON.stringify(getSceneData()),
-        });
-      }
     });
   }
 

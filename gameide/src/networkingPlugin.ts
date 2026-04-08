@@ -34,11 +34,11 @@ function shouldEmitSceneUpdateForNetworking(
 ): boolean {
   const objectPath = objectPathForOwnerCheck(update);
   if (objectPath === null) return true;
-  const obj = getSceneValueAtPath(objectPath) as
+  const object = getSceneValueAtPath(objectPath) as
     | { [SCENE_OWNER_ID]?: string }
     | undefined;
   const marked =
-    obj && typeof obj === "object" ? obj[SCENE_OWNER_ID] : undefined;
+    object && typeof object === "object" ? object[SCENE_OWNER_ID] : undefined;
   const slotId = String(objectPath[objectPath.length - 1]);
   const owner = marked ?? slotId;
   return owner === localPeerId;
@@ -74,7 +74,8 @@ export const networkingPlugin =
       iceServers: options.iceServers,
       peerConnectTimeoutMilliseconds,
     });
-
+    const peerConnectionEstablished = transport.remotePeerIds.length > 0;
+ 
     const serializeSceneForPeer =
       options.onRequestInitial ?? (() => JSON.stringify(getSceneRaw() ?? {}));
 
@@ -87,14 +88,13 @@ export const networkingPlugin =
       shouldEmitSceneUpdate: (update) =>
         shouldEmitSceneUpdateForNetworking(update, peerId),
       onRequestInitial: serializeSceneForPeer,
-      initialSceneBootstrap: true,
+      skipSceneInitialization: !peerConnectionEstablished,
     });
 
     return {
       ...input,
       networking: {
         peerId,
-        remotePeerId: transport.remotePeerId,
         remotePeerIds: transport.remotePeerIds,
         channel,
         dispose() {

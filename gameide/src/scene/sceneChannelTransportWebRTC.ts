@@ -26,9 +26,6 @@ export interface CreateSceneTransportWebRTCOptions {
 function createNoopWebRtcTransport(localPeerId: string): SceneTransportWebRTC {
   return {
     localPeerId,
-    get remotePeerId() {
-      return null as string | null;
-    },
     get remotePeerIds() {
       return [] as readonly string[];
     },
@@ -40,11 +37,7 @@ function createNoopWebRtcTransport(localPeerId: string): SceneTransportWebRTC {
 
 export type SceneTransportWebRTC = SceneChannelTransport & {
   dispose(): void;
-  /** This tab's id (same as {@link CreateSceneTransportWebRTCOptions.peerId}). */
   localPeerId: string;
-  /** First connected remote, if any (legacy; prefer {@link remotePeerIds}). */
-  get remotePeerId(): string | null;
-  /** All remotes with an open data channel. */
   get remotePeerIds(): readonly string[];
 };
 
@@ -169,7 +162,6 @@ export function createSceneTransportWebRTC(
           peerId: localPeerId,
         } satisfies WebRTCSignal);
       } catch {
-        /* ignore */
       }
     }
 
@@ -341,10 +333,6 @@ export function createSceneTransportWebRTC(
     function buildTransport(): SceneTransportWebRTC {
       return {
         localPeerId,
-        get remotePeerId() {
-          const first = connectedRemotes.values().next().value;
-          return first !== undefined ? first : null;
-        },
         get remotePeerIds() {
           return [...connectedRemotes];
         },
