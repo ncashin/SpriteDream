@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "avenir next", avenir, "segoe ui",
+    "helvetica neue", "Adwaita Sans", Cantarell, Ubuntu, roboto, noto,
+    helvetica, arial, sans-serif;
+  --font-serif:
+    Iowan Old Style, Apple Garamond, Baskerville, Times New Roman, Droid Serif,
+    Times, Source Serif Pro, serif, Apple Color Emoji, Segoe UI Emoji,
+    Segoe UI Symbol;
+  --font-mono:
+    Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console,
+    monospace;
 }
 
 html,
@@ -12,4 +21,12 @@ body {
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;
   }
+}
+
+ul {
+  @apply flex flex-col;
+}
+
+h1 {
+  @apply font-semibold text-xl;
 }
