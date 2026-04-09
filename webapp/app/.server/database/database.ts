@@ -18,7 +18,7 @@ function ensureLocalFileDatabase(url: string) {
 }
 
 invariant(process.env.DB_FILE_NAME);
-const dbUrl = process.env.DB_FILE_NAME;
-ensureLocalFileDatabase(dbUrl);
-export const database = drizzle(dbUrl);
+const dbURL = process.env.DB_FILE_NAME;
+ensureLocalFileDatabase(dbURL);
+export const database = drizzle(dbURL);
 
