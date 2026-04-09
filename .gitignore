@@ -30,3 +30,5 @@ out
 .env
 .gameide-types
 
+
+volumes/
