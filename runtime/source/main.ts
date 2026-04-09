@@ -74,7 +74,7 @@ initializeGame({
   main({ input, networking }) {
     const scene = getScene() as any;
     if(!scene.players) {
-      scene.players = [];
+      scene.players = {};
     }
     const players = scene.players;
     const localPlayer = players.createObject(networking.peerId, {
