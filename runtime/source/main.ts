@@ -21,9 +21,13 @@ invariant(rootElement);
 
 const search = new URLSearchParams(window.location.search);
 const networkRoomId = search.get("room") ?? "default";
+const gameIdFromPath = (() => {
+  const match = window.location.pathname.match(/^\/game\/([^/]+)(?:\/|$)/);
+  return match?.[1] ?? null;
+})();
 const networkGameId =
   search.get("game") ??
-  window.location.pathname.match(/^\/game\/([^/]+)\//)?.[1] ??
+  gameIdFromPath ??
   "dev";
 const signalingURL = `/game/${networkGameId}/webrtc-signal`;
 
@@ -49,7 +53,7 @@ initializeGame({
     networkingPlugin({
       roomId: networkRoomId,
       signalingURL,
-      peerConnectTimeoutMilliseconds: 15_000,
+      peerConnectTimeoutMilliseconds: 1000,
     }),
     inputPlugin({
       axes: {

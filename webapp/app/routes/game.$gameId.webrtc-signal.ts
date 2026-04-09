@@ -3,9 +3,24 @@
 type PeerSend = (message: unknown) => void;
 
 const rooms = new Map<string, Map<string, PeerSend>>();
+const DEFAULT_ROOM = "default";
 
 function roomKey(gameId: string, room: string): string {
   return `${gameId}::${room}`;
+}
+
+function roomPeers(
+  gameId: string,
+  room: string,
+  create = false,
+): Map<string, PeerSend> | undefined {
+  const key = roomKey(gameId, room);
+  let peers = rooms.get(key);
+  if (!peers && create) {
+    peers = new Map();
+    rooms.set(key, peers);
+  }
+  return peers;
 }
 
 function subscribePeer(
@@ -15,12 +30,20 @@ function subscribePeer(
   send: PeerSend,
 ): () => void {
   const key = roomKey(gameId, room);
-  let peers = rooms.get(key);
-  if (!peers) {
-    peers = new Map();
-    rooms.set(key, peers);
+  const peers = roomPeers(gameId, room, true);
+  if (!peers) return () => {};
+
+  for (const [existingPeerId, existingSend] of peers) {
+    if (existingPeerId === peerId) continue;
+    try {
+      send({ type: "hello", peerId: existingPeerId });
+      existingSend({ type: "hello", peerId });
+    } catch {
+      // ignore broken streams
+    }
   }
   peers.set(peerId, send);
+
   return () => {
     const map = rooms.get(key);
     if (!map) return;
@@ -35,17 +58,14 @@ function subscribePeer(
 function senderPeerId(message: unknown): string | null {
   if (!message || typeof message !== "object") return null;
   const m = message as { type?: string; peerId?: string; from?: string };
-  if (m.type === "hello") {
-    return typeof m.peerId === "string" ? m.peerId : null;
-  }
-  return typeof m.from === "string" ? m.from : null;
+  const sender = m.type === "hello" ? m.peerId : m.from;
+  return typeof sender === "string" ? sender : null;
 }
 
 /** Fan-out to every peer in the room except the sender (derived from the signal body). */
 function relaySignal(gameId: string, room: string, message: unknown): void {
   const from = senderPeerId(message);
-  const key = roomKey(gameId, room);
-  const peers = rooms.get(key);
+  const peers = roomPeers(gameId, room);
   if (!peers) return;
   for (const [peerId, send] of peers) {
     if (from !== null && peerId === from) continue;
@@ -107,7 +127,6 @@ export async function loader({
   request: Request;
   params: { gameId?: string };
 }) {
-  console.log("RECEIVED: ", params.gameId)
   const gameId = params.gameId;
   if (!gameId) {
     return new Response("Missing game id", { status: 400 });
@@ -125,7 +144,7 @@ export async function loader({
     return new Response("peerId required", { status: 400 });
   }
 
-  const room = url.searchParams.get("room") ?? "default";
+  const room = url.searchParams.get("room") ?? DEFAULT_ROOM;
   return sseResponse(request, gameId, room, peerId);
 }
 
@@ -146,7 +165,7 @@ export async function action({
   }
 
   const url = new URL(request.url);
-  const room = url.searchParams.get("room") ?? "default";
+  const room = url.searchParams.get("room") ?? DEFAULT_ROOM;
 
   let message: unknown;
   try {
