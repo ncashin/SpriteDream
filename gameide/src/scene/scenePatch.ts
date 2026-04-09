@@ -21,8 +21,11 @@ export function applyScenePatch(
       delete scene[key];
     } else if (isPlainObjectForPatch(patchValue)) {
       const existing = scene[key];
-      if (existing !== undefined && isPlainObjectForPatch(existing)) {
-        applyScenePatch(existing, patchValue);
+      if (
+        existing !== undefined &&
+        (isPlainObjectForPatch(existing) || Array.isArray(existing))
+      ) {
+        applyScenePatch(existing as Record<PropertyKey, unknown>, patchValue);
       } else {
         const created: Record<PropertyKey, unknown> = {};
         scene[key] = created;
@@ -79,8 +82,13 @@ export function buildScenePatchFromDiff(
       continue;
     }
     if (isPlainObject(newVal)) {
+      const oldForMerge: Record<string, unknown> = isPlainObject(oldVal)
+        ? (oldVal as Record<string, unknown>)
+        : Array.isArray(oldVal)
+          ? (oldVal as unknown as Record<string, unknown>)
+          : {};
       buildScenePatchFromDiff(
-        (isPlainObject(oldVal) ? oldVal : {}) as Record<string, unknown>,
+        oldForMerge,
         newVal as Record<string, unknown>,
         pathWithKey,
         mergedPatch

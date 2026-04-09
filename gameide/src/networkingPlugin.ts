@@ -1,6 +1,7 @@
 import { createSceneChannel } from "./scene/sceneChannel.js";
 import {
   createBroadcastChannelSignaling,
+  createHTTPSSESignaling,
   createNetworkingPeerId,
   createSceneTransportWebRTC,
   type WebRTCSignaling,
@@ -47,6 +48,7 @@ function shouldEmitSceneUpdateForNetworking(
 export type NetworkingPluginOptions = {
   peerId?: string;
   signaling?: WebRTCSignaling;
+  signalingURL?: string;
   roomId?: string;
   iceServers?: RTCIceServer[];
   peerConnectTimeoutMilliseconds?: number;
@@ -56,11 +58,18 @@ export type NetworkingPluginOptions = {
 export const networkingPlugin =
   (options: NetworkingPluginOptions) =>
   async (input: { rootElement: HTMLElement }) => {
-    const signaling =
-      options.signaling ??
-      createBroadcastChannelSignaling(options.roomId ?? "default");
-
     const peerId = options.peerId ?? createNetworkingPeerId();
+
+    const roomId = options.roomId ?? "default";
+    const signaling: WebRTCSignaling =
+      options.signaling ??
+      (options.signalingURL
+        ? createHTTPSSESignaling({
+            signalingURL: options.signalingURL,
+            roomId,
+            peerId,
+          })
+        : createBroadcastChannelSignaling(roomId));
 
     const peerConnectTimeoutMilliseconds =
       options.peerConnectTimeoutMilliseconds != null &&
@@ -107,9 +116,11 @@ export const networkingPlugin =
 
 export {
   createBroadcastChannelSignaling,
+  createHTTPSSESignaling as createHTTPSSESignaling,
   createNetworkingPeerId,
   createSceneTransportWebRTC,
 } from "./scene/sceneChannelTransportWebRTC.js";
+export type { HTTPSSESignalingOptions as HttpSseSignalingOptions } from "./scene/sceneChannelTransportWebRTC.js";
 export type {
   WebRTCSignaling,
   WebRTCSignal,

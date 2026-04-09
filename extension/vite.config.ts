@@ -13,7 +13,8 @@ const nodeBuiltins = [
 
 export default defineConfig({
   ssr: {
-    noExternal: true, // bundle gameide so the extension is self-contained
+    // bundle gameide so the extension is self-contained
+    noExternal: true,
   },
   build: {
     ssr: path.resolve(__dirname, "src/extension.ts"),
@@ -24,8 +25,7 @@ export default defineConfig({
     minify: false,
     rollupOptions: {
       input: path.resolve(__dirname, "src/extension.ts"),
-      external: (id) =>
-        nodeBuiltins.includes(id) || id.startsWith("node:"),
+      external: (id) => nodeBuiltins.includes(id) || id.startsWith("node:"),
       output: {
         format: "esm",
         entryFileNames: "extension.js",

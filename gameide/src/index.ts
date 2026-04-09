@@ -73,6 +73,7 @@ export {
   networkingPlugin,
   SCENE_OWNER_ID,
   createBroadcastChannelSignaling,
+  createHTTPSSESignaling as createHttpSseSignaling,
   createNetworkingPeerId,
   createSceneTransportWebRTC,
 } from "./networkingPlugin.js";
@@ -82,6 +83,7 @@ export type {
   WebRTCSignal,
   CreateSceneTransportWebRTCOptions,
   SceneTransportWebRTC,
+  HttpSseSignalingOptions,
 } from "./networkingPlugin.js";
 export type { ScenePatchMessage } from "./editor/editorPlugin.js";
 export { gameUIPlugin } from "./editor/gameUIPlugin/gameUIPlugin.js";

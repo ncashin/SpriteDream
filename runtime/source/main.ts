@@ -19,8 +19,13 @@ import { GameUI } from "./GameUI";
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-const networkRoomId =
-  new URLSearchParams(window.location.search).get("room") ?? "default";
+const search = new URLSearchParams(window.location.search);
+const networkRoomId = search.get("room") ?? "default";
+const networkGameId =
+  search.get("game") ??
+  window.location.pathname.match(/^\/game\/([^/]+)\//)?.[1] ??
+  "dev";
+const signalingURL = `/game/${networkGameId}/webrtc-signal`;
 
 function hashHue(id: string): number {
   let h = 0;
@@ -43,7 +48,8 @@ initializeGame({
     gameUIPlugin(GameUI),
     networkingPlugin({
       roomId: networkRoomId,
-      peerConnectTimeoutMilliseconds: 1000,
+      signalingURL,
+      peerConnectTimeoutMilliseconds: 15_000,
     }),
     inputPlugin({
       axes: {
