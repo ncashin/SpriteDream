@@ -29,7 +29,7 @@ const networkGameId =
   search.get("game") ??
   gameIdFromPath ??
   "dev";
-const signalingURL = `/game/${networkGameId}/webrtc-signal`;
+const signalingURL = `https://gameide.app/game/57ed7ee4-55c0-49f3-9c13-fc83e3b9f964/webrtc-signal`;
 
 function hashHue(id: string): number {
   let h = 0;

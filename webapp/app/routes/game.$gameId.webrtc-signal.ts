@@ -2,6 +2,36 @@
 
 type PeerSend = (message: unknown) => void;
 
+function allowedCorsOrigin(originHeader: string | null): string | null {
+  if (!originHeader) return null;
+  try {
+    const u = new URL(originHeader);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    const host = u.hostname;
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "[::1]"
+    ) {
+      return originHeader;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function corsHeaders(request: Request): Record<string, string> {
+  const origin = allowedCorsOrigin(request.headers.get("Origin"));
+  if (!origin) return {};
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    Vary: "Origin",
+  };
+}
+
 const rooms = new Map<string, Map<string, PeerSend>>();
 const DEFAULT_ROOM = "default";
 
@@ -112,6 +142,7 @@ function sseResponse(
 
   return new Response(stream, {
     headers: {
+      ...corsHeaders(request),
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
@@ -127,6 +158,14 @@ export async function loader({
   request: Request;
   params: { gameId?: string };
 }) {
+  if (request.method === "OPTIONS") {
+    const headers = corsHeaders(request);
+    return new Response(null, {
+      status: 204,
+      headers: headers["Access-Control-Allow-Origin"] ? headers : undefined,
+    });
+  }
+
   const gameId = params.gameId;
   if (!gameId) {
     return new Response("Missing game id", { status: 400 });
@@ -175,5 +214,5 @@ export async function action({
   }
 
   relaySignal(gameId, room, message);
-  return Response.json({ ok: true });
+  return Response.json({ ok: true }, { headers: corsHeaders(request) });
 }

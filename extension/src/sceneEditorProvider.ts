@@ -306,9 +306,11 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     const port = this.devServer
       ? this.devServer.getPort()
       : parseInt(process.env.GAMEIDE_RUNTIME_PORT ?? "38472", 10) || 38472;
+
     const csp = [
       "default-src 'none'",
-      `frame-src http://localhost:${port}`,
+      `frame-src *`,
+      `connect-src * stun: stuns: turn: turns:`,
       "script-src 'unsafe-inline'",
       "style-src 'unsafe-inline'",
     ].join("; ");
