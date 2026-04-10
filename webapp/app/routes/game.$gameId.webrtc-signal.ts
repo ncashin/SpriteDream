@@ -2,7 +2,7 @@
 
 type PeerSend = (message: unknown) => void;
 
-function allowedCorsOrigin(originHeader: string | null): string | null {
+function allowedCORSOrigin(originHeader: string | null): string | null {
   if (!originHeader) return null;
   try {
     const u = new URL(originHeader);
@@ -21,13 +21,16 @@ function allowedCorsOrigin(originHeader: string | null): string | null {
   }
 }
 
+const CORS_ALLOW_HEADERS =
+  "Accept, Cache-Control, Content-Type, Last-Event-ID, Pragma";
+
 function corsHeaders(request: Request): Record<string, string> {
-  const origin = allowedCorsOrigin(request.headers.get("Origin"));
+  const origin = allowedCORSOrigin(request.headers.get("Origin"));
   if (!origin) return {};
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": CORS_ALLOW_HEADERS,
     Vary: "Origin",
   };
 }

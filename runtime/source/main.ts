@@ -19,17 +19,10 @@ import { GameUI } from "./GameUI";
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-const search = new URLSearchParams(window.location.search);
-const networkRoomId = search.get("room") ?? "default";
-const gameIdFromPath = (() => {
-  const match = window.location.pathname.match(/^\/game\/([^/]+)(?:\/|$)/);
-  return match?.[1] ?? null;
-})();
-const networkGameId =
-  search.get("game") ??
-  gameIdFromPath ??
-  "dev";
-const signalingURL = `https://gameide.app/game/57ed7ee4-55c0-49f3-9c13-fc83e3b9f964/webrtc-signal`;
+/** Dev: same-origin via Vite proxy (runtime/vite.config.ts → webapp). Prod: hosted signaling. */
+const signalingURL = import.meta.env.DEV
+  ? "/game/57ed7ee4-55c0-49f3-9c13-fc83e3b9f964/webrtc-signal"
+  : "https://gameide.app/game/57ed7ee4-55c0-49f3-9c13-fc83e3b9f964/webrtc-signal";
 
 function hashHue(id: string): number {
   let h = 0;
@@ -51,7 +44,7 @@ initializeGame({
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
     networkingPlugin({
-      roomId: networkRoomId,
+      roomId: "default",
       signalingURL,
       peerConnectTimeoutMilliseconds: 1000,
     }),
