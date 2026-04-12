@@ -180,7 +180,7 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
         throw new Error("dist folder is empty, nothing to upload.");
       }
 
-      const endpointPath = `/game/${encodeURIComponent(trimmedGameId)}/bundle`;
+      const endpointPath = `/game/${encodeURIComponent(trimmedGameId)}/upload`;
       const endpoint = new URL(endpointPath, webappBaseUrl.trim());
 
       progress.report({ message: "Uploading bundle to webapp..." });

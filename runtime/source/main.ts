@@ -19,8 +19,8 @@ import { GameUI } from "./GameUI";
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-const signalingURL =
-  "https://gameide.app/game/57ed7ee4-55c0-49f3-9c13-fc83e3b9f964/webrtc-signal";
+const gameId = "457a34a3-adfc-49ec-9113-fa411ba089fb";
+const signalingURL = `https://gameide.app/game/${gameId}/webrtc-signal`;
 
 function hashHue(id: string): number {
   let h = 0;
