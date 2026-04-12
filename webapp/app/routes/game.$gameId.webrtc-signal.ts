@@ -1,13 +1,10 @@
-/** In-memory WebRTC signal relay per game room (single-process; KISS). */
-
-type PeerSend = (message: unknown) => void;
-
 function allowedCORSOrigin(originHeader: string | null): string | null {
   if (!originHeader) return null;
   try {
-    const u = new URL(originHeader);
-    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
-    const host = u.hostname;
+    const originUrl = new URL(originHeader);
+    if (originUrl.protocol !== "http:" && originUrl.protocol !== "https:")
+      return null;
+    const host = originUrl.hostname;
     if (
       host === "localhost" ||
       host === "127.0.0.1" ||
@@ -21,8 +18,7 @@ function allowedCORSOrigin(originHeader: string | null): string | null {
   }
 }
 
-const CORS_ALLOW_HEADERS =
-  "Accept, Cache-Control, Content-Type, Last-Event-ID, Pragma";
+const CORS_ALLOW_HEADERS = "Accept, Cache-Control, Content-Type, Pragma";
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = allowedCORSOrigin(request.headers.get("Origin"));
@@ -41,132 +37,131 @@ function corsAwareResponse(
   init: ResponseInit = {},
 ): Response {
   const headers = new Headers(init.headers);
-  for (const [k, v] of Object.entries(corsHeaders(request))) {
-    headers.set(k, v);
+  for (const [headerName, headerValue] of Object.entries(
+    corsHeaders(request),
+  )) {
+    headers.set(headerName, headerValue);
   }
   return new Response(body, { ...init, headers });
 }
 
-const rooms = new Map<string, Map<string, PeerSend>>();
 const DEFAULT_ROOM = "default";
+const STALE_MS = 60_000;
+const MAX_QUEUE = 500;
 
 function roomKey(gameId: string, room: string): string {
   return `${gameId}::${room}`;
 }
 
-function roomPeers(
-  gameId: string,
-  room: string,
-  create = false,
-): Map<string, PeerSend> | undefined {
-  const key = roomKey(gameId, room);
-  let peers = rooms.get(key);
-  if (!peers && create) {
-    peers = new Map();
-    rooms.set(key, peers);
-  }
-  return peers;
+const roomPeers = new Map<string, Set<string>>();
+const mailboxes = new Map<string, Map<string, unknown[]>>();
+const lastPoll = new Map<string, number>();
+
+function peerStamp(key: string, peerId: string): string {
+  return `${key}::${peerId}`;
 }
 
-function subscribePeer(
-  gameId: string,
-  room: string,
-  peerId: string,
-  send: PeerSend,
-): () => void {
+function pruneStale(gameId: string, room: string): void {
   const key = roomKey(gameId, room);
-  const peers = roomPeers(gameId, room, true);
-  if (!peers) return () => {};
-
-  for (const [existingPeerId, existingSend] of peers) {
-    if (existingPeerId === peerId) continue;
-    try {
-      send({ type: "hello", peerId: existingPeerId });
-      existingSend({ type: "hello", peerId });
-    } catch {
-      // ignore broken streams
+  const peers = roomPeers.get(key);
+  if (!peers) return;
+  const now = Date.now();
+  for (const peerId of [...peers]) {
+    const stamp = peerStamp(key, peerId);
+    if (now - (lastPoll.get(stamp) ?? 0) > STALE_MS) {
+      peers.delete(peerId);
+      lastPoll.delete(stamp);
+      mailboxes.get(key)?.delete(peerId);
     }
   }
-  peers.set(peerId, send);
+  if (peers.size === 0) {
+    roomPeers.delete(key);
+    mailboxes.delete(key);
+  }
+}
 
-  return () => {
-    const map = rooms.get(key);
-    if (!map) return;
-    if (map.get(peerId) !== send) return;
-    map.delete(peerId);
-    if (map.size === 0) {
-      rooms.delete(key);
-    }
-  };
+function ensureMailbox(key: string, peerId: string): unknown[] {
+  let room = mailboxes.get(key);
+  if (!room) {
+    room = new Map();
+    mailboxes.set(key, room);
+  }
+  let mailboxQueue = room.get(peerId);
+  if (!mailboxQueue) {
+    mailboxQueue = [];
+    room.set(peerId, mailboxQueue);
+  }
+  return mailboxQueue;
+}
+
+function enqueue(gameId: string, room: string, toPeerId: string, message: unknown): void {
+  const key = roomKey(gameId, room);
+  const mailboxQueue = ensureMailbox(key, toPeerId);
+  if (mailboxQueue.length >= MAX_QUEUE) mailboxQueue.shift();
+  mailboxQueue.push(message);
+}
+
+function ensurePeerRegistered(gameId: string, room: string, peerId: string): void {
+  const key = roomKey(gameId, room);
+  let peers = roomPeers.get(key);
+  if (!peers) {
+    peers = new Set();
+    roomPeers.set(key, peers);
+  }
+  if (peers.has(peerId)) return;
+
+  for (const other of peers) {
+    enqueue(gameId, room, peerId, { type: "hello", peerId: other });
+    enqueue(gameId, room, other, { type: "hello", peerId });
+  }
+  peers.add(peerId);
+  lastPoll.set(peerStamp(key, peerId), Date.now());
 }
 
 function senderPeerId(message: unknown): string | null {
   if (!message || typeof message !== "object") return null;
-  const m = message as { type?: string; peerId?: string; from?: string };
-  const sender = m.type === "hello" ? m.peerId : m.from;
+  const signalBody = message as {
+    type?: string;
+    peerId?: string;
+    from?: string;
+  };
+  const sender =
+    signalBody.type === "hello" ? signalBody.peerId : signalBody.from;
   return typeof sender === "string" ? sender : null;
 }
 
-/** Fan-out to every peer in the room except the sender (derived from the signal body). */
 function relaySignal(gameId: string, room: string, message: unknown): void {
+  pruneStale(gameId, room);
   const from = senderPeerId(message);
-  const peers = roomPeers(gameId, room);
+  if (from) ensurePeerRegistered(gameId, room, from);
+
+  const key = roomKey(gameId, room);
+  const peers = roomPeers.get(key);
   if (!peers) return;
-  for (const [peerId, send] of peers) {
+  for (const peerId of peers) {
     if (from !== null && peerId === from) continue;
-    try {
-      send(message);
-    } catch {
-      // ignore broken streams
-    }
+    enqueue(gameId, room, peerId, message);
   }
 }
 
-function sseResponse(
+function pollResponse(
   request: Request,
   gameId: string,
   room: string,
   peerId: string,
 ): Response {
-  const encoder = new TextEncoder();
+  pruneStale(gameId, room);
+  ensurePeerRegistered(gameId, room, peerId);
+  const key = roomKey(gameId, room);
+  lastPoll.set(peerStamp(key, peerId), Date.now());
 
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      const send = (message: unknown) => {
-        const line = `data: ${JSON.stringify(message)}\n\n`;
-        controller.enqueue(encoder.encode(line));
-      };
+  const mailboxQueue = ensureMailbox(key, peerId);
+  const messages = mailboxQueue.splice(0, mailboxQueue.length);
 
-      const unsubscribe = subscribePeer(gameId, room, peerId, send);
-
-      const onAbort = () => {
-        unsubscribe();
-        try {
-          controller.close();
-        } catch {
-          // already closed
-        }
-      };
-
-      const { signal } = request;
-      if (signal) {
-        signal.addEventListener("abort", onAbort);
-        if (signal.aborted) {
-          onAbort();
-        }
-      }
-    },
-  });
-
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      ...corsHeaders(request),
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      "X-Accel-Buffering": "no",
-    },
-  });
+  return Response.json(
+    { messages },
+    { headers: { ...corsHeaders(request), "Cache-Control": "no-store" } },
+  );
 }
 
 export async function loader({
@@ -190,10 +185,10 @@ export async function loader({
   }
 
   const url = new URL(request.url);
-  if (url.searchParams.get("sse") !== "1") {
+  if (url.searchParams.get("poll") !== "1") {
     return corsAwareResponse(
       request,
-      "Use GET ?sse=1&peerId=…&room=… for SSE",
+      "Use GET ?poll=1&peerId=…&room=… to receive signals",
       { status: 400 },
     );
   }
@@ -203,14 +198,12 @@ export async function loader({
     return corsAwareResponse(request, "peerId required", { status: 400 });
   }
 
-  // Only GET may open the event stream (OPTIONS is handled above; without this,
-  // older stacks could treat OPTIONS+?sse=1 as SSE and hang CORS preflight).
   if (request.method !== "GET") {
-    return corsAwareResponse(request, "Use GET for SSE", { status: 405 });
+    return corsAwareResponse(request, "Use GET for polling", { status: 405 });
   }
 
   const room = url.searchParams.get("room") ?? DEFAULT_ROOM;
-  return sseResponse(request, gameId, room, peerId);
+  return pollResponse(request, gameId, room, peerId);
 }
 
 export async function action({
@@ -220,6 +213,13 @@ export async function action({
   request: Request;
   params: { gameId?: string };
 }) {
+  if (request.method === "OPTIONS") {
+    const headers = corsHeaders(request);
+    return new Response(null, {
+      status: 204,
+      headers: headers["Access-Control-Allow-Origin"] ? headers : undefined,
+    });
+  }
   if (request.method !== "POST") {
     return corsAwareResponse(request, "Method not allowed", { status: 405 });
   }

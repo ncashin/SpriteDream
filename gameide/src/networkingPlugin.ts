@@ -1,7 +1,7 @@
 import { createSceneChannel } from "./scene/sceneChannel.js";
 import {
   createBroadcastChannelSignaling,
-  createHTTPSSESignaling,
+  createHTTPRelaySignaling,
   createNetworkingPeerId,
   createSceneTransportWebRTC,
   type WebRTCSignaling,
@@ -64,7 +64,7 @@ export const networkingPlugin =
     const signaling: WebRTCSignaling =
       options.signaling ??
       (options.signalingURL
-        ? createHTTPSSESignaling({
+        ? createHTTPRelaySignaling({
             signalingURL: options.signalingURL,
             roomId,
             peerId,
@@ -116,11 +116,15 @@ export const networkingPlugin =
 
 export {
   createBroadcastChannelSignaling,
-  createHTTPSSESignaling as createHTTPSSESignaling,
+  createHTTPRelaySignaling,
+  createHTTPSSESignaling,
   createNetworkingPeerId,
   createSceneTransportWebRTC,
 } from "./scene/sceneChannelTransportWebRTC.js";
-export type { HTTPSSESignalingOptions as HttpSseSignalingOptions } from "./scene/sceneChannelTransportWebRTC.js";
+export type {
+  HTTPRelaySignalingOptions as HttpRelaySignalingOptions,
+  HTTPSSESignalingOptions as HttpSseSignalingOptions,
+} from "./scene/sceneChannelTransportWebRTC.js";
 export type {
   WebRTCSignaling,
   WebRTCSignal,

@@ -73,6 +73,7 @@ export {
   networkingPlugin,
   SCENE_OWNER_ID,
   createBroadcastChannelSignaling,
+  createHTTPRelaySignaling as createHttpRelaySignaling,
   createHTTPSSESignaling as createHttpSseSignaling,
   createNetworkingPeerId,
   createSceneTransportWebRTC,

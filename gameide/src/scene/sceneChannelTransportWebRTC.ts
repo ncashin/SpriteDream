@@ -93,18 +93,27 @@ export function createBroadcastChannelSignaling(roomId: string): WebRTCSignaling
   };
 }
 
-export type HTTPSSESignalingOptions = {
+export type HTTPRelaySignalingOptions = {
   signalingURL: string;
   roomId: string;
   peerId: string;
+  /** Milliseconds between GET ?poll=1 requests. */
+  pollIntervalMs?: number;
 };
 
-export function createHTTPSSESignaling(
-  options: HTTPSSESignalingOptions,
-): WebRTCSignaling {
-  const { signalingURL, roomId, peerId } = options;
+/** @deprecated Use {@link HTTPRelaySignalingOptions} */
+export type HTTPSSESignalingOptions = HTTPRelaySignalingOptions;
 
-  if (typeof window === "undefined" || typeof EventSource === "undefined") {
+/**
+ * Minimal HTTP relay: POST JSON signals, GET periodically to drain inbound messages.
+ * WebRTC mesh negotiation stays entirely in {@link createSceneTransportWebRTC}.
+ */
+export function createHTTPRelaySignaling(
+  options: HTTPRelaySignalingOptions,
+): WebRTCSignaling {
+  const { signalingURL, roomId, peerId, pollIntervalMs = 400 } = options;
+
+  if (typeof window === "undefined" || typeof fetch === "undefined") {
     return {
       send: () => {},
       onMessage: () => () => {},
@@ -113,8 +122,7 @@ export function createHTTPSSESignaling(
   }
 
   const handlers = new Set<(message: unknown) => void>();
-  let eventSource: EventSource | null = null;
-  const pendingOutbound: unknown[] = [];
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
   let resolveReady: (() => void) | undefined;
   const ready = new Promise<void>((resolve) => {
     resolveReady = resolve;
@@ -143,67 +151,56 @@ export function createHTTPSSESignaling(
     }).catch(() => {});
   }
 
-  function flushOutboundIfOpen(): void {
-    if (!eventSource || eventSource.readyState !== EventSource.OPEN) return;
-    while (pendingOutbound.length > 0) {
-      const next = pendingOutbound.shift();
-      if (next !== undefined) {
-        postToSignaling(next);
-      }
-    }
+  function pollOnce(): void {
+    void fetch(signalingEndpoint({ poll: "1", peerId }), {
+      method: "GET",
+      credentials: "same-origin",
+    })
+      .then(async (r) => {
+        if (!r.ok) return;
+        const body = (await r.json()) as { messages?: unknown[] };
+        const messages = body.messages;
+        if (!Array.isArray(messages)) return;
+        resolveReadyOnce();
+        for (const message of messages) {
+          for (const handler of handlers) handler(message);
+        }
+      })
+      .catch(() => {
+        resolveReadyOnce();
+      });
   }
 
-  function ensureEventSource(): void {
-    if (eventSource || handlers.size === 0) return;
-    const es = new EventSource(
-      signalingEndpoint({ sse: "1", peerId }),
-    );
-    eventSource = es;
-    es.onopen = () => {
-      resolveReadyOnce();
-      flushOutboundIfOpen();
-    };
-    es.onmessage = (ev: MessageEvent) => {
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(ev.data as string) as unknown;
-      } catch {
-        return;
-      }
-      for (const handler of handlers) handler(parsed);
-    };
-    es.onerror = () => {
-      resolveReadyOnce();
-    };
+  function startPolling(): void {
+    if (pollTimer !== null) return;
+    pollOnce();
+    pollTimer = setInterval(pollOnce, pollIntervalMs);
+  }
+
+  function stopPolling(): void {
+    if (pollTimer === null) return;
+    clearInterval(pollTimer);
+    pollTimer = null;
   }
 
   return {
     ready,
     send(message: unknown) {
-      if (!eventSource) {
-        pendingOutbound.push(message);
-        return;
-      }
-      if (eventSource.readyState === EventSource.OPEN) {
-        postToSignaling(message);
-      } else {
-        pendingOutbound.push(message);
-      }
+      postToSignaling(message);
     },
     onMessage(handler: (message: unknown) => void) {
       handlers.add(handler);
-      ensureEventSource();
+      startPolling();
       return () => {
         handlers.delete(handler);
-        if (handlers.size === 0 && eventSource) {
-          eventSource.close();
-          eventSource = null;
-          pendingOutbound.length = 0;
-        }
+        if (handlers.size === 0) stopPolling();
       };
     },
   };
 }
+
+/** @deprecated Use {@link createHTTPRelaySignaling} */
+export const createHTTPSSESignaling = createHTTPRelaySignaling;
 
 type NegotiationRole = "offerer" | "answerer";
 
