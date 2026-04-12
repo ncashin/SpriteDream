@@ -19,10 +19,8 @@ import { GameUI } from "./GameUI";
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-/** Dev: same-origin via Vite proxy (runtime/vite.config.ts → webapp). Prod: hosted signaling. */
-const signalingURL = import.meta.env.DEV
-  ? "/game/57ed7ee4-55c0-49f3-9c13-fc83e3b9f964/webrtc-signal"
-  : "https://gameide.app/game/57ed7ee4-55c0-49f3-9c13-fc83e3b9f964/webrtc-signal";
+const signalingURL =
+  "https://gameide.app/game/57ed7ee4-55c0-49f3-9c13-fc83e3b9f964/webrtc-signal";
 
 function hashHue(id: string): number {
   let h = 0;

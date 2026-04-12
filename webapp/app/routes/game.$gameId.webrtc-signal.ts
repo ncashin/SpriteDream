@@ -35,6 +35,18 @@ function corsHeaders(request: Request): Record<string, string> {
   };
 }
 
+function corsAwareResponse(
+  request: Request,
+  body: BodyInit | null,
+  init: ResponseInit = {},
+): Response {
+  const headers = new Headers(init.headers);
+  for (const [k, v] of Object.entries(corsHeaders(request))) {
+    headers.set(k, v);
+  }
+  return new Response(body, { ...init, headers });
+}
+
 const rooms = new Map<string, Map<string, PeerSend>>();
 const DEFAULT_ROOM = "default";
 
@@ -136,19 +148,22 @@ function sseResponse(
         }
       };
 
-      request.signal.addEventListener("abort", onAbort);
-      if (request.signal.aborted) {
-        onAbort();
+      const { signal } = request;
+      if (signal) {
+        signal.addEventListener("abort", onAbort);
+        if (signal.aborted) {
+          onAbort();
+        }
       }
     },
   });
 
   return new Response(stream, {
+    status: 200,
     headers: {
       ...corsHeaders(request),
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     },
   });
@@ -169,21 +184,29 @@ export async function loader({
     });
   }
 
-  const gameId = params.gameId;
+  const gameId = params?.gameId;
   if (!gameId) {
-    return new Response("Missing game id", { status: 400 });
+    return corsAwareResponse(request, "Missing game id", { status: 400 });
   }
 
   const url = new URL(request.url);
   if (url.searchParams.get("sse") !== "1") {
-    return new Response("Use GET ?sse=1&peerId=…&room=… for SSE", {
-      status: 400,
-    });
+    return corsAwareResponse(
+      request,
+      "Use GET ?sse=1&peerId=…&room=… for SSE",
+      { status: 400 },
+    );
   }
 
   const peerId = url.searchParams.get("peerId");
   if (!peerId) {
-    return new Response("peerId required", { status: 400 });
+    return corsAwareResponse(request, "peerId required", { status: 400 });
+  }
+
+  // Only GET may open the event stream (OPTIONS is handled above; without this,
+  // older stacks could treat OPTIONS+?sse=1 as SSE and hang CORS preflight).
+  if (request.method !== "GET") {
+    return corsAwareResponse(request, "Use GET for SSE", { status: 405 });
   }
 
   const room = url.searchParams.get("room") ?? DEFAULT_ROOM;
@@ -198,12 +221,12 @@ export async function action({
   params: { gameId?: string };
 }) {
   if (request.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+    return corsAwareResponse(request, "Method not allowed", { status: 405 });
   }
 
-  const gameId = params.gameId;
+  const gameId = params?.gameId;
   if (!gameId) {
-    return new Response("Missing game id", { status: 400 });
+    return corsAwareResponse(request, "Missing game id", { status: 400 });
   }
 
   const url = new URL(request.url);
@@ -213,7 +236,7 @@ export async function action({
   try {
     message = await request.json();
   } catch {
-    return new Response("Invalid JSON", { status: 400 });
+    return corsAwareResponse(request, "Invalid JSON", { status: 400 });
   }
 
   relaySignal(gameId, room, message);
