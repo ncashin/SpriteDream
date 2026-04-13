@@ -1,8 +1,9 @@
-export type { SceneObject, SceneUpdate } from "./scene.js";
-export { queryObject } from "./query.js";
+export type { SceneObject, SceneObjectData, SceneUpdate } from "./scene.js";
+export { queryObject, querySubtree } from "./query.js";
 export {
   getSceneRaw,
   getScene,
+  getSceneObjectPath,
   getSceneValueAtPath,
   restoreSceneSnapshot,
   saveSceneSnapshot,

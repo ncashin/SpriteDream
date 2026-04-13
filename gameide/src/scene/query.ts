@@ -1,7 +1,7 @@
-import type { SceneObject } from "./scene.js";
+import type { SceneObject, SceneObjectData } from "./scene.js";
 import { getSceneRaw, getTarget } from "./scene.js";
 
-function isSceneObject(value: unknown): value is SceneObject {
+function isSceneObjectData(value: unknown): value is SceneObjectData {
   return typeof value === "object" && value !== null;
 }
 
@@ -14,18 +14,18 @@ function getProxyAtPath(sceneProxy: SceneObject, path: PropertyKey[]): SceneObje
 }
 
 function walkSceneRawCollect(
-  rawRoot: SceneObject,
+  rawRoot: SceneObjectData,
   basePath: PropertyKey[],
-  predicate: (raw: SceneObject) => boolean,
+  predicate: (raw: SceneObjectData) => boolean,
   resultPaths: PropertyKey[][],
   visited: WeakSet<object>,
 ): void {
-  const stack: { node: SceneObject; path: PropertyKey[] }[] = [
+  const stack: { node: SceneObjectData; path: PropertyKey[] }[] = [
     { node: rawRoot, path: basePath },
   ];
   while (stack.length > 0) {
     const { node, path } = stack.pop()!;
-    const raw = getTarget(node) ?? node;
+    const raw = (getTarget(node as SceneObject) ?? node) as SceneObjectData;
     if (visited.has(raw)) continue;
     visited.add(raw);
 
@@ -37,34 +37,60 @@ function walkSceneRawCollect(
     for (let i = keys.length - 1; i >= 0; i--) {
       const k = keys[i];
       const value = (raw as Record<PropertyKey, unknown>)[k];
-      const rawChild = isSceneObject(value) ? getTarget(value) ?? value : null;
-      if (isSceneObject(rawChild)) {
-        stack.push({ node: rawChild as SceneObject, path: path.concat(k) });
+      const rawChild = isSceneObjectData(value)
+        ? ((getTarget(value as SceneObject) ?? value) as SceneObjectData)
+        : null;
+      if (isSceneObjectData(rawChild)) {
+        stack.push({ node: rawChild, path: path.concat(k) });
       }
     }
   }
 }
 
-export function queryObject<T extends SceneObject>(
+/** Depth-first query within a subtree; `basePath` is this node’s path from the scene root. */
+export function querySubtree<T extends SceneObjectData>(
+  rootProxy: SceneObject,
+  from: SceneObjectData,
+  basePath: PropertyKey[],
+  predicate: (object: SceneObjectData) => object is T,
+): (SceneObject & T)[];
+export function querySubtree(
+  rootProxy: SceneObject,
+  from: SceneObjectData,
+  basePath: PropertyKey[],
+  predicate: (object: SceneObjectData) => boolean,
+): SceneObject[];
+export function querySubtree(
+  rootProxy: SceneObject,
+  from: SceneObjectData,
+  basePath: PropertyKey[],
+  predicate: (object: SceneObjectData) => boolean,
+): SceneObject[] {
+  const rawFrom = (getTarget(from as SceneObject) ?? from) as SceneObjectData;
+  if (!isSceneObjectData(rawFrom)) return [];
+  const resultPaths: PropertyKey[][] = [];
+  const visited = new WeakSet<object>();
+  walkSceneRawCollect(rawFrom, basePath, predicate, resultPaths, visited);
+  return resultPaths.map((path) => getProxyAtPath(rootProxy, path));
+}
+
+export function queryObject<T extends SceneObjectData>(
   scene: SceneObject,
-  predicate: (object: SceneObject) => object is T,
-): T[];
+  predicate: (object: SceneObjectData) => object is T,
+): (SceneObject & T)[];
 export function queryObject(
   scene: SceneObject,
-  predicate: (object: SceneObject) => boolean,
+  predicate: (object: SceneObjectData) => boolean,
 ): SceneObject[];
 export function queryObject(
   scene: SceneObject,
-  predicate: (object: SceneObject) => boolean,
+  predicate: (object: SceneObjectData) => boolean,
 ): SceneObject[] {
   let rawRoot = getSceneRaw();
   if (rawRoot === undefined) {
-    rawRoot = getTarget(scene) ?? scene;
+    rawRoot = (getTarget(scene) ?? scene) as SceneObjectData;
   }
-  if (!isSceneObject(rawRoot)) return [];
-  const rawRootOnly = getTarget(rawRoot) ?? rawRoot;
-  const resultPaths: PropertyKey[][] = [];
-  const visited = new WeakSet<object>();
-  walkSceneRawCollect(rawRootOnly as SceneObject, [], predicate, resultPaths, visited);
-  return resultPaths.map((path) => getProxyAtPath(scene, path));
+  if (!isSceneObjectData(rawRoot)) return [];
+  const rawRootOnly = (getTarget(rawRoot as SceneObject) ?? rawRoot) as SceneObjectData;
+  return querySubtree(scene, rawRootOnly, [], predicate);
 }

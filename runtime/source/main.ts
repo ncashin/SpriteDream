@@ -10,6 +10,8 @@ import {
   gameStart,
   gameUpdate,
   update,
+  type SceneObjectData,
+  isOwned,
 } from "gameide";
 import sampleScene from "./sample.scene";
 import "./style.css";
@@ -19,6 +21,18 @@ import { GameUI } from "./GameUI";
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
+
+type PlayerBody = SceneObjectData & {
+  x: number;
+  y: number;
+  speed: number;
+} & Partial<Record<typeof SCENE_OWNER_ID, string>>;
+
+const isPlayer = (gameObject: SceneObjectData): gameObject is PlayerBody =>
+  typeof gameObject.x === "number" &&
+  typeof gameObject.y === "number" &&
+  typeof gameObject.speed === "number";
+
 
 function hashHue(id: string): number {
   let h = 0;
@@ -60,15 +74,10 @@ initializeGame({
     }),
   ]),
   main({ input, networking }) {
-    const scene = getScene() as any;
-    if (!scene.players) {
-      scene.players = {};
-    }
-    const players = scene.players;
+    const scene = getScene();
 
-    let localPlayer: { x: number; y: number; speed: number } | undefined;
     gameStart(() => {
-      localPlayer = players.createObject(networking.peerId, {
+      scene.createObject(networking.peerId, {
         [SCENE_OWNER_ID]: networking.peerId,
         x: 0,
         y: 0,
@@ -97,21 +106,24 @@ initializeGame({
 
     update(() => {
       context.clearRect(0, 0, canvas.width, canvas.height);
-      for (const id of Object.keys(players)) {
-        const player = players[id];
+      for (const player of scene.query(isPlayer)) {
         const px = canvas.width / 2 + player.x;
         const py = canvas.height / 2 - player.y;
-        context.fillStyle = playerColor(id);
+        context.fillStyle = playerColor(player[SCENE_OWNER_ID] ?? "");
         context.fillRect(px - half, py - half, playerSize, playerSize);
       }
     });
 
     gameUpdate((deltaTime) => {
-      invariant(localPlayer);
-      const h = input.axes.Horizontal;
-      const v = input.axes.Vertical;
-      localPlayer.x += h * localPlayer.speed * deltaTime;
-      localPlayer.y += v * localPlayer.speed * deltaTime;
+      for (const player of scene.query(isPlayer)) {
+        if (!isOwned(networking.peerId, player)) {
+          continue;
+        }
+        const h = input.axes.Horizontal;
+        const v = input.axes.Vertical;
+        player.x += h * player.speed * deltaTime;
+        player.y += v * player.speed * deltaTime;
+      }
     });
   },
 });

@@ -1,10 +1,10 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
 import { patchAtPath, type ScenePatch } from "./scenePatch.js";
 import { appendKeyToPath } from "./scenePath.js";
-import type { SceneObject, SceneUpdate } from "./scene.js";
+import type { SceneObjectData, SceneUpdate } from "./scene.js";
 import { getScene } from "./scene.js";
 
-export type SceneData = SceneObject;
+export type SceneData = SceneObjectData;
 
 export interface SceneWebviewMessage {
   type: string;

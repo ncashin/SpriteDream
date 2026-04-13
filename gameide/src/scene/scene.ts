@@ -1,37 +1,46 @@
 import { getValueAtPath } from "./scenePath.js";
 import { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
 import { applyScenePatch, buildScenePatchFromDiff } from "./scenePatch.js";
+import { querySubtree } from "./query.js";
 
-export type SceneObject = Record<PropertyKey, unknown>;
+export type SceneObjectData = Record<PropertyKey, unknown>;
+
+export type SceneObject = SceneObjectData & {
+  createObject(name: PropertyKey, object: SceneObjectData): SceneObject;
+  query<T extends SceneObjectData>(
+    predicate: (object: SceneObjectData) => object is T,
+  ): (SceneObject & T)[];
+  query(predicate: (object: SceneObjectData) => boolean): SceneObject[];
+};
 
 export type SceneUpdate =
   | { type: "set"; path: PropertyKey[]; key: PropertyKey; value: unknown }
-  | { type: "delete"; path: PropertyKey[]; key: PropertyKey };
+  | { type: "delete"; path: PropertyKey[]; key: PropertyKey; oldValue: unknown };
 
 type SceneSubscriber = (update: SceneUpdate) => void;
 
-function isSceneObject(value: unknown): value is SceneObject {
+function isSceneObjectData(value: unknown): value is SceneObjectData {
   return typeof value === "object" && value !== null;
 }
 
 const proxyCache = new WeakMap<object, SceneObject>();
 const pathCache = new WeakMap<object, PropertyKey[]>();
-const targetOfProxy = new WeakMap<SceneObject, SceneObject>();
+const targetOfProxy = new WeakMap<SceneObject, SceneObjectData>();
 
 let subscribers: Set<SceneSubscriber>;
 let scene: SceneObject | undefined;
-let rootTarget: SceneObject | undefined;
-let initialSceneData: SceneObject | undefined;
+let rootTarget: SceneObjectData | undefined;
+let initialSceneData: SceneObjectData | undefined;
 let loadedSceneSnapshot: Record<string, unknown> | undefined;
-let savedSceneSnapshot: SceneObject | undefined;
+let savedSceneSnapshot: SceneObjectData | undefined;
 
 if (typeof import.meta !== "undefined" && import.meta.hot) {
   const hotData = import.meta.hot.data as {
     scene?: SceneObject;
-    rootTarget?: SceneObject;
+    rootTarget?: SceneObjectData;
     subscribers?: Set<SceneSubscriber>;
     loadedSceneSnapshot?: Record<string, unknown>;
-    savedSceneSnapshot?: SceneObject;
+    savedSceneSnapshot?: SceneObjectData;
   };
   subscribers = hotData.subscribers ?? new Set();
   if (hotData.scene) scene = hotData.scene;
@@ -72,14 +81,20 @@ function notifySubscribers(update: SceneUpdate): void {
   });
 }
 
-/** Plain object backing a scene proxy — never wrap a proxy with another proxy. */
-function unwrapSceneTarget(obj: SceneObject): SceneObject {
-  return targetOfProxy.get(obj) ?? obj;
+function unwrapSceneTarget(obj: SceneObject | SceneObjectData): SceneObjectData {
+  return targetOfProxy.get(obj as SceneObject) ?? (obj as SceneObjectData);
+}
+
+export function getSceneObjectPath(
+  o: SceneObject | SceneObjectData,
+): PropertyKey[] | undefined {
+  const raw = unwrapSceneTarget(o);
+  return pathCache.get(raw);
 }
 
 function toPlainSceneTree(value: unknown, seen: WeakSet<object> = new WeakSet()): unknown {
   if (value === null || typeof value !== "object") return value;
-  const raw = unwrapSceneTarget(value as SceneObject);
+  const raw = unwrapSceneTarget(value as SceneObject | SceneObjectData);
   if (seen.has(raw)) {
     throw new Error("[scene] createObject: cyclic object graph");
   }
@@ -87,7 +102,7 @@ function toPlainSceneTree(value: unknown, seen: WeakSet<object> = new WeakSet())
   if (Array.isArray(raw)) {
     return raw.map((item) => toPlainSceneTree(item, seen));
   }
-  const out: SceneObject = {};
+  const out: SceneObjectData = {};
   for (const k of Reflect.ownKeys(raw)) {
     out[k as PropertyKey] = toPlainSceneTree(raw[k as PropertyKey], seen);
   }
@@ -95,41 +110,44 @@ function toPlainSceneTree(value: unknown, seen: WeakSet<object> = new WeakSet())
 }
 
 /** Eagerly wrap every nested scene object with proxies (sets pathCache via createProxy) and return the root proxy. */
-function ensureSubtreeProxies(node: SceneObject, nodePath: PropertyKey[]): SceneObject {
+function ensureSubtreeProxies(
+  node: SceneObject | SceneObjectData,
+  nodePath: PropertyKey[],
+): SceneObject {
   const raw = unwrapSceneTarget(node);
   if (Array.isArray(raw)) {
     for (let i = 0; i < raw.length; i++) {
       const v = raw[i];
-      if (isSceneObject(v)) {
-        ensureSubtreeProxies(v as SceneObject, nodePath.concat(i));
+      if (isSceneObjectData(v)) {
+        ensureSubtreeProxies(v as SceneObjectData, nodePath.concat(i));
       }
     }
   } else {
     for (const k of Reflect.ownKeys(raw)) {
       const v = raw[k as PropertyKey];
-      if (isSceneObject(v)) {
-        ensureSubtreeProxies(v as SceneObject, nodePath.concat(k));
+      if (isSceneObjectData(v)) {
+        ensureSubtreeProxies(v as SceneObjectData, nodePath.concat(k));
       }
     }
   }
   return createProxy(raw, nodePath);
 }
 
-function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject {
+function createProxy(target: SceneObjectData, path: PropertyKey[] = []): SceneObject {
   target = unwrapSceneTarget(target);
   const cached = proxyCache.get(target);
   if (cached) return cached;
 
   pathCache.set(target, path);
 
-  const proxy: SceneObject = new Proxy(target, {
+  const proxy = new Proxy(target, {
     get(obj, key: PropertyKey) {
       obj = unwrapSceneTarget(obj);
 
       if (key === "createObject") {
-        return (name: PropertyKey, object: SceneObject): SceneObject => {
+        return (name: PropertyKey, object: SceneObjectData): SceneObject => {
           const parent = unwrapSceneTarget(obj);
-          const plain = toPlainSceneTree(object) as SceneObject;
+          const plain = toPlainSceneTree(object) as SceneObjectData;
           parent[name] = plain;
           const childPath = path.concat(name);
           const wrapped = ensureSubtreeProxies(plain, childPath);
@@ -146,23 +164,30 @@ function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject
         };
       }
 
+      if (key === "query") {
+        const basePath = pathCache.get(obj) ?? [];
+        const queryFn: SceneObject["query"] = (
+          predicate: (object: SceneObjectData) => boolean,
+        ) => querySubtree(getScene(), obj, basePath, predicate);
+        return queryFn;
+      }
+
       const value = obj[key];
 
-   
       if (value === undefined && key === "toJSON") {
         return undefined;
       }
 
       if (value === undefined) {
-        const child: SceneObject = {};
+        const child: SceneObjectData = {};
         obj[key] = child;
         const childPath = path.concat(key);
         pathCache.set(child, childPath);
         return createProxy(child, childPath);
       }
 
-      if (isSceneObject(value)) {
-        const raw = unwrapSceneTarget(value as SceneObject);
+      if (isSceneObjectData(value)) {
+        const raw = unwrapSceneTarget(value as SceneObject | SceneObjectData);
         const childPath = path.concat(key);
         if (!pathCache.has(raw)) pathCache.set(raw, childPath);
         return createProxy(raw, childPath);
@@ -191,6 +216,7 @@ function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject
     deleteProperty(obj, key: PropertyKey) {
       obj = unwrapSceneTarget(obj);
       if (!Object.prototype.hasOwnProperty.call(obj, key)) return true;
+      const oldValue = obj[key];
       delete obj[key];
       const targetPath = pathCache.get(obj);
       if (targetPath !== undefined) {
@@ -198,24 +224,25 @@ function createProxy(target: SceneObject, path: PropertyKey[] = []): SceneObject
           type: "delete",
           path: targetPath,
           key,
+          oldValue,
         });
       }
       return true;
     },
   });
 
-  proxyCache.set(target, proxy);
-  targetOfProxy.set(proxy, target);
-  return proxy;
+  proxyCache.set(target, proxy as SceneObject);
+  targetOfProxy.set(proxy as SceneObject, target);
+  return proxy as SceneObject;
 }
 
-export function getTarget(obj: SceneObject): SceneObject | undefined {
+export function getTarget(obj: SceneObject): SceneObjectData | undefined {
   return targetOfProxy.get(obj);
 }
 
-export function setScene(data: SceneObject | undefined): void {
+export function setScene(data: SceneObjectData | undefined): void {
   if (rootTarget) {
-    const next = (data ?? {}) as SceneObject;
+    const next = (data ?? {}) as SceneObjectData;
     const patch = buildScenePatchFromDiff(
       rootTarget as Record<string, unknown>,
       next as Record<string, unknown>,
@@ -249,21 +276,22 @@ export function onSceneChange(callback: SceneSubscriber): () => void {
   };
 }
 
-export function getSceneRaw(): SceneObject | undefined {
+export function getSceneRaw(): SceneObjectData | undefined {
   return rootTarget;
 }
 
-const emptySceneRoot: SceneObject = {};
+const emptySceneRoot: SceneObjectData = {};
 
 export function getSceneValueAtPath(path: PropertyKey[]): unknown {
   const root = rootTarget ?? initialSceneData ?? emptySceneRoot;
-  return getValueAtPath(root as SceneObject, path);
+  return getValueAtPath(root as SceneObjectData, path);
 }
 
 export function saveSceneSnapshot(): void {
-  savedSceneSnapshot = structuredClone(getSceneRaw() ?? {}) as SceneObject;
+  savedSceneSnapshot = structuredClone(getSceneRaw() ?? {}) as SceneObjectData;
   if (typeof import.meta !== "undefined" && import.meta.hot) {
-    (import.meta.hot.data as { savedSceneSnapshot?: SceneObject }).savedSceneSnapshot = savedSceneSnapshot;
+    (import.meta.hot.data as { savedSceneSnapshot?: SceneObjectData }).savedSceneSnapshot =
+      savedSceneSnapshot;
   }
 }
 
@@ -272,7 +300,8 @@ export function restoreSceneSnapshot(): void {
   const data = savedSceneSnapshot;
   savedSceneSnapshot = undefined;
   if (typeof import.meta !== "undefined" && import.meta.hot) {
-    (import.meta.hot.data as { savedSceneSnapshot?: SceneObject }).savedSceneSnapshot = undefined;
+    (import.meta.hot.data as { savedSceneSnapshot?: SceneObjectData }).savedSceneSnapshot =
+      undefined;
   }
   if (!rootTarget) {
     setScene(data);

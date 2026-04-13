@@ -32,7 +32,7 @@ export {
   editorUpdate,
   startGameloop,
 } from "./gameloop.js";
-export { queryObject } from "./scene/query.js";
+export { queryObject, querySubtree } from "./scene/query.js";
 export {
   getScene,
   setScene,
@@ -40,9 +40,10 @@ export {
   restoreSceneSnapshot,
   onSceneChange,
   getSceneRaw,
+  getSceneObjectPath,
   getSceneValueAtPath,
 } from "./scene/scene.js";
-export type { SceneObject, SceneUpdate } from "./scene/scene.js";
+export type { SceneObject, SceneObjectData, SceneUpdate } from "./scene/scene.js";
 export type { ScenePath } from "./scene/scenePath.js";
 export {
   appendKeyToPath,
@@ -76,6 +77,7 @@ export type { Plugin, FinalContext } from "./initializeGame.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
 export {
   networkingPlugin,
+  isOwned,
   SCENE_OWNER_ID,
   createBroadcastChannelSignaling,
   createHTTPRelaySignaling as createHttpRelaySignaling,

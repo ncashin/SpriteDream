@@ -10,40 +10,87 @@ import { applyScenePatch } from "./scene/scenePatch.js";
 import {
   getScene,
   getSceneRaw,
+  getSceneObjectPath,
   getSceneValueAtPath,
   setScene,
   onSceneChange,
 } from "./scene/scene.js";
-import type { SceneUpdate } from "./scene/scene.js";
+import type { SceneObjectData, SceneUpdate } from "./scene/scene.js";
 import { getGameIDEMetadata, getGameIDESignalingURL } from "./gameideManifest.js";
 
 export const SCENE_OWNER_ID = "__ownerId" as const;
 
-function objectPathForOwnerCheck(update: SceneUpdate): PropertyKey[] | null {
-  const updatePath = update.path;
-  if (updatePath.length === 0) return null;
-  const rootKey = updatePath[0];
-  if (rootKey === "players") {
-    if (updatePath.length >= 2) return ["players", updatePath[1]];
-    return ["players", update.key];
-  }
-  return null;
+function isPlainSceneRecord(value: unknown): value is Record<PropertyKey, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function shouldEmitSceneUpdateForNetworking(
-  update: SceneUpdate,
-  localPeerId: string,
-): boolean {
-  const objectPath = objectPathForOwnerCheck(update);
-  if (objectPath === null) return true;
-  const object = getSceneValueAtPath(objectPath) as
-    | { [SCENE_OWNER_ID]?: string }
-    | undefined;
+function ownedObjectPathFromSceneUpdate(update: SceneUpdate): PropertyKey[] | null {
+  const { path: updatePath, key } = update;
+  if (updatePath.length === 0) {
+    if (String(key).startsWith("__")) return null;
+    return [key];
+  }
+  if (updatePath.length >= 2) {
+    return [updatePath[0], updatePath[1]];
+  }
+  const parentKey = updatePath[0];
+  if (update.type === "set") {
+    return isPlainSceneRecord(update.value) ? [parentKey, key] : [parentKey];
+  }
+  const deleted = update.oldValue;
+  return isPlainSceneRecord(deleted) ? [parentKey, key] : [parentKey];
+}
+
+function isSceneUpdatePayload(x: unknown): x is SceneUpdate {
+  if (typeof x !== "object" || x === null) return false;
+  const u = x as { type?: unknown; path?: unknown };
+  if (u.type !== "set" && u.type !== "delete") return false;
+  return Array.isArray(u.path);
+}
+
+function ownerIdForNode(node: unknown, objectPath: PropertyKey[]): string {
+  const object = node as { [SCENE_OWNER_ID]?: unknown } | undefined;
   const marked =
     object && typeof object === "object" ? object[SCENE_OWNER_ID] : undefined;
-  const slotId = String(objectPath[objectPath.length - 1]);
-  const owner = marked ?? slotId;
+  const recordId = String(objectPath[objectPath.length - 1]);
+  const owner = (typeof marked === "string" ? marked : undefined) ?? recordId;
+  return owner;
+}
+
+function isOwnedSceneUpdate(localPeerId: string, update: SceneUpdate): boolean {
+  const objectPath = ownedObjectPathFromSceneUpdate(update);
+  if (objectPath === null) return true;
+  let node: unknown = getSceneValueAtPath(objectPath);
+  if (
+    update.type === "delete" &&
+    (node === undefined || !isPlainSceneRecord(node)) &&
+    isPlainSceneRecord(update.oldValue)
+  ) {
+    node = update.oldValue;
+  }
+  const owner = ownerIdForNode(node, objectPath);
   return owner === localPeerId;
+}
+
+function isOwnedSceneObject(localPeerId: string, object: SceneObjectData): boolean {
+  const path = getSceneObjectPath(object);
+  const recordId =
+    path !== undefined && path.length > 0 ? String(path[path.length - 1]) : "";
+  const marked =
+    object && typeof object === "object" ? object[SCENE_OWNER_ID] : undefined;
+  const owner = (typeof marked === "string" ? marked : undefined) ?? recordId;
+  return owner === localPeerId;
+}
+
+export function isOwned(localPeerId: string, update: SceneUpdate): boolean;
+export function isOwned(localPeerId: string, object: SceneObjectData): boolean;
+export function isOwned(
+  localPeerId: string,
+  updateOrObject: SceneUpdate | SceneObjectData,
+): boolean {
+  return isSceneUpdatePayload(updateOrObject)
+    ? isOwnedSceneUpdate(localPeerId, updateOrObject)
+    : isOwnedSceneObject(localPeerId, updateOrObject as SceneObjectData);
 }
 
 export type NetworkingPluginOptions = {
@@ -104,8 +151,7 @@ export const networkingPlugin =
       setSceneData: setScene,
       applyScenePatch,
       subscribeToUpdates: onSceneChange,
-      shouldEmitSceneUpdate: (update) =>
-        shouldEmitSceneUpdateForNetworking(update, peerId),
+      shouldEmitSceneUpdate: (update) => isOwned(peerId, update),
       onRequestInitial: serializeSceneForPeer,
       skipSceneInitialization: !peerConnectionEstablished,
     });
