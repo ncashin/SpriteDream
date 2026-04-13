@@ -1,6 +1,7 @@
 {
   "name": "webapp",
   "private": true,
+  "packageManager": "npm@11.12.1",
   "type": "module",
   "scripts": {
     "build": "react-router build",
