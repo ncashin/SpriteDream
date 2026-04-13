@@ -1,5 +1,13 @@
 {
   "__metadata": {
     "name": "test"
+  },
+  "players": {
+    "124db26e-8f2c-45a9-840c-b90364c9c497": {
+      "__ownerId": "124db26e-8f2c-45a9-840c-b90364c9c497",
+      "x": 0,
+      "y": 0,
+      "speed": 200
+    }
   }
 }

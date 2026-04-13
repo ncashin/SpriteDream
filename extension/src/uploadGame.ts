@@ -2,7 +2,6 @@ import * as path from "path";
 import { spawn } from "node:child_process";
 import * as vscode from "vscode";
 
-/** Production webapp; bundle upload always targets this host. */
 const UPLOAD_BASE_URL = "https://gameide.app";
 
 type BundleUploadFile = {
@@ -17,7 +16,7 @@ type GameideManifest = {
   description?: string;
 };
 
-async function readGameideManifest(
+async function readGameIDEManifest(
   projectRoot: vscode.Uri
 ): Promise<GameideManifest | undefined> {
   const uri = vscode.Uri.joinPath(projectRoot, "gameide.json");
@@ -33,7 +32,7 @@ async function readGameideManifest(
   }
 }
 
-async function gameideJsonFileExists(projectRoot: vscode.Uri): Promise<boolean> {
+async function gameideJSONFileExists(projectRoot: vscode.Uri): Promise<boolean> {
   const uri = vscode.Uri.joinPath(projectRoot, "gameide.json");
   try {
     await vscode.workspace.fs.stat(uri);
@@ -76,13 +75,18 @@ async function readPackageJsonBasics(
   }
 }
 
-async function promptFirstUploadManifestFields(
-  projectRoot: vscode.Uri
+async function promptUploadManifestFields(
+  projectRoot: vscode.Uri,
+  manifest?: GameideManifest
 ): Promise<FirstUploadManifestFields | undefined> {
   const pkg = await readPackageJsonBasics(projectRoot);
-  const version = pkg.version?.trim() || "0.0.0";
+  const version =
+    manifest?.version?.trim() || pkg.version?.trim() || "0.0.0";
 
-  let name = pkg.name?.trim() ?? "";
+  const nameFromManifest =
+    manifest && typeof manifest.name === "string" ? manifest.name.trim() : "";
+  const nameFromPkg = pkg.name?.trim() || "";
+  let name = nameFromManifest || nameFromPkg;
   if (!name) {
     const input = await vscode.window.showInputBox({
       title: "Game metadata",
@@ -105,39 +109,90 @@ async function promptFirstUploadManifestFields(
     }
   }
 
-  let description = pkg.description?.trim() ?? "";
-  if (!description) {
-    const input = await vscode.window.showInputBox({
-      title: "Game metadata",
-      prompt: "Short description for this game (saved to gameide.json)",
-      placeHolder: "Optional — press Enter to leave blank",
-      ignoreFocusOut: true,
-    });
-    if (input === undefined) {
-      return undefined;
-    }
-    description = input.trim();
+  let description: string;
+  if (manifest && typeof manifest.description === "string") {
+    description = manifest.description.trim();
+  } else if (typeof pkg.description === "string") {
+    description = pkg.description.trim();
+  } else {
+    description = "";
   }
 
   return { name, description, version };
 }
 
-async function writeInitialGameideJson(
+async function writeGameideManifest(
   projectRoot: vscode.Uri,
   gameId: string,
-  fields: FirstUploadManifestFields
+  fields: FirstUploadManifestFields,
+  mergeFromExistingFile: boolean
 ): Promise<void> {
-  const manifest = {
+  const uri = vscode.Uri.joinPath(projectRoot, "gameide.json");
+  let base: Record<string, unknown> = {};
+  if (mergeFromExistingFile) {
+    try {
+      const raw = await vscode.workspace.fs.readFile(uri);
+      const parsed: unknown = JSON.parse(Buffer.from(raw).toString("utf8"));
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        base = { ...(parsed as Record<string, unknown>) };
+      }
+    } catch {
+      base = {};
+    }
+  }
+  const reserved = new Set(["id", "name", "version", "description"]);
+  const extra: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(base)) {
+    if (!reserved.has(key)) {
+      extra[key] = value;
+    }
+  }
+  const merged = {
     name: fields.name,
     version: fields.version,
     description: fields.description,
     id: gameId,
+    ...extra,
   };
-  const uri = vscode.Uri.joinPath(projectRoot, "gameide.json");
   await vscode.workspace.fs.writeFile(
     uri,
-    Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, "utf8")
+    Buffer.from(`${JSON.stringify(merged, null, 2)}\n`, "utf8")
   );
+}
+
+async function createGameOnServer(
+  baseUrl: string,
+  fields: FirstUploadManifestFields
+): Promise<string> {
+  const endpoint = new URL("/game/create", baseUrl);
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      title: fields.name,
+      description: fields.description || undefined,
+    }),
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(
+      `Create game failed (${response.status}): ${body || response.statusText}`
+    );
+  }
+  let parsed: unknown;
+  try {
+    parsed = await response.json();
+  } catch {
+    throw new Error("Create game succeeded but response was not JSON.");
+  }
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("Create game response was not a JSON object.");
+  }
+  const id = (parsed as { id?: unknown }).id;
+  if (typeof id !== "string" || !id.trim()) {
+    throw new Error("Create game response missing id.");
+  }
+  return id.trim();
 }
 
 async function runNPMBuild(cwd: string): Promise<void> {
@@ -246,38 +301,17 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
     return;
   }
 
-  const manifest = await readGameideManifest(projectDirectory);
-  const defaultGameId = manifest?.id?.trim() ?? "";
-  const hadGameideJson = await gameideJsonFileExists(projectDirectory);
+  const manifest = await readGameIDEManifest(projectDirectory);
+  const manifestGameId = manifest?.id?.trim() ?? "";
+  const hadGameideJson = await gameideJSONFileExists(projectDirectory);
 
-  const gameId = await vscode.window.showInputBox({
-    title: "Upload Game Bundle",
-    prompt: "Game ID to upload bundle to",
-    placeHolder: "e.g. 2ab4a33f-6acd-4fd2-b71f-3cd9f81f69f1",
-    value: defaultGameId,
-    ignoreFocusOut: true,
-    validateInput: (value) => {
-      if (!value.trim()) {
-        return "Game ID is required";
-      }
-      return undefined;
-    },
-  });
-  if (gameId === undefined) {
-    return;
-  }
-  const trimmedGameId = gameId.trim();
-  if (!trimmedGameId) {
-    vscode.window.showErrorMessage("Upload cancelled: Game ID is required.");
-    return;
-  }
-
-  let manifestFieldsForInitialFile: FirstUploadManifestFields | undefined;
-  if (!hadGameideJson) {
-    manifestFieldsForInitialFile = await promptFirstUploadManifestFields(
-      projectDirectory
+  let manifestFieldsForNewGame: FirstUploadManifestFields | undefined;
+  if (!manifestGameId) {
+    manifestFieldsForNewGame = await promptUploadManifestFields(
+      projectDirectory,
+      manifest
     );
-    if (manifestFieldsForInitialFile === undefined) {
+    if (manifestFieldsForNewGame === undefined) {
       return;
     }
   }
@@ -305,7 +339,16 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
         throw new Error("dist folder is empty, nothing to upload.");
       }
 
-      const endpointPath = `/game/${encodeURIComponent(trimmedGameId)}/upload`;
+      let targetGameId = manifestGameId;
+      if (!targetGameId) {
+        progress.report({ message: "Creating game on gameide.app..." });
+        targetGameId = await createGameOnServer(
+          UPLOAD_BASE_URL,
+          manifestFieldsForNewGame!
+        );
+      }
+
+      const endpointPath = `/game/${encodeURIComponent(targetGameId)}/upload`;
       const endpoint = new URL(endpointPath, UPLOAD_BASE_URL);
 
       progress.report({ message: "Uploading bundle to gameide.app..." });
@@ -322,17 +365,18 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
         );
       }
 
-      const baseSuccessMessage = `Uploaded ${files.length} files to game ${trimmedGameId}.`;
-      if (!hadGameideJson) {
+      const baseSuccessMessage = `Uploaded ${files.length} files to game ${targetGameId}.`;
+      if (!manifestGameId) {
         try {
-          progress.report({ message: "Creating gameide.json..." });
-          await writeInitialGameideJson(
+          progress.report({ message: "Saving gameide.json..." });
+          await writeGameideManifest(
             projectDirectory,
-            trimmedGameId,
-            manifestFieldsForInitialFile!
+            targetGameId,
+            manifestFieldsForNewGame!,
+            hadGameideJson
           );
           vscode.window.showInformationMessage(
-            `${baseSuccessMessage} Created gameide.json.`
+            `${baseSuccessMessage} Saved gameide.json.`
           );
         } catch (err) {
           vscode.window.showWarningMessage(

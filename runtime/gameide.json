@@ -1,6 +1,0 @@
-{
-  "id": "457a34a3-adfc-49ec-9113-fa411ba089fb",
-  "name": "test",
-  "version": "0.0.0",
-  "description": "GameIDE runtime sample. Set id to your game UUID from gameide.app before uploading the bundle."
-}

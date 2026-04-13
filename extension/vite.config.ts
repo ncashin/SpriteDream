@@ -1,5 +1,6 @@
 import * as path from "path";
 import { defineConfig } from "vite";
+import { gameidePlugin } from "gameide/vite";
 
 const nodeBuiltins = [
   "vscode",
@@ -12,8 +13,8 @@ const nodeBuiltins = [
 ];
 
 export default defineConfig({
+  plugins: [gameidePlugin()],
   ssr: {
-    // bundle gameide so the extension is self-contained
     noExternal: true,
   },
   build: {

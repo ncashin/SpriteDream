@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 
-import { gameTable } from "~/database/schema";
+import { gamesTable } from "~/database/schema";
 import {
   getDefaultFrontendBundle,
   uploadGameFrontendBundle,
@@ -10,6 +10,7 @@ import { database } from "./database";
 
 export type CreateGameInput = {
   title: string;
+  description?: string | null;
 };
 
 export type UpdateGameInput = CreateGameInput & {
@@ -17,29 +18,29 @@ export type UpdateGameInput = CreateGameInput & {
 };
 
 export async function listGames() {
-  return database.select().from(gameTable).orderBy(desc(gameTable.id));
+  return database.select().from(gamesTable).orderBy(desc(gamesTable.id));
 }
 
 export async function createGame(input: CreateGameInput) {
   const id = crypto.randomUUID();
-  await database.insert(gameTable).values({ ...input, id });
+  await database.insert(gamesTable).values({ ...input, id });
   await uploadGameFrontendBundle(id, getDefaultFrontendBundle(input.title));
   return id;
 }
 
 export async function updateGame(input: UpdateGameInput) {
   const { id, ...values } = input;
-  await database.update(gameTable).set(values).where(eq(gameTable.id, id));
+  await database.update(gamesTable).set(values).where(eq(gamesTable.id, id));
 }
 
 export async function deleteGame(id: string) {
-  await database.delete(gameTable).where(eq(gameTable.id, id));
+  await database.delete(gamesTable).where(eq(gamesTable.id, id));
 }
 
 export async function getGameById(id: string) {
   const result = await database
     .select()
-    .from(gameTable)
-    .where(eq(gameTable.id, id));
+    .from(gamesTable)
+    .where(eq(gamesTable.id, id));
   return result[0] ?? null;
 }

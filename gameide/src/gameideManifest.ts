@@ -7,17 +7,12 @@ export type GameIDEMetadata = {
   description?: string;
 };
 
-/** Values from the project root `gameide.json` (provided by `gameidePlugin`). */
 export function getGameIDEMetadata(): GameIDEMetadata {
   return manifest;
 }
 
 const DEFAULT_SIGNALING_ORIGIN = "https://gameide.app";
 
-/**
- * Builds the hosted game’s WebRTC signaling URL.
- * When `metadata` is omitted, uses {@link getGameIDEMetadata} (manifest from `gameide.json`).
- */
 export function getGameIDESignalingURL(
   metadata?: GameIDEMetadata,
   origin: string = DEFAULT_SIGNALING_ORIGIN
