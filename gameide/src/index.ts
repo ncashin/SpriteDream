@@ -8,6 +8,7 @@ export {
 } from "./scene/scenePatch.js";
 export { createSceneTransportPostMessage as createPostMessageTransport } from "./scene/sceneChannelTransport.js";
 export type {
+  RelaySnapshotCoordination,
   SceneChannelTransport,
   PostMessageTransportOptions,
 } from "./scene/sceneChannelTransport.js";
@@ -22,6 +23,13 @@ export type {
   SceneChannelInMessage,
   SceneChannelOutMessage,
 } from "./scene/sceneChannel.js";
+export {
+  createWebSocketRoomTransport,
+} from "./websocketRoomTransport.js";
+export type {
+  WebSocketRoomTransport,
+  CreateWebSocketRoomTransportOptions,
+} from "./websocketRoomTransport.js";
 
 export {
   start,

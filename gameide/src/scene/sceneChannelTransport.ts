@@ -3,6 +3,7 @@ export interface SceneChannelTransport {
   onMessage(handler: (message: unknown) => void): () => void;
 }
 
+
 export interface PostMessageTransportOptions {
   target: Window;
   source?: Window;
@@ -12,10 +13,8 @@ export interface PostMessageTransportOptions {
 export function createSceneTransportPostMessage(
   options: PostMessageTransportOptions
 ): SceneChannelTransport {
-  const { target, source = typeof window !== "undefined" ? window : undefined, origin } = options;
-  const win = source ?? (typeof globalThis !== "undefined" ? (globalThis as unknown as Window) : undefined);
-
-  if (!win) {
+  const target = options.target;
+  if (!window) {
     return {
       send: () => {},
       onMessage: () => () => {},
@@ -24,23 +23,22 @@ export function createSceneTransportPostMessage(
 
   const handlers = new Set<(message: unknown) => void>();
 
-  const listener = (event: MessageEvent): void => {
-    if (origin != null && event.origin !== origin) return;
-    const message = event.data;
-    if (message == null || typeof message !== "object") return;
-    for (const handler of handlers) handler(message);
-  };
+  function listener(event: MessageEvent) {
+    if (options.origin && event.origin !== options.origin) return;
+    if (!event.data || typeof event.data !== "object") return;
+    handlers.forEach((h) => h(event.data));
+  }
 
   return {
     send(message: unknown) {
       target.postMessage(message, "*");
     },
     onMessage(handler: (message: unknown) => void) {
-      if (handlers.size === 0) win.addEventListener("message", listener);
+      if (!handlers.size) window.addEventListener("message", listener);
       handlers.add(handler);
       return () => {
         handlers.delete(handler);
-        if (handlers.size === 0) win.removeEventListener("message", listener);
+        if (!handlers.size) window.removeEventListener("message", listener);
       };
     },
   };

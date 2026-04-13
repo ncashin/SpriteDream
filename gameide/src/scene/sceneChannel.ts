@@ -25,13 +25,10 @@ export const SCENE_MESSAGE_TYPES = new Set([
   SCENE_CHANNEL.sceneChange,
 ]);
 
-export type SceneChannelInMessage =
+export type SceneChannelMessage =
   | { type: typeof SCENE_CHANNEL.initialScene; content: string }
-  | { type: typeof SCENE_CHANNEL.scenePatch; patch: ScenePatch };
-
-export type SceneChannelOutMessage =
-  | { type: typeof SCENE_CHANNEL.requestInitialScene }
   | { type: typeof SCENE_CHANNEL.scenePatch; patch: ScenePatch }
+  | { type: typeof SCENE_CHANNEL.requestInitialScene }
   | { type: typeof SCENE_CHANNEL.sceneChange; content: string };
 
 export interface CreateSceneChannelOptions {
@@ -41,23 +38,27 @@ export interface CreateSceneChannelOptions {
   applyScenePatch: (scene: SceneData, patch: ScenePatch) => void;
   subscribeToUpdates?: (callback: (update: SceneUpdate) => void) => () => void;
   shouldEmitSceneUpdate?: (update: SceneUpdate) => boolean;
-  onRequestInitial?: () => string;
-  /** When true, the channel stays unready and suppresses outgoing patches until an `initialScene` message is received (or requested). */
-  awaitInitialSceneSnapshot?: boolean;
+  getInitializationPayload?: () => string;
+
+  initializeScene?: boolean;
 }
 
 export interface SceneChannel {
   dispose(): void;
+  
   pause(): void;
   unpause(): void;
-  sendPatch(patch: ScenePatch): void;
-  sendInitialScene(content: string): void;
-  sendSceneChange(content: string): void;
+
   requestInitialScene(): void;
+  sendInitialScene(content: string): void;
+
+  sendPatch(patch: ScenePatch): void;
+
+  sendSceneChange(content: string): void;
 }
 
 export async function createSceneChannel(
-  options: CreateSceneChannelOptions
+  options: CreateSceneChannelOptions,
 ): Promise<SceneChannel> {
   const {
     transport,
@@ -65,12 +66,11 @@ export async function createSceneChannel(
     setSceneData,
     applyScenePatch: applyPatch,
     subscribeToUpdates,
-    onRequestInitial,
+    getInitializationPayload: onRequestInitial,
     shouldEmitSceneUpdate,
-    awaitInitialSceneSnapshot = false,
+    initializeScene: awaitInitialSceneSnapshot = false,
   } = options;
   let paused = false;
-
   let initialSceneReceived = !awaitInitialSceneSnapshot;
 
   let markReady = () => {};
@@ -104,78 +104,58 @@ export async function createSceneChannel(
     }
   }
 
-  function handleMessage(message: unknown): void {
-    if (!message || typeof (message as { type?: string }).type !== "string") {
-      return;
-    }
-    const { type, content, patch } = message as {
-      type: string;
-      content?: string;
-      patch?: ScenePatch;
-    };
-
-    const isRequestInitial =
-      type === SCENE_CHANNEL.requestInitialScene ||
-      type === "requestInitialScene";
-    const isInitialScene =
-      type === SCENE_CHANNEL.initialScene ||
-      type === "scene" ||
-      type === "setSceneContent" ||
-      type === "sceneUpdate";
-    const isScenePatch =
-      type === SCENE_CHANNEL.scenePatch || type === "scenePatch";
-    const isSceneChange =
-      type === SCENE_CHANNEL.sceneChange || type === "sceneChange";
-
-    if (isRequestInitial && onRequestInitial) {
-      sendInitialScene(onRequestInitial());
-      return;
-    }
-
-    if (paused) {
-      return;
-    }
-
-    if (isInitialScene && content !== undefined) {
-      if (initialSceneReceived) {
+  function handleMessage(message: SceneChannelMessage): void {
+    switch (message.type) {
+      case SCENE_CHANNEL.requestInitialScene:
+        if (onRequestInitial) {
+          sendInitialScene(onRequestInitial());
+        }
+        return;
+      case SCENE_CHANNEL.initialScene: {
+        if (paused) return;
+        if (initialSceneReceived) return;
+        try {
+          const data = JSON.parse(message.content) as SceneData;
+          setSceneData(data);
+          initialSceneReceived = true;
+          markReady();
+        } catch {}
         return;
       }
-      try {
-        const data = JSON.parse(content) as SceneData;
-        setSceneData(data);
-        initialSceneReceived = true;
-        markReady();
-      } catch {}
-      return;
-    }
-    if (isScenePatch && patch !== undefined) {
-      if (typeof patch !== "object" || Array.isArray(patch)) {
+      case SCENE_CHANNEL.scenePatch: {
+        if (paused) return;
+        applyPatch(getSceneData(), message.patch);
         return;
       }
-      applyPatch(getSceneData(), patch);
-      return;
-    }
-    if (isSceneChange && content !== undefined) {
-      try {
-        const data = JSON.parse(content) as SceneData;
-        setSceneData(data);
-      } catch {}
+      case SCENE_CHANNEL.sceneChange: {
+        if (paused) return;
+        try {
+          const data = JSON.parse(message.content) as SceneData;
+          setSceneData(data);
+        } catch {}
+        return;
+      }
     }
   }
 
-  const unsubscribeTransport = transport.onMessage(handleMessage);
+  const unsubscribeTransport = transport.onMessage(handleMessage as any);
+
+  function patchForSceneUpdate(update: SceneUpdate): ScenePatch {
+    const fullPath = appendKeyToPath(update.path, update.key);
+    switch (update.type) {
+      case "set":
+        return patchAtPath(fullPath, update.value);
+      case "delete":
+        return patchAtPath(fullPath, undefined, true);
+    }
+  }
 
   let unsubscribeOutgoing: (() => void) | undefined;
   if (subscribeToUpdates) {
     unsubscribeOutgoing = subscribeToUpdates((update: SceneUpdate) => {
       if (!initialSceneReceived || paused) return;
       if (shouldEmitSceneUpdate && !shouldEmitSceneUpdate(update)) return;
-      const fullPath = appendKeyToPath(update.path, update.key);
-      const patch =
-        update.type === "set"
-          ? patchAtPath(fullPath, update.value)
-          : patchAtPath(fullPath, undefined, true);
-      sendPatch(patch);
+      sendPatch(patchForSceneUpdate(update));
     });
     queueMicrotask(() => {
       if (initialSceneReceived) return;
