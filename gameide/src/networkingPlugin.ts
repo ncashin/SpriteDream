@@ -15,6 +15,7 @@ import {
   onSceneChange,
 } from "./scene/scene.js";
 import type { SceneUpdate } from "./scene/scene.js";
+import { getGameIDEMetadata, getGameIDESignalingURL } from "./gameideManifest.js";
 
 export const SCENE_OWNER_ID = "__ownerId" as const;
 
@@ -61,11 +62,20 @@ export const networkingPlugin =
     const peerId = options.peerId ?? createNetworkingPeerId();
 
     const roomId = options.roomId ?? "default";
+    const manifestMeta = getGameIDEMetadata();
+    const signalingURLFromManifest =
+      options.signaling === undefined &&
+      options.signalingURL === undefined &&
+      manifestMeta.id
+        ? getGameIDESignalingURL(manifestMeta)
+        : undefined;
+    const resolvedSignalingURL = options.signalingURL ?? signalingURLFromManifest;
+
     const signaling: WebRTCSignaling =
       options.signaling ??
-      (options.signalingURL
+      (resolvedSignalingURL
         ? createHTTPRelaySignaling({
-            signalingURL: options.signalingURL,
+            signalingURL: resolvedSignalingURL,
             roomId,
             peerId,
           })

@@ -9,4 +9,7 @@ export default defineConfig({
   base: "./",
   publicDir: "assets",
   plugins: [tailwindcss(), gameidePlugin()],
+  optimizeDeps: {
+    exclude: ["gameide"],
+  },
 });

@@ -3,6 +3,22 @@ import fs from "node:fs";
 import path from "node:path";
 import { SCENE_HMR_EVENT_NAME } from "./scene/sceneHMR.js";
 
+const MANIFEST_VIRTUAL = "\0virtual:gameide-manifest";
+
+function loadManifestModuleSource(root: string): string {
+  const manifestPath = path.join(root, "gameide.json");
+  if (!fs.existsSync(manifestPath)) {
+    return "export default {};\n";
+  }
+  try {
+    const raw = fs.readFileSync(manifestPath, "utf8");
+    const data = JSON.parse(raw) as unknown;
+    return `export default ${JSON.stringify(data)};\n`;
+  } catch {
+    return "export default {};\n";
+  }
+}
+
 const HMR_ACCEPT = `
 if (import.meta.hot) {
   import.meta.hot.accept();
@@ -172,12 +188,38 @@ export function gameidePlugin(): Plugin {
       syncSceneDeclarationsInDirectory(config.root, config.root);
       pruneStaleSceneDeclarations(config.root);
     },
+    configureServer(server) {
+      const manifestPath = path.join(server.config.root, "gameide.json");
+      server.watcher.add(manifestPath);
+      server.watcher.on("change", (changedPath) => {
+        if (path.normalize(changedPath) !== path.normalize(manifestPath)) {
+          return;
+        }
+        const mod = server.moduleGraph.getModuleById(MANIFEST_VIRTUAL);
+        if (mod) {
+          server.moduleGraph.invalidateModule(mod);
+        }
+      });
+    },
     buildStart() {
       if (!config) return;
       syncSceneDeclarationsInDirectory(config.root, config.root);
       pruneStaleSceneDeclarations(config.root);
     },
+    resolveId(id) {
+      if (id === "virtual:gameide-manifest") {
+        return MANIFEST_VIRTUAL;
+      }
+      return;
+    },
     load(id) {
+      if (id === MANIFEST_VIRTUAL) {
+        const root = config?.root;
+        if (!root) {
+          return "export default {};\n";
+        }
+        return loadManifestModuleSource(root);
+      }
       const cleanId = id.replace(/\?.*$/, "");
       if (!cleanId.endsWith(".scene")) return;
       if (config) syncSceneDeclaration(cleanId, config.root);
