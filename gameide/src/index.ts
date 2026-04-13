@@ -8,7 +8,6 @@ export {
 } from "./scene/scenePatch.js";
 export { createSceneTransportPostMessage as createPostMessageTransport } from "./scene/sceneChannelTransport.js";
 export type {
-  RelaySnapshotCoordination,
   SceneChannelTransport,
   PostMessageTransportOptions,
 } from "./scene/sceneChannelTransport.js";
@@ -23,12 +22,10 @@ export type {
   SceneChannelInMessage,
   SceneChannelOutMessage,
 } from "./scene/sceneChannel.js";
-export {
-  createWebSocketRoomTransport,
-} from "./websocketRoomTransport.js";
+export { connectWebSocketRoomTransport } from "./websocketRoomTransport.js";
 export type {
   WebSocketRoomTransport,
-  CreateWebSocketRoomTransportOptions,
+  ConnectWebSocketRoomResult,
 } from "./websocketRoomTransport.js";
 
 export {
@@ -77,44 +74,16 @@ export {
   initializePlugins,
 } from "./initializeGame.js";
 export type { GameIDEMetadata } from "./gameideManifest.js";
-export {
-  getGameIDEMetadata,
-  getGameIDESignalingURL,
-} from "./gameideManifest.js";
+export { getGameIDEMetadata } from "./gameideManifest.js";
 export type { Plugin, FinalContext } from "./initializeGame.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
 export {
   networkingPlugin,
+  SCENE_OWNER_ID,
   isOwnedSceneUpdate,
   isOwnedSceneObject,
-  SCENE_OWNER_ID,
-  createHTTPRelaySignaling as createHttpRelaySignaling,
-  createHTTPSSESignaling as createHttpSseSignaling,
-  createNetworkingPeerId,
-  createSceneTransportWebRTC,
-  createSignalingChannel,
-  isWebRtcSignal,
-  WEBRTC_SIGNALING,
 } from "./networkingPlugin.js";
 export type { NetworkingPluginOptions } from "./networkingPlugin.js";
-export {
-  sortedSessionPeerIds,
-  electedHostPeerId,
-  isSessionHost,
-  successorOwnerAfterPeerLeft,
-  transferSceneOwnershipFromPeer,
-  withSceneOwnershipForPeer,
-} from "./distributedSimulation.js";
-export type {
-  WebRTCSignaling,
-  WebRTCSignal,
-  CreateSceneTransportWebRTCOptions,
-  SceneTransportWebRTC,
-  HttpSseSignalingOptions,
-  SignalingTransport,
-  SignalingChannel,
-  CreateSignalingChannelOptions,
-} from "./networkingPlugin.js";
 export type { ScenePatchMessage } from "./editor/editorPlugin.js";
 export { gameUIPlugin } from "./editor/gameUIPlugin/gameUIPlugin.js";
 export { ExampleGameUI } from "./editor/gameUIPlugin/ExampleGameUI.js";

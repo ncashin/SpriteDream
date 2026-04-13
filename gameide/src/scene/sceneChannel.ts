@@ -31,6 +31,9 @@ export type SceneChannelMessage =
   | { type: typeof SCENE_CHANNEL.requestInitialScene }
   | { type: typeof SCENE_CHANNEL.sceneChange; content: string };
 
+export type SceneChannelInMessage = SceneChannelMessage;
+export type SceneChannelOutMessage = SceneChannelMessage;
+
 export interface CreateSceneChannelOptions {
   transport: SceneChannelTransport;
   getSceneData(): SceneData;
@@ -38,8 +41,13 @@ export interface CreateSceneChannelOptions {
   applyScenePatch: (scene: SceneData, patch: ScenePatch) => void;
   subscribeToUpdates?: (callback: (update: SceneUpdate) => void) => () => void;
   shouldEmitSceneUpdate?: (update: SceneUpdate) => boolean;
+  /** Full scene JSON when a peer requests {@link SCENE_CHANNEL.requestInitialScene}. */
   getInitializationPayload?: () => string;
 
+  /**
+   * `true` = first in room / holds authoritative scene (local snapshot is already valid).
+   * `false` = joiner; wait for {@link SCENE_CHANNEL.initialScene} before syncing.
+   */
   initializeScene?: boolean;
 }
 
@@ -68,10 +76,12 @@ export async function createSceneChannel(
     subscribeToUpdates,
     getInitializationPayload: onRequestInitial,
     shouldEmitSceneUpdate,
-    initializeScene: awaitInitialSceneSnapshot = false,
+    /** Default true: single-client / editor already has a scene. */
+    initializeScene: isSceneAuthority = true,
   } = options;
   let paused = false;
-  let initialSceneReceived = !awaitInitialSceneSnapshot;
+  /** Authority starts with a valid snapshot; joiners apply `initialScene` first. */
+  let initialSceneReceived = isSceneAuthority;
 
   let markReady = () => {};
   const readyPromise =
@@ -104,10 +114,13 @@ export async function createSceneChannel(
     }
   }
 
+  const shouldRequestInitialSnapshot =
+    subscribeToUpdates && !isSceneAuthority;
+
   function handleMessage(message: SceneChannelMessage): void {
     switch (message.type) {
       case SCENE_CHANNEL.requestInitialScene:
-        if (onRequestInitial) {
+        if (isSceneAuthority && onRequestInitial) {
           sendInitialScene(onRequestInitial());
         }
         return;
@@ -158,7 +171,7 @@ export async function createSceneChannel(
       sendPatch(patchForSceneUpdate(update));
     });
     queueMicrotask(() => {
-      if (initialSceneReceived) return;
+      if (initialSceneReceived || !shouldRequestInitialSnapshot) return;
       requestInitialScene();
     });
   }

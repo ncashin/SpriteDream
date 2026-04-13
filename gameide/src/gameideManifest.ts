@@ -13,7 +13,7 @@ export function getGameIDEMetadata(): GameIDEMetadata {
 
 const DEFAULT_SIGNALING_ORIGIN = "https://gameide.app";
 
-export function getGameIDESignalingURL(
+export function getGameIDESignalingUrl(
   metadata?: GameIDEMetadata,
   origin: string = DEFAULT_SIGNALING_ORIGIN
 ): string {
