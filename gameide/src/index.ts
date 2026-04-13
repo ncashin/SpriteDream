@@ -80,11 +80,13 @@ export {
   isOwnedSceneUpdate,
   isOwnedSceneObject,
   SCENE_OWNER_ID,
-  createBroadcastChannelSignaling,
   createHTTPRelaySignaling as createHttpRelaySignaling,
   createHTTPSSESignaling as createHttpSseSignaling,
   createNetworkingPeerId,
   createSceneTransportWebRTC,
+  createSignalingChannel,
+  isWebRtcSignal,
+  WEBRTC_SIGNALING,
 } from "./networkingPlugin.js";
 export type { NetworkingPluginOptions } from "./networkingPlugin.js";
 export {
@@ -101,6 +103,9 @@ export type {
   CreateSceneTransportWebRTCOptions,
   SceneTransportWebRTC,
   HttpSseSignalingOptions,
+  SignalingTransport,
+  SignalingChannel,
+  CreateSignalingChannelOptions,
 } from "./networkingPlugin.js";
 export type { ScenePatchMessage } from "./editor/editorPlugin.js";
 export { gameUIPlugin } from "./editor/gameUIPlugin/gameUIPlugin.js";

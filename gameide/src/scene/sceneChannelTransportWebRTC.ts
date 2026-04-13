@@ -1,16 +1,10 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
-
-export interface WebRTCSignaling {
-  send(message: unknown): void;
-  onMessage(handler: (message: unknown) => void): () => void;
-  ready?: Promise<void>;
-}
-
-export type WebRTCSignal =
-  | { type: "hello"; peerId: string }
-  | { type: "offer"; from: string; to: string; sdp: string }
-  | { type: "answer"; from: string; to: string; sdp: string }
-  | { type: "ice"; from: string; to: string; candidate: RTCIceCandidateInit | null };
+import {
+  createSignalingChannel,
+  WEBRTC_SIGNALING,
+  type SignalingTransport,
+  type WebRTCSignal,
+} from "./signaling.js";
 
 const DEFAULT_ICE: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
@@ -18,7 +12,7 @@ const DEFAULT_ICE: RTCIceServer[] = [
 
 export interface CreateSceneTransportWebRTCOptions {
   peerId: string;
-  signaling: WebRTCSignaling;
+  signaling: SignalingTransport;
   iceServers?: RTCIceServer[];
   dataChannelLabel?: string;
 }
@@ -43,22 +37,10 @@ export type SceneTransportWebRTC = SceneChannelTransport & {
   dispose(): void;
   localPeerId: string;
   get remotePeerIds(): readonly string[];
-  /** Sorted snapshot whenever a remote data channel opens or closes. */
   onRemotePeersChange(
     handler: (remotePeerIds: readonly string[]) => void,
   ): () => void;
 };
-
-function isSignal(message: unknown): message is WebRTCSignal {
-  if (!message || typeof message !== "object") return false;
-  const signalType = (message as { type?: string }).type;
-  return (
-    signalType === "hello" ||
-    signalType === "offer" ||
-    signalType === "answer" ||
-    signalType === "ice"
-  );
-}
 
 export function createNetworkingPeerId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -66,148 +48,6 @@ export function createNetworkingPeerId(): string {
   }
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
-
-export function createBroadcastChannelSignaling(roomId: string): WebRTCSignaling {
-  const name = `gameide-webrtc-${roomId}`;
-  const channel =
-    typeof BroadcastChannel !== "undefined"
-      ? new BroadcastChannel(name)
-      : null;
-
-  if (!channel) {
-    return {
-      send: () => {},
-      onMessage: () => () => {},
-    };
-  }
-
-  const handlers = new Set<(message: unknown) => void>();
-
-  channel.onmessage = (event: MessageEvent) => {
-    for (const handler of handlers) handler(event.data);
-  };
-
-  return {
-    send(message: unknown) {
-      channel.postMessage(message);
-    },
-    onMessage(handler: (message: unknown) => void) {
-      handlers.add(handler);
-      return () => {
-        handlers.delete(handler);
-      };
-    },
-  };
-}
-
-export type HTTPRelaySignalingOptions = {
-  signalingURL: string;
-  roomId: string;
-  peerId: string;
-  /** Milliseconds between GET ?poll=1 requests. */
-  pollIntervalMs?: number;
-};
-
-/** @deprecated Use {@link HTTPRelaySignalingOptions} */
-export type HTTPSSESignalingOptions = HTTPRelaySignalingOptions;
-
-/**
- * Minimal HTTP relay: POST JSON signals, GET periodically to drain inbound messages.
- * WebRTC mesh negotiation stays entirely in {@link createSceneTransportWebRTC}.
- */
-export function createHTTPRelaySignaling(
-  options: HTTPRelaySignalingOptions,
-): WebRTCSignaling {
-  const { signalingURL, roomId, peerId, pollIntervalMs = 400 } = options;
-
-  if (typeof window === "undefined" || typeof fetch === "undefined") {
-    return {
-      send: () => {},
-      onMessage: () => () => {},
-      ready: Promise.resolve(),
-    };
-  }
-
-  const handlers = new Set<(message: unknown) => void>();
-  let pollTimer: ReturnType<typeof setInterval> | null = null;
-  let resolveReady: (() => void) | undefined;
-  const ready = new Promise<void>((resolve) => {
-    resolveReady = resolve;
-  });
-
-  function resolveReadyOnce(): void {
-    resolveReady?.();
-    resolveReady = undefined;
-  }
-
-  function signalingEndpoint(extra: Record<string, string>): string {
-    const u = new URL(signalingURL, window.location.href);
-    u.searchParams.set("room", roomId);
-    for (const [key, value] of Object.entries(extra)) {
-      u.searchParams.set(key, value);
-    }
-    return u.toString();
-  }
-
-  function postToSignaling(message: unknown): void {
-    void fetch(signalingEndpoint({}), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(message),
-      credentials: "same-origin",
-    }).catch(() => {});
-  }
-
-  function pollOnce(): void {
-    void fetch(signalingEndpoint({ poll: "1", peerId }), {
-      method: "GET",
-      credentials: "same-origin",
-    })
-      .then(async (r) => {
-        if (!r.ok) return;
-        const body = (await r.json()) as { messages?: unknown[] };
-        const messages = body.messages;
-        if (!Array.isArray(messages)) return;
-        resolveReadyOnce();
-        for (const message of messages) {
-          for (const handler of handlers) handler(message);
-        }
-      })
-      .catch(() => {
-        resolveReadyOnce();
-      });
-  }
-
-  function startPolling(): void {
-    if (pollTimer !== null) return;
-    pollOnce();
-    pollTimer = setInterval(pollOnce, pollIntervalMs);
-  }
-
-  function stopPolling(): void {
-    if (pollTimer === null) return;
-    clearInterval(pollTimer);
-    pollTimer = null;
-  }
-
-  return {
-    ready,
-    send(message: unknown) {
-      postToSignaling(message);
-    },
-    onMessage(handler: (message: unknown) => void) {
-      handlers.add(handler);
-      startPolling();
-      return () => {
-        handlers.delete(handler);
-        if (handlers.size === 0) stopPolling();
-      };
-    },
-  };
-}
-
-/** @deprecated Use {@link createHTTPRelaySignaling} */
-export const createHTTPSSESignaling = createHTTPRelaySignaling;
 
 type NegotiationRole = "offerer" | "answerer";
 
@@ -250,6 +90,7 @@ export function createSceneTransportWebRTC(
   }
 
   return new Promise((resolve, reject) => {
+    const signalingChannel = createSignalingChannel({ transport: signaling });
     const sessions = new Map<string, PeerSession>();
     const connectedRemotes = new Set<string>();
     const preSessionIce = new Map<string, (RTCIceCandidateInit | null)[]>();
@@ -271,13 +112,10 @@ export function createSceneTransportWebRTC(
     let signalChain: Promise<void> = Promise.resolve();
 
     function sendHello(): void {
-      try {
-        signaling.send({
-          type: "hello",
-          peerId: localPeerId,
-        } satisfies WebRTCSignal);
-      } catch {
-      }
+      signalingChannel.sendSignal({
+        type: WEBRTC_SIGNALING.hello,
+        peerId: localPeerId,
+      });
     }
 
     function scheduleReHello(): void {
@@ -403,12 +241,12 @@ export function createSceneTransportWebRTC(
         const candidate = event.candidate
           ? event.candidate.toJSON()
           : null;
-        signaling.send({
-          type: "ice",
+        signalingChannel.sendSignal({
+          type: WEBRTC_SIGNALING.ice,
           from: localPeerId,
           to: remotePeerId,
           candidate,
-        } satisfies WebRTCSignal);
+        });
       };
 
       peerConnection.onconnectionstatechange = () => {
@@ -468,6 +306,7 @@ export function createSceneTransportWebRTC(
         },
         dispose() {
           unsubSignaling();
+          signalingChannel.dispose();
           if (reHelloTimeoutId !== undefined) {
             clearTimeout(reHelloTimeoutId);
             reHelloTimeoutId = undefined;
@@ -552,12 +391,12 @@ export function createSceneTransportWebRTC(
       try {
         const offer = await session.peerConnection.createOffer();
         await session.peerConnection.setLocalDescription(offer);
-        signaling.send({
-          type: "offer",
+        signalingChannel.sendSignal({
+          type: WEBRTC_SIGNALING.offer,
           from: localPeerId,
           to: remotePeerId,
           sdp: offer.sdp!,
-        } satisfies WebRTCSignal);
+        });
       } catch (error) {
         rejectIfNotSettled(error);
       }
@@ -569,12 +408,12 @@ export function createSceneTransportWebRTC(
       await flushPendingCandidates(session);
       const answer = await session.peerConnection.createAnswer();
       await session.peerConnection.setLocalDescription(answer);
-      signaling.send({
-        type: "answer",
+      signalingChannel.sendSignal({
+        type: WEBRTC_SIGNALING.answer,
         from: localPeerId,
         to: session.remotePeerId,
         sdp: answer.sdp!,
-      } satisfies WebRTCSignal);
+      });
     }
 
     async function applyAnswer(session: PeerSession, sdp: string): Promise<void> {
@@ -650,11 +489,10 @@ export function createSceneTransportWebRTC(
       }
     }
 
-    unsubSignaling = signaling.onMessage((message) => {
+    unsubSignaling = signalingChannel.onSignal((signal) => {
       signalChain = signalChain
         .then(async () => {
-          if (!isSignal(message)) return;
-          await handleSignal(message);
+          await handleSignal(signal);
         })
         .catch((err) => {
           rejectIfNotSettled(err);
@@ -669,7 +507,7 @@ export function createSceneTransportWebRTC(
     // Send a one-shot discovery hello immediately; hello replies handle late joiners.
     sendHello();
 
-    const signalingReady = signaling.ready ?? Promise.resolve();
+    const signalingReady = signalingChannel.ready;
     void signalingReady
       .then(() => {
         if (settled) return;

@@ -1,10 +1,12 @@
 import { createSceneChannel } from "./scene/sceneChannel.js";
 import {
-  createBroadcastChannelSignaling,
   createHTTPRelaySignaling,
+  type SignalingRoomState,
+  type SignalingTransport,
+} from "./scene/signaling.js";
+import {
   createNetworkingPeerId,
   createSceneTransportWebRTC,
-  type WebRTCSignaling,
 } from "./scene/sceneChannelTransportWebRTC.js";
 import { applyScenePatch } from "./scene/scenePatch.js";
 import {
@@ -16,7 +18,6 @@ import {
   onSceneChange,
 } from "./scene/scene.js";
 import type { SceneObjectData, SceneUpdate } from "./scene/scene.js";
-import { getGameIDEMetadata, getGameIDESignalingURL } from "./gameideManifest.js";
 import { SCENE_OWNER_ID } from "./sceneOwnership.js";
 import {
   electedHostPeerId,
@@ -81,14 +82,16 @@ export function isOwnedSceneObject(localPeerId: string, object: SceneObjectData)
   return owner === localPeerId;
 }
 
-export type NetworkingPluginOptions = {
+type NetworkingPluginShared = {
   peerId?: string;
-  signaling?: WebRTCSignaling;
-  signalingURL?: string;
   roomId?: string;
   iceServers?: RTCIceServer[];
   onRequestInitial?: () => string;
 };
+
+export type NetworkingPluginOptions =
+  | (NetworkingPluginShared & { signalingURL: string; signaling?: undefined })
+  | (NetworkingPluginShared & { signaling: SignalingTransport; signalingURL?: string });
 
 export const networkingPlugin =
   (options: NetworkingPluginOptions) =>
@@ -96,31 +99,25 @@ export const networkingPlugin =
     const peerId = options.peerId ?? createNetworkingPeerId();
 
     const roomId = options.roomId ?? "default";
-    const manifestMeta = getGameIDEMetadata();
-    const signalingURLFromManifest =
-      options.signaling === undefined &&
-      options.signalingURL === undefined &&
-      manifestMeta.id
-        ? getGameIDESignalingURL(manifestMeta)
-        : undefined;
-    const resolvedSignalingURL = options.signalingURL ?? signalingURLFromManifest;
 
-    const signaling: WebRTCSignaling =
-      options.signaling ??
-      (resolvedSignalingURL
-        ? createHTTPRelaySignaling({
-            signalingURL: resolvedSignalingURL,
+    const signaling: SignalingTransport =
+      "signaling" in options && options.signaling != null
+        ? options.signaling
+        : createHTTPRelaySignaling({
+            signalingURL: options.signalingURL,
             roomId,
             peerId,
-          })
-        : createBroadcastChannelSignaling(roomId));
+          });
 
     const transport = await createSceneTransportWebRTC({
       peerId,
       signaling,
       iceServers: options.iceServers,
     });
-    const peerConnectionEstablished = transport.remotePeerIds.length > 0;
+    await signaling.ready?.catch(() => {});
+    const initialRoomState: SignalingRoomState | null =
+      signaling.getRoomState?.() ?? null;
+    const roomHasRemotePeers = (initialRoomState?.peerIds.length ?? 0) > 0;
  
     const serializeSceneForPeer =
       options.onRequestInitial ?? (() => JSON.stringify(getSceneRaw() ?? {}));
@@ -133,7 +130,7 @@ export const networkingPlugin =
       subscribeToUpdates: onSceneChange,
       shouldEmitSceneUpdate: (update) => isOwnedSceneUpdate(peerId, update),
       onRequestInitial: serializeSceneForPeer,
-      awaitInitialSceneSnapshot: peerConnectionEstablished,
+      awaitInitialSceneSnapshot: roomHasRemotePeers,
     });
 
     return {
@@ -170,19 +167,29 @@ export const networkingPlugin =
   };
 
 export {
-  createBroadcastChannelSignaling,
   createHTTPRelaySignaling,
   createHTTPSSESignaling,
+  createSignalingChannel,
+  isWebRtcSignal,
+  WEBRTC_SIGNALING,
+} from "./scene/signaling.js";
+export {
   createNetworkingPeerId,
   createSceneTransportWebRTC,
 } from "./scene/sceneChannelTransportWebRTC.js";
 export type {
+  CreateSignalingChannelOptions,
+  HTTPRelaySignalingOptions,
   HTTPRelaySignalingOptions as HttpRelaySignalingOptions,
+  HTTPSSESignalingOptions,
   HTTPSSESignalingOptions as HttpSseSignalingOptions,
-} from "./scene/sceneChannelTransportWebRTC.js";
-export type {
-  WebRTCSignaling,
+  SignalingChannel,
+  SignalingRoomState,
+  SignalingTransport,
   WebRTCSignal,
+  WebRTCSignaling,
+} from "./scene/signaling.js";
+export type {
   CreateSceneTransportWebRTCOptions,
   SceneTransportWebRTC,
 } from "./scene/sceneChannelTransportWebRTC.js";

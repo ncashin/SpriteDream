@@ -56,9 +56,16 @@ function roomKey(gameId: string, room: string): string {
 const roomPeers = new Map<string, Set<string>>();
 const mailboxes = new Map<string, Map<string, unknown[]>>();
 const lastPoll = new Map<string, number>();
+const roomEpochs = new Map<string, number>();
 
 function peerStamp(key: string, peerId: string): string {
   return `${key}::${peerId}`;
+}
+
+function bumpRoomEpoch(key: string): number {
+  const nextEpoch = (roomEpochs.get(key) ?? 0) + 1;
+  roomEpochs.set(key, nextEpoch);
+  return nextEpoch;
 }
 
 function pruneStale(gameId: string, room: string): void {
@@ -66,17 +73,21 @@ function pruneStale(gameId: string, room: string): void {
   const peers = roomPeers.get(key);
   if (!peers) return;
   const now = Date.now();
+  let removedPeer = false;
   for (const peerId of [...peers]) {
     const stamp = peerStamp(key, peerId);
     if (now - (lastPoll.get(stamp) ?? 0) > STALE_MS) {
       peers.delete(peerId);
       lastPoll.delete(stamp);
       mailboxes.get(key)?.delete(peerId);
+      removedPeer = true;
     }
   }
+  if (removedPeer) bumpRoomEpoch(key);
   if (peers.size === 0) {
     roomPeers.delete(key);
     mailboxes.delete(key);
+    roomEpochs.delete(key);
   }
 }
 
@@ -115,6 +126,7 @@ function ensurePeerRegistered(gameId: string, room: string, peerId: string): voi
     enqueue(gameId, room, other, { type: "hello", peerId });
   }
   peers.add(peerId);
+  bumpRoomEpoch(key);
   lastPoll.set(peerStamp(key, peerId), Date.now());
 }
 
@@ -157,9 +169,13 @@ function pollResponse(
 
   const mailboxQueue = ensureMailbox(key, peerId);
   const messages = mailboxQueue.splice(0, mailboxQueue.length);
+  const peerIds = [...(roomPeers.get(key) ?? [])]
+    .filter((candidatePeerId) => candidatePeerId !== peerId)
+    .sort();
+  const roomEpoch = roomEpochs.get(key) ?? 0;
 
   return Response.json(
-    { messages },
+    { messages, peerIds, roomEpoch },
     { headers: { ...corsHeaders(request), "Cache-Control": "no-store" } },
   );
 }

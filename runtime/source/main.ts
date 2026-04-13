@@ -6,6 +6,7 @@ import {
   initializePlugins,
   inputPlugin,
   editorPlugin,
+  getGameIDESignalingURL,
   networkingPlugin,
   SCENE_OWNER_ID,
   gameStart,
@@ -81,6 +82,7 @@ initializeGame({
     gameUIPlugin(GameUI),
     networkingPlugin({
       roomId: "default",
+      signalingURL: getGameIDESignalingURL(),
     }),
     inputPlugin({
       axes: {
