@@ -19,14 +19,8 @@ export {
 export type {
   CreateSceneChannelOptions,
   SceneChannel,
-  SceneChannelInMessage,
-  SceneChannelOutMessage,
 } from "./scene/sceneChannel.js";
-export { connectWebSocketRoomTransport } from "./websocketRoomTransport.js";
-export type {
-  WebSocketRoomTransport,
-  ConnectWebSocketRoomResult,
-} from "./websocketRoomTransport.js";
+
 
 export {
   start,
@@ -82,6 +76,7 @@ export {
   SCENE_OWNER_ID,
   isOwnedSceneUpdate,
   isOwnedSceneObject,
+  withOwnership,
 } from "./networkingPlugin.js";
 export type { NetworkingPluginOptions } from "./networkingPlugin.js";
 export type { ScenePatchMessage } from "./editor/editorPlugin.js";

@@ -81,6 +81,19 @@ export function attachRoomWebSocket(httpServer: Server): WebSocketServer {
       r.delete(client);
       if (r.size === 0) {
         rooms.delete(room);
+        return;
+      }
+      let i = 0;
+      for (const peer of r) {
+        if (peer.readyState === WebSocket.OPEN) {
+          peer.send(
+            JSON.stringify({
+              type: "roomAuthorityUpdate",
+              initializeScene: i === 0,
+            }),
+          );
+        }
+        i++;
       }
     });
 

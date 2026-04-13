@@ -19,6 +19,10 @@ export const SCENE_CHANNEL = {
   sceneChange: "gameide.editor.sceneChange",
 } as const;
 
+export const ROOM_CHANNEL = {
+  authorityUpdate: "roomAuthorityUpdate",
+} as const;
+
 export const SCENE_MESSAGE_TYPES = new Set([
   SCENE_CHANNEL.initialScene,
   SCENE_CHANNEL.scenePatch,
@@ -29,10 +33,8 @@ export type SceneChannelMessage =
   | { type: typeof SCENE_CHANNEL.initialScene; content: string }
   | { type: typeof SCENE_CHANNEL.scenePatch; patch: ScenePatch }
   | { type: typeof SCENE_CHANNEL.requestInitialScene }
-  | { type: typeof SCENE_CHANNEL.sceneChange; content: string };
-
-export type SceneChannelInMessage = SceneChannelMessage;
-export type SceneChannelOutMessage = SceneChannelMessage;
+  | { type: typeof SCENE_CHANNEL.sceneChange; content: string }
+  | { type: typeof ROOM_CHANNEL.authorityUpdate; initializeScene: boolean };
 
 export interface CreateSceneChannelOptions {
   transport: SceneChannelTransport;
@@ -76,11 +78,11 @@ export async function createSceneChannel(
     subscribeToUpdates,
     getInitializationPayload: onRequestInitial,
     shouldEmitSceneUpdate,
-    /** Default true: single-client / editor already has a scene. */
-    initializeScene: isSceneAuthority = true,
+
+    initializeScene: initialAuthority = true,
   } = options;
+  let isSceneAuthority = initialAuthority;
   let paused = false;
-  /** Authority starts with a valid snapshot; joiners apply `initialScene` first. */
   let initialSceneReceived = isSceneAuthority;
 
   let markReady = () => {};
@@ -119,6 +121,18 @@ export async function createSceneChannel(
 
   function handleMessage(message: SceneChannelMessage): void {
     switch (message.type) {
+      case ROOM_CHANNEL.authorityUpdate: {
+        isSceneAuthority = message.initializeScene;
+        if (!initialSceneReceived) {
+          if (isSceneAuthority) {
+            initialSceneReceived = true;
+            markReady();
+          } else {
+            requestInitialScene();
+          }
+        }
+        return;
+      }
       case SCENE_CHANNEL.requestInitialScene:
         if (isSceneAuthority && onRequestInitial) {
           sendInitialScene(onRequestInitial());
