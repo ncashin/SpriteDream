@@ -1,23 +1,5 @@
 {
   "__metadata": {
     "name": "test"
-  },
-  "99b668a1-fef3-4406-abd3-0432a73d9b18": {
-    "__ownerId": "99b668a1-fef3-4406-abd3-0432a73d9b18",
-    "x": 0,
-    "y": 0,
-    "speed": 200
-  },
-  "5c3fc7fa-8637-4dc0-8624-53e3083bc066": {
-    "__ownerId": "5c3fc7fa-8637-4dc0-8624-53e3083bc066",
-    "x": 0,
-    "y": 0,
-    "speed": 200
-  },
-  "c0628acd-2fe8-4056-b2ef-1ae877f7f43b": {
-    "__ownerId": "c0628acd-2fe8-4056-b2ef-1ae877f7f43b",
-    "x": 0,
-    "y": 0,
-    "speed": 200
   }
 }

@@ -17,8 +17,14 @@ import {
 } from "./scene/scene.js";
 import type { SceneObjectData, SceneUpdate } from "./scene/scene.js";
 import { getGameIDEMetadata, getGameIDESignalingURL } from "./gameideManifest.js";
+import { SCENE_OWNER_ID } from "./sceneOwnership.js";
+import {
+  electedHostPeerId,
+  sortedSessionPeerIds,
+  withSceneOwnershipForPeer,
+} from "./distributedSimulation.js";
 
-export const SCENE_OWNER_ID = "__ownerId" as const;
+export { SCENE_OWNER_ID };
 
 function isPlainSceneRecord(value: unknown): value is Record<PropertyKey, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -81,7 +87,6 @@ export type NetworkingPluginOptions = {
   signalingURL?: string;
   roomId?: string;
   iceServers?: RTCIceServer[];
-  peerConnectTimeoutMilliseconds?: number;
   onRequestInitial?: () => string;
 };
 
@@ -110,17 +115,10 @@ export const networkingPlugin =
           })
         : createBroadcastChannelSignaling(roomId));
 
-    const peerConnectTimeoutMilliseconds =
-      options.peerConnectTimeoutMilliseconds != null &&
-      options.peerConnectTimeoutMilliseconds > 0
-        ? options.peerConnectTimeoutMilliseconds
-        : undefined;
-
     const transport = await createSceneTransportWebRTC({
       peerId,
       signaling,
       iceServers: options.iceServers,
-      peerConnectTimeoutMilliseconds,
     });
     const peerConnectionEstablished = transport.remotePeerIds.length > 0;
  
@@ -135,7 +133,7 @@ export const networkingPlugin =
       subscribeToUpdates: onSceneChange,
       shouldEmitSceneUpdate: (update) => isOwnedSceneUpdate(peerId, update),
       onRequestInitial: serializeSceneForPeer,
-      skipSceneInitialization: !peerConnectionEstablished,
+      awaitInitialSceneSnapshot: peerConnectionEstablished,
     });
 
     return {
@@ -144,6 +142,25 @@ export const networkingPlugin =
         peerId,
         remotePeerIds: transport.remotePeerIds,
         channel,
+        isOwned(object: SceneObjectData) {
+          return isOwnedSceneObject(peerId, object);
+        },
+        withOwnership<T extends SceneObjectData>(data: T) {
+          return withSceneOwnershipForPeer(peerId, data);
+        },
+        withOwner<T extends SceneObjectData>(simulatorPeerId: string, data: T) {
+          return withSceneOwnershipForPeer(simulatorPeerId, data);
+        },
+        withDistributedOwnership<T extends SceneObjectData>(data: T) {
+          const host =
+            electedHostPeerId(
+              sortedSessionPeerIds(peerId, transport.remotePeerIds),
+            ) ?? peerId;
+          return withSceneOwnershipForPeer(host, data);
+        },
+        onRemotePeersChange(handler: (remotePeerIds: readonly string[]) => void) {
+          return transport.onRemotePeersChange(handler);
+        },
         dispose() {
           channel.dispose();
           transport.dispose();

@@ -21,7 +21,6 @@ export interface CreateSceneTransportWebRTCOptions {
   signaling: WebRTCSignaling;
   iceServers?: RTCIceServer[];
   dataChannelLabel?: string;
-  peerConnectTimeoutMilliseconds?: number;
 }
 
 function createNoOpWebRTCTransport(localPeerId: string): SceneTransportWebRTC {
@@ -32,6 +31,10 @@ function createNoOpWebRTCTransport(localPeerId: string): SceneTransportWebRTC {
     },
     send: () => {},
     onMessage: () => () => {},
+    onRemotePeersChange(handler: (remotePeerIds: readonly string[]) => void) {
+      queueMicrotask(() => handler([]));
+      return () => {};
+    },
     dispose: () => {},
   };
 }
@@ -40,6 +43,10 @@ export type SceneTransportWebRTC = SceneChannelTransport & {
   dispose(): void;
   localPeerId: string;
   get remotePeerIds(): readonly string[];
+  /** Sorted snapshot whenever a remote data channel opens or closes. */
+  onRemotePeersChange(
+    handler: (remotePeerIds: readonly string[]) => void,
+  ): () => void;
 };
 
 function isSignal(message: unknown): message is WebRTCSignal {
@@ -236,12 +243,7 @@ export function createSceneTransportWebRTC(
     signaling,
     iceServers = DEFAULT_ICE,
     dataChannelLabel = "scene",
-    peerConnectTimeoutMilliseconds: peerConnectTimeoutOption,
   } = options;
-  const peerConnectTimeout =
-    peerConnectTimeoutOption != null && peerConnectTimeoutOption > 0
-      ? peerConnectTimeoutOption
-      : undefined;
 
   if (typeof RTCPeerConnection === "undefined") {
     return Promise.resolve(createNoOpWebRTCTransport(localPeerId));
@@ -253,38 +255,20 @@ export function createSceneTransportWebRTC(
     const preSessionIce = new Map<string, (RTCIceCandidateInit | null)[]>();
 
     const messageHandlers = new Set<(message: unknown) => void>();
+    const remotePeersListeners = new Set<(remotePeerIds: readonly string[]) => void>();
     let preConnectSendQueue: string[] = [];
 
-    let unsubSignaling: () => void = () => {};
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    let settled = false;
-    let reHelloTimeoutId: ReturnType<typeof setTimeout> | undefined;
-    let signalChain: Promise<void> = Promise.resolve();
-
-    function clearPeerTimeout(): void {
-      if (timeoutId !== undefined) {
-        clearTimeout(timeoutId);
-        timeoutId = undefined;
+    function notifyRemotePeersChanged(): void {
+      const snapshot = [...connectedRemotes].sort();
+      for (const listener of remotePeersListeners) {
+        listener(snapshot);
       }
     }
 
-    function schedulePeerConnectCutoff(): void {
-      if (peerConnectTimeout === undefined || settled) return;
-      clearPeerTimeout();
-      timeoutId = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        clearPeerTimeout();
-        console.warn(
-          "[webrtc] peer connect timed out; scene runs locally, still listening for peers",
-          {
-            peerId: localPeerId,
-            peerConnectTimeoutMs: peerConnectTimeout,
-          },
-        );
-        resolve(buildTransport());
-      }, peerConnectTimeout);
-    }
+    let unsubSignaling: () => void = () => {};
+    let settled = false;
+    let reHelloTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let signalChain: Promise<void> = Promise.resolve();
 
     function sendHello(): void {
       try {
@@ -322,6 +306,7 @@ export function createSceneTransportWebRTC(
       }
       sessions.delete(remotePeerId);
       preSessionIce.delete(remotePeerId);
+      notifyRemotePeersChanged();
     }
 
     function flushSessionQueue(session: PeerSession): void {
@@ -369,6 +354,7 @@ export function createSceneTransportWebRTC(
           remotePeerId: session.remotePeerId,
           role: session.role,
         });
+        notifyRemotePeersChanged();
         onFirstOpen();
       };
 
@@ -473,6 +459,13 @@ export function createSceneTransportWebRTC(
             messageHandlers.delete(handler);
           };
         },
+        onRemotePeersChange(handler: (remotePeerIds: readonly string[]) => void) {
+          remotePeersListeners.add(handler);
+          queueMicrotask(() => handler([...connectedRemotes].sort()));
+          return () => {
+            remotePeersListeners.delete(handler);
+          };
+        },
         dispose() {
           unsubSignaling();
           if (reHelloTimeoutId !== undefined) {
@@ -482,6 +475,7 @@ export function createSceneTransportWebRTC(
           for (const id of [...sessions.keys()]) {
             removePeerSession(id);
           }
+          remotePeersListeners.clear();
           messageHandlers.clear();
         },
       };
@@ -527,14 +521,12 @@ export function createSceneTransportWebRTC(
     function tryResolveFirstOpen(): void {
       if (settled) return;
       settled = true;
-      clearPeerTimeout();
       resolve(buildTransport());
     }
 
     function rejectIfNotSettled(error: unknown): void {
       if (settled) return;
       settled = true;
-      clearPeerTimeout();
       reject(toError(error));
     }
 
@@ -552,8 +544,6 @@ export function createSceneTransportWebRTC(
       const session = getOrCreateSession(remotePeerId);
       if (session.role !== "offerer") return;
 
-      schedulePeerConnectCutoff();
-
       const dataChannel = session.peerConnection.createDataChannel(dataChannelLabel, {
         ordered: true,
       });
@@ -568,7 +558,6 @@ export function createSceneTransportWebRTC(
           to: remotePeerId,
           sdp: offer.sdp!,
         } satisfies WebRTCSignal);
-        schedulePeerConnectCutoff();
       } catch (error) {
         rejectIfNotSettled(error);
       }
@@ -586,14 +575,12 @@ export function createSceneTransportWebRTC(
         to: session.remotePeerId,
         sdp: answer.sdp!,
       } satisfies WebRTCSignal);
-      schedulePeerConnectCutoff();
     }
 
     async function applyAnswer(session: PeerSession, sdp: string): Promise<void> {
       await session.peerConnection.setRemoteDescription({ type: "answer", sdp });
       session.remoteDescriptionSet = true;
       await flushPendingCandidates(session);
-      schedulePeerConnectCutoff();
     }
 
     function handleHello(remotePeerId: string): void {
@@ -626,16 +613,12 @@ export function createSceneTransportWebRTC(
     async function handleSignal(message: WebRTCSignal): Promise<void> {
       switch (message.type) {
         case "hello": {
-          if (message.peerId !== localPeerId) {
-            schedulePeerConnectCutoff();
-          }
           handleHello(message.peerId);
           return;
         }
 
         case "offer": {
           if (message.to !== localPeerId || message.from === localPeerId) return;
-          schedulePeerConnectCutoff();
           const session = getOrCreateAnswererSession(message.from);
           if (session.role === "answerer") {
             await applyOffer(session, message.sdp);
@@ -645,7 +628,6 @@ export function createSceneTransportWebRTC(
 
         case "answer": {
           if (message.to !== localPeerId) return;
-          schedulePeerConnectCutoff();
           const session = sessions.get(message.from);
           if (session && session.role === "offerer") {
             await applyAnswer(session, message.sdp);
@@ -680,8 +662,11 @@ export function createSceneTransportWebRTC(
         });
     });
 
+    // Resolve immediately so callers can run locally while negotiation continues.
+    settled = true;
+    resolve(buildTransport());
+
     // Send a one-shot discovery hello immediately; hello replies handle late joiners.
-    schedulePeerConnectCutoff();
     sendHello();
 
     const signalingReady = signaling.ready ?? Promise.resolve();

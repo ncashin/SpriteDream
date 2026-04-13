@@ -87,6 +87,14 @@ export {
   createSceneTransportWebRTC,
 } from "./networkingPlugin.js";
 export type { NetworkingPluginOptions } from "./networkingPlugin.js";
+export {
+  sortedSessionPeerIds,
+  electedHostPeerId,
+  isSessionHost,
+  successorOwnerAfterPeerLeft,
+  transferSceneOwnershipFromPeer,
+  withSceneOwnershipForPeer,
+} from "./distributedSimulation.js";
 export type {
   WebRTCSignaling,
   WebRTCSignal,

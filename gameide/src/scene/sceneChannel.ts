@@ -42,7 +42,8 @@ export interface CreateSceneChannelOptions {
   subscribeToUpdates?: (callback: (update: SceneUpdate) => void) => () => void;
   shouldEmitSceneUpdate?: (update: SceneUpdate) => boolean;
   onRequestInitial?: () => string;
-  skipSceneInitialization?: boolean;
+  /** When true, the channel stays unready and suppresses outgoing patches until an `initialScene` message is received (or requested). */
+  awaitInitialSceneSnapshot?: boolean;
 }
 
 export interface SceneChannel {
@@ -66,11 +67,11 @@ export async function createSceneChannel(
     subscribeToUpdates,
     onRequestInitial,
     shouldEmitSceneUpdate,
-    skipSceneInitialization = true,
+    awaitInitialSceneSnapshot = false,
   } = options;
   let paused = false;
 
-  let initialSceneReceived = skipSceneInitialization;
+  let initialSceneReceived = !awaitInitialSceneSnapshot;
 
   let markReady = () => {};
   const readyPromise =
