@@ -77,7 +77,8 @@ export type { Plugin, FinalContext } from "./initializeGame.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
 export {
   networkingPlugin,
-  isOwned,
+  isOwnedSceneUpdate,
+  isOwnedSceneObject,
   SCENE_OWNER_ID,
   createBroadcastChannelSignaling,
   createHTTPRelaySignaling as createHttpRelaySignaling,

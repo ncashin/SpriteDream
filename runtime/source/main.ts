@@ -11,7 +11,7 @@ import {
   gameUpdate,
   update,
   type SceneObjectData,
-  isOwned,
+  isOwnedSceneObject,
 } from "gameide";
 import sampleScene from "./sample.scene";
 import "./style.css";
@@ -116,7 +116,7 @@ initializeGame({
 
     gameUpdate((deltaTime) => {
       for (const player of scene.query(isPlayer)) {
-        if (!isOwned(networking.peerId, player)) {
+        if (!isOwnedSceneObject(networking.peerId, player)) {
           continue;
         }
         const h = input.axes.Horizontal;
