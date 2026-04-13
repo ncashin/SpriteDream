@@ -59,7 +59,8 @@ async function initializeGame<
   if (hot?.data?.context) {
     result = hot.data.context;
   }
-  if (!hot?.data?.context) {
+  const isFirstInit = !hot?.data?.context;
+  if (isFirstInit) {
     if (options.initialScene !== undefined) {
       setScene(options.initialScene);
     }
@@ -69,8 +70,6 @@ async function initializeGame<
         typeof plugin === "function" ? plugin(result) : result,
       )) as ResultContext;
     }
-
-    startGameloop();
   }
 
   if (hot) {
@@ -82,6 +81,10 @@ async function initializeGame<
     hot.data.context = result;
   } else {
     runWithToken(() => options.main(result));
+  }
+
+  if (isFirstInit) {
+    startGameloop();
   }
 
   return result;

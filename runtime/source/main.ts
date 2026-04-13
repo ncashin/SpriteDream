@@ -7,6 +7,7 @@ import {
   editorPlugin,
   networkingPlugin,
   SCENE_OWNER_ID,
+  gameStart,
   gameUpdate,
   update,
 } from "gameide";
@@ -60,17 +61,20 @@ initializeGame({
   ]),
   main({ input, networking }) {
     const scene = getScene() as any;
-    if(!scene.players) {
+    if (!scene.players) {
       scene.players = {};
     }
     const players = scene.players;
-    const localPlayer = players.createObject(networking.peerId, {
-      [SCENE_OWNER_ID]: networking.peerId,
-      x: 0,
-      y: 0,
-      speed: 200,
-    })
- 
+
+    let localPlayer: { x: number; y: number; speed: number } | undefined;
+    gameStart(() => {
+      localPlayer = players.createObject(networking.peerId, {
+        [SCENE_OWNER_ID]: networking.peerId,
+        x: 0,
+        y: 0,
+        speed: 200,
+      });
+    });
 
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
@@ -103,6 +107,7 @@ initializeGame({
     });
 
     gameUpdate((deltaTime) => {
+      invariant(localPlayer);
       const h = input.axes.Horizontal;
       const v = input.axes.Vertical;
       localPlayer.x += h * localPlayer.speed * deltaTime;

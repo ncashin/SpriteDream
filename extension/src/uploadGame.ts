@@ -323,6 +323,22 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
       cancellable: false,
     },
     async (progress) => {
+      let targetGameId = manifestGameId;
+      if (!targetGameId) {
+        progress.report({ message: "Creating game on gameide.app..." });
+        targetGameId = await createGameOnServer(
+          UPLOAD_BASE_URL,
+          manifestFieldsForNewGame!
+        );
+        progress.report({ message: "Saving gameide.json..." });
+        await writeGameideManifest(
+          projectDirectory,
+          targetGameId,
+          manifestFieldsForNewGame!,
+          hadGameideJson
+        );
+      }
+
       progress.report({ message: "Running npm run build..." });
       await runNPMBuild(projectDirectory.fsPath);
 
@@ -337,15 +353,6 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
       const files = await collectBundleFiles(distDirectory);
       if (files.length === 0) {
         throw new Error("dist folder is empty, nothing to upload.");
-      }
-
-      let targetGameId = manifestGameId;
-      if (!targetGameId) {
-        progress.report({ message: "Creating game on gameide.app..." });
-        targetGameId = await createGameOnServer(
-          UPLOAD_BASE_URL,
-          manifestFieldsForNewGame!
-        );
       }
 
       const endpointPath = `/game/${encodeURIComponent(targetGameId)}/upload`;
@@ -365,29 +372,9 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
         );
       }
 
-      const baseSuccessMessage = `Uploaded ${files.length} files to game ${targetGameId}.`;
-      if (!manifestGameId) {
-        try {
-          progress.report({ message: "Saving gameide.json..." });
-          await writeGameideManifest(
-            projectDirectory,
-            targetGameId,
-            manifestFieldsForNewGame!,
-            hadGameideJson
-          );
-          vscode.window.showInformationMessage(
-            `${baseSuccessMessage} Saved gameide.json.`
-          );
-        } catch (err) {
-          vscode.window.showWarningMessage(
-            `${baseSuccessMessage} Could not write gameide.json: ${
-              err instanceof Error ? err.message : String(err)
-            }`
-          );
-        }
-        return;
-      }
-      vscode.window.showInformationMessage(baseSuccessMessage);
+      vscode.window.showInformationMessage(
+        `Uploaded ${files.length} files to game ${targetGameId}.`
+      );
     }
   );
 }
