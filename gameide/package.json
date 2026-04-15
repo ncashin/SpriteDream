@@ -23,10 +23,11 @@
   ],
   "scripts": {
     "build": "vite build && vite build --config vite.plugin.config.ts",
-    "watch": "vite build --watch",
+    "watch": "npm run build && concurrently -n lib,vite-plugin -c blue,magenta \"vite build --watch\" \"vite build --watch --config vite.plugin.config.ts\"",
     "prepare": "npm run build"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
     "@tailwindcss/vite": "^4.2.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",

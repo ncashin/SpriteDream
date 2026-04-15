@@ -2,7 +2,6 @@ import type { SceneChannelTransport } from "./sceneChannelTransport.js";
 import { patchAtPath, type ScenePatch } from "./scenePatch.js";
 import { appendKeyToPath } from "./scenePath.js";
 import type { SceneObjectData, SceneUpdate } from "./scene.js";
-import { getScene } from "./scene.js";
 
 export type SceneData = SceneObjectData;
 
@@ -19,10 +18,6 @@ export const SCENE_CHANNEL = {
   sceneChange: "gameide.editor.sceneChange",
 } as const;
 
-export const ROOM_CHANNEL = {
-  authorityUpdate: "roomAuthorityUpdate",
-} as const;
-
 export const SCENE_MESSAGE_TYPES = new Set([
   SCENE_CHANNEL.initialScene,
   SCENE_CHANNEL.scenePatch,
@@ -33,29 +28,23 @@ export type SceneChannelMessage =
   | { type: typeof SCENE_CHANNEL.initialScene; content: string }
   | { type: typeof SCENE_CHANNEL.scenePatch; patch: ScenePatch }
   | { type: typeof SCENE_CHANNEL.requestInitialScene }
-  | { type: typeof SCENE_CHANNEL.sceneChange; content: string }
-  | { type: typeof ROOM_CHANNEL.authorityUpdate; initializeScene: boolean };
+  | { type: typeof SCENE_CHANNEL.sceneChange; content: string };
 
 export interface CreateSceneChannelOptions {
   transport: SceneChannelTransport;
-  getSceneData(): SceneData;
-  setSceneData(data: SceneData): void;
+  getScene(): SceneData;
+  setScene(data: SceneData): void;
+  onSceneUpdate?: (callback: (update: SceneUpdate) => void) => () => void;
   applyScenePatch: (scene: SceneData, patch: ScenePatch) => void;
-  subscribeToUpdates?: (callback: (update: SceneUpdate) => void) => () => void;
   shouldEmitSceneUpdate?: (update: SceneUpdate) => boolean;
-  /** Full scene JSON when a peer requests {@link SCENE_CHANNEL.requestInitialScene}. */
-  getInitializationPayload?: () => string;
+  getInitialSceneContent?: () => string;
 
-  /**
-   * `true` = first in room / holds authoritative scene (local snapshot is already valid).
-   * `false` = joiner; wait for {@link SCENE_CHANNEL.initialScene} before syncing.
-   */
   initializeScene?: boolean;
 }
 
 export interface SceneChannel {
   dispose(): void;
-  
+
   pause(): void;
   unpause(): void;
 
@@ -72,100 +61,74 @@ export async function createSceneChannel(
 ): Promise<SceneChannel> {
   const {
     transport,
-    getSceneData,
-    setSceneData,
+    getScene,
+    setScene,
     applyScenePatch: applyPatch,
-    subscribeToUpdates,
-    getInitializationPayload: onRequestInitial,
+    onSceneUpdate,
     shouldEmitSceneUpdate,
+    getInitialSceneContent,
 
-    initializeScene: initialAuthority = true,
+    initializeScene = true,
   } = options;
-  let isSceneAuthority = initialAuthority;
+  let sceneInitialized = !initializeScene;
   let paused = false;
-  let initialSceneReceived = isSceneAuthority;
 
-  let markReady = () => {};
-  const readyPromise =
-    subscribeToUpdates !== undefined
-      ? new Promise<void>((resolve) => {
-          markReady = () => resolve();
-        })
-      : Promise.resolve();
+  let markReady: () => void;
+  const readyPromise = new Promise<void>((resolve) => {
+    markReady = resolve;
+    if (sceneInitialized) resolve();
+  });
+
+  function requestInitialScene(): void {
+    transport.send({ type: SCENE_CHANNEL.requestInitialScene });
+  }
+  function sendInitialScene(content: string): void {
+    transport.send({ type: SCENE_CHANNEL.initialScene, content });
+  }
 
   function sendPatch(patch: ScenePatch): void {
     transport.send({ type: SCENE_CHANNEL.scenePatch, patch });
   }
 
-  function sendInitialScene(content: string): void {
-    transport.send({ type: SCENE_CHANNEL.initialScene, content });
-  }
-
   function sendSceneChange(content: string): void {
     transport.send({ type: SCENE_CHANNEL.sceneChange, content });
   }
-
-  function requestInitialScene(): void {
-    transport.send({ type: SCENE_CHANNEL.requestInitialScene });
-  }
-
-  if (subscribeToUpdates) {
-    getScene();
-    if (initialSceneReceived) {
-      markReady();
-    }
-  }
-
-  const shouldRequestInitialSnapshot =
-    subscribeToUpdates && !isSceneAuthority;
+  
 
   function handleMessage(message: SceneChannelMessage): void {
+    console.log(message)
     switch (message.type) {
-      case ROOM_CHANNEL.authorityUpdate: {
-        isSceneAuthority = message.initializeScene;
-        if (!initialSceneReceived) {
-          if (isSceneAuthority) {
-            initialSceneReceived = true;
-            markReady();
-          } else {
-            requestInitialScene();
-          }
-        }
-        return;
-      }
       case SCENE_CHANNEL.requestInitialScene:
-        if (isSceneAuthority && onRequestInitial) {
-          sendInitialScene(onRequestInitial());
+        if (sceneInitialized && getInitialSceneContent) {
+          sendInitialScene(getInitialSceneContent());
         }
         return;
       case SCENE_CHANNEL.initialScene: {
-        if (paused) return;
-        if (initialSceneReceived) return;
-        try {
-          const data = JSON.parse(message.content) as SceneData;
-          setSceneData(data);
-          initialSceneReceived = true;
-          markReady();
-        } catch {}
+        if (sceneInitialized) return;
+        const data = JSON.parse(message.content) as SceneData;
+        setScene(data);
+        sceneInitialized = true;
+        markReady();
         return;
       }
       case SCENE_CHANNEL.scenePatch: {
-        if (paused) return;
-        applyPatch(getSceneData(), message.patch);
+        if (!sceneInitialized || paused) return;
+        applyPatch(getScene(), message.patch);
         return;
       }
       case SCENE_CHANNEL.sceneChange: {
-        if (paused) return;
-        try {
-          const data = JSON.parse(message.content) as SceneData;
-          setSceneData(data);
-        } catch {}
+        if (!sceneInitialized || paused) return;
+        const data = JSON.parse(message.content) as SceneData;
+        setScene(data);
         return;
       }
     }
   }
 
   const unsubscribeTransport = transport.onMessage(handleMessage as any);
+  if (!sceneInitialized){
+    requestInitialScene();
+  }
 
   function patchForSceneUpdate(update: SceneUpdate): ScenePatch {
     const fullPath = appendKeyToPath(update.path, update.key);
@@ -178,15 +141,11 @@ export async function createSceneChannel(
   }
 
   let unsubscribeOutgoing: (() => void) | undefined;
-  if (subscribeToUpdates) {
-    unsubscribeOutgoing = subscribeToUpdates((update: SceneUpdate) => {
-      if (!initialSceneReceived || paused) return;
+  if (onSceneUpdate) {
+    unsubscribeOutgoing = onSceneUpdate((update: SceneUpdate) => {
+      if (!sceneInitialized || paused) return;
       if (shouldEmitSceneUpdate && !shouldEmitSceneUpdate(update)) return;
       sendPatch(patchForSceneUpdate(update));
-    });
-    queueMicrotask(() => {
-      if (initialSceneReceived || !shouldRequestInitialSnapshot) return;
-      requestInitialScene();
     });
   }
 

@@ -230,11 +230,11 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
 
     await createSceneChannel({
       transport,
-      getSceneData: () => document.getSceneRoot(),
-      setSceneData: (data: SceneData) => document.mergeSceneFromRuntime(data),
+      getScene: () => document.getSceneRoot(),
+      setScene: (data: SceneData) => document.mergeSceneFromRuntime(data),
       applyScenePatch: (_scene: SceneData, patch: ScenePatch) =>
         document.applyPatch(patch),
-      getInitializationPayload: () =>
+      getInitialSceneContent: () =>
         JSON.stringify(document.getDocumentData(), null, 2),
     });
   }

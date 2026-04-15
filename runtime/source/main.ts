@@ -1,6 +1,7 @@
 import {
   getScene,
   getSceneObjectPath,
+  getValueAtPath,
   gameUIPlugin,
   initializeGame,
   initializePlugins,
@@ -11,6 +12,7 @@ import {
   gameStart,
   gameUpdate,
   update,
+  type SceneObject,
   type SceneObjectData,
 } from "gameide";
 import sampleScene from "./sample.scene";
@@ -26,6 +28,8 @@ type PlayerBody = SceneObjectData & {
   x: number;
   y: number;
   speed: number;
+  health: number;
+  maxHealth: number;
 } & Partial<Record<typeof SCENE_OWNER_ID, string>>;
 
 type ProjectileBody = SceneObjectData & {
@@ -42,6 +46,8 @@ const isPlayer = (gameObject: SceneObjectData): gameObject is PlayerBody =>
   typeof gameObject.x === "number" &&
   typeof gameObject.y === "number" &&
   typeof gameObject.speed === "number" &&
+  typeof (gameObject as PlayerBody).health === "number" &&
+  typeof (gameObject as PlayerBody).maxHealth === "number" &&
   (gameObject as { kind?: unknown }).kind !== "projectile";
 
 const isProjectile = (gameObject: SceneObjectData): gameObject is ProjectileBody =>
@@ -54,11 +60,11 @@ const isProjectile = (gameObject: SceneObjectData): gameObject is ProjectileBody
   typeof gameObject.lifetime === "number";
 
 function hashHue(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) {
-    h = (h * 31 + id.charCodeAt(i)) | 0;
+  let hash = 0;
+  for (let index = 0; index < id.length; index++) {
+    hash = (hash * 31 + id.charCodeAt(index)) | 0;
   }
-  return Math.abs(h) % 360;
+  return Math.abs(hash) % 360;
 }
 
 function playerColor(id: string): string {
@@ -70,6 +76,82 @@ function newProjectileId(): string {
     return `proj-${crypto.randomUUID()}`;
   }
   return `proj-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+const PLAYER_MAX_HEALTH = 100;
+const PROJECTILE_DAMAGE = 20;
+
+function circleRectOverlap(
+  cx: number,
+  cy: number,
+  radius: number,
+  px: number,
+  py: number,
+  halfExtent: number,
+): boolean {
+  const closestX = Math.max(px - halfExtent, Math.min(cx, px + halfExtent));
+  const closestY = Math.max(py - halfExtent, Math.min(cy, py + halfExtent));
+  const dx = cx - closestX;
+  const dy = cy - closestY;
+  return dx * dx + dy * dy < radius * radius;
+}
+
+function projectileOverlapsPlayer(
+  proj: ProjectileBody,
+  player: PlayerBody,
+  playerHalfExtent: number,
+): boolean {
+  return circleRectOverlap(
+    proj.x,
+    proj.y,
+    proj.radius,
+    player.x,
+    player.y,
+    playerHalfExtent,
+  );
+}
+
+/** Remove a nested or root-level object; must use parent delete so scene sync runs. */
+function deleteSceneObjectAtPath(root: SceneObject, path: PropertyKey[] | undefined): void {
+  if (!path || path.length < 1) {
+    return;
+  }
+  const childKey = path[path.length - 1]!;
+  const parentPath = path.slice(0, -1);
+  const parent =
+    parentPath.length === 0
+      ? root
+      : (getValueAtPath(
+          root as Record<PropertyKey, unknown>,
+          parentPath,
+        ) as SceneObject | undefined);
+  if (parent !== undefined && parent !== null && typeof parent === "object") {
+    Reflect.deleteProperty(parent as object, childKey);
+  }
+}
+
+function aimFromMouse(
+  canvas: HTMLCanvasElement,
+  mouse: { x: number; y: number } | null,
+  player: PlayerBody,
+): { ax: number; ay: number } {
+  if (!mouse) {
+    return { ax: 1, ay: 0 };
+  }
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (mouse.x - rect.left) * scaleX;
+  const my = (mouse.y - rect.top) * scaleY;
+  const aimWorldX = mx - canvas.width / 2;
+  const aimWorldY = canvas.height / 2 - my;
+  let dx = aimWorldX - player.x;
+  let dy = aimWorldY - player.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-3) {
+    return { ax: 1, ay: 0 };
+  }
+  return { ax: dx / len, ay: dy / len };
 }
 
 initializeGame({
@@ -109,6 +191,8 @@ initializeGame({
           x: 0,
           y: 0,
           speed: 200,
+          health: PLAYER_MAX_HEALTH,
+          maxHealth: PLAYER_MAX_HEALTH,
         }),
       );
     });
@@ -133,6 +217,7 @@ initializeGame({
     const half = playerSize / 2;
     const projectileSpeed = 420;
     const worldHalfExtent = 2800;
+    const damagedByProjectileKey = new Set<string>();
 
     update(() => {
       context.fillStyle = "#0f1419";
@@ -143,6 +228,30 @@ initializeGame({
         const py = canvas.height / 2 - player.y;
         context.fillStyle = playerColor(player[SCENE_OWNER_ID] ?? "");
         context.fillRect(px - half, py - half, playerSize, playerSize);
+      }
+
+      for (const player of scene.query(isPlayer)) {
+        if (!networking.isOwned(player)) {
+          continue;
+        }
+        const barW = 200;
+        const barH = 10;
+        const bx = (canvas.width - barW) / 2;
+        const by = canvas.height - 36;
+        const ratio = Math.max(0, Math.min(1, player.health / player.maxHealth));
+        context.fillStyle = "rgba(15, 20, 25, 0.85)";
+        context.fillRect(bx - 2, by - 2, barW + 4, barH + 4);
+        context.fillStyle = "#334155";
+        context.fillRect(bx, by, barW, barH);
+        context.fillStyle = ratio > 0.25 ? "#22c55e" : "#ef4444";
+        context.fillRect(bx, by, barW * ratio, barH);
+        context.fillStyle = "#e2e8f0";
+        context.font = "12px system-ui, sans-serif";
+        context.fillText(
+          `HP ${Math.ceil(player.health)} / ${player.maxHealth}`,
+          bx,
+          by - 6,
+        );
       }
 
       for (const proj of scene.query(isProjectile)) {
@@ -156,8 +265,12 @@ initializeGame({
 
       context.fillStyle = "#94a3b8";
       context.font = "13px system-ui, sans-serif";
-      context.fillText("WASD move, Space/F fire — each peer owns their shots (`withOwnership`).", 12, 22);
-      context.fillText("Open two tabs to see both players and projectiles.", 12, 40);
+      context.fillText(
+        "WASD move, Space/F fire toward mouse — each peer owns their shots (`withOwnership`).",
+        12,
+        22,
+      );
+      context.fillText("Open two tabs to test multiplayer damage.", 12, 40);
     });
 
     gameUpdate((deltaTime) => {
@@ -165,16 +278,18 @@ initializeGame({
         if (!networking.isOwned(player)) {
           continue;
         }
-        const h = input.axes.Horizontal;
-        const v = input.axes.Vertical;
-        player.x += h * player.speed * deltaTime;
-        player.y += v * player.speed * deltaTime;
+        const horizontal = input.axes.Horizontal;
+        const vertical = input.axes.Vertical;
+        player.x += horizontal * player.speed * deltaTime;
+        player.y += vertical * player.speed * deltaTime;
 
         if (input.buttons.Fire.pressed) {
-          const len = Math.hypot(h, v);
-          const ax = len > 0.08 ? h / len : 1;
-          const ay = len > 0.08 ? v / len : 0;
-          scene.createObject(
+          const { ax, ay } = aimFromMouse(canvas, input.mouse.position, player);
+          const shooterRoot = scene[networking.peerId as keyof SceneObject] as
+            | SceneObject
+            | undefined;
+          invariant(shooterRoot && typeof shooterRoot.createObject === "function");
+          shooterRoot.createObject(
             newProjectileId(),
             networking.withOwnership({
               kind: "projectile",
@@ -196,13 +311,44 @@ initializeGame({
         proj.x += proj.vx * deltaTime;
         proj.y += proj.vy * deltaTime;
         proj.lifetime -= deltaTime;
+      }
+
+      for (const proj of scene.query(isProjectile)) {
+        const path = getSceneObjectPath(proj);
+        const projKey = path?.join(".") ?? "";
+        const shooterId = proj[SCENE_OWNER_ID];
+
+        if (!networking.isOwned(proj)) {
+          continue;
+        }
         const out =
           Math.abs(proj.x) > worldHalfExtent || Math.abs(proj.y) > worldHalfExtent;
-        if (proj.lifetime <= 0 || out) {
-          const path = getSceneObjectPath(proj);
-          const key = path?.[0];
-          if (key !== undefined) {
-            Reflect.deleteProperty(scene, key);
+        let hitEnemy = false;
+        if (!out && proj.lifetime > 0) {
+          for (const target of scene.query(isPlayer)) {
+            const victimKey  = target[SCENE_OWNER_ID] ?? getSceneObjectPath(target)?.[0];
+            if (victimKey === undefined || String(victimKey) === String(shooterId)) {
+              continue;
+            }
+            if (!projectileOverlapsPlayer(proj, target, half)) {
+              continue;
+            }
+            if (damagedByProjectileKey.has(projKey)) {
+              continue;
+            }
+            damagedByProjectileKey.add(projKey);
+            networking.replicateSet(
+              [victimKey, "health"],
+              Math.max(0, target.health - PROJECTILE_DAMAGE),
+            );
+            hitEnemy = true;
+            break;
+          }
+        }
+        if (proj.lifetime <= 0 || out || hitEnemy) {
+          deleteSceneObjectAtPath(scene, path);
+          if (path !== undefined) {
+            damagedByProjectileKey.delete(path.join("."));
           }
         }
       }

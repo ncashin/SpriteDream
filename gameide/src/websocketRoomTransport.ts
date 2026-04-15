@@ -1,39 +1,66 @@
 import type { SceneChannelTransport } from "./scene/sceneChannelTransport.js";
 
+const ROOM_PEERS_UPDATE = "roomPeersUpdate";
+
 export type WebSocketRoomTransport = SceneChannelTransport & {
   dispose(): void;
+  getPeers(): string[];
+  onPeersChange(handler: (peers: string[]) => void): () => void;
 };
 
 export type ConnectWebSocketRoomResult = {
   transport: WebSocketRoomTransport;
-  initializeScene: boolean;
+  peers: string[];
   dispose(): void;
 };
 
-function webSocketUrlForRoom(room: string): string {
-  const loc = globalThis.location as Location;
-  const protocol = loc.protocol === "https:" ? "wss:" : "ws:";
+function websocketURLForRoom(room: string): string {
+  const location = globalThis.location as Location;
+  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
   const params = new URLSearchParams({ room });
-  return `${protocol}//${loc.host}/room?${params.toString()}`;
+  return `${protocol}//${location.host}/room?${params.toString()}`;
+}
+
+function applyPeersFromServerMessage(
+  message: unknown,
+  setPeers: (next: string[]) => void,
+): void {
+  if (message == null || typeof message !== "object") return;
+  const { type, peers } = message as Record<string, unknown>;
+  if (type !== ROOM_PEERS_UPDATE) return;
+  if (!Array.isArray(peers) || !peers.every((id): id is string => typeof id === "string")) {
+    return;
+  }
+  setPeers(peers);
 }
 
 export function connectWebSocketRoomTransport(options: {
   room: string;
   url?: string;
 }): Promise<ConnectWebSocketRoomResult> {
-  const url = options.url ?? webSocketUrlForRoom(options.room);
+  const url = options.url ?? websocketURLForRoom(options.room);
   const websocket = new WebSocket(url);
 
   return new Promise((resolve, reject) => {
     const handlers = new Set<(message: unknown) => void>();
+    const peerSubscribers = new Set<(peers: string[]) => void>();
+    let currentPeers: string[] = [];
     let settled = false;
+
+    function notifyPeerSubscribers() {
+      const snap = [...currentPeers];
+      peerSubscribers.forEach((callback) => callback(snap));
+    }
+
+    function setPeersFromServer(next: string[]) {
+      currentPeers = next;
+      notifyPeerSubscribers();
+    }
 
     function fail(err: unknown) {
       if (settled) return;
       settled = true;
-      try {
-        websocket.close();
-      } catch {}
+      websocket.close();
       reject(err);
     }
 
@@ -41,54 +68,59 @@ export function connectWebSocketRoomTransport(options: {
 
     websocket.addEventListener("open", () => {});
 
-    websocket.addEventListener("message", function onFirst(ev: MessageEvent) {
-      try {
-        const raw = JSON.parse(String(ev.data)) as {
-          type?: string;
-          initializeScene?: boolean;
-        };
-        if (raw.type !== "ready" || typeof raw.initializeScene !== "boolean") {
-          fail(new Error("expected room ready message"));
-          return;
-        }
-        websocket.removeEventListener("message", onFirst);
+    websocket.addEventListener("message", function onFirst(event: MessageEvent) {
 
-        websocket.addEventListener("message", (ev2: MessageEvent) => {
-          try {
-            const msg = JSON.parse(String(ev2.data)) as unknown;
-            handlers.forEach((h) => h(msg));
-          } catch {}
-        });
-
-        const transport: WebSocketRoomTransport = {
-          send(message: unknown) {
-            if (websocket.readyState === WebSocket.OPEN) {
-              websocket.send(JSON.stringify(message));
-            }
-          },
-          onMessage(handler: (message: unknown) => void) {
-            handlers.add(handler);
-            return () => {
-              handlers.delete(handler);
-            };
-          },
-          dispose() {
-            handlers.clear();
-            try {
-              websocket.close();
-            } catch {}
-          },
-        };
-
-        settled = true;
-        resolve({
-          initializeScene: raw.initializeScene,
-          transport,
-          dispose: transport.dispose,
-        });
-      } catch (e) {
-        fail(e);
+      const raw = JSON.parse(String(event.data)) as { type: string; peers: string[] };
+      if (raw.type !== "ready") {
+        fail(new Error("expected room ready message with peers: string[]"));
+        return;
       }
+ 
+      const peers = raw.peers as string[];
+      currentPeers = peers;
+      notifyPeerSubscribers();
+      websocket.removeEventListener("message", onFirst);
+
+      websocket.addEventListener("message", (messageEvent: MessageEvent) => {
+        const message = JSON.parse(String(messageEvent.data)) as unknown;
+        applyPeersFromServerMessage(message, setPeersFromServer);
+        handlers.forEach((handler) => handler(message));
+      });
+
+      const transport: WebSocketRoomTransport = {
+        send(message: unknown) {
+          if (websocket.readyState === WebSocket.OPEN) {
+            websocket.send(JSON.stringify(message));
+          }
+        },
+        onMessage(handler: (message: unknown) => void) {
+          handlers.add(handler);
+          return () => {
+            handlers.delete(handler);
+          };
+        },
+        getPeers() {
+          return [...currentPeers];
+        },
+        onPeersChange(handler: (peers: string[]) => void) {
+          peerSubscribers.add(handler);
+          return () => {
+            peerSubscribers.delete(handler);
+          };
+        },
+        dispose() {
+          handlers.clear();
+          peerSubscribers.clear();
+          websocket.close();
+        },
+      };
+
+      settled = true;
+      resolve({
+        peers: [...currentPeers],
+        transport,
+        dispose: transport.dispose,
+      });
     });
   });
 }

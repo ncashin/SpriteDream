@@ -72,9 +72,9 @@ if (typeof import.meta !== "undefined" && import.meta.hot) {
 }
 
 function notifySubscribers(update: SceneUpdate): void {
-  subscribers.forEach((fn) => {
+  subscribers.forEach((subscriber) => {
     try {
-      fn(update);
+      subscriber(update);
     } catch (err) {
       console.error("[scene] subscriber error:", err);
     }
@@ -86,9 +86,9 @@ function unwrapSceneTarget(obj: SceneObject | SceneObjectData): SceneObjectData 
 }
 
 export function getSceneObjectPath(
-  o: SceneObject | SceneObjectData,
+  sceneRoot: SceneObject | SceneObjectData,
 ): PropertyKey[] | undefined {
-  const raw = unwrapSceneTarget(o);
+  const raw = unwrapSceneTarget(sceneRoot);
   return pathCache.get(raw);
 }
 
@@ -103,8 +103,8 @@ function toPlainSceneTree(value: unknown, seen: WeakSet<object> = new WeakSet())
     return raw.map((item) => toPlainSceneTree(item, seen));
   }
   const out: SceneObjectData = {};
-  for (const k of Reflect.ownKeys(raw)) {
-    out[k as PropertyKey] = toPlainSceneTree(raw[k as PropertyKey], seen);
+  for (const key of Reflect.ownKeys(raw)) {
+    out[key as PropertyKey] = toPlainSceneTree(raw[key as PropertyKey], seen);
   }
   return out;
 }
@@ -116,17 +116,17 @@ function ensureSubtreeProxies(
 ): SceneObject {
   const raw = unwrapSceneTarget(node);
   if (Array.isArray(raw)) {
-    for (let i = 0; i < raw.length; i++) {
-      const v = raw[i];
-      if (isSceneObjectData(v)) {
-        ensureSubtreeProxies(v as SceneObjectData, nodePath.concat(i));
+    for (let index = 0; index < raw.length; index++) {
+      const child = raw[index];
+      if (isSceneObjectData(child)) {
+        ensureSubtreeProxies(child as SceneObjectData, nodePath.concat(index));
       }
     }
   } else {
-    for (const k of Reflect.ownKeys(raw)) {
-      const v = raw[k as PropertyKey];
-      if (isSceneObjectData(v)) {
-        ensureSubtreeProxies(v as SceneObjectData, nodePath.concat(k));
+    for (const key of Reflect.ownKeys(raw)) {
+      const child = raw[key as PropertyKey];
+      if (isSceneObjectData(child)) {
+        ensureSubtreeProxies(child as SceneObjectData, nodePath.concat(key));
       }
     }
   }
@@ -269,7 +269,7 @@ export function getScene(): SceneObject {
   return scene;
 }
 
-export function onSceneChange(callback: SceneSubscriber): () => void {
+export function onSceneUpdate(callback: SceneSubscriber): () => void {
   subscribers.add(callback);
   return () => {
     subscribers.delete(callback);

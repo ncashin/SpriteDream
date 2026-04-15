@@ -1,7 +1,7 @@
 import { connectWebSocketRoomTransport } from "./websocketRoomTransport.js";
 import { createSceneChannel } from "./scene/sceneChannel.js";
 import { applyScenePatch } from "./scene/scenePatch.js";
-import { getScene, setScene, onSceneChange } from "./scene/scene.js";
+import { getScene, setScene, onSceneUpdate } from "./scene/scene.js";
 import type { SceneObjectData } from "./scene/scene.js";
 import {
   isOwnedSceneObject,
@@ -21,33 +21,41 @@ export type NetworkingPluginOptions = {
   url?: string;
 };
 
-
 export const networkingPlugin =
   (options: NetworkingPluginOptions = {}) =>
-  async (input: { rootElement: HTMLElement }) => {
+  async (input: { rootElement: HTMLElement; initialScene: SceneObjectData }) => {
     const room = options.room ?? "default";
-    const {
-      transport,
-      initializeScene,
-      dispose: disposeTransport,
-    } = await connectWebSocketRoomTransport({ room, url: options.url });
+    
+    const { transport, dispose: disposeTransport } =
+      await connectWebSocketRoomTransport({ room, url: options.url });
+
+    const shouldBootstrapScene = transport.getPeers().length === 1;
+    if (shouldBootstrapScene) {
+      setScene(input.initialScene);
+    }
+    console.log(transport.getPeers().length);
 
     const peerId = crypto.randomUUID();
     const channel = await createSceneChannel({
       transport,
-      getSceneData: getScene,
-      setSceneData: setScene,
+      getScene,
+      setScene,
       applyScenePatch,
-      subscribeToUpdates: onSceneChange,
+      onSceneUpdate,
       shouldEmitSceneUpdate: (update) => isOwnedSceneUpdate(update, peerId),
-      getInitializationPayload: () => JSON.stringify(getScene()),
-      initializeScene,
+      getInitialSceneContent: () => JSON.stringify(getScene()),
+      initializeScene: !shouldBootstrapScene,
     });
 
     return {
       ...input,
       networking: {
         peerId,
+        get peers() {
+          return transport.getPeers();
+        },
+        onPeersChange: (handler: (peers: string[]) => void) =>
+          transport.onPeersChange(handler),
         channel,
         isOwned: (obj: SceneObjectData) => isOwnedSceneObject(obj, peerId),
         withOwnership: <T extends Record<string, unknown>>(obj: T) =>

@@ -11,10 +11,11 @@ let nextPeer = 1;
 
 function getRoomName(request: IncomingMessage): string {
   const host = request.headers.host ?? "localhost";
-  const pathname = new URL(request.url ?? "/", `http://${host}`).pathname;
-  if (pathname !== ROOM_PATH) return "";
-  const q = new URL(request.url ?? "/", `http://${host}`).searchParams.get("room");
-  return q && q.length > 0 ? q : "default";
+  const url = new URL(request.url ?? "/", `http://${host}`);
+  if (url.pathname !== ROOM_PATH) return "";
+  const room = url.searchParams.get("room")?.trim() ?? "";
+  if (!room) return "";
+  return room;
 }
 
 function isRoomUpgrade(request: IncomingMessage): boolean {
@@ -25,7 +26,17 @@ function isRoomUpgrade(request: IncomingMessage): boolean {
 function peerIdsInRoom(room: string): string[] {
   const set = rooms.get(room);
   if (!set) return [];
-  return [...set].map((c) => c.peerId);
+  return [...set].map((roomClient) => roomClient.peerId);
+}
+
+function messageDataToUTF8(data: Buffer | ArrayBuffer | Buffer[]): string {
+  if (Buffer.isBuffer(data)) {
+    return data.toString("utf8");
+  }
+  if (Array.isArray(data)) {
+    return Buffer.concat(data).toString("utf8");
+  }
+  return Buffer.from(data).toString("utf8");
 }
 
 export function attachRoomWebSocket(httpServer: Server): WebSocketServer {
@@ -45,7 +56,6 @@ export function attachRoomWebSocket(httpServer: Server): WebSocketServer {
     client.peerId = `p${nextPeer++}`;
 
     let set = rooms.get(room);
-    const isFirstInRoom = !set || set.size === 0;
     if (!set) {
       set = new Set();
       rooms.set(room, set);
@@ -55,17 +65,22 @@ export function attachRoomWebSocket(httpServer: Server): WebSocketServer {
     websocket.send(
       JSON.stringify({
         type: "ready",
-        initializeScene: isFirstInRoom,
         peers: peerIdsInRoom(room),
       }),
     );
 
+    const peersPayload = JSON.stringify({
+      type: "roomPeersUpdate",
+      peers: peerIdsInRoom(room),
+    });
+    for (const other of set) {
+      if (other !== client && other.readyState === WebSocket.OPEN) {
+        other.send(peersPayload);
+      }
+    }
+
     websocket.on("message", (data: Buffer | ArrayBuffer | Buffer[]) => {
-      const text = Buffer.isBuffer(data)
-        ? data.toString("utf8")
-        : Array.isArray(data)
-          ? Buffer.concat(data).toString("utf8")
-          : Buffer.from(data as ArrayBuffer).toString("utf8");
+      const text = messageDataToUTF8(data);
       const others = rooms.get(room);
       if (!others) return;
       for (const other of others) {
@@ -76,24 +91,21 @@ export function attachRoomWebSocket(httpServer: Server): WebSocketServer {
     });
 
     websocket.on("close", () => {
-      const r = rooms.get(room);
-      if (!r) return;
-      r.delete(client);
-      if (r.size === 0) {
+      const roomClients = rooms.get(room);
+      if (!roomClients) return;
+      roomClients.delete(client);
+      if (roomClients.size === 0) {
         rooms.delete(room);
         return;
       }
-      let i = 0;
-      for (const peer of r) {
+      const peersPayload = JSON.stringify({
+        type: "roomPeersUpdate",
+        peers: peerIdsInRoom(room),
+      });
+      for (const peer of roomClients) {
         if (peer.readyState === WebSocket.OPEN) {
-          peer.send(
-            JSON.stringify({
-              type: "roomAuthorityUpdate",
-              initializeScene: i === 0,
-            }),
-          );
+          peer.send(peersPayload);
         }
-        i++;
       }
     });
 

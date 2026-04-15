@@ -2,7 +2,7 @@ import { useSyncExternalStore, useRef, useCallback, useMemo } from "react";
 import {
   getScene,
   getSceneValueAtPath,
-  onSceneChange,
+  onSceneUpdate,
   type SceneUpdate,
 } from "../scene/scene.js";
 import {
@@ -15,7 +15,7 @@ function createPathScopedSubscribe(
   pathRef: { current: PropertyKey[] }
 ): (onStoreChange: () => void) => () => void {
   return (onStoreChange) => {
-    return onSceneChange((update: SceneUpdate) => {
+    return onSceneUpdate((update: SceneUpdate) => {
       const changedPath = appendKeyToPath(update.path, update.key);
       if (pathUpdateAffectsPath(changedPath, pathRef.current)) {
         onStoreChange();

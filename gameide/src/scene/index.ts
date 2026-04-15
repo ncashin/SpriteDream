@@ -8,7 +8,7 @@ export {
   restoreSceneSnapshot,
   saveSceneSnapshot,
   setScene,
-  onSceneChange,
+  onSceneUpdate,
 } from "./scene.js";
 
 export { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
@@ -23,8 +23,6 @@ export {
 export type {
   CreateSceneChannelOptions,
   SceneChannel,
-  SceneChannelInMessage,
-  SceneChannelOutMessage,
 } from "./sceneChannel.js";
 
 export type { ScenePath } from "./scenePath.js";

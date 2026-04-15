@@ -26,7 +26,7 @@ export function createSceneTransportPostMessage(
   function listener(event: MessageEvent) {
     if (options.origin && event.origin !== options.origin) return;
     if (!event.data || typeof event.data !== "object") return;
-    handlers.forEach((h) => h(event.data));
+    handlers.forEach((handler) => handler(event.data));
   }
 
   return {

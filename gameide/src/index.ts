@@ -37,7 +37,7 @@ export {
   setScene,
   saveSceneSnapshot,
   restoreSceneSnapshot,
-  onSceneChange,
+  onSceneUpdate,
   getSceneRaw,
   getSceneObjectPath,
   getSceneValueAtPath,

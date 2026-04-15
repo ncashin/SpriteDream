@@ -4,11 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -n gameide,vite -c blue,green \"npm run watch -w gameide\" \"vite\"",
     "build": "vite build && tsc",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^5.2.0",
+    "concurrently": "^9.1.2",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^25.4.0",
     "tailwindcss": "^4.0.0",

@@ -8,7 +8,7 @@ import {
   setScene,
   restoreSceneSnapshot,
   saveSceneSnapshot,
-  onSceneChange,
+  onSceneUpdate,
 } from "../scene/scene.js";
 import { GameIDEMode, getMode, onModeChange } from "../mode.js";
 import { createEditorUI } from "./createEditorUI.js";
@@ -28,12 +28,15 @@ export const editorPlugin =
         target: window.parent,
         source: window,
       }),
-      getSceneData: getScene,
-      setSceneData: setScene,
-      applyScenePatch,
-      subscribeToUpdates: onSceneChange,
-    });
+      getScene,
+      setScene,
+      onSceneUpdate,
 
+      applyScenePatch,
+
+      initializeScene: false,
+    });
+    
     const { rootElement } = input;
     createEditorUI(Editor ?? DefaultEditor, rootElement);
 

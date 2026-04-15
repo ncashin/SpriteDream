@@ -1,15 +1,8 @@
-import path from "path";
-import { fileURLToPath } from "url";
 import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { gameidePlugin } from "gameide/vite";
 
-
 export default defineConfig({
-  base: "./",
-  publicDir: "assets",
-  plugins: [tailwindcss(), gameidePlugin()],
-  optimizeDeps: {
-    exclude: ["gameide"],
-  },
+  plugins: [gameidePlugin(), react(), tailwindcss()],
 });
