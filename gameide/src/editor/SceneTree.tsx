@@ -1,5 +1,5 @@
 import { ChevronRight, Box } from "lucide-react";
-import { useRef, useState, type CSSProperties } from "react";
+import { useRef, useState } from "react";
 import type { SceneObject } from "../scene/scene.js";
 import { getScene } from "../scene/scene.js";
 import { setValueAtPath } from "../scene/scenePath.js";
@@ -53,34 +53,35 @@ function parseInput(s: string): unknown {
 }
 
 const textSize = "text-xs";
+const iconSize = 16;
 const font = "font-[var(--vscode-font-family)]";
-const rowClass = `flex flex-row items-center w-full min-w-0 py-1.5 pr-1.5 ${textSize} ${font} overflow-hidden`;
-const leafKeyIndent = "0.375rem";
+const treeGridClass =
+  "grid grid-cols-[auto_minmax(0,1fr)] gap-x-0 w-full min-w-0 items-start";
+const treeRowPad = "py-1.5 px-3";
 const muted = "text-[var(--vscode-descriptionForeground)]";
 const foreground = "text-[var(--vscode-editor-foreground)]";
 const hover = "hover:bg-[var(--vscode-list-hoverBackground)]";
 const inputClass = `w-full min-w-0 flex-1 py-0 border-0 bg-transparent text-inherit ${textSize} font-[inherit] outline-none`;
 
+const internalPadding = "pl-2 pr-2.5 py-1.5";
+
 type PropertyNodeProps = {
   name: string;
-  style: CSSProperties;
-  displayText: string;
-  setDraft: (value: string | null) => void;
-  commitEdit: () => void;
+  path: PropertyKey[];
+  value: unknown;
+  setAtPath: (path: PropertyKey[], value: unknown) => void;
 };
 
-function PropertyNode({
-  name,
-  style,
-  displayText,
-  setDraft,
-  commitEdit,
-}: PropertyNodeProps) {
+function PropertyNode({ name, path, value, setAtPath }: PropertyNodeProps) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const displayText = draft ?? formatValue(value);
+  const commitEdit = () => {
+    setAtPath(path, parseInput(displayText));
+    setDraft(null);
+  };
+
   return (
-    <div
-      className={cn(rowClass, "gap-1 justify-start")}
-      style={style}
-    >
+    <div className={cn(internalPadding, "w-full flex items-center gap-1")}>
       <span className={cn(muted, "shrink-0")}>{name}:</span>
       <input
         type="text"
@@ -110,6 +111,90 @@ function SceneViewHeader() {
   );
 }
 
+type ObjectNodeProps = {
+  name: string;
+  depth: number;
+  path: PropertyKey[];
+  sceneObject: Record<string, unknown>;
+  setAtPath: (path: PropertyKey[], value: unknown) => void;
+};
+
+function ObjectNode({
+  name,
+  depth,
+  path,
+  sceneObject,
+  setAtPath,
+}: ObjectNodeProps) {
+  const [open, setOpen] = useState(depth < 2);
+  const keys = Object.keys(sceneObject);
+
+  const stickyStyle = {
+    top: `calc(${depth} * var(--scene-tree-row-height))`,
+    zIndex: 100 - depth,
+  };
+
+  return (
+    <div className={cn(treeGridClass, textSize, font)}>
+      <div
+        data-scene-tree-sticky-row=""
+        className={cn(
+          "col-span-2 grid grid-cols-subgrid items-center min-w-0",
+          treeRowPad,
+          textSize,
+          font,
+          open && "sticky bg-[var(--vscode-editor-background)]",
+        )}
+        style={open ? stickyStyle : undefined}
+      >
+        <div className={cn("p-1.5 rounded -ml-1.5", hover)}>
+          <Box size={iconSize} />
+        </div>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpen((open) => !open)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setOpen((open) => !open);
+            }
+          }}
+          className={cn(
+            internalPadding,
+            "group flex flex-row items-center gap-1 min-w-0 rounded cursor-pointer outline-none",
+            foreground,
+            hover,
+          )}
+        >
+          <span className="min-w-0 flex-1 truncate">{name}</span>
+          <ChevronRight
+            size={iconSize - 2}
+            className={cn(
+              "shrink-0 transition-[transform,opacity] opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
+              open && "rotate-90",
+            )}
+          />
+        </div>
+      </div>
+      {open && (
+        <div className="col-start-2 min-w-0">
+          {keys.map((key) => (
+            <TreeNode
+              name={key}
+              depth={depth + 1}
+              path={path.concat(key)}
+              value={sceneObject[key]}
+              setAtPath={setAtPath}
+              key={key}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type TreeNodeProps = {
   name: string;
   depth: number;
@@ -119,87 +204,25 @@ type TreeNodeProps = {
 };
 
 function TreeNode({ name, depth, path, value, setAtPath }: TreeNodeProps) {
-  const setValue = (next: unknown) => setAtPath(path, next);
-  const [open, setOpen] = useState(depth < 2);
-  const [draft, setDraft] = useState<string | null>(null);
-  const displayText = draft ?? formatValue(value);
-  const expandable = isExpandable(value);
-  const sceneObject = expandable ? value : null;
-  const keys = sceneObject ? Object.keys(sceneObject) : [];
-
-  const commitEdit = () => {
-    setValue(parseInput(displayText));
-    setDraft(null);
-  };
-
-  const leftPadding = { paddingLeft: `calc(0.375rem + ${depth}rem)` };
-  const leafLeftPadding = {
-    paddingLeft: `calc(0.375rem + ${depth}rem + ${leafKeyIndent})`,
-  };
-  const stickyStyle = { top: `calc(${depth} * var(--scene-tree-row-height))`, zIndex: 100 - depth }
-
-  if (!expandable) {
+  if (!isExpandable(value)) {
     return (
       <PropertyNode
         name={name}
-        style={leafLeftPadding}
-        displayText={displayText}
-        setDraft={setDraft}
-        commitEdit={commitEdit}
+        path={path}
+        value={value}
+        setAtPath={setAtPath}
       />
     );
   }
 
   return (
-    <div className="min-w-0">
-      <div
-        data-scene-tree-sticky-row=""
-        className={cn(
-          rowClass,
-          "gap-1 justify-between",
-          expandable &&
-            open &&
-            "sticky bg-[var(--vscode-editor-background)]",
-        )}
-        style={{ ...leftPadding, ...(expandable && stickyStyle) }}
-   
-      >
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => setOpen((o) => !o)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setOpen((o) => !o);
-            }
-          }}
-          className={cn(
-            "flex flex-row items-center gap-1 min-w-0 flex-1 rounded py-1 px-1.5 -my-1 cursor-pointer outline-none",
-            foreground,
-            hover,
-          )}
-        >
-          <Box size={12} className="shrink-0 opacity-80" />
-          <span className="min-w-0 flex-1 truncate">{name}</span>
-          <ChevronRight
-            size={12}
-            className={cn("shrink-0 transition-transform", open && "rotate-90")}
-          />
-        </div>
-      </div>
-      {open &&
-        keys.map((key) => (
-          <TreeNode
-            name={key}
-            depth={depth + 1}
-            path={path.concat(key)}
-            value={(sceneObject as SceneObject)[key]}
-            setAtPath={setAtPath}
-            key={key}
-          />
-        ))}
-    </div>
+    <ObjectNode
+      name={name}
+      depth={depth}
+      path={path}
+      sceneObject={value as SceneObject}
+      setAtPath={setAtPath}
+    />
   );
 }
 
@@ -222,10 +245,7 @@ export function SceneTree() {
     <div className="w-full h-full min-w-0 flex flex-col gap-0">
       <SceneViewHeader />
       {rootObject && (
-        <div
-          ref={scrollRef}
-          className="flex-1 min-h-0 overflow-auto relative"
-        >
+        <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto relative">
           {Object.keys(rootObject).map((key) => (
             <TreeNode
               name={key}
