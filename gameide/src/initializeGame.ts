@@ -7,19 +7,17 @@ import { setScene } from "./scene/scene.js";
 
 export type Plugin = (input: object) => object | Promise<object>;
 
-type ContextAddedByPlugin<PluginFunction> = PluginFunction extends (
-  input: infer In,
-) => infer Out
-  ? Out extends Promise<infer R>
-    ? Omit<R, keyof In>
+type PluginAddedFields<F> = F extends (input: infer In) => infer Out
+  ? Out extends Promise<infer Resolved>
+    ? Omit<Resolved, keyof In>
     : Omit<Out, keyof In>
   : never;
 
-type ReducedContext<PluginList extends readonly unknown[]> =
-  PluginList extends readonly [infer First, ...infer Rest]
-    ? Rest extends readonly unknown[]
-      ? ContextAddedByPlugin<First> & ReducedContext<Rest>
-      : ContextAddedByPlugin<First>
+type IntersectPluginFields<Plugins extends readonly unknown[]> =
+  Plugins extends readonly [infer Head, ...infer Tail]
+    ? Tail extends readonly unknown[]
+      ? PluginAddedFields<Head> & IntersectPluginFields<Tail>
+      : PluginAddedFields<Head>
     : unknown;
 
 export const initializePlugins = <const Plugins extends readonly unknown[]>(
@@ -29,11 +27,16 @@ export const initializePlugins = <const Plugins extends readonly unknown[]>(
 export type FinalContext<
   InitialContext,
   PluginList extends readonly unknown[],
-> = InitialContext & ReducedContext<PluginList>;
+> = InitialContext & IntersectPluginFields<PluginList>;
 
 type RootContext = {
   rootElement: HTMLElement;
 };
+
+type InitializedContext<
+  InitialContext,
+  PluginList extends readonly unknown[],
+> = FinalContext<InitialContext & RootContext, PluginList>;
 
 async function initializeGame<
   InitialContext,
@@ -43,32 +46,27 @@ async function initializeGame<
   initialContext: InitialContext;
   plugins: PluginList;
   initialScene?: Record<string, unknown>;
-  main: (
-    context: FinalContext<InitialContext & RootContext, PluginList>,
-  ) => void;
-}): Promise<FinalContext<InitialContext & RootContext, PluginList>> {
-  type ResultContext = FinalContext<InitialContext & RootContext, PluginList>;
+  main: (context: InitializedContext<InitialContext, PluginList>) => void;
+}): Promise<InitializedContext<InitialContext, PluginList>> {
+  type ResultContext = InitializedContext<InitialContext, PluginList>;
   const hot = import.meta.hot;
-  let result: ResultContext;
+  const restored = hot?.data?.context as ResultContext | undefined;
 
-  result = {
-    ...options.initialContext,
-    rootElement: options.rootElement,
-  } as ResultContext;
+  let result: ResultContext =
+    restored ??
+    ({
+      ...options.initialContext,
+      rootElement: options.rootElement,
+    } as ResultContext);
 
-  if (hot?.data?.context) {
-    result = hot.data.context;
-  }
-  const isFirstInit = !hot?.data?.context;
-  if (isFirstInit) {
+  if (!restored) {
     if (options.initialScene !== undefined) {
       setScene(options.initialScene);
     }
-
     for (const plugin of options.plugins ?? []) {
-      result = (await Promise.resolve(
-        typeof plugin === "function" ? plugin(result) : result,
-      )) as ResultContext;
+      const next =
+        typeof plugin === "function" ? plugin(result) : result;
+      result = (await next) as ResultContext;
     }
   }
 
@@ -76,14 +74,13 @@ async function initializeGame<
     if (hot.data.runToken !== undefined) {
       removeCallbacksForToken(hot.data.runToken);
     }
-    const token = runWithToken(() => options.main(result));
-    hot.data.runToken = token;
+    hot.data.runToken = runWithToken(() => options.main(result));
     hot.data.context = result;
   } else {
     runWithToken(() => options.main(result));
   }
 
-  if (isFirstInit) {
+  if (!restored) {
     startGameloop();
   }
 

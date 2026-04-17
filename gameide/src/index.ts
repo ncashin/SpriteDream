@@ -52,7 +52,7 @@ export {
   pathUpdateAffectsPath,
   pathsEqual,
   pathsSharePrefix,
-  setValueAtPathInObject,
+  setValueAtPath,
 } from "./scene/scenePath.js";
 export {
   defineObject,

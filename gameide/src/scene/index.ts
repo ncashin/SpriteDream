@@ -34,7 +34,7 @@ export {
   pathUpdateAffectsPath,
   pathsEqual,
   pathsSharePrefix,
-  setValueAtPathInObject,
+  setValueAtPath,
 } from "./scenePath.js";
 
 export type { ScenePatch } from "./scenePatch.js";

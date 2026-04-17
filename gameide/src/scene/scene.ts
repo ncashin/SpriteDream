@@ -1,3 +1,4 @@
+import { invalidateUseSceneSnapshot } from "../editor/useSceneSnapshot.js";
 import { getValueAtPath } from "./scenePath.js";
 import { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
 import { applyScenePatch, buildScenePatchFromDiff } from "./scenePatch.js";
@@ -52,7 +53,8 @@ if (typeof import.meta !== "undefined" && import.meta.hot) {
     if (!root) return;
     const snapshot = loadedSceneSnapshot ?? hotData.loadedSceneSnapshot ?? {};
     const patch = buildScenePatchFromDiff(snapshot, payload.sceneData);
-    applyScenePatch(root, patch);
+    applyScenePatch(getScene() as unknown as Record<PropertyKey, unknown>, patch);
+    invalidateUseSceneSnapshot();
     if (savedSceneSnapshot) {
       applyScenePatch(savedSceneSnapshot, patch);
     }
@@ -79,6 +81,7 @@ function notifySubscribers(update: SceneUpdate): void {
       console.error("[scene] subscriber error:", err);
     }
   });
+  invalidateUseSceneSnapshot();
 }
 
 function unwrapSceneTarget(obj: SceneObject | SceneObjectData): SceneObjectData {
@@ -247,7 +250,8 @@ export function setScene(data: SceneObjectData | undefined): void {
       rootTarget as Record<string, unknown>,
       next as Record<string, unknown>,
     );
-    applyScenePatch(rootTarget as Record<string, unknown>, patch);
+    applyScenePatch(getScene() as unknown as Record<PropertyKey, unknown>, patch);
+    invalidateUseSceneSnapshot();
   } else {
     initialSceneData = data;
   }
@@ -311,5 +315,6 @@ export function restoreSceneSnapshot(): void {
     rootTarget as Record<string, unknown>,
     data as Record<string, unknown>,
   );
-  applyScenePatch(rootTarget as Record<string, unknown>, patch);
+  applyScenePatch(getScene() as unknown as Record<PropertyKey, unknown>, patch);
+  invalidateUseSceneSnapshot();
 }

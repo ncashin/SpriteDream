@@ -10,6 +10,9 @@ import {
   useGameIDEMode,
   useScene,
   EditorRoot,
+  getScene,
+  getValueAtPath,
+  setValueAtPath,
 } from "gameide";
 import { Cuboid, MoveLeft, Play, Square } from "lucide-react";
 
@@ -17,7 +20,13 @@ export function Editor() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const mode = useGameIDEMode();
   const isRunning = mode === GameIDEMode.Game;
-  const [sceneName, setSceneName] = useScene(["__metadata", "name"]);
+  const [scene] = useScene();
+  const sceneName = getValueAtPath(scene, [
+    "__metadata",
+    "name",
+  ]);
+  const setSceneName = (next: string) =>
+    setValueAtPath(getScene(), ["__metadata", "name"], next);
 
   return (
     <EditorRoot>

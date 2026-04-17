@@ -11,7 +11,7 @@ export function getValueAtPath(object: SceneRecord, path: ScenePath): unknown {
   return current;
 }
 
-export function setValueAtPathInObject(
+export function setValueAtPath(
   root: SceneRecord,
   path: ScenePath,
   value: unknown

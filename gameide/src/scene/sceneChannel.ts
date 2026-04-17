@@ -1,6 +1,7 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
 import { patchAtPath, type ScenePatch } from "./scenePatch.js";
 import { appendKeyToPath } from "./scenePath.js";
+import { invalidateUseSceneSnapshot } from "../editor/useSceneSnapshot.js";
 import type { SceneObjectData, SceneUpdate } from "./scene.js";
 
 export type SceneData = SceneObjectData;
@@ -105,15 +106,16 @@ export async function createSceneChannel(
         return;
       case SCENE_CHANNEL.initialScene: {
         if (sceneInitialized) return;
+        sceneInitialized = true;
         const data = JSON.parse(message.content) as SceneData;
         setScene(data);
-        sceneInitialized = true;
         markReady();
         return;
       }
       case SCENE_CHANNEL.scenePatch: {
         if (!sceneInitialized || paused) return;
         applyPatch(getScene(), message.patch);
+        invalidateUseSceneSnapshot();
         return;
       }
       case SCENE_CHANNEL.sceneChange: {

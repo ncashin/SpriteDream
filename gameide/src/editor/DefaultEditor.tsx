@@ -8,6 +8,8 @@ import { OverlayInput } from "./OverlayInput.js";
 import { Cuboid, MoveLeft, Play, Square } from "lucide-react";
 import { GameIDEMode, setMode } from "../mode.js";
 import { useGameIDEMode } from "./useGameIDEMode.js";
+import { getScene } from "../scene/scene.js";
+import { getValueAtPath, setValueAtPath } from "../scene/scenePath.js";
 import { useScene } from "./useScene.js";
 import { EditorRoot } from "./EditorRoot.js";
 
@@ -15,7 +17,10 @@ export function DefaultEditor() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const mode = useGameIDEMode();
   const isRunning = mode === GameIDEMode.Game;
-  const [sceneName, setSceneName] = useScene(["name"]);
+  const [scene] = useScene();
+  const sceneName = getValueAtPath(scene as Record<PropertyKey, unknown>, ["name"]);
+  const setSceneName = (next: string) =>
+    setValueAtPath(getScene() as Record<PropertyKey, unknown>, ["name"], next);
 
   return (
     <EditorRoot>

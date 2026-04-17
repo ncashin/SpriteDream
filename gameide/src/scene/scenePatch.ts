@@ -18,21 +18,21 @@ export function applyScenePatch(
     const patchValue = patch[key];
 
     if (patchValue === null) {
-      delete scene[key];
+      Reflect.deleteProperty(scene, key);
     } else if (isPlainObjectForPatch(patchValue)) {
-      const existing = scene[key];
+      const existing = Reflect.get(scene, key);
       if (
         existing !== undefined &&
         (isPlainObjectForPatch(existing) || Array.isArray(existing))
       ) {
         applyScenePatch(existing as Record<PropertyKey, unknown>, patchValue);
       } else {
-        const created: Record<PropertyKey, unknown> = {};
-        scene[key] = created;
+        Reflect.set(scene, key, {});
+        const created = Reflect.get(scene, key) as Record<PropertyKey, unknown>;
         applyScenePatch(created, patchValue);
       }
     } else {
-      scene[key] = patchValue;
+      Reflect.set(scene, key, patchValue);
     }
   }
 }

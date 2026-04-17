@@ -10,7 +10,7 @@ type SidebarProps = {
 
 export function Sidebar({
   open,
-  width = "w-[17.5rem]",
+  width = "w-[30rem]",
   children,
   className,
 }: SidebarProps) {
