@@ -1,7 +1,6 @@
 import {
   getScene,
   getSceneObjectPath,
-  getValueAtPath,
   gameUIPlugin,
   initializeGame,
   initializePlugins,
@@ -78,6 +77,10 @@ function newProjectileId(): string {
   return `proj-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function playerObjectKey(peerId: string): string {
+  return `player-${peerId}`;
+}
+
 const PLAYER_MAX_HEALTH = 100;
 const PROJECTILE_DAMAGE = 20;
 
@@ -111,23 +114,12 @@ function projectileOverlapsPlayer(
   );
 }
 
-/** Remove a nested or root-level object; must use parent delete so scene sync runs. */
-function deleteSceneObjectAtPath(root: SceneObject, path: PropertyKey[] | undefined): void {
-  if (!path || path.length < 1) {
+/** Remove a root-level scene object (players, projectiles); must use delete so scene sync runs. */
+function deleteRootSceneChild(root: SceneObject, path: PropertyKey[] | undefined): void {
+  if (path === undefined || path.length !== 1) {
     return;
   }
-  const childKey = path[path.length - 1]!;
-  const parentPath = path.slice(0, -1);
-  const parent =
-    parentPath.length === 0
-      ? root
-      : (getValueAtPath(
-          root as Record<PropertyKey, unknown>,
-          parentPath,
-        ) as SceneObject | undefined);
-  if (parent !== undefined && parent !== null && typeof parent === "object") {
-    Reflect.deleteProperty(parent as object, childKey);
-  }
+  Reflect.deleteProperty(root as object, path[0]!);
 }
 
 function aimFromMouse(
@@ -186,7 +178,7 @@ initializeGame({
 
     gameStart(() => {
       scene.createObject(
-        networking.peerId,
+        playerObjectKey(networking.peerId),
         networking.withOwnership({
           x: 0,
           y: 0,
@@ -228,9 +220,7 @@ initializeGame({
         const py = canvas.height / 2 - player.y;
         context.fillStyle = playerColor(player[SCENE_OWNER_ID] ?? "");
         context.fillRect(px - half, py - half, playerSize, playerSize);
-      }
 
-      for (const player of scene.query(isPlayer)) {
         if (!networking.isOwned(player)) {
           continue;
         }
@@ -285,11 +275,7 @@ initializeGame({
 
         if (input.buttons.Fire.pressed) {
           const { ax, ay } = aimFromMouse(canvas, input.mouse.position, player);
-          const shooterRoot = scene[networking.peerId as keyof SceneObject] as
-            | SceneObject
-            | undefined;
-          invariant(shooterRoot && typeof shooterRoot.createObject === "function");
-          shooterRoot.createObject(
+          scene.createObject(
             newProjectileId(),
             networking.withOwnership({
               kind: "projectile",
@@ -311,23 +297,20 @@ initializeGame({
         proj.x += proj.vx * deltaTime;
         proj.y += proj.vy * deltaTime;
         proj.lifetime -= deltaTime;
-      }
 
-      for (const proj of scene.query(isProjectile)) {
         const path = getSceneObjectPath(proj);
         const projKey = path?.join(".") ?? "";
         const shooterId = proj[SCENE_OWNER_ID];
-
-        if (!networking.isOwned(proj)) {
-          continue;
-        }
         const out =
           Math.abs(proj.x) > worldHalfExtent || Math.abs(proj.y) > worldHalfExtent;
         let hitEnemy = false;
         if (!out && proj.lifetime > 0) {
           for (const target of scene.query(isPlayer)) {
-            const victimKey  = target[SCENE_OWNER_ID] ?? getSceneObjectPath(target)?.[0];
-            if (victimKey === undefined || String(victimKey) === String(shooterId)) {
+            const victimSceneKey = getSceneObjectPath(target)?.[0];
+            if (
+              victimSceneKey === undefined ||
+              String(target[SCENE_OWNER_ID]) === String(shooterId)
+            ) {
               continue;
             }
             if (!projectileOverlapsPlayer(proj, target, half)) {
@@ -337,16 +320,13 @@ initializeGame({
               continue;
             }
             damagedByProjectileKey.add(projKey);
-            networking.replicateSet(
-              [victimKey, "health"],
-              Math.max(0, target.health - PROJECTILE_DAMAGE),
-            );
+            target.health = Math.max(0, target.health - PROJECTILE_DAMAGE);
             hitEnemy = true;
             break;
           }
         }
         if (proj.lifetime <= 0 || out || hitEnemy) {
-          deleteSceneObjectAtPath(scene, path);
+          deleteRootSceneChild(scene, path);
           if (path !== undefined) {
             damagedByProjectileKey.delete(path.join("."));
           }

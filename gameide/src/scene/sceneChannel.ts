@@ -97,7 +97,6 @@ export async function createSceneChannel(
   
 
   function handleMessage(message: SceneChannelMessage): void {
-    console.log(message)
     switch (message.type) {
       case SCENE_CHANNEL.requestInitialScene:
         if (sceneInitialized && getInitialSceneContent) {

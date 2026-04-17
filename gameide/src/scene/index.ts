@@ -9,6 +9,7 @@ export {
   saveSceneSnapshot,
   setScene,
   onSceneUpdate,
+  applyScenePatchToRootTarget,
 } from "./scene.js";
 
 export { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";

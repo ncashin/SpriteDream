@@ -1,6 +1,5 @@
 import { createSceneTransportPostMessage } from "../scene/sceneChannelTransport.js";
 import { createSceneChannel } from "../scene/sceneChannel.js";
-import { applyScenePatch } from "../scene/scenePatch.js";
 import type { SceneObject } from "../scene/scene.js";
 import {
   getScene,
@@ -9,6 +8,7 @@ import {
   restoreSceneSnapshot,
   saveSceneSnapshot,
   onSceneUpdate,
+  applyScenePatchToRootTarget,
 } from "../scene/scene.js";
 import { GameIDEMode, getMode, onModeChange } from "../mode.js";
 import { createEditorUI } from "./createEditorUI.js";
@@ -32,7 +32,7 @@ export const editorPlugin =
       setScene,
       onSceneUpdate,
 
-      applyScenePatch,
+      applyScenePatch: (_scene, patch) => applyScenePatchToRootTarget(patch),
 
       initializeScene: false,
     });

@@ -1,7 +1,11 @@
 import { invalidateUseSceneSnapshot } from "../editor/useSceneSnapshot.js";
 import { getValueAtPath } from "./scenePath.js";
 import { SCENE_HMR_EVENT_NAME } from "./sceneHMR.js";
-import { applyScenePatch, buildScenePatchFromDiff } from "./scenePatch.js";
+import {
+  applyScenePatch,
+  buildScenePatchFromDiff,
+  type ScenePatch,
+} from "./scenePatch.js";
 import { querySubtree } from "./query.js";
 
 export type SceneObjectData = Record<PropertyKey, unknown>;
@@ -282,6 +286,15 @@ export function onSceneUpdate(callback: SceneSubscriber): () => void {
 
 export function getSceneRaw(): SceneObjectData | undefined {
   return rootTarget;
+}
+
+/**
+ * Applies a patch to the live scene data without firing {@link onSceneUpdate} subscribers.
+ * Use for remote/network patches so the same change is not re-sent to peers.
+ */
+export function applyScenePatchToRootTarget(patch: ScenePatch): void {
+  if (!rootTarget) return;
+  applyScenePatch(rootTarget as Record<PropertyKey, unknown>, patch);
 }
 
 const emptySceneRoot: SceneObjectData = {};

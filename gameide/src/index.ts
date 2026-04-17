@@ -41,6 +41,7 @@ export {
   getSceneRaw,
   getSceneObjectPath,
   getSceneValueAtPath,
+  applyScenePatchToRootTarget,
 } from "./scene/scene.js";
 export type { SceneObject, SceneObjectData, SceneUpdate } from "./scene/scene.js";
 export type { ScenePath } from "./scene/scenePath.js";

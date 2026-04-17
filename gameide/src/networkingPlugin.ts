@@ -1,13 +1,13 @@
 import { connectWebSocketRoomTransport } from "./websocketRoomTransport.js";
 import { createSceneChannel } from "./scene/sceneChannel.js";
-import { applyScenePatch } from "./scene/scenePatch.js";
-import { getScene, setScene, onSceneUpdate } from "./scene/scene.js";
-import type { SceneObjectData } from "./scene/scene.js";
 import {
-  isOwnedSceneObject,
-  isOwnedSceneUpdate,
-  withOwnership,
-} from "./distributedSimulation.js";
+  getScene,
+  setScene,
+  onSceneUpdate,
+  applyScenePatchToRootTarget,
+} from "./scene/scene.js";
+import type { SceneObjectData } from "./scene/scene.js";
+import { isOwnedSceneObject, withOwnership } from "./distributedSimulation.js";
 
 export {
   SCENE_OWNER_ID,
@@ -33,16 +33,14 @@ export const networkingPlugin =
     if (shouldBootstrapScene) {
       setScene(input.initialScene);
     }
-    console.log(transport.getPeers().length);
 
     const peerId = crypto.randomUUID();
     const channel = await createSceneChannel({
       transport,
       getScene,
       setScene,
-      applyScenePatch,
+      applyScenePatch: (_scene, patch) => applyScenePatchToRootTarget(patch),
       onSceneUpdate,
-      shouldEmitSceneUpdate: (update) => isOwnedSceneUpdate(update, peerId),
       getInitialSceneContent: () => JSON.stringify(getScene()),
       initializeScene: !shouldBootstrapScene,
     });
