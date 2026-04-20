@@ -53,6 +53,11 @@ export function subscribeToScene(callback: SceneSubscriber): () => void {
 export const getScene = () => {
   return scene;
 };
+
+export const getRawScene = () => {
+  return sceneTarget;
+};
+
 export const setScene = (data: SceneObject) => {
   for (const key of Object.keys(sceneTarget)) {
     delete sceneTarget[key];

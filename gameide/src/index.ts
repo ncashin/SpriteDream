@@ -24,6 +24,7 @@ export {
 export { query } from "./scene/query/query.js";
 export {
   getScene,
+  getRawScene,
   setScene,
   saveSceneSnapshot,
   restoreSceneSnapshot,

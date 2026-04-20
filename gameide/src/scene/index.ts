@@ -2,6 +2,7 @@ export type { SceneObject, SceneReflectUpdate } from "./scene.js";
 export {
   sceneTarget,
   getScene,
+  getRawScene,
   setScene,
   subscribeToScene,
   saveSceneSnapshot,

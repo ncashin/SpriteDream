@@ -3,6 +3,7 @@ import { createSceneChannel } from "../scene/sceneChannel/sceneChannel.js";
 import type { SceneObject } from "../scene/scene.js";
 import {
   getScene,
+  getRawScene,
   setScene,
   subscribeToScene,
   saveSceneSnapshot,
@@ -28,6 +29,7 @@ export const editorPlugin =
         source: window,
       }),
       getScene,
+      getRawScene,
       setScene,
       subscribeToScene,
 

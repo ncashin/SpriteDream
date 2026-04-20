@@ -232,7 +232,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       transport,
       getScene: () => document.getSceneRoot(),
       setScene: (data: SceneData) => document.mergeSceneFromRuntime(data),
-      applyScenePatch: (_scene: SceneData, patch: ScenePatch) =>
+      applyPatch: (_scene: SceneData, patch: ScenePatch) =>
         document.applyPatch(patch),
       getInitialSceneContent: () =>
         JSON.stringify(document.getDocumentData(), null, 2),

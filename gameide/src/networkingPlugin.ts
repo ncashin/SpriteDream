@@ -2,6 +2,7 @@ import { connectWebSocketRoomTransport } from "./websocketRoomTransport.js";
 import { createSceneChannel } from "./scene/sceneChannel/sceneChannel.js";
 import {
   getScene,
+  getRawScene,
   setScene,
   subscribeToScene,
   applyPatch as applyScenePatch,
@@ -38,6 +39,7 @@ export const networkingPlugin =
     const channel = await createSceneChannel({
       transport,
       getScene,
+      getRawScene,
       setScene,
       applyPatch: applyScenePatch,
       subscribeToScene,

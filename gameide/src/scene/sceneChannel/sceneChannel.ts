@@ -23,6 +23,7 @@ export type SceneChannelMessage =
 export interface CreateSceneChannelOptions {
   transport: SceneChannelTransport;
   getScene(): SceneObject;
+  getRawScene?: () => SceneObject;
   setScene(data: SceneObject): void;
   subscribeToScene?: (
     callback: (update: SceneReflectUpdate) => void,
@@ -54,6 +55,7 @@ export async function createSceneChannel(
   const {
     transport,
     getScene,
+    getRawScene,
     setScene,
     applyPatch: applyPatch,
     subscribeToScene,
@@ -103,7 +105,8 @@ export async function createSceneChannel(
       }
       case SCENE_CHANNEL.scenePatch: {
         if (!sceneInitialized || paused) return;
-        applyPatch(getScene(), message.patch);
+        const sceneForPatch = getRawScene?.() ?? getScene();
+        applyPatch(sceneForPatch, message.patch);
         return;
       }
       case SCENE_CHANNEL.sceneChange: {
