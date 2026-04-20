@@ -1,22 +1,19 @@
-import { createSceneTransportPostMessage } from "../scene/sceneChannelTransport.js";
-import { createSceneChannel } from "../scene/sceneChannel.js";
+import { createSceneTransportPostMessage } from "../scene/sceneChannel/sceneChannelTransport.js";
+import { createSceneChannel } from "../scene/sceneChannel/sceneChannel.js";
 import type { SceneObject } from "../scene/scene.js";
 import {
   getScene,
-  getSceneRaw,
   setScene,
-  restoreSceneSnapshot,
+  subscribeToScene,
   saveSceneSnapshot,
-  onSceneUpdate,
-  applyScenePatchToRootTarget,
+  restoreSceneSnapshot,
+  applyPatch,
 } from "../scene/scene.js";
 import { GameIDEMode, getMode, onModeChange } from "../mode.js";
 import type { GameIDEPluginContext } from "../initializeGame.js";
 import { createEditorUI } from "./createEditorUI.js";
 import { DefaultEditor } from "./DefaultEditor.js";
 import type { EditorWithGameViewRef } from "./createEditorUI.js";
-
-export type ScenePatchMessage = Record<string, unknown>;
 
 export const editorPlugin =
   (Editor?: EditorWithGameViewRef) =>
@@ -32,9 +29,9 @@ export const editorPlugin =
       }),
       getScene,
       setScene,
-      onSceneUpdate,
+      subscribeToScene,
 
-      applyScenePatch: (_scene, patch) => applyScenePatchToRootTarget(patch),
+      applyPatch,
 
       initializeScene: false,
     });
@@ -56,7 +53,6 @@ export const editorPlugin =
           break;
 
         case GameIDEMode.Game:
-          getScene();
           saveSceneSnapshot();
           channel.pause();
           break;

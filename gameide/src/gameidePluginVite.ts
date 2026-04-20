@@ -1,7 +1,6 @@
 import type { Plugin, ResolvedConfig } from "vite";
 import fs from "node:fs";
 import path from "node:path";
-import { SCENE_HMR_EVENT_NAME } from "./scene/sceneHMR.js";
 
 const MANIFEST_VIRTUAL = "\0virtual:gameide-manifest";
 
@@ -238,16 +237,6 @@ export function gameidePlugin(): Plugin {
     async handleHotUpdate(context) {
       if (context.file.endsWith(".scene") && config) {
         syncSceneDeclaration(context.file, config.root);
-        try {
-          const raw = await context.read();
-          const sceneData = JSON.parse(raw) as Record<string, unknown>;
-          context.server.ws.send({
-            type: "custom",
-            event: SCENE_HMR_EVENT_NAME,
-            data: { path: context.file, sceneData },
-          });
-          return [];
-        } catch {}
       }
     },
     watchChange(id) {

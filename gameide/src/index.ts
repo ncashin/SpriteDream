@@ -1,26 +1,16 @@
-export type { ScenePatch } from "./scene/scenePatch.js";
-export type { SceneData, SceneWebviewMessage } from "./scene/sceneChannel.js";
-export {
-  applyScenePatchesInOrder,
-  applyScenePatch,
-  buildScenePatchFromDiff,
-  patchAtPath,
-} from "./scene/scenePatch.js";
-export { createSceneTransportPostMessage as createPostMessageTransport } from "./scene/sceneChannelTransport.js";
+export { createSceneTransportPostMessage as createPostMessageTransport } from "./scene/sceneChannel/sceneChannelTransport.js";
 export type {
   SceneChannelTransport,
   PostMessageTransportOptions,
-} from "./scene/sceneChannelTransport.js";
+} from "./scene/sceneChannel/sceneChannelTransport.js";
 export {
   createSceneChannel,
   SCENE_CHANNEL,
-  SCENE_MESSAGE_TYPES,
-} from "./scene/sceneChannel.js";
+} from "./scene/sceneChannel/sceneChannel.js";
 export type {
   CreateSceneChannelOptions,
   SceneChannel,
-} from "./scene/sceneChannel.js";
-
+} from "./scene/sceneChannel/sceneChannel.js";
 
 export {
   start,
@@ -31,30 +21,16 @@ export {
   editorUpdate,
   startGameloop,
 } from "./gameloop.js";
-export { queryObject, querySubtree } from "./scene/query.js";
+export { query } from "./scene/query/query.js";
 export {
   getScene,
   setScene,
   saveSceneSnapshot,
   restoreSceneSnapshot,
-  onSceneUpdate,
-  getSceneRaw,
-  getSceneObjectPath,
-  getSceneValueAtPath,
-  applyScenePatchToRootTarget,
 } from "./scene/scene.js";
-export type { SceneObject, SceneObjectData, SceneUpdate } from "./scene/scene.js";
-export type { ScenePath } from "./scene/scenePath.js";
-export {
-  appendKeyToPath,
-  getPathKey,
-  getValueAtPath,
-  isPathPrefixOf,
-  pathUpdateAffectsPath,
-  pathsEqual,
-  pathsSharePrefix,
-  setValueAtPath,
-} from "./scene/scenePath.js";
+export { getValueAtPath, setValueAtPath } from "./scene/path.js";
+export { applyPatch as applyScenePatch } from "./scene/patch.js";
+export type { SceneObject } from "./scene/scene.js";
 export {
   defineObject,
   createObjectGuard,
@@ -64,10 +40,7 @@ export {
   $boolean,
 } from "./objectRegistry.js";
 export type { SchemaToType, ObjectMetadata } from "./objectRegistry.js";
-export {
-  initializeGame,
-  initializePlugins,
-} from "./initializeGame.js";
+export { initializeGame, initializePlugins } from "./initializeGame.js";
 export type { GameIDEMetadata } from "./gameideManifest.js";
 export { getGameIDEMetadata } from "./gameideManifest.js";
 export type {
@@ -85,7 +58,6 @@ export {
   withOwnership,
 } from "./networkingPlugin.js";
 export type { NetworkingPluginOptions } from "./networkingPlugin.js";
-export type { ScenePatchMessage } from "./editor/editorPlugin.js";
 export { gameUIPlugin } from "./editor/gameUIPlugin/gameUIPlugin.js";
 export { ExampleGameUI } from "./editor/gameUIPlugin/ExampleGameUI.js";
 export { Game } from "./editor/gameUIPlugin/Game.js";
@@ -98,12 +70,7 @@ export { OverlayButton } from "./editor/OverlayButton.js";
 export { OverlayInput } from "./editor/OverlayInput.js";
 export { useScene } from "./editor/useScene.js";
 export { useGameIDEMode } from "./editor/useGameIDEMode.js";
-export {
-  GameIDEMode,
-  getMode,
-  setMode,
-  onModeChange,
-} from "./mode.js";
+export { GameIDEMode, getMode, setMode, onModeChange } from "./mode.js";
 export { inputPlugin } from "./inputPlugin.js";
 export type {
   InputBinding,
@@ -112,5 +79,3 @@ export type {
   InputPluginRequiredContext,
   InputPluginOptions,
 } from "./inputPlugin.js";
-export { SCENE_HMR_EVENT_NAME } from "./scene/sceneHMR.js";
-export type { SceneHMRPayload } from "./scene/sceneHMR.js";

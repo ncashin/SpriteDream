@@ -2,7 +2,7 @@ import { ChevronRight, Box } from "lucide-react";
 import { useRef, useState } from "react";
 import type { SceneObject } from "../scene/scene.js";
 import { getScene } from "../scene/scene.js";
-import { setValueAtPath } from "../scene/scenePath.js";
+import { setValueAtPath } from "../scene/path.js";
 import { useResizeObserverSetCSSVar } from "./useResizeObserverSetCSSVar.js";
 import { useScene } from "./useScene.js";
 import { cn } from "../utils/cn.js";

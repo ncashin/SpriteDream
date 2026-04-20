@@ -1,12 +1,12 @@
 import { connectWebSocketRoomTransport } from "./websocketRoomTransport.js";
-import { createSceneChannel } from "./scene/sceneChannel.js";
+import { createSceneChannel } from "./scene/sceneChannel/sceneChannel.js";
 import {
   getScene,
   setScene,
-  onSceneUpdate,
-  applyScenePatchToRootTarget,
+  subscribeToScene,
+  applyPatch as applyScenePatch,
 } from "./scene/scene.js";
-import type { SceneObjectData } from "./scene/scene.js";
+import type { SceneObject } from "./scene/scene.js";
 import { isOwnedSceneObject, withOwnership } from "./distributedSimulation.js";
 
 export {
@@ -23,7 +23,7 @@ export type NetworkingPluginOptions = {
 
 export const networkingPlugin =
   (options: NetworkingPluginOptions = {}) =>
-  async (input: { rootElement: HTMLElement; initialScene: SceneObjectData }) => {
+  async (input: { rootElement: HTMLElement; initialScene: SceneObject }) => {
     const room = options.room ?? "default";
     
     const { transport, dispose: disposeTransport } =
@@ -39,8 +39,8 @@ export const networkingPlugin =
       transport,
       getScene,
       setScene,
-      applyScenePatch: (_scene, patch) => applyScenePatchToRootTarget(patch),
-      onSceneUpdate,
+      applyPatch: applyScenePatch,
+      subscribeToScene,
       getInitialSceneContent: () => JSON.stringify(getScene()),
       initializeScene: !shouldBootstrapScene,
     });
@@ -55,7 +55,7 @@ export const networkingPlugin =
         onPeersChange: (handler: (peers: string[]) => void) =>
           transport.onPeersChange(handler),
         channel,
-        isOwned: (obj: SceneObjectData) => isOwnedSceneObject(obj, peerId),
+        isOwned: (obj: SceneObject) => isOwnedSceneObject(obj, peerId),
         withOwnership: <T extends Record<string, unknown>>(obj: T) =>
           withOwnership(obj, peerId),
         dispose() {
