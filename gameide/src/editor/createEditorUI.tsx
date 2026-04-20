@@ -1,32 +1,32 @@
+import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import type { ComponentType } from "react";
+import type { ComponentType, Ref } from "react";
 
+export type EditorWithGameViewRef = ComponentType<{
+  gameViewRef?: Ref<HTMLDivElement>;
+}>;
+
+/**
+ * Mounts the editor into `parentRoot` and resolves with the GameView host element
+ * (where the game surface should attach).
+ */
 export function createEditorUI(
-  Editor: ComponentType,
-  rootElement: HTMLElement,
-): void {
-  const overlay = document.createElement("div");
-  overlay.id = "gameide-editor-overlay";
-  overlay.style.position = "fixed";
-  overlay.style.inset = "0";
-  overlay.style.pointerEvents = "none";
+  parentRoot: HTMLElement,
+  Editor: EditorWithGameViewRef,
+): Promise<HTMLDivElement> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const gameViewRef = (el: HTMLDivElement | null) => {
+      if (el && !settled) {
+        settled = true;
+        resolve(el);
+      }
+    };
 
-  document.body.appendChild(overlay);
+    const root = createRoot(parentRoot);
 
-  const root = createRoot(overlay);
-  root.render(<Editor />);
-
-  requestAnimationFrame(() => {
-    const gameRootContainer = document.getElementById("gameide-editor-gameview");
-    if (!gameRootContainer) return;
-
-    const currentParent = rootElement.parentElement;
-    if (!currentParent) return;
-
-    currentParent.removeChild(rootElement);
-    gameRootContainer.appendChild(rootElement);
-
-    rootElement.style.width = "100%";
-    rootElement.style.height = "100%";
+    flushSync(() => {
+      root.render(<Editor gameViewRef={gameViewRef} />);
+    });
   });
 }

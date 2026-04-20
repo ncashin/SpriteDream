@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type Ref } from "react";
 import {
   SceneTree,
   GameView,
@@ -16,7 +16,11 @@ import {
 } from "gameide";
 import { Cuboid, MoveLeft, Play, Square } from "lucide-react";
 
-export function Editor() {
+export function Editor({
+  gameViewRef,
+}: {
+  gameViewRef?: Ref<HTMLDivElement>;
+}) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const mode = useGameIDEMode();
   const isRunning = mode === GameIDEMode.Game;
@@ -35,7 +39,7 @@ export function Editor() {
       </Sidebar>
 
       <div className="relative flex-1 min-w-0 overflow-hidden">
-        <GameView className="h-full" />
+        <GameView ref={gameViewRef} className="h-full" />
 
         <div className="absolute top-3 w-full flex items-center justify-between px-3 gap-3">
           <OverlayButton
@@ -89,4 +93,3 @@ export function Editor() {
     </EditorRoot>
   );
 }
-

@@ -173,7 +173,7 @@ initializeGame({
       },
     }),
   ]),
-  main({ input, networking }) {
+  main({ input, networking, rootElement }) {
     const scene = getScene();
 
     gameStart(() => {
@@ -195,7 +195,7 @@ initializeGame({
     canvas.width = rootElement.clientWidth;
     canvas.height = rootElement.clientHeight;
     canvas.style.display = "block";
-    rootElement.appendChild(canvas);
+    rootElement.prepend(canvas);
 
     const context = canvas.getContext("2d");
     invariant(context);

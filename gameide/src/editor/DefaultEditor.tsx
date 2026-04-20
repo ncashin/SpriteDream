@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type Ref } from "react";
 import { SceneTree } from "./SceneTree.js";
 import { GameView } from "./GameView.js";
 import { Sidebar } from "./Sidebar.js";
@@ -13,7 +13,11 @@ import { getValueAtPath, setValueAtPath } from "../scene/scenePath.js";
 import { useScene } from "./useScene.js";
 import { EditorRoot } from "./EditorRoot.js";
 
-export function DefaultEditor() {
+export function DefaultEditor({
+  gameViewRef,
+}: {
+  gameViewRef?: Ref<HTMLDivElement>;
+}) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const mode = useGameIDEMode();
   const isRunning = mode === GameIDEMode.Game;
@@ -29,7 +33,7 @@ export function DefaultEditor() {
       </Sidebar>
 
       <div className="relative flex-1 min-w-0 overflow-hidden">
-        <GameView className="h-full" />
+        <GameView ref={gameViewRef} className="h-full" />
 
         <div className="absolute top-3 flex items-center justify-between px-3 gap-3">
           <OverlayButton

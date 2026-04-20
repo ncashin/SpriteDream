@@ -11,14 +11,16 @@ import {
   applyScenePatchToRootTarget,
 } from "../scene/scene.js";
 import { GameIDEMode, getMode, onModeChange } from "../mode.js";
+import type { GameIDEPluginContext } from "../initializeGame.js";
 import { createEditorUI } from "./createEditorUI.js";
-import type { ComponentType } from "react";
 import { DefaultEditor } from "./DefaultEditor.js";
+import type { EditorWithGameViewRef } from "./createEditorUI.js";
 
 export type ScenePatchMessage = Record<string, unknown>;
 
 export const editorPlugin =
-  (Editor?: ComponentType) => async (input: { rootElement: HTMLElement }) => {
+  (Editor?: EditorWithGameViewRef) =>
+  async (input: GameIDEPluginContext) => {
     if (process.env.NODE_ENV !== "development") {
       return input;
     }
@@ -36,9 +38,11 @@ export const editorPlugin =
 
       initializeScene: false,
     });
-    
-    const { rootElement } = input;
-    createEditorUI(Editor ?? DefaultEditor, rootElement);
+
+    const gameViewRoot = await createEditorUI(
+      input.rootElement,
+      Editor ?? DefaultEditor,
+    );
 
     if (getMode() === GameIDEMode.Editor) {
       saveSceneSnapshot();
@@ -62,5 +66,5 @@ export const editorPlugin =
       }
     });
 
-    return input;
+    return { ...input, rootElement: gameViewRoot };
   };

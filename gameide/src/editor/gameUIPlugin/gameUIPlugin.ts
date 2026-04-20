@@ -1,13 +1,16 @@
 import type { ComponentType } from "react";
+import type { GameIDEPluginContext } from "../../initializeGame.js";
 import { createGameUI } from "./createGameUI.js";
 import { ExampleGameUI } from "./ExampleGameUI.js";
 
 export const gameUIPlugin =
   (GameUI?: ComponentType) =>
-  (input: { rootElement: HTMLElement }) => {
-    const { rootElement } = input;
-    createGameUI(GameUI ?? ExampleGameUI, rootElement);
+  async (input: GameIDEPluginContext) => {
+    const rootElement = await createGameUI(
+      input.rootElement,
+      GameUI ?? ExampleGameUI,
+    );
 
-    return input;
+    return { ...input, rootElement };
   };
 

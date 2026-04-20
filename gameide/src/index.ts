@@ -70,8 +70,13 @@ export {
 } from "./initializeGame.js";
 export type { GameIDEMetadata } from "./gameideManifest.js";
 export { getGameIDEMetadata } from "./gameideManifest.js";
-export type { Plugin, FinalContext } from "./initializeGame.js";
+export type {
+  Plugin,
+  FinalContext,
+  GameIDEPluginContext,
+} from "./initializeGame.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
+export type { EditorWithGameViewRef } from "./editor/createEditorUI.js";
 export {
   networkingPlugin,
   SCENE_OWNER_ID,

@@ -1,32 +1,27 @@
+import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import { Game } from "./Game.js";
 import type { ComponentType } from "react";
 
+/**
+ * Mounts game UI as a layer inside `parentRoot` (typically the GameView host).
+ * Returns the same `parentRoot` so the canvas can still attach there (prepend in main).
+ */
 export function createGameUI(
+  parentRoot: HTMLElement,
   GameUI: ComponentType,
-  rootElement: HTMLElement,
-): void {
-  const overlay = document.createElement("div");
-  overlay.id = "gameide-game-overlay";
-  overlay.style.position = "fixed";
-  overlay.style.inset = "0";
-  overlay.style.pointerEvents = "none";
+): Promise<HTMLElement> {
+  const layer = document.createElement("div");
+  layer.style.cssText =
+    "position:absolute;inset:0;pointer-events:none;z-index:1";
 
-  document.body.appendChild(overlay);
+  parentRoot.style.position = "relative";
+  parentRoot.appendChild(layer);
 
-  const root = createRoot(overlay);
-  root.render(<GameUI />);
+  const root = createRoot(layer);
 
-  const gameRootContainer = document.getElementById("gameide-gameui-game");
-  if (!gameRootContainer) return;
+  flushSync(() => {
+    root.render(<GameUI />);
+  });
 
-  const currentParent = rootElement.parentElement;
-  if (!currentParent) return;
-
-  currentParent.removeChild(rootElement);
-  gameRootContainer.appendChild(rootElement);
-
-  rootElement.style.width = "100%";
-  rootElement.style.height = "100%";
+  return Promise.resolve(parentRoot);
 }
-

@@ -5,6 +5,10 @@ import {
 } from "./gameloop.js";
 import { setScene } from "./scene/scene.js";
 
+export type GameIDEPluginContext = {
+  rootElement: HTMLElement;
+};
+
 export type Plugin = (input: object) => object | Promise<object>;
 
 type PluginAddedFields<F> = F extends (input: infer In) => infer Out
@@ -29,9 +33,7 @@ export type FinalContext<
   PluginList extends readonly unknown[],
 > = InitialContext & IntersectPluginFields<PluginList>;
 
-type RootContext = {
-  rootElement: HTMLElement;
-};
+type RootContext = GameIDEPluginContext;
 
 type InitializedContext<
   InitialContext,
