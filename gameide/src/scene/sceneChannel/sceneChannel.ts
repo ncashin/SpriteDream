@@ -1,4 +1,5 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
+import { invalidateUseSceneSnapshot } from "../../editor/useSceneSnapshot.js";
 import {
   type SceneObject,
   type SceneReflectUpdate,
@@ -107,6 +108,7 @@ export async function createSceneChannel(
         if (!sceneInitialized || paused) return;
         const sceneForPatch = getRawScene?.() ?? getScene();
         applyPatch(sceneForPatch, message.patch);
+        invalidateUseSceneSnapshot();
         return;
       }
       case SCENE_CHANNEL.sceneChange: {

@@ -1,3 +1,5 @@
+import { invalidateUseSceneSnapshot } from "../editor/useSceneSnapshot.js";
+
 export { saveSceneSnapshot, restoreSceneSnapshot } from "./snapshot.js";
 export {
   applyPatch,
@@ -36,6 +38,7 @@ function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<any> {
       subscribers.forEach((callback) => {
         callback({ path, property, previousValue, value });
       });
+      invalidateUseSceneSnapshot();
       return result;
     },
   };
@@ -63,4 +66,5 @@ export const setScene = (data: SceneObject) => {
     delete sceneTarget[key];
   }
   Object.assign(sceneTarget, data);
+  invalidateUseSceneSnapshot();
 };

@@ -57,8 +57,8 @@ export {
   isOwnedSceneUpdate,
   isOwnedSceneObject,
   withOwnership,
-} from "./networkingPlugin.js";
-export type { NetworkingPluginOptions } from "./networkingPlugin.js";
+} from "./networking/networkingPlugin.js";
+export type { NetworkingPluginOptions } from "./networking/networkingPlugin.js";
 export { gameUIPlugin } from "./editor/gameUIPlugin/gameUIPlugin.js";
 export { ExampleGameUI } from "./editor/gameUIPlugin/ExampleGameUI.js";
 export { Game } from "./editor/gameUIPlugin/Game.js";
