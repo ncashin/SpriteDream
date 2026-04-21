@@ -33,14 +33,15 @@ export { getValueAtPath, setValueAtPath } from "./scene/path.js";
 export { applyPatch as applyScenePatch } from "./scene/patch.js";
 export type { SceneObject } from "./scene/scene.js";
 export {
-  defineObject,
-  createObjectGuard,
-  getDefinedObjectsForEditor,
+  trait,
+  implementsTrait,
+  createTraitGuard,
+  getDefinedTraitsForEditor,
   $number,
   $string,
   $boolean,
-} from "./objectRegistry.js";
-export type { SchemaToType, ObjectMetadata } from "./objectRegistry.js";
+} from "./trait/trait.js";
+export type { TraitMetadata } from "./trait/trait.js";
 export {
   game,
   plugins,
@@ -51,8 +52,8 @@ export {
   type GameMain,
   type GameContext,
 } from "./lifecycle/index.js";
-export type { GameIDEMetadata } from "./gameideManifest.js";
-export { getGameIDEMetadata } from "./gameideManifest.js";
+export type { GameIDEMetadata } from "./meta/gameideManifest.js";
+export { getGameIDEMetadata } from "./meta/gameideManifest.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
 export type { EditorWithGameViewRef } from "./editor/createEditorUI.js";
 export {

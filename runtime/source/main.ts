@@ -1,30 +1,26 @@
 import {
+  implementsTrait,
+  trait,
   getScene,
   query,
   SCENE_OWNER_ID,
   gameStart,
   gameUpdate,
   update,
-  type SceneObject,
+  $string,
 } from "gameide";
 import invariant from "tiny-invariant";
 import type { MainContext } from "./gameConfig";
 
-type PlayerBody = SceneObject & {
-  x: number;
-  y: number;
-  speed: number;
-};
-
-function isPlayer(value: unknown): value is PlayerBody {
-  if (!value || typeof value !== "object") return false;
-  const o = value as Record<PropertyKey, unknown>;
-  return (
-    typeof o.x === "number" &&
-    typeof o.y === "number" &&
-    typeof o.speed === "number"
-  );
-}
+const Player = trait(
+  {
+    [SCENE_OWNER_ID]: $string,
+    x: 0,
+    y: 0,
+    speed: 0,
+  },
+  { name: "Player" },
+);
 
 function hashHue(id: string): number {
   let hash = 0;
@@ -42,11 +38,7 @@ function playerObjectKey(peerId: string): string {
   return `player-${peerId}`;
 }
 
-export function main({
-  input,
-  networking,
-  rootElement,
-}: MainContext): void {
+export function main({ input, networking, rootElement }: MainContext): void {
   const scene = getScene();
 
   gameStart(() => {
@@ -80,7 +72,7 @@ export function main({
     context.fillStyle = "#0f1419";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (const player of query(scene, isPlayer)) {
+    for (const player of query(scene, implementsTrait(Player))) {
       const px = canvas.width / 2 + player.x;
       const py = canvas.height / 2 - player.y;
       context.fillStyle = playerColor(String(player[SCENE_OWNER_ID] ?? ""));
@@ -97,7 +89,7 @@ export function main({
   });
 
   gameUpdate((deltaTime) => {
-    for (const player of query(scene, isPlayer)) {
+    for (const player of query(scene, implementsTrait(Player))) {
       if (!networking.isOwned(player)) {
         continue;
       }
