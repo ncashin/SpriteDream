@@ -1,9 +1,9 @@
 import {
   implementsTrait,
-  trait,
+  defineTrait,
   getScene,
   query,
-  SCENE_OWNER_ID,
+  OWNER_ID,
   gameStart,
   gameUpdate,
   update,
@@ -12,12 +12,12 @@ import {
 import invariant from "tiny-invariant";
 import type { MainContext } from "./gameConfig";
 
-const Player = trait(
+const PlayerTrait = defineTrait(
   {
-    [SCENE_OWNER_ID]: $string,
+    [OWNER_ID]: $string,
     x: 0,
     y: 0,
-    speed: 0,
+    speed: 200,
   },
   { name: "Player" },
 );
@@ -72,10 +72,11 @@ export function main({ input, networking, rootElement }: MainContext): void {
     context.fillStyle = "#0f1419";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (const player of query(scene, implementsTrait(Player))) {
+    for (const player of query(scene, implementsTrait(PlayerTrait))) {
+      console.log(player)
       const px = canvas.width / 2 + player.x;
       const py = canvas.height / 2 - player.y;
-      context.fillStyle = playerColor(String(player[SCENE_OWNER_ID] ?? ""));
+      context.fillStyle = playerColor(String(player[OWNER_ID] ?? ""));
       context.fillRect(px - half, py - half, playerSize, playerSize);
     }
 
@@ -89,7 +90,7 @@ export function main({ input, networking, rootElement }: MainContext): void {
   });
 
   gameUpdate((deltaTime) => {
-    for (const player of query(scene, implementsTrait(Player))) {
+    for (const player of query(scene, implementsTrait(PlayerTrait))) {
       if (!networking.isOwned(player)) {
         continue;
       }

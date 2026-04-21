@@ -26,8 +26,12 @@ type InferSchemaValue<T extends SchemaValue> =
       ? string
       : T extends typeof $boolean
         ? boolean
-        : T extends number | string | boolean
-          ? T
+      : T extends number
+          ? number
+          : T extends string
+              ? string
+              : T extends boolean
+                  ? boolean
           : T extends SchemaObject
             ? InferSchemaObject<T>
             : never;
@@ -70,13 +74,14 @@ function compilePropertyCheck(constraint: SchemaValue): (actual: unknown) => boo
     return (actual) => nestedGuard(actual);
   }
   if (typeof constraint === "number") {
-    return (actual) => typeof actual === "number" && Number.isFinite(actual) && Object.is(actual, constraint);
+    // Primitive literals in trait schemas are treated as typed defaults.
+    return (actual) => typeof actual === "number" && Number.isFinite(actual);
   }
   if (typeof constraint === "string") {
-    return (actual) => actual === constraint;
+    return (actual) => typeof actual === "string";
   }
   if (typeof constraint === "boolean") {
-    return (actual) => actual === constraint;
+    return (actual) => typeof actual === "boolean";
   }
   return () => false;
 }

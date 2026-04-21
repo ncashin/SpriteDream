@@ -32,7 +32,6 @@ export type GameOptions<
   main: GameMain<Initial, Plugins>;
 };
 
-/** Binds scene, plugins, and seed context; pass `main` in a second call so its `context` is contextually typed. */
 export function game<
   Initial extends object,
   const Plugins extends readonly unknown[],

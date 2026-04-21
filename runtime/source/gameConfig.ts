@@ -1,6 +1,5 @@
 import {
   game,
-  plugins,
   inputPlugin,
   editorPlugin,
   networkingPlugin,
@@ -16,11 +15,11 @@ import { main } from "./main";
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-const boundGame = game({
+const mainFunction = game({
   rootElement,
   initialContext: {},
   initialScene: sampleScene,
-  plugins: plugins([
+  plugins: [
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
     networkingPlugin({
@@ -40,9 +39,9 @@ const boundGame = game({
       },
       buttons: {},
     }),
-  ]),
+  ],
 });
 
-export type MainContext = Parameters<Parameters<typeof boundGame>[0]>[0];
+export type MainContext = Parameters<Parameters<typeof mainFunction>[0]>[0];
 
-void boundGame(main);
+void mainFunction(main);

@@ -21,6 +21,13 @@ function websocketURLForRoom(room: string): string {
   return `${protocol}//${location.host}/room?${params.toString()}`;
 }
 
+function appendRoomToURL(url: string, room: string): string {
+  const base = globalThis.location?.origin ?? "http://localhost";
+  const target = new URL(url, base);
+  target.searchParams.set("room", room);
+  return target.toString();
+}
+
 function applyPeersFromServerMessage(
   message: unknown,
   setPeers: (next: string[]) => void,
@@ -38,7 +45,10 @@ export function connectWebSocketRoomTransport(options: {
   room: string;
   url?: string;
 }): Promise<ConnectWebSocketRoomResult> {
-  const url = options.url ?? websocketURLForRoom(options.room);
+  const url =
+    options.url == null
+      ? websocketURLForRoom(options.room)
+      : appendRoomToURL(options.url, options.room);
   const websocket = new WebSocket(url);
 
   return new Promise((resolve, reject) => {
