@@ -45,12 +45,14 @@ export {
   game,
   plugins,
   type ApplyPlugins,
+  type Plugin,
   type GameOptions,
-  type GameContextSeed,
+  type GameConfig,
+  type GameMain,
+  type GameContext,
 } from "./lifecycle/index.js";
 export type { GameIDEMetadata } from "./gameideManifest.js";
 export { getGameIDEMetadata } from "./gameideManifest.js";
-export type { GameIDEPluginContext } from "./gameIDEPluginContext.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
 export type { EditorWithGameViewRef } from "./editor/createEditorUI.js";
 export {

@@ -24,14 +24,14 @@ export type NetworkingPluginOptions = {
 
 export const networkingPlugin =
   (options: NetworkingPluginOptions = {}) =>
-  async (input: { rootElement: HTMLElement; initialScene: SceneObject }) => {
+  async (input: { rootElement: HTMLElement; initialScene?: SceneObject }) => {
     const room = options.room ?? "default";
-    
+
     const { transport, dispose: disposeTransport } =
       await connectWebSocketRoomTransport({ room, url: options.url });
 
     const shouldBootstrapScene = transport.getPeers().length === 1;
-    if (shouldBootstrapScene) {
+    if (shouldBootstrapScene && input.initialScene !== undefined) {
       setScene(input.initialScene);
     }
 
@@ -51,9 +51,7 @@ export const networkingPlugin =
       ...input,
       networking: {
         peerId,
-        get peers() {
-          return transport.getPeers();
-        },
+        getPeers: () => transport.getPeers(),
         onPeersChange: (handler: (peers: string[]) => void) =>
           transport.onPeersChange(handler),
         channel,

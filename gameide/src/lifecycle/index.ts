@@ -1,2 +1,8 @@
-export { game, type GameOptions, type GameContextSeed } from "./game.js";
-export { plugins, type ApplyPlugins } from "./plugin.js";
+export {
+  game,
+  type GameOptions,
+  type GameConfig,
+  type GameMain,
+  type GameContext,
+} from "./game.js";
+export { plugins, type ApplyPlugins, type Plugin } from "./plugin.js";

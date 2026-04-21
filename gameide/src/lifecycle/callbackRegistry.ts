@@ -20,14 +20,9 @@ export function createCallbackRegistry<
     for (const callbackFunction of callbackList) callbackFunction(...argumentList);
   }
 
-  function runCallbacksAndCollectResults(...argumentList: Parameters<CallbackType>): ReturnType<CallbackType>[] {
-    return callbackList.map((callbackFunction) => callbackFunction(...argumentList) as ReturnType<CallbackType>);
-  }
-
   return {
     register: registerCallback,
     run: runCallbacks,
-    runAndCollect: runCallbacksAndCollectResults,
     get callbacks(): readonly CallbackType[] {
       return callbackList;
     },

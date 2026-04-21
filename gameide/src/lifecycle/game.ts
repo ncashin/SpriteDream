@@ -3,51 +3,68 @@ import type { SceneObject } from "../scene/scene.js";
 import { setScene } from "../scene/scene.js";
 import { reducePlugins, type ApplyPlugins } from "./plugin.js";
 
-export type GameContextSeed<
+export type GameContext<Initial extends object> = Initial & {
+  rootElement: HTMLElement;
+  initialScene?: SceneObject;
+};
+
+export type GameMain<
   Initial extends object,
-  Scene extends SceneObject | undefined,
-> = Initial &
-  { rootElement: HTMLElement } &
-  (Scene extends SceneObject ? { initialScene: Scene } : {});
+  Plugins extends readonly unknown[],
+> = (
+  context: ApplyPlugins<GameContext<Initial>, Plugins>,
+) => void | Promise<void>;
+
+export type GameConfig<
+  Initial extends object,
+  Plugins extends readonly unknown[],
+> = {
+  rootElement: HTMLElement;
+  initialContext: Initial;
+  initialScene?: SceneObject;
+  plugins?: Plugins;
+};
 
 export type GameOptions<
   Initial extends object,
   Plugins extends readonly unknown[],
-  Scene extends SceneObject | undefined = undefined,
-> = {
-  rootElement: HTMLElement;
-  initialContext: Initial;
-  initialScene?: Scene;
-  plugins?: Plugins;
-  main: (
-    ctx: ApplyPlugins<GameContextSeed<Initial, Scene>, Plugins>,
-  ) => void | Promise<void>;
+> = GameConfig<Initial, Plugins> & {
+  main: GameMain<Initial, Plugins>;
 };
 
-export async function game<
+/** Binds scene, plugins, and seed context; pass `main` in a second call so its `context` is contextually typed. */
+export function game<
   Initial extends object,
   const Plugins extends readonly unknown[],
-  Scene extends SceneObject | undefined = undefined,
 >(
-  options: GameOptions<Initial, Plugins, Scene>,
-): Promise<ApplyPlugins<GameContextSeed<Initial, Scene>, Plugins>> {
-  let result: GameContextSeed<Initial, Scene> = {
-    ...options.initialContext,
-    rootElement: options.rootElement,
-    ...(options.initialScene !== undefined
-      ? { initialScene: options.initialScene }
-      : {}),
-  } as GameContextSeed<Initial, Scene>;
+  config: GameConfig<Initial, Plugins>,
+): (
+  main: GameMain<Initial, Plugins>,
+) => Promise<ApplyPlugins<GameContext<Initial>, Plugins>> {
+  return (main) => runGame({ ...config, main });
+}
 
-  if (options.initialScene !== undefined) {
-    setScene(options.initialScene);
+async function runGame<
+  Initial extends object,
+  const Plugins extends readonly unknown[],
+>(
+  options: GameOptions<Initial, Plugins>,
+): Promise<ApplyPlugins<GameContext<Initial>, Plugins>> {
+  const { rootElement, initialContext, initialScene, main } = options;
+  const pluginList = (options.plugins ?? []) as Plugins;
+
+  if (initialScene !== undefined) {
+    setScene(initialScene);
   }
 
-  const pluginList = (options.plugins ?? []) as Plugins;
-  const context = await reducePlugins(result, pluginList);
+  const seed = {
+    ...initialContext,
+    rootElement,
+    ...(initialScene !== undefined && { initialScene }),
+  } as GameContext<Initial>;
 
-  void options.main(context);
+  const context = await reducePlugins(seed, pluginList);
+  void main(context);
   startGameloop();
-
   return context;
 }

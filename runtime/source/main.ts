@@ -1,11 +1,5 @@
 import {
   getScene,
-  gameUIPlugin,
-  game,
-  plugins,
-  inputPlugin,
-  editorPlugin,
-  networkingPlugin,
   query,
   SCENE_OWNER_ID,
   gameStart,
@@ -13,14 +7,8 @@ import {
   update,
   type SceneObject,
 } from "gameide";
-import sampleScene from "./sample.scene";
-import "./style.css";
 import invariant from "tiny-invariant";
-import { Editor } from "./Editor";
-import { GameUI } from "./GameUI";
-
-const rootElement = document.getElementById("app");
-invariant(rootElement);
+import type { MainContext } from "./gameConfig";
 
 type PlayerBody = SceneObject & {
   x: number;
@@ -54,93 +42,69 @@ function playerObjectKey(peerId: string): string {
   return `player-${peerId}`;
 }
 
-game({
+export function main({
+  input,
+  networking,
   rootElement,
-  initialContext: {},
-  initialScene: sampleScene,
-  plugins: plugins([
-    editorPlugin(Editor),
-    gameUIPlugin(GameUI),
-    networkingPlugin({
-      room: "default",
-      url: "ws://localhost:5173/room?room=default",
-    }),
-    inputPlugin({
-      axes: {
-        Horizontal: {
-          negative: ["KeyA", "KeyArrowLeft"],
-          positive: ["KeyD", "KeyArrowRight"],
-        },
-        Vertical: {
-          negative: ["KeyS", "KeyArrowDown"],
-          positive: ["KeyW", "KeyArrowUp"],
-        },
-      },
-      buttons: {},
-    }),
-  ]),
-  main({ input, networking, rootElement }) {
-    const scene = getScene();
+}: MainContext): void {
+  const scene = getScene();
 
-    gameStart(() => {
-      scene[playerObjectKey(networking.peerId)] = networking.withOwnership({
-        x: 0,
-        y: 0,
-        speed: 200,
-      });
+  gameStart(() => {
+    scene[playerObjectKey(networking.peerId)] = networking.withOwnership({
+      x: 0,
+      y: 0,
+      speed: 200,
     });
+  });
 
-    const canvas = document.createElement("canvas");
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
+  const canvas = document.createElement("canvas");
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  canvas.width = rootElement.clientWidth;
+  canvas.height = rootElement.clientHeight;
+  canvas.style.display = "block";
+  rootElement.prepend(canvas);
+
+  const context = canvas.getContext("2d");
+  invariant(context);
+
+  window.addEventListener("resize", () => {
     canvas.width = rootElement.clientWidth;
     canvas.height = rootElement.clientHeight;
-    canvas.style.display = "block";
-    rootElement.prepend(canvas);
+  });
 
-    const context = canvas.getContext("2d");
-    invariant(context);
+  const playerSize = 32;
+  const half = playerSize / 2;
 
-    window.addEventListener("resize", () => {
-      canvas.width = rootElement.clientWidth;
-      canvas.height = rootElement.clientHeight;
-    });
+  update(() => {
+    context.fillStyle = "#0f1419";
+    context.fillRect(0, 0, canvas.width, canvas.height);
 
-    const playerSize = 32;
-    const half = playerSize / 2;
+    for (const player of query(scene, isPlayer)) {
+      const px = canvas.width / 2 + player.x;
+      const py = canvas.height / 2 - player.y;
+      context.fillStyle = playerColor(String(player[SCENE_OWNER_ID] ?? ""));
+      context.fillRect(px - half, py - half, playerSize, playerSize);
+    }
 
-    update(() => {
-      context.fillStyle = "#0f1419";
-      context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#94a3b8";
+    context.font = "13px system-ui, sans-serif";
+    context.fillText(
+      "WASD / arrow keys to move. Open two tabs to see other players.",
+      12,
+      22,
+    );
+  });
 
-      for (const player of query(scene, isPlayer)) {
-        const px = canvas.width / 2 + player.x;
-        const py = canvas.height / 2 - player.y;
-        context.fillStyle = playerColor(
-          String(player[SCENE_OWNER_ID] ?? ""),
-        );
-        context.fillRect(px - half, py - half, playerSize, playerSize);
+  gameUpdate((deltaTime) => {
+    for (const player of query(scene, isPlayer)) {
+      if (!networking.isOwned(player)) {
+        continue;
       }
-
-      context.fillStyle = "#94a3b8";
-      context.font = "13px system-ui, sans-serif";
-      context.fillText(
-        "WASD / arrow keys to move. Open two tabs to see other players.",
-        12,
-        22,
-      );
-    });
-
-    gameUpdate((deltaTime) => {
-      for (const player of query(scene, isPlayer)) {
-        if (!networking.isOwned(player)) {
-          continue;
-        }
-        const horizontal = input.axes.Horizontal;
-        const vertical = input.axes.Vertical;
-        player.x += horizontal * player.speed * deltaTime;
-        player.y += vertical * player.speed * deltaTime;
-      }
-    });
-  },
-});
+      const horizontal = input.axes.Horizontal;
+      const vertical = input.axes.Vertical;
+      player.x += horizontal * player.speed * deltaTime;
+      player.y += vertical * player.speed * deltaTime;
+    }
+  });
+}

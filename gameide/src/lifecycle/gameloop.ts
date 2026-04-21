@@ -6,8 +6,10 @@ type UpdateCallback = (deltaTime: number) => void;
 
 const gameStartRegistry = createCallbackRegistry<StartCallback>();
 const gameUpdateRegistry = createCallbackRegistry<UpdateCallback>();
+
 const editorStartRegistry = createCallbackRegistry<StartCallback>();
 const editorUpdateRegistry = createCallbackRegistry<UpdateCallback>();
+
 const alwaysStartRegistry = createCallbackRegistry<StartCallback>();
 const alwaysUpdateRegistry = createCallbackRegistry<UpdateCallback>();
 

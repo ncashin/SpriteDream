@@ -1,4 +1,5 @@
 import { update } from "./lifecycle/gameloop.js";
+import type { Plugin } from "./lifecycle/plugin.js";
 
 export type InputBinding =
   | `Key${string}`
@@ -12,26 +13,15 @@ export type AxisConfig = {
 
 export type ButtonConfig = InputBinding[];
 
-export type InputPluginRequiredContext = { rootElement?: HTMLElement };
+export type InputPluginRequiredContext = { rootElement: HTMLElement };
 export type InputPluginOptions = {
-  axes: Record<string, { negative: string[]; positive: string[] }>;
-  buttons: Record<string, string[]>;
+  axes: Record<string, AxisConfig>;
+  buttons: Record<string, ButtonConfig>;
   target?: HTMLElement | Document;
-  /**
-   * Controls cursor appearance for click+drag interactions.
-   * Only applies when the input target is an HTMLElement.
-   */
   dragCursor?: {
-    /** MouseEvent.button values to treat as "draggable". */
     buttons: number[];
-    /** Cursor while the button is down but movement hasn't started yet. */
     down: string;
-    /** Cursor while moving with a draggable button held down. */
     dragging: string;
-    /**
-     * Cursor to restore on mouse up. If omitted, restores the element's
-     * previous inline `style.cursor`.
-     */
     idle?: string;
   };
 };
@@ -41,16 +31,12 @@ type AxisKeys<Options extends InputPluginOptions> = keyof Options["axes"] &
 type ButtonKeys<Options extends InputPluginOptions> = keyof Options["buttons"] &
   string;
 
-/** Mirrors the public `input` field shape (not exported). */
-type InputSnapshot<Options extends InputPluginOptions> = {
+type InputShape<Options extends InputPluginOptions> = {
   axes: { [K in keyof Options["axes"] & string]: number };
   buttons: {
     [K in keyof Options["buttons"] & string]: {
-      /** True while the binding is currently down (this frame). */
       held: boolean;
-      /** True on the frame the binding became down (pressed this frame). */
       pressed: boolean;
-      /** True on the frame the binding became up (released this frame). */
       released: boolean;
     };
   };
@@ -67,31 +53,12 @@ function normalizeKey(code: string): InputBinding {
 
 export function inputPlugin<Options extends InputPluginOptions>(
   options: Options,
-): (input: InputPluginRequiredContext) => InputPluginRequiredContext & {
-  input: {
-    axes: { [K in keyof Options["axes"] & string]: number };
-    buttons: {
-      [K in keyof Options["buttons"] & string]: {
-        /** True while the binding is currently down (this frame). */
-        held: boolean;
-        /** True on the frame the binding became down (pressed this frame). */
-        pressed: boolean;
-        /** True on the frame the binding became up (released this frame). */
-        released: boolean;
-      };
-    };
-    mouse: {
-      delta: { x: number; y: number };
-      position: { x: number; y: number } | null;
-    };
-  };
-} {
-  return (inputContext: InputPluginRequiredContext) => {
+): Plugin<InputPluginRequiredContext, { input: InputShape<Options> }> {
+  return (inputContext) => {
     const axesConfig = options.axes;
     const buttonsConfig = options.buttons;
     const target = options.target ?? inputContext.rootElement ?? document;
 
-    // TODO: This is an ugly way to ensure editor iframe receives keyboard input
     if (target instanceof HTMLElement) target.tabIndex = 0;
 
     const cursorTarget = target instanceof HTMLElement ? target : null;
@@ -115,18 +82,18 @@ export function inputPlugin<Options extends InputPluginOptions>(
 
     const axes = Object.fromEntries(
       axisKeys.map((k) => [k, 0]),
-    ) as InputSnapshot<Options>["axes"];
+    ) as InputShape<Options>["axes"];
 
     const buttons = Object.fromEntries(
       buttonKeys.map((k) => [
         k,
         { held: false, pressed: false, released: false },
       ]),
-    ) as InputSnapshot<Options>["buttons"];
+    ) as InputShape<Options>["buttons"];
 
-    const mouse: InputSnapshot<Options>["mouse"] = {
+    const mouse = {
       delta: { x: 0, y: 0 },
-      position: null,
+      position: null as { x: number; y: number } | null,
     };
 
     function setKey(binding: InputBinding, down: boolean) {
@@ -185,19 +152,18 @@ export function inputPlugin<Options extends InputPluginOptions>(
       return bindings.some((b) => !isBindingDown(b) && wasBindingDown(b));
     }
 
-    target.addEventListener("keydown", (e: Event) => {
+    target.addEventListener("keydown", (e) => {
       const ev = e as KeyboardEvent;
       setKey(normalizeKey(ev.code), true);
       ev.preventDefault();
     });
-    target.addEventListener("keyup", (e: Event) => {
+    target.addEventListener("keyup", (e) => {
       const ev = e as KeyboardEvent;
       setKey(normalizeKey(ev.code), false);
       ev.preventDefault();
     });
-    target.addEventListener("mousedown", (e: Event) => {
+    target.addEventListener("mousedown", (e) => {
       const ev = e as MouseEvent;
-      // TODO: This is an ugly way to ensure editor iframe receives keyboard input
       if (target instanceof HTMLElement) target.focus();
 
       if (
@@ -215,7 +181,7 @@ export function inputPlugin<Options extends InputPluginOptions>(
       setMouse(ev.button, true);
       ev.preventDefault();
     });
-    target.addEventListener("mouseup", (e: Event) => {
+    target.addEventListener("mouseup", (e) => {
       const ev = e as MouseEvent;
 
       if (
@@ -234,7 +200,7 @@ export function inputPlugin<Options extends InputPluginOptions>(
       setMouse(ev.button, false);
       ev.preventDefault();
     });
-    target.addEventListener("mousemove", (e: Event) => {
+    target.addEventListener("mousemove", (e) => {
       const ev = e as MouseEvent;
       mouseDeltaX += ev.movementX;
       mouseDeltaY += ev.movementY;
@@ -272,8 +238,9 @@ export function inputPlugin<Options extends InputPluginOptions>(
       mouseDeltaY = 0;
     });
 
-    const input: InputSnapshot<Options> = { axes, buttons, mouse };
-
-    return { ...inputContext, input };
+    return {
+      ...inputContext,
+      input: { axes, buttons, mouse } as InputShape<Options>,
+    };
   };
 }

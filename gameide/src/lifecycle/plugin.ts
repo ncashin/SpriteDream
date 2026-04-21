@@ -1,45 +1,35 @@
-type PluginReturn<F> = F extends (...args: never[]) => infer R
-  ? Awaited<R>
-  : never;
+export type Plugin<Needs extends object = object, Adds extends object = object> =
+  <Context extends Needs>(context: Context) =>
+    | (Context & Adds)
+    | Promise<Context & Adds>;
 
-/**
- * Context object after running each plugin in order; each plugin’s return
- * type (sync or async) becomes the input to the next.
- */
-export type ApplyPlugins<
-  Base extends object,
-  Plugins extends readonly unknown[],
-> = Plugins extends readonly []
-  ? Base
-  : Plugins extends readonly [infer Head, ...infer Tail]
-    ? Head extends (...args: never[]) => unknown
-      ? PluginReturn<Head> extends infer Out
-        ? Out extends object
-          ? ApplyPlugins<Out, Tail extends readonly unknown[] ? Tail : []>
-          : Base
-        : Base
-      : Base
-    : Base;
+export type ApplyPlugins<Context, Plugins extends readonly unknown[]> =
+  Plugins extends readonly [infer Head, ...infer Rest]
+    ? Head extends Plugin<infer Needs, infer Adds>
+      ? Context extends Needs
+        ? ApplyPlugins<Context & Adds, Rest>
+        : ApplyPlugins<Context, Rest>
+      : Head extends (context: Context) => infer R
+        ? ApplyPlugins<Awaited<R>, Rest>
+        : ApplyPlugins<Context, Rest>
+    : Context;
 
-export function plugins<const T extends readonly unknown[]>(
-  plugins: T,
-): T {
-  return plugins;
+export function plugins<const T extends readonly unknown[]>(list: T): T {
+  return list;
 }
 
 export async function reducePlugins<
-  Context extends object,
+  Context,
   const Plugins extends readonly unknown[],
 >(
   initial: Context,
   pluginList: Plugins,
 ): Promise<ApplyPlugins<Context, Plugins>> {
-  let result: object = initial;
+  let context: unknown = initial;
   for (const plugin of pluginList) {
     if (typeof plugin === "function") {
-      const next = await (plugin as (ctx: object) => unknown)(result);
-      result = next as object;
+      context = await (plugin as (c: unknown) => unknown)(context);
     }
   }
-  return result as ApplyPlugins<Context, Plugins>;
+  return context as ApplyPlugins<Context, Plugins>;
 }

@@ -11,14 +11,13 @@ import {
   applyPatch,
 } from "../scene/scene.js";
 import { GameIDEMode, getMode, onModeChange } from "../lifecycle/mode.js";
-import type { GameIDEPluginContext } from "../gameIDEPluginContext.js";
 import { createEditorUI } from "./createEditorUI.js";
 import { DefaultEditor } from "./DefaultEditor.js";
 import type { EditorWithGameViewRef } from "./createEditorUI.js";
 
 export const editorPlugin =
   (Editor?: EditorWithGameViewRef) =>
-  async (input: GameIDEPluginContext) => {
+  async (input: { rootElement: HTMLElement }) => {
     if (process.env.NODE_ENV !== "development") {
       return input;
     }
