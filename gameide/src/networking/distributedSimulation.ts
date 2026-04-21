@@ -1,12 +1,12 @@
 import type { SceneObject, SceneReflectUpdate } from "../scene/scene.js";
 
-export const SCENE_OWNER_ID = "__ownerId" as const;
+export const OWNER_ID = "__ownerId" as const;
 
 export function isOwnedSceneObject(
   object: SceneObject,
   peerId: string,
 ): boolean {
-  return object[SCENE_OWNER_ID] === peerId;
+  return object[OWNER_ID] === peerId;
 }
 
 export function isOwnedSceneUpdate(
@@ -21,6 +21,6 @@ export function isOwnedSceneUpdate(
 export function withOwnership<T extends Record<string, unknown>>(
   object: T,
   peerId: string,
-): T & Record<typeof SCENE_OWNER_ID, string> {
-  return { ...object, [SCENE_OWNER_ID]: peerId };
+): T & Record<typeof OWNER_ID, string> {
+  return { ...object, [OWNER_ID]: peerId };
 }

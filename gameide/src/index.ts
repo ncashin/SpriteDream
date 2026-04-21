@@ -33,7 +33,7 @@ export { getValueAtPath, setValueAtPath } from "./scene/path.js";
 export { applyPatch as applyScenePatch } from "./scene/patch.js";
 export type { SceneObject } from "./scene/scene.js";
 export {
-  trait,
+  defineTrait,
   implementsTrait,
   createTraitGuard,
   getDefinedTraitsForEditor,
@@ -58,7 +58,7 @@ export { editorPlugin } from "./editor/editorPlugin.js";
 export type { EditorWithGameViewRef } from "./editor/createEditorUI.js";
 export {
   networkingPlugin,
-  SCENE_OWNER_ID,
+  SCENE_OWNER_ID as OWNER_ID,
   isOwnedSceneUpdate,
   isOwnedSceneObject,
   withOwnership,

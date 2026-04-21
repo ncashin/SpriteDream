@@ -123,7 +123,7 @@ function mergeSchemas(schemas: readonly [SchemaObject, ...SchemaObject[]]): Sche
   return out;
 }
 
-export function trait<TSchema extends SchemaInput>(
+export function defineTrait<TSchema extends SchemaInput>(
   schema: TSchema,
   metadata?: TraitMetadata,
 ): TraitHandle<SchemaInputToObject<TSchema>> {

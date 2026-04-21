@@ -11,7 +11,7 @@ import type { SceneObject } from "../scene/scene.js";
 import { isOwnedSceneObject, withOwnership } from "./distributedSimulation.js";
 
 export {
-  SCENE_OWNER_ID,
+  OWNER_ID as SCENE_OWNER_ID,
   isOwnedSceneObject,
   isOwnedSceneUpdate,
   withOwnership,
