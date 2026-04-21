@@ -1,4 +1,4 @@
-import { update } from "./gameloop.js";
+import { update } from "./lifecycle/gameloop.js";
 
 export type InputBinding =
   | `Key${string}`

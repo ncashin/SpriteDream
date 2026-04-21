@@ -1,6 +1,6 @@
 import { Play, Square } from "lucide-react";
 import { useState, useEffect } from "react";
-import { GameIDEMode, getMode, setMode, onModeChange } from "../mode.js";
+import { GameIDEMode, getMode, setMode, onModeChange } from "../lifecycle/mode.js";
 import { OverlayButton } from "./OverlayButton.js";
 
 function useMode() {

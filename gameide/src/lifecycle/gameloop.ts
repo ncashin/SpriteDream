@@ -4,59 +4,12 @@ import { GameIDEMode, getMode, onModeChange } from "./mode.js";
 type StartCallback = () => void;
 type UpdateCallback = (deltaTime: number) => void;
 
-let runId = 0;
-let currentRunToken: string | undefined;
-
-function nextRunToken(): string {
-  return `run-${++runId}`;
-}
-
-function setRunToken(token: string): void {
-  currentRunToken = token;
-}
-
-function clearRunToken(): void {
-  currentRunToken = undefined;
-}
-
-const gameStartRegistry = createCallbackRegistry<StartCallback>({
-  getCurrentScope: () => currentRunToken,
-});
-const gameUpdateRegistry = createCallbackRegistry<UpdateCallback>({
-  getCurrentScope: () => currentRunToken,
-});
-const editorStartRegistry = createCallbackRegistry<StartCallback>({
-  getCurrentScope: () => currentRunToken,
-});
-const editorUpdateRegistry = createCallbackRegistry<UpdateCallback>({
-  getCurrentScope: () => currentRunToken,
-});
-const alwaysStartRegistry = createCallbackRegistry<StartCallback>({
-  getCurrentScope: () => currentRunToken,
-});
-const alwaysUpdateRegistry = createCallbackRegistry<UpdateCallback>({
-  getCurrentScope: () => currentRunToken,
-});
-
-export function runWithToken(fn: () => void): string {
-  const token = nextRunToken();
-  setRunToken(token);
-  try {
-    fn();
-    return token;
-  } finally {
-    clearRunToken();
-  }
-}
-
-export function removeCallbacksForToken(token: string): void {
-  gameStartRegistry.removeScope(token);
-  gameUpdateRegistry.removeScope(token);
-  editorStartRegistry.removeScope(token);
-  editorUpdateRegistry.removeScope(token);
-  alwaysStartRegistry.removeScope(token);
-  alwaysUpdateRegistry.removeScope(token);
-}
+const gameStartRegistry = createCallbackRegistry<StartCallback>();
+const gameUpdateRegistry = createCallbackRegistry<UpdateCallback>();
+const editorStartRegistry = createCallbackRegistry<StartCallback>();
+const editorUpdateRegistry = createCallbackRegistry<UpdateCallback>();
+const alwaysStartRegistry = createCallbackRegistry<StartCallback>();
+const alwaysUpdateRegistry = createCallbackRegistry<UpdateCallback>();
 
 let frameId: number | undefined;
 

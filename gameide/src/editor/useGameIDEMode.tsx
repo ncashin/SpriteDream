@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GameIDEMode, getMode, onModeChange } from "../mode.js";
+import { GameIDEMode, getMode, onModeChange } from "../lifecycle/mode.js";
 
 export function useGameIDEMode() {
   const [mode, setModeState] = useState(getMode());

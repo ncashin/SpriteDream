@@ -8,16 +8,6 @@ let currentMode: GameIDEMode =
     ? GameIDEMode.Editor
     : GameIDEMode.Game;
 
-if (import.meta.hot) {
-  const data = import.meta.hot.data;
-
-  if (data.currentMode) currentMode = data.currentMode;
-
-  import.meta.hot.dispose(() => {
-    data.currentMode = currentMode;
-  });
-}
-
 export function getMode(): GameIDEMode {
   return currentMode;
 }

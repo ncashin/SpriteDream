@@ -1,8 +1,8 @@
 import {
   getScene,
   gameUIPlugin,
-  initializeGame,
-  initializePlugins,
+  game,
+  plugins,
   inputPlugin,
   editorPlugin,
   networkingPlugin,
@@ -54,11 +54,11 @@ function playerObjectKey(peerId: string): string {
   return `player-${peerId}`;
 }
 
-initializeGame({
+game({
   rootElement,
   initialContext: {},
   initialScene: sampleScene,
-  plugins: initializePlugins([
+  plugins: plugins([
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
     networkingPlugin({

@@ -18,12 +18,6 @@ function loadManifestModuleSource(root: string): string {
   }
 }
 
-const HMR_ACCEPT = `
-if (import.meta.hot) {
-  import.meta.hot.accept();
-}
-`;
-
 const GENERATED_SCENE_DECLARATION_HEADER = `
 // This file is generated from the matching .scene file.
 // Do not edit directly.
@@ -225,19 +219,6 @@ export function gameidePlugin(): Plugin {
       const raw = fs.readFileSync(cleanId, "utf8");
       const data = JSON.parse(raw) as unknown;
       return createSceneModuleCode(data);
-    },
-    transform(source) {
-      if (source.includes("initializeGame")) {
-        return {
-          code: source + HMR_ACCEPT,
-          map: null,
-        };
-      }
-    },
-    async handleHotUpdate(context) {
-      if (context.file.endsWith(".scene") && config) {
-        syncSceneDeclaration(context.file, config.root);
-      }
     },
     watchChange(id) {
       if (id.endsWith(".scene") && config) {

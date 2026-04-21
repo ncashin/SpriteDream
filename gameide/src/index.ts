@@ -20,7 +20,7 @@ export {
   editorStart,
   editorUpdate,
   startGameloop,
-} from "./gameloop.js";
+} from "./lifecycle/gameloop.js";
 export { query } from "./scene/query/query.js";
 export {
   getScene,
@@ -41,14 +41,16 @@ export {
   $boolean,
 } from "./objectRegistry.js";
 export type { SchemaToType, ObjectMetadata } from "./objectRegistry.js";
-export { initializeGame, initializePlugins } from "./initializeGame.js";
+export {
+  game,
+  plugins,
+  type ApplyPlugins,
+  type GameOptions,
+  type GameContextSeed,
+} from "./lifecycle/index.js";
 export type { GameIDEMetadata } from "./gameideManifest.js";
 export { getGameIDEMetadata } from "./gameideManifest.js";
-export type {
-  Plugin,
-  FinalContext,
-  GameIDEPluginContext,
-} from "./initializeGame.js";
+export type { GameIDEPluginContext } from "./gameIDEPluginContext.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
 export type { EditorWithGameViewRef } from "./editor/createEditorUI.js";
 export {
@@ -71,7 +73,7 @@ export { OverlayButton } from "./editor/OverlayButton.js";
 export { OverlayInput } from "./editor/OverlayInput.js";
 export { useScene } from "./editor/useScene.js";
 export { useGameIDEMode } from "./editor/useGameIDEMode.js";
-export { GameIDEMode, getMode, setMode, onModeChange } from "./mode.js";
+export { GameIDEMode, getMode, setMode, onModeChange } from "./lifecycle/mode.js";
 export { inputPlugin } from "./inputPlugin.js";
 export type {
   InputBinding,

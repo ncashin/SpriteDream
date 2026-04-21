@@ -6,7 +6,7 @@ import { cn } from "../utils/cn.js";
 import { OverlayButton } from "./OverlayButton.js";
 import { OverlayInput } from "./OverlayInput.js";
 import { Cuboid, MoveLeft, Play, Square } from "lucide-react";
-import { GameIDEMode, setMode } from "../mode.js";
+import { GameIDEMode, setMode } from "../lifecycle/mode.js";
 import { useGameIDEMode } from "./useGameIDEMode.js";
 import { getScene } from "../scene/scene.js";
 import { getValueAtPath, setValueAtPath } from "../scene/path.js";
