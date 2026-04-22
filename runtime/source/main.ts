@@ -22,31 +22,26 @@ const PlayerTrait = defineTrait(
   { name: "Player" },
 );
 
-function hashHue(id: string): number {
-  let hash = 0;
-  for (let index = 0; index < id.length; index++) {
-    hash = (hash * 31 + id.charCodeAt(index)) | 0;
-  }
-  return Math.abs(hash) % 360;
-}
-
 function playerColor(id: string): string {
-  return `hsl(${hashHue(id)} 55% 52%)`;
-}
-
-function playerObjectKey(peerId: string): string {
-  return `player-${peerId}`;
+  let hash = 0;
+  for (const char of id) {
+    hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  }
+  return `hsl(${Math.abs(hash) % 360} 55% 52%)`;
 }
 
 export function main({ input, networking, rootElement }: MainContext): void {
   const scene = getScene();
 
   gameStart(() => {
-    scene[playerObjectKey(networking.peerId)] = networking.withOwnership({
-      x: 0,
-      y: 0,
-      speed: 200,
-    });
+    scene.createObject(
+      networking.peerId,
+      networking.withOwnership({
+        x: 0,
+        y: 0,
+        speed: 200,
+      }),
+    );
   });
 
   const canvas = document.createElement("canvas");
@@ -89,7 +84,7 @@ export function main({ input, networking, rootElement }: MainContext): void {
   });
 
   gameUpdate((deltaTime) => {
-    for (const player of query(scene, implementsTrait(PlayerTrait))) {
+    for (const player of scene.query(implementsTrait(PlayerTrait))) {
       if (!networking.isOwned(player)) {
         continue;
       }

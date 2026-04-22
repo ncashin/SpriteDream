@@ -9,6 +9,13 @@ export const sceneAdditions = {
     return <T>(predicate: (value: unknown) => value is T) =>
       query(sceneNode, predicate);
   },
+  createObject(sceneNode: BaseSceneObject) {
+    return (key: PropertyKey, value: unknown) => {
+      const nextObject = { [key]: value };
+      Object.assign(sceneNode, nextObject);
+      return nextObject;
+    };
+  },
 } satisfies Record<string, SceneAddition>;
 
 export type SceneAdditions = {
