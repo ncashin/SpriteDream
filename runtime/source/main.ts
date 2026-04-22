@@ -2,7 +2,6 @@ import {
   implementsTrait,
   defineTrait,
   getScene,
-  query,
   OWNER_ID,
   gameStart,
   gameUpdate,
@@ -18,8 +17,7 @@ const PlayerTrait = defineTrait(
     x: 0,
     y: 0,
     speed: 200,
-  },
-  { name: "Player" },
+  }
 );
 
 function playerColor(id: string): string {

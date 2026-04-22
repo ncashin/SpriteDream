@@ -77,11 +77,11 @@ export { OverlayInput } from "./editor/OverlayInput.js";
 export { useScene } from "./editor/useScene.js";
 export { useGameIDEMode } from "./editor/useGameIDEMode.js";
 export { GameIDEMode, getMode, setMode, onModeChange } from "./lifecycle/mode.js";
-export { inputPlugin } from "./inputPlugin.js";
+export { inputPlugin } from "./inputPlugin/inputPlugin.js";
 export type {
   InputBinding,
   AxisConfig,
   ButtonConfig,
   InputPluginRequiredContext,
   InputPluginOptions,
-} from "./inputPlugin.js";
+} from "./inputPlugin/inputPlugin.js";
