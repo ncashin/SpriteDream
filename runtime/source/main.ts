@@ -7,18 +7,18 @@ import {
   gameUpdate,
   update,
   $string,
+  transformTrait
 } from "gameide";
 import invariant from "tiny-invariant";
 import type { MainContext } from "./gameConfig";
 
-const PlayerTrait = defineTrait(
+const playerTrait = defineTrait([
+  transformTrait,
   {
     [OWNER_ID]: $string,
-    x: 0,
-    y: 0,
     speed: 200,
-  }
-);
+  },
+]);
 
 function playerColor(id: string): string {
   let hash = 0;
@@ -35,8 +35,7 @@ export function main({ input, networking, rootElement }: MainContext): void {
     scene.createObject(
       networking.peerId,
       networking.withOwnership({
-        x: 0,
-        y: 0,
+        ...transformTrait,
         speed: 200,
       }),
     );
@@ -65,9 +64,9 @@ export function main({ input, networking, rootElement }: MainContext): void {
     context.fillStyle = "#0f1419";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (const player of scene.query(implementsTrait(PlayerTrait))) {
-      const px = canvas.width / 2 + player.x;
-      const py = canvas.height / 2 - player.y;
+    for (const player of scene.query(implementsTrait(playerTrait))) {
+      const px = canvas.width / 2 + player.position.x;
+      const py = canvas.height / 2 - player.position.y;
       context.fillStyle = playerColor(String(player[OWNER_ID] ?? ""));
       context.fillRect(px - half, py - half, playerSize, playerSize);
     }
@@ -82,14 +81,14 @@ export function main({ input, networking, rootElement }: MainContext): void {
   });
 
   gameUpdate((deltaTime) => {
-    for (const player of scene.query(implementsTrait(PlayerTrait))) {
+    for (const player of scene.query(implementsTrait(playerTrait))) {
       if (!networking.isOwned(player)) continue;
 
       const horizontal = input.axes.Horizontal;
       const vertical = input.axes.Vertical;
 
-      player.x += horizontal * player.speed * deltaTime;
-      player.y += vertical * player.speed * deltaTime;
+      player.position.x += horizontal * player.speed * deltaTime;
+      player.position.y += vertical * player.speed * deltaTime;
     }
   });
 }

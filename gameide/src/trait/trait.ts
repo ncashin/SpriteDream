@@ -17,7 +17,8 @@ export type TraitMetadata = {
   icon?: string;
 };
 
-type SchemaInput = SchemaObject | readonly [SchemaObject, ...SchemaObject[]];
+type TraitInputItem = SchemaObject | TraitHandle<object>;
+type TraitInput = TraitInputItem | readonly [TraitInputItem, ...TraitInputItem[]];
 
 type InferSchemaValue<T extends SchemaValue> =
   T extends typeof $number
@@ -40,13 +41,19 @@ type InferSchemaObject<T extends SchemaObject> = {
   [K in keyof T]: InferSchemaValue<T[K]>;
 };
 
-type SchemaInputToObject<T extends SchemaInput> = T extends readonly [
-  infer First extends SchemaObject,
-  ...infer Rest extends SchemaObject[],
-]
-  ? InferSchemaObject<First> & InferSchemaObject<Rest[number]>
+type InferTraitInputItem<T extends TraitInputItem> = T extends TraitHandle<infer Handle>
+  ? Handle
   : T extends SchemaObject
     ? InferSchemaObject<T>
+    : never;
+
+type TraitInputToObject<T extends TraitInput> = T extends readonly [
+  infer First extends TraitInputItem,
+  ...infer Rest extends TraitInputItem[],
+]
+  ? InferTraitInputItem<First> & InferTraitInputItem<Rest[number]>
+  : T extends TraitInputItem
+    ? InferTraitInputItem<T>
     : never;
 
 export type TraitHandle<T extends object> = {
@@ -58,6 +65,10 @@ function isSchemaObject(value: unknown): value is SchemaObject {
 }
 
 const traitGuards = new WeakMap<object, (value: unknown) => boolean>();
+
+function isRegisteredTraitHandle(value: unknown): value is TraitHandle<object> {
+  return isSchemaObject(value) && traitGuards.has(value);
+}
 
 function compilePropertyCheck(constraint: SchemaValue): (actual: unknown) => boolean {
   if (constraint === $number) {
@@ -128,17 +139,31 @@ function mergeSchemas(schemas: readonly [SchemaObject, ...SchemaObject[]]): Sche
   return out;
 }
 
-export function defineTrait<TSchema extends SchemaInput>(
-  schema: TSchema,
-  metadata?: TraitMetadata,
-): TraitHandle<SchemaInputToObject<TSchema>> {
-  let resolvedSchema: SchemaObject;
-  if (Array.isArray(schema)) {
-    resolvedSchema = mergeSchemas(schema as readonly [SchemaObject, ...SchemaObject[]]);
-  } else {
-    resolvedSchema = schema as SchemaObject;
+function resolveSchemaObject(input: TraitInputItem): SchemaObject {
+  if (isSchemaObject(input)) return input;
+  throw new Error("GameIDE: trait schema input must be an object or trait handle");
+}
+
+function isTraitInputArray(
+  input: TraitInput,
+): input is readonly [TraitInputItem, ...TraitInputItem[]] {
+  return Array.isArray(input);
+}
+
+function resolveSchemaInput(input: TraitInput): SchemaObject {
+  if (isTraitInputArray(input)) {
+    const schemas = input.map(resolveSchemaObject) as [SchemaObject, ...SchemaObject[]];
+    return mergeSchemas(schemas);
   }
-  const handle: TraitHandle<SchemaInputToObject<TSchema>> = {};
+  return resolveSchemaObject(input);
+}
+
+export function defineTrait<TInput extends TraitInput>(
+  schema: TInput,
+  metadata?: TraitMetadata,
+): TraitHandle<TraitInputToObject<TInput>> {
+  const resolvedSchema = resolveSchemaInput(schema);
+  const handle = resolvedSchema as TraitHandle<TraitInputToObject<TInput>>;
   traitGuards.set(handle, createTraitGuard(resolvedSchema));
   const definition = {
     ...(metadata ?? {}),
@@ -150,10 +175,17 @@ export function defineTrait<TSchema extends SchemaInput>(
 
 type TraitPredicate<T> = (value: unknown) => value is T;
 
-export function implementsTrait<T extends object>(t: TraitHandle<T>): TraitPredicate<T> {
-  const guard = traitGuards.get(t);
-  if (!guard) {
-    throw new Error("GameIDE: trait guard not registered");
+export function implementsTrait<TInput extends TraitInput>(
+  t: TInput,
+): TraitPredicate<TraitInputToObject<TInput>> {
+  if (!Array.isArray(t) && isRegisteredTraitHandle(t)) {
+    const guard = traitGuards.get(t);
+    if (!guard) {
+      throw new Error("GameIDE: trait guard not registered");
+    }
+    return (candidate: unknown): candidate is TraitInputToObject<TInput> => guard(candidate);
   }
-  return (candidate: unknown): candidate is T => guard(candidate);
+
+  const guard = createTraitGuard(resolveSchemaInput(t));
+  return (candidate: unknown): candidate is TraitInputToObject<TInput> => guard(candidate);
 }

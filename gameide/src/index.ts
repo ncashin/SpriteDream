@@ -42,6 +42,7 @@ export {
   $boolean,
 } from "./trait/trait.js";
 export type { TraitMetadata } from "./trait/trait.js";
+export { transformTrait } from "./trait/transform.js";
 export {
   game,
   plugins,
