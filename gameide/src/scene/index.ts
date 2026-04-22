@@ -15,6 +15,7 @@ export {
 export { getValueAtPath, setValueAtPath } from "./path.js";
 
 export { merge } from "./merge.js";
+export { sceneAdditions } from "./sceneAdditions/index.js";
 
 export type { SceneChannelMessage } from "./sceneChannel/sceneChannel.js";
 export {
