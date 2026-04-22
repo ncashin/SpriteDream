@@ -85,11 +85,11 @@ export function main({ input, networking, rootElement }: MainContext): void {
 
   gameUpdate((deltaTime) => {
     for (const player of scene.query(implementsTrait(PlayerTrait))) {
-      if (!networking.isOwned(player)) {
-        continue;
-      }
+      if (!networking.isOwned(player)) continue;
+
       const horizontal = input.axes.Horizontal;
       const vertical = input.axes.Vertical;
+
       player.x += horizontal * player.speed * deltaTime;
       player.y += vertical * player.speed * deltaTime;
     }

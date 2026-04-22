@@ -11,9 +11,8 @@ export const sceneAdditions = {
   },
   createObject(sceneNode: BaseSceneObject) {
     return (key: PropertyKey, value: unknown) => {
-      const nextObject = { [key]: value };
-      Object.assign(sceneNode, nextObject);
-      return nextObject;
+      sceneNode[key] = value;
+      return sceneNode[key];
     };
   },
 } satisfies Record<string, SceneAddition>;

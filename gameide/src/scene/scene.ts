@@ -31,7 +31,7 @@ function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<BaseSceneObj
     get(target, property, receiver) {
       const sceneAddition = getSceneAddition(property);
       if (sceneAddition) {
-        return sceneAddition(target);
+        return sceneAddition(receiver);
       }
 
       const value = Reflect.get(target, property, receiver);
