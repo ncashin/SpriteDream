@@ -24,7 +24,7 @@ const mainFunction = game({
     gameUIPlugin(GameUI),
     networkingPlugin({
       room: "default",
-      url: "ws://localhost:5173/room",
+      url: "ws://localhost:5174/room",
     }),
     inputPlugin({
       axes: {

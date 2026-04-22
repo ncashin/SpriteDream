@@ -1,6 +1,6 @@
 import { createSceneTransportPostMessage } from "../scene/sceneChannel/sceneChannelTransport.js";
 import { createSceneChannel } from "../scene/sceneChannel/sceneChannel.js";
-import type { SceneObject } from "../scene/scene.js";
+import type { BaseSceneObject } from "../scene/scene.js";
 import {
   getScene,
   getRawScene,

@@ -1,11 +1,11 @@
 import { startGameloop } from "./gameloop.js";
-import type { SceneObject } from "../scene/scene.js";
+import type { BaseSceneObject } from "../scene/scene.js";
 import { setScene } from "../scene/scene.js";
 import { reducePlugins, type ApplyPlugins } from "./plugin.js";
 
 export type GameContext<Initial extends object> = Initial & {
   rootElement: HTMLElement;
-  initialScene?: SceneObject;
+  initialScene?: BaseSceneObject;
 };
 
 export type GameMain<
@@ -21,7 +21,7 @@ export type GameConfig<
 > = {
   rootElement: HTMLElement;
   initialContext: Initial;
-  initialScene?: SceneObject;
+  initialScene?: BaseSceneObject;
   plugins?: Plugins;
 };
 

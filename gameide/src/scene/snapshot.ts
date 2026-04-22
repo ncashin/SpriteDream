@@ -1,7 +1,7 @@
-import type { SceneObject } from "./scene.js";
+import type { BaseSceneObject } from "./scene.js";
 import { sceneTarget } from "./scene.js";
 
-let sceneSnapshot: SceneObject | undefined = undefined;
+let sceneSnapshot: BaseSceneObject | undefined = undefined;
 
 export function saveSceneSnapshot() {
   sceneSnapshot = structuredClone(sceneTarget);

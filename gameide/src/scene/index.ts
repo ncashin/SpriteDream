@@ -1,4 +1,4 @@
-export type { SceneObject, SceneReflectUpdate } from "./scene.js";
+export type { BaseSceneObject, SceneObject, SceneReflectUpdate } from "./scene.js";
 export {
   sceneTarget,
   getScene,

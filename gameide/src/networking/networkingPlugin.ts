@@ -7,11 +7,11 @@ import {
   subscribeToScene,
   applyPatch as applyScenePatch,
 } from "../scene/scene.js";
-import type { SceneObject } from "../scene/scene.js";
+import type { BaseSceneObject } from "../scene/scene.js";
 import { isOwnedSceneObject, withOwnership } from "./distributedSimulation.js";
 
 export {
-  OWNER_ID as SCENE_OWNER_ID,
+  OWNER_ID as OWNER_ID,
   isOwnedSceneObject,
   isOwnedSceneUpdate,
   withOwnership,
@@ -24,7 +24,7 @@ export type NetworkingPluginOptions = {
 
 export const networkingPlugin =
   (options: NetworkingPluginOptions = {}) =>
-  async (input: { rootElement: HTMLElement; initialScene?: SceneObject }) => {
+  async (input: { rootElement: HTMLElement; initialScene?: BaseSceneObject }) => {
     const room = options.room ?? "default";
 
     const { transport, dispose: disposeTransport } =
@@ -55,7 +55,7 @@ export const networkingPlugin =
         onPeersChange: (handler: (peers: string[]) => void) =>
           transport.onPeersChange(handler),
         channel,
-        isOwned: (obj: SceneObject) => isOwnedSceneObject(obj, peerId),
+        isOwned: (obj: BaseSceneObject) => isOwnedSceneObject(obj, peerId),
         withOwnership: <T extends Record<string, unknown>>(obj: T) =>
           withOwnership(obj, peerId),
         dispose() {

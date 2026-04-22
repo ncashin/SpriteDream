@@ -31,7 +31,7 @@ export {
 } from "./scene/scene.js";
 export { getValueAtPath, setValueAtPath } from "./scene/path.js";
 export { applyPatch as applyScenePatch } from "./scene/patch.js";
-export type { SceneObject } from "./scene/scene.js";
+export type { BaseSceneObject, SceneObject } from "./scene/scene.js";
 export {
   defineTrait,
   implementsTrait,
@@ -58,7 +58,7 @@ export { editorPlugin } from "./editor/editorPlugin.js";
 export type { EditorWithGameViewRef } from "./editor/createEditorUI.js";
 export {
   networkingPlugin,
-  SCENE_OWNER_ID as OWNER_ID,
+  OWNER_ID,
   isOwnedSceneUpdate,
   isOwnedSceneObject,
   withOwnership,

@@ -1,7 +1,7 @@
-import { SceneObject } from "../scene";
+import type { BaseSceneObject } from "../scene.js";
 
 export function query<T>(
-  root: SceneObject,
+  root: BaseSceneObject,
   predicate: (value: unknown) => value is T,
 ): T[] {
   const matches: T[] = [];

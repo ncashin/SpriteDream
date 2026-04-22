@@ -1,7 +1,7 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
 import { invalidateUseSceneSnapshot } from "../../editor/useSceneSnapshot.js";
 import {
-  type SceneObject,
+  type BaseSceneObject,
   type SceneReflectUpdate,
   mergeSceneReflectUpdateIntoPatch,
 } from "../scene.js";
@@ -17,19 +17,19 @@ export const SCENE_CHANNEL = {
 
 export type SceneChannelMessage =
   | { type: typeof SCENE_CHANNEL.initialScene; content: string }
-  | { type: typeof SCENE_CHANNEL.scenePatch; patch: SceneObject }
+  | { type: typeof SCENE_CHANNEL.scenePatch; patch: BaseSceneObject }
   | { type: typeof SCENE_CHANNEL.requestInitialScene }
   | { type: typeof SCENE_CHANNEL.sceneChange; content: string };
 
 export interface CreateSceneChannelOptions {
   transport: SceneChannelTransport;
-  getScene(): SceneObject;
-  getRawScene?: () => SceneObject;
-  setScene(data: SceneObject): void;
+  getScene(): BaseSceneObject;
+  getRawScene?: () => BaseSceneObject;
+  setScene(data: BaseSceneObject): void;
   subscribeToScene?: (
     callback: (update: SceneReflectUpdate) => void,
   ) => () => void;
-  applyPatch: (scene: SceneObject, patch: SceneObject) => void;
+  applyPatch: (scene: BaseSceneObject, patch: BaseSceneObject) => void;
   shouldEmitSceneUpdate?: (update: SceneReflectUpdate) => boolean;
   getInitialSceneContent?: () => string;
 
@@ -45,7 +45,7 @@ export interface SceneChannel {
   requestInitialScene(): void;
   sendInitialScene(content: string): void;
 
-  sendPatch(patch: SceneObject): void;
+  sendPatch(patch: BaseSceneObject): void;
 
   sendSceneChange(content: string): void;
 }
@@ -81,7 +81,7 @@ export async function createSceneChannel(
     transport.send({ type: SCENE_CHANNEL.initialScene, content });
   }
 
-  function sendPatch(patch: SceneObject): void {
+  function sendPatch(patch: BaseSceneObject): void {
     transport.send({ type: SCENE_CHANNEL.scenePatch, patch });
   }
 
@@ -126,13 +126,13 @@ export async function createSceneChannel(
   }
 
   let unsubscribeOutgoing: (() => void) | undefined;
-  let pendingPatch: SceneObject = {};
+  let pendingPatch: BaseSceneObject = {};
 
   function patchFlushLoop(): void {
     requestAnimationFrame(patchFlushLoop);
     if (!sceneInitialized || paused) return;
     if (Object.keys(pendingPatch).length === 0) return;
-    const patch = structuredClone(pendingPatch) as SceneObject;
+    const patch = structuredClone(pendingPatch) as BaseSceneObject;
     pendingPatch = {};
     sendPatch(patch);
   }

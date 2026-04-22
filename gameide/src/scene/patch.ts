@@ -1,9 +1,9 @@
 import { merge } from "./merge.js";
-import type { SceneObject, SceneReflectUpdate } from "./scene.js";
+import type { BaseSceneObject, SceneReflectUpdate } from "./scene.js";
 
 export function applyPatch(
-  target: SceneObject,
-  patch: Partial<SceneObject>,
+  target: BaseSceneObject,
+  patch: Partial<BaseSceneObject>,
 ): void {
   merge(
     target as Record<PropertyKey, unknown>,
@@ -12,7 +12,7 @@ export function applyPatch(
 }
 
 export function findSceneReceiverPath(
-  root: SceneObject,
+  root: BaseSceneObject,
   receiver: object,
   path: PropertyKey[] = [],
 ): PropertyKey[] | null {
@@ -29,7 +29,7 @@ export function findSceneReceiverPath(
     if (child && typeof child === "object") {
       const nextPath = [...path, key];
       const found = findSceneReceiverPath(
-        child as SceneObject,
+        child as BaseSceneObject,
         receiver,
         nextPath,
       );
@@ -49,10 +49,10 @@ function cloneScenePatchValue(value: unknown): unknown {
 }
 
 export function mergeSceneReflectUpdateIntoPatch(
-  patch: SceneObject,
+  patch: BaseSceneObject,
   update: SceneReflectUpdate,
 ): void {
-  let node: SceneObject = patch;
+  let node: BaseSceneObject = patch;
   for (const key of update.path) {
     let next = node[key];
     const shouldCreate =
@@ -61,7 +61,7 @@ export function mergeSceneReflectUpdateIntoPatch(
       next = {};
       node[key] = next;
     }
-    node = next as SceneObject;
+    node = next as BaseSceneObject;
   }
   node[update.property] = cloneScenePatchValue(update.value);
 }

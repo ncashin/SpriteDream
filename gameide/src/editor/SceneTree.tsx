@@ -1,6 +1,6 @@
 import { ChevronRight, Box } from "lucide-react";
 import { useRef, useState } from "react";
-import type { SceneObject } from "../scene/scene.js";
+import type { BaseSceneObject } from "../scene/scene.js";
 import { getScene } from "../scene/scene.js";
 import { setValueAtPath } from "../scene/path.js";
 import { useResizeObserverSetCSSVar } from "./useResizeObserverSetCSSVar.js";
@@ -220,7 +220,7 @@ function TreeNode({ name, depth, path, value, setAtPath }: TreeNodeProps) {
       name={name}
       depth={depth}
       path={path}
-      sceneObject={value as SceneObject}
+      sceneObject={value as BaseSceneObject}
       setAtPath={setAtPath}
     />
   );
@@ -228,7 +228,7 @@ function TreeNode({ name, depth, path, value, setAtPath }: TreeNodeProps) {
 
 export function SceneTree() {
   const [root] = useScene();
-  const rootObject = isExpandable(root) ? (root as SceneObject) : undefined;
+  const rootObject = isExpandable(root) ? (root as BaseSceneObject) : undefined;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useResizeObserverSetCSSVar(

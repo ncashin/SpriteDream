@@ -1,6 +1,6 @@
 import { useSyncExternalStore, useCallback, useMemo } from "react";
 import { getScene, setScene } from "../scene/scene.js";
-import type { SceneObject } from "../scene/scene.js";
+import type { BaseSceneObject } from "../scene/scene.js";
 import {
   getUseSceneSnapshot,
   subscribeUseSceneSnapshot,
@@ -8,7 +8,7 @@ import {
 
 export { invalidateUseSceneSnapshot } from "./useSceneSnapshot.js";
 
-export function useScene(): [SceneObject, (data: SceneObject) => void] {
+export function useScene(): [BaseSceneObject, (data: BaseSceneObject) => void] {
   const subscribe = useMemo(
     () => (onStoreChange: () => void) => subscribeUseSceneSnapshot(onStoreChange),
     [],
@@ -19,7 +19,7 @@ export function useScene(): [SceneObject, (data: SceneObject) => void] {
 
   const value = getScene();
 
-  const setValue = useCallback((data: SceneObject) => setScene(data), []);
+  const setValue = useCallback((data: BaseSceneObject) => setScene(data), []);
 
   return [value, setValue];
 }

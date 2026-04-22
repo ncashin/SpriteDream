@@ -1,4 +1,6 @@
 import { invalidateUseSceneSnapshot } from "../editor/useSceneSnapshot.js";
+import { getSceneAddition } from "./sceneAdditions/index.js";
+import type { SceneAdditions } from "./sceneAdditions/index.js";
 
 export { saveSceneSnapshot, restoreSceneSnapshot } from "./snapshot.js";
 export {
@@ -7,7 +9,8 @@ export {
   mergeSceneReflectUpdateIntoPatch,
 } from "./patch.js";
 
-export type SceneObject = Record<PropertyKey, unknown>;
+export type BaseSceneObject = Record<PropertyKey, unknown>;
+export type SceneObject = BaseSceneObject & SceneAdditions;
 
 export type SceneReflectUpdate = {
   path: PropertyKey[];
@@ -16,16 +19,21 @@ export type SceneReflectUpdate = {
   value: unknown;
 };
 
-export const sceneTarget: SceneObject = {};
+export const sceneTarget: BaseSceneObject = {};
 
 
 type SceneSubscriber = (update: SceneReflectUpdate) => void;
 
 const subscribers = new Set<SceneSubscriber>();
 
-function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<any> {
+function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<BaseSceneObject> {
   return {
     get(target, property, receiver) {
+      const sceneAddition = getSceneAddition(property);
+      if (sceneAddition) {
+        return sceneAddition(target);
+      }
+
       const value = Reflect.get(target, property, receiver);
       if (value && typeof value === "object") {
         return new Proxy(value, createSceneProxyHandler([...path, property]));
@@ -44,7 +52,7 @@ function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<any> {
   };
 }
 
-const scene = new Proxy(sceneTarget, createSceneProxyHandler([]));
+const scene = new Proxy(sceneTarget, createSceneProxyHandler([])) as SceneObject;
 
 export function subscribeToScene(callback: SceneSubscriber): () => void {
   subscribers.add(callback);
@@ -61,7 +69,7 @@ export const getRawScene = () => {
   return sceneTarget;
 };
 
-export const setScene = (data: SceneObject) => {
+export const setScene = (data: BaseSceneObject) => {
   for (const key of Object.keys(sceneTarget)) {
     delete sceneTarget[key];
   }

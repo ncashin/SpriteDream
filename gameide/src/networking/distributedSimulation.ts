@@ -1,9 +1,9 @@
-import type { SceneObject, SceneReflectUpdate } from "../scene/scene.js";
+import type { BaseSceneObject, SceneReflectUpdate } from "../scene/scene.js";
 
 export const OWNER_ID = "__ownerId" as const;
 
 export function isOwnedSceneObject(
-  object: SceneObject,
+  object: BaseSceneObject,
   peerId: string,
 ): boolean {
   return object[OWNER_ID] === peerId;

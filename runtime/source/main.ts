@@ -72,8 +72,7 @@ export function main({ input, networking, rootElement }: MainContext): void {
     context.fillStyle = "#0f1419";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (const player of query(scene, implementsTrait(PlayerTrait))) {
-      console.log(player)
+    for (const player of scene.query(implementsTrait(PlayerTrait))) {
       const px = canvas.width / 2 + player.x;
       const py = canvas.height / 2 - player.y;
       context.fillStyle = playerColor(String(player[OWNER_ID] ?? ""));
