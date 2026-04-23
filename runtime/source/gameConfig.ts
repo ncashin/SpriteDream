@@ -4,6 +4,7 @@ import {
   editorPlugin,
   networkingPlugin,
   gameUIPlugin,
+  threePlugin,
 } from "gameide";
 import sampleScene from "./sample.scene";
 import "./style.css";
@@ -26,6 +27,12 @@ const mainFunction = game({
       room: "default",
       url: "ws://localhost:5174/room",
     }),
+    threePlugin({
+      clearColor: 0x0f1419,
+      camera: {
+        z: 8,
+      },
+    }),
     inputPlugin({
       axes: {
         Horizontal: {
@@ -37,7 +44,11 @@ const mainFunction = game({
           positive: ["KeyW", "KeyArrowUp"],
         },
       },
-      buttons: {},
+      buttons: {
+        MoveUp: ["KeySpace"],
+        MoveDown: ["KeyShiftLeft", "KeyShiftRight"],
+        LookCamera: ["Mouse0"],
+      },
     }),
   ],
 });
