@@ -10,6 +10,7 @@ import {
   meshRenderTrait,
 } from "gameide";
 import type { MainContext } from "./gameConfig";
+import { createEditorCameraController } from "./editorCamera";
 
 const playerTrait = defineTrait([
   meshRenderTrait,
@@ -29,13 +30,7 @@ function playerColor(id: string): string {
 
 export function main({ input, networking, three }: MainContext): void {
   const scene = getScene();
-  const cameraMoveSpeed = 4;
-  const cameraLookSensitivity = 0.0025;
-  const maxPitch = Math.PI / 2 - 0.01;
-  const camera = three.camera;
-  camera.rotation.order = "YXZ";
-  let cameraYaw = camera.rotation.y;
-  let cameraPitch = camera.rotation.x;
+  const editorCamera = createEditorCameraController({ input, three });
 
   gameStart(() => {
     scene.createObject(
@@ -58,22 +53,10 @@ export function main({ input, networking, three }: MainContext): void {
   gameUpdate((deltaTime: number) => {
     const horizontal = input.axes.Horizontal;
     const vertical = input.axes.Vertical;
-    const lookCamera = input.buttons.LookCamera.held;
-    const verticalLook =
-      (input.buttons.MoveUp.held ? 1 : 0) - (input.buttons.MoveDown.held ? 1 : 0);
-    if (lookCamera) {
-      cameraYaw -= input.mouse.delta.x * cameraLookSensitivity;
-      cameraPitch -= input.mouse.delta.y * cameraLookSensitivity;
-      cameraPitch = Math.max(-maxPitch, Math.min(maxPitch, cameraPitch));
-    }
-    camera.rotation.y = cameraYaw;
-    camera.rotation.x = cameraPitch;
-    camera.translateX(horizontal * cameraMoveSpeed * deltaTime);
-    camera.translateZ(-vertical * cameraMoveSpeed * deltaTime);
-    camera.position.y += verticalLook * cameraMoveSpeed * deltaTime;
+    editorCamera.update(deltaTime);
 
     for (const player of scene.query(implementsTrait(playerTrait))) {
-      if (true || !networking.isOwned(player)) continue;
+      if (!networking.isOwned(player)) continue;
 
       player.position.x += horizontal * player.speed * deltaTime;
       player.position.y += vertical * player.speed * deltaTime;

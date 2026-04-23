@@ -36,17 +36,25 @@ const mainFunction = game({
     inputPlugin({
       axes: {
         Horizontal: {
-          negative: ["KeyA", "KeyArrowLeft"],
-          positive: ["KeyD", "KeyArrowRight"],
+          negative: ["KeyA"],
+          positive: ["KeyD"],
         },
         Vertical: {
-          negative: ["KeyS", "KeyArrowDown"],
-          positive: ["KeyW", "KeyArrowUp"],
+          negative: ["KeyS"],
+          positive: ["KeyW"],
+        },
+        EditorHorizontal: {
+          negative: ["KeyArrowLeft"],
+          positive: ["KeyArrowRight"],
+        },
+        EditorVertical: {
+          negative: ["KeyArrowDown"],
+          positive: ["KeyArrowUp"],
         },
       },
       buttons: {
-        MoveUp: ["KeySpace"],
-        MoveDown: ["KeyShiftLeft", "KeyShiftRight"],
+        EditorMoveUp: ["KeyE"],
+        EditorMoveDown: ["KeyQ"],
         LookCamera: ["Mouse0"],
       },
     }),
