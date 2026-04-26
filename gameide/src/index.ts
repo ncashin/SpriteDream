@@ -76,6 +76,8 @@ export { GameView } from "./editor/GameView.js";
 export { OverlayButton } from "./editor/OverlayButton.js";
 export { OverlayInput } from "./editor/OverlayInput.js";
 export { useScene } from "./editor/useScene.js";
+export { useTraits } from "./editor/useTraits.js";
+export type { TraitTemplate } from "./editor/useTraits.js";
 export { useGameIDEMode } from "./editor/useGameIDEMode.js";
 export { GameIDEMode, getMode, setMode, onModeChange } from "./lifecycle/mode.js";
 export { inputPlugin } from "./inputPlugin/inputPlugin.js";

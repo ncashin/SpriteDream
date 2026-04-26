@@ -5,6 +5,10 @@ export function merge(
 ): void {
   for (const propertyKey of Object.keys(patch)) {
     const patchValue = patch[propertyKey];
+    if (patchValue === undefined) {
+      Reflect.deleteProperty(target, propertyKey);
+      continue;
+    }
     const patchIsObject = patchValue && typeof patchValue === "object";
 
     const targetValue = target[propertyKey];

@@ -41,12 +41,26 @@ function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<BaseSceneObj
       return value;
     },
     set(target, property, value, receiver) {
+      if (value === undefined) {
+        return Reflect.deleteProperty(receiver as object, property);
+      }
       const previousValue = target[property];
       const result = Reflect.set(target, property, value, receiver);
       subscribers.forEach((callback) => {
         callback({ path, property, previousValue, value });
       });
       invalidateUseSceneSnapshot();
+      return result;
+    },
+    deleteProperty(target, property) {
+      const previousValue = target[property];
+      const result = Reflect.deleteProperty(target, property);
+      if (result) {
+        subscribers.forEach((callback) => {
+          callback({ path, property, previousValue, value: undefined });
+        });
+        invalidateUseSceneSnapshot();
+      }
       return result;
     },
   };

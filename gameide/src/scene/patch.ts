@@ -63,5 +63,9 @@ export function mergeSceneReflectUpdateIntoPatch(
     }
     node = next as BaseSceneObject;
   }
+  if (update.value === undefined) {
+    Reflect.deleteProperty(node, update.property);
+    return;
+  }
   node[update.property] = cloneScenePatchValue(update.value);
 }
