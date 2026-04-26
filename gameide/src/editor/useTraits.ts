@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import type { IconSlug } from "../lucide/lucideIconSlug.js";
 import {
   $boolean,
   $number,
@@ -44,7 +45,12 @@ function mergeMissing(target: Record<string, unknown>, incoming: Record<string, 
   }
 }
 
-export type TraitTemplate = { id: number; label: string; schema: SchemaObject };
+export type TraitTemplate = {
+  id: number;
+  label: string;
+  schema: SchemaObject;
+  icon?: IconSlug;
+};
 
 export function useTraits() {
   const templates: TraitTemplate[] = useMemo(
@@ -53,6 +59,7 @@ export function useTraits() {
         id: i,
         label: def.name ?? `Trait ${i + 1}`,
         schema: def.schema,
+        icon: def.icon,
       })),
     [],
   );
@@ -65,7 +72,15 @@ export function useTraits() {
       objectPath,
     );
     if (!node || typeof node !== "object" || Array.isArray(node)) return;
-    mergeMissing(node as Record<string, unknown>, defaultFromSchemaValue(def.schema) as Record<string, unknown>);
+    const target = node as Record<string, unknown>;
+    mergeMissing(target, defaultFromSchemaValue(def.schema) as Record<string, unknown>);
+    if (
+      typeof def.icon === "string" &&
+      def.icon.trim() !== "" &&
+      !("__icon" in target)
+    ) {
+      target.__icon = def.icon;
+    }
   }, [templates]);
 
   return { templates, mergeTraitInto };

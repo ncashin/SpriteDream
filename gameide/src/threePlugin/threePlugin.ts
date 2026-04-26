@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { IconSlug } from "../lucide/lucideIconSlug.js";
 import { defineTrait, implementsTrait } from "../trait/trait.js";
 import { transformTrait } from "../trait/transform.js";
 import { getScene } from "../scene/scene.js";
@@ -35,7 +36,7 @@ export const meshRenderTrait = defineTrait(
   {
     name: "Mesh Render",
     description: "Render a Three.js mesh from scene object data.",
-    icon: "box",
+    icon: "box" satisfies IconSlug,
   }
 );
 

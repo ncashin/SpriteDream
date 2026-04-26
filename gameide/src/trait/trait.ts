@@ -1,3 +1,5 @@
+import type { IconSlug } from "../lucide/lucideIconSlug.js";
+
 export const $number = Symbol("number");
 export const $string = Symbol("string");
 export const $boolean = Symbol("boolean");
@@ -14,7 +16,7 @@ export type SchemaValue = SchemaPrimitive | SchemaObject;
 export type TraitMetadata = {
   name?: string;
   description?: string;
-  icon?: string;
+  icon?: IconSlug;
 };
 
 type TraitInputItem = SchemaObject | TraitHandle<object>;
@@ -98,10 +100,12 @@ function compilePropertyCheck(constraint: SchemaValue): (actual: unknown) => boo
 }
 
 export function createTraitGuard(schema: SchemaObject) {
-  const checks = Object.entries(schema).map(([key, constraint]) => ({
-    key,
-    check: compilePropertyCheck(constraint),
-  }));
+  const checks = Object.entries(schema)
+    .filter(([key]) => !String(key).startsWith("__"))
+    .map(([key, constraint]) => ({
+      key,
+      check: compilePropertyCheck(constraint),
+    }));
 
   return function guard(value: unknown): boolean {
     if (!isSchemaObject(value)) return false;
@@ -116,14 +120,14 @@ export function createTraitGuard(schema: SchemaObject) {
 const EDITOR_DEFINITIONS: Array<{
   name?: string;
   description?: string;
-  icon?: string;
+  icon?: IconSlug;
   schema: SchemaObject;
 }> = [];
 
 export function getDefinedTraitsForEditor(): Array<{
   name?: string;
   description?: string;
-  icon?: string;
+  icon?: IconSlug;
   schema: SchemaObject;
 }> {
   return [...EDITOR_DEFINITIONS];

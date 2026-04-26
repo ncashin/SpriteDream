@@ -4,8 +4,10 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import dynamicIconImports from "lucide-react/dynamicIconImports";
 import {
   useCallback,
+  useEffect,
   useState,
   type MouseEvent,
   type ReactNode,
@@ -80,6 +82,59 @@ const muted = "text-[var(--vscode-descriptionForeground)]";
 const foreground = "text-[var(--vscode-editor-foreground)]";
 const rowHover = "hover:bg-[var(--vscode-list-hoverBackground)]";
 const inputClass = `w-full min-w-0 flex-1 py-0.5 border-0 bg-transparent text-inherit ${textSize} font-[inherit] outline-none`;
+
+const SCENE_TREE_META_KEYS = new Set(["__icon"]);
+
+type LeadIconComponent = typeof Box;
+
+function normalizeIconSlug(raw: string): string {
+  const t = raw.trim();
+  if (!t) return "";
+  if (t.includes("-")) return t.toLowerCase();
+  return t
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replace(/([A-Z])([A-Z][a-z])/g, "$1-$2")
+    .toLowerCase();
+}
+
+function SceneTreeObjectLeadIcon({ iconKey }: { iconKey: unknown }) {
+  const [Icon, setIcon] = useState<LeadIconComponent>(() => Box);
+
+  useEffect(() => {
+    if (typeof iconKey !== "string" || iconKey.trim() === "") {
+      setIcon(() => Box);
+      return;
+    }
+    const slug = normalizeIconSlug(iconKey);
+    const loaders = dynamicIconImports as Record<
+      string,
+      () => Promise<{ default: LeadIconComponent }>
+    >;
+    const load = loaders[slug];
+    if (!load) {
+      setIcon(() => Box);
+      return;
+    }
+    let cancelled = false;
+    void load()
+      .then((mod) => {
+        if (!cancelled && mod?.default) {
+          setIcon(() => mod.default);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIcon(() => Box);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [iconKey]);
+
+  const Cmp = Icon;
+  return <Cmp size={iconSize} className={iconClass} aria-hidden />;
+}
 
 function ObjectAddSelect({
   objectPath,
@@ -214,6 +269,8 @@ type RowShellProps = {
   /** List-style hover background; off for property (non-object) rows. */
   highlightable?: boolean;
   propertyRow?: boolean;
+  /** When `dropInto`, Lucide icon name/slug from scene `__icon` (kebab-case or PascalCase). */
+  objectLeadIconKey?: unknown;
 };
 
 function RowShell({
@@ -231,12 +288,13 @@ function RowShell({
   headerExpanded,
   highlightable = true,
   propertyRow = false,
+  objectLeadIconKey,
 }: RowShellProps) {
   let lead: ReactNode = null;
   if (dropInto) {
     lead = (
       <SceneTreeRowIconFrame>
-        <Box size={iconSize} className={iconClass} aria-hidden />
+        <SceneTreeObjectLeadIcon iconKey={objectLeadIconKey} />
       </SceneTreeRowIconFrame>
     );
   }
@@ -265,7 +323,7 @@ function RowShell({
       <div
         className={cn(
           "group flex items-center gap-0.5 min-w-0 rounded",
-          propertyRow ? "px-2" : "pl-1.5 pr-1.5",
+          propertyRow ? "pl-2 pr-1.5" : "pl-1.5 pr-1.5",
           textSize,
           font,
           highlightable && rowHover,
@@ -277,7 +335,7 @@ function RowShell({
         <div
           className={cn(
             "flex-1 min-w-0 flex items-center gap-1",
-            propertyRow ? "py-1.5" : "py-1",
+            propertyRow ? "py-1" : "py-1",
           )}
         >
           {label}
@@ -387,7 +445,7 @@ function ObjectNode({
   mergeTraitInto,
 }: ObjectNodeProps) {
   const [open, setOpen] = useState(true);
-  const keys = Object.keys(sceneObject);
+  const keys = Object.keys(sceneObject).filter((k) => !SCENE_TREE_META_KEYS.has(k));
 
   let childBody: ReactNode = null;
   if (open) {
@@ -425,6 +483,7 @@ function ObjectNode({
       templates={templates}
       mergeTraitInto={mergeTraitInto}
       dropInto
+      objectLeadIconKey={sceneObject.__icon}
       trailing={
         <SceneTreeRowIconFrame>
           <ChevronRight size={iconSize} className={chevronClass} aria-hidden />
