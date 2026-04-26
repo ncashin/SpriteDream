@@ -10,7 +10,7 @@ import {
   meshRenderTrait,
 } from "gameide";
 import type { MainContext } from "./gameConfig";
-import { createEditorCameraController } from "./editorCamera";
+import { createEditorCameraController } from "../../gameide/src/threePlugin/editorCamera";
 
 const playerTrait = defineTrait([
   meshRenderTrait,

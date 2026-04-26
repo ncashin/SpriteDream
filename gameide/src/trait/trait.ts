@@ -62,6 +62,9 @@ export type TraitHandle<T extends object> = {
   readonly __gameideTraitType?: T;
 };
 
+/** Trait returned by {@link defineTrait}: schema defaults are readable on the object at compile time. */
+export type DefinedTrait<T extends object> = TraitHandle<T> & T;
+
 function isSchemaObject(value: unknown): value is SchemaObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -165,9 +168,9 @@ function resolveSchemaInput(input: TraitInput): SchemaObject {
 export function defineTrait<TInput extends TraitInput>(
   schema: TInput,
   metadata?: TraitMetadata,
-): TraitHandle<TraitInputToObject<TInput>> {
+): DefinedTrait<TraitInputToObject<TInput>> {
   const resolvedSchema = resolveSchemaInput(schema);
-  const handle = resolvedSchema as TraitHandle<TraitInputToObject<TInput>>;
+  const handle = resolvedSchema as DefinedTrait<TraitInputToObject<TInput>>;
   traitGuards.set(handle, createTraitGuard(resolvedSchema));
   const definition = {
     ...(metadata ?? {}),

@@ -1,5 +1,6 @@
 import { connectWebSocketRoomTransport } from "./websocketRoomTransport.js";
 import { createSceneChannel } from "../scene/sceneChannel/sceneChannel.js";
+import type { SceneChannel } from "../scene/sceneChannel/sceneChannel.js";
 import {
   getScene,
   getRawScene,
@@ -8,7 +9,12 @@ import {
   applyPatch as applyScenePatch,
 } from "../scene/scene.js";
 import type { BaseSceneObject } from "../scene/scene.js";
-import { isOwnedSceneObject, withOwnership } from "./distributedSimulation.js";
+import type { Plugin } from "../lifecycle/plugin.js";
+import {
+  isOwnedSceneObject,
+  withOwnership,
+  OWNER_ID,
+} from "./distributedSimulation.js";
 
 export {
   OWNER_ID as OWNER_ID,
@@ -22,9 +28,27 @@ export type NetworkingPluginOptions = {
   url?: string;
 };
 
-export const networkingPlugin =
-  (options: NetworkingPluginOptions = {}) =>
-  async (input: { rootElement: HTMLElement; initialScene?: BaseSceneObject }) => {
+export type NetworkingPluginRequiredContext = {
+  rootElement: HTMLElement;
+  initialScene?: BaseSceneObject;
+};
+
+export type NetworkingApi = {
+  peerId: string;
+  getPeers: () => string[];
+  onPeersChange: (handler: (peers: string[]) => void) => () => void;
+  channel: SceneChannel;
+  isOwned: (obj: BaseSceneObject) => boolean;
+  withOwnership: <T extends Record<string, unknown>>(
+    obj: T
+  ) => T & Record<typeof OWNER_ID, string>;
+  dispose(): void;
+};
+
+export const networkingPlugin = (
+  options: NetworkingPluginOptions = {},
+): Plugin<NetworkingPluginRequiredContext, { networking: NetworkingApi }> =>
+  async (input) => {
     const room = options.room ?? "default";
 
     const { transport, dispose: disposeTransport } =

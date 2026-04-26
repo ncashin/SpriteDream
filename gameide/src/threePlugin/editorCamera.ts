@@ -1,6 +1,16 @@
-import type { MainContext } from "./gameConfig";
+import type { PerspectiveCamera } from "three";
 
-type CreateEditorCameraControllerOptions = Pick<MainContext, "input" | "three"> & {
+type CreateEditorCameraControllerOptions = {
+  input: {
+    axes: { EditorHorizontal: number; EditorVertical: number };
+    buttons: {
+      LookCamera: { held: boolean };
+      EditorMoveUp: { held: boolean };
+      EditorMoveDown: { held: boolean };
+    };
+    mouse: { delta: { x: number; y: number } };
+  };
+  three: { camera: PerspectiveCamera };
   moveSpeed?: number;
   lookSensitivity?: number;
 };

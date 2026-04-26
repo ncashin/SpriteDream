@@ -4,9 +4,11 @@ import { defineTrait, implementsTrait } from "../trait/trait.js";
 import { transformTrait } from "../trait/transform.js";
 import { getScene } from "../scene/scene.js";
 import { update } from "../lifecycle/gameloop.js";
+import type { Plugin } from "../lifecycle/plugin.js";
 import {
   createThreePluginCamera,
   type ThreePluginCameraOptions,
+  type ThreePluginCameraController,
 } from "./camera.js";
 
 type ThreePluginOptions = {
@@ -16,9 +18,22 @@ type ThreePluginOptions = {
   camera?: ThreePluginCameraOptions;
 };
 
-type ThreePluginContext = {
-  rootElement: HTMLElement;
-} & Record<string, unknown>;
+export type ThreePluginRequiredContext = { rootElement: HTMLElement };
+
+export type ThreePluginApi = {
+  THREE: typeof THREE;
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  cameraController: ThreePluginCameraController;
+  renderer: THREE.WebGLRenderer;
+  draw: () => void;
+  addMesh: (
+    geometry: THREE.BufferGeometry,
+    material?: THREE.Material
+  ) => THREE.Mesh;
+  drawBox: (size?: number, material?: THREE.Material) => THREE.Mesh;
+  dispose: () => void;
+};
 
 export const meshRenderTrait = defineTrait(
   [
@@ -53,8 +68,10 @@ type MeshRenderable = {
   };
 };
 
-export function threePlugin(options: ThreePluginOptions = {}) {
-  return <Context extends ThreePluginContext>(context: Context) => {
+export function threePlugin(
+  options: ThreePluginOptions = {}
+): Plugin<ThreePluginRequiredContext, { three: ThreePluginApi }> {
+  return (context) => {
     const rootElement = context.rootElement;
     const width = rootElement.clientWidth || 1;
     const height = rootElement.clientHeight || 1;
@@ -164,18 +181,16 @@ export function threePlugin(options: ThreePluginOptions = {}) {
       draw();
     });
 
-    return {
-      ...context,
-      three: {
-        THREE,
-        scene,
-        camera,
-        cameraController,
-        renderer,
-        draw,
-        addMesh,
-        drawBox,
-        dispose() {
+    const three: ThreePluginApi = {
+      THREE,
+      scene,
+      camera,
+      cameraController,
+      renderer,
+      draw,
+      addMesh,
+      drawBox,
+      dispose() {
           disposed = true;
           window.removeEventListener("resize", resize);
           for (const mesh of meshByObject.values()) {
@@ -192,7 +207,8 @@ export function threePlugin(options: ThreePluginOptions = {}) {
             rootElement.removeChild(renderer.domElement);
           }
         },
-      },
     };
+
+    return { ...context, three };
   };
 }
