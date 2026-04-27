@@ -54,7 +54,6 @@ export const editorPlugin =
           break;
 
         case GameIDEMode.Game:
-          saveSceneSnapshot();
           channel.pause();
           break;
 

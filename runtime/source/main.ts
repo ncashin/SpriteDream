@@ -36,7 +36,7 @@ export function main({ input, networking }: MainContext): void {
           height: 32,
           tint: PLAYER_SPRITE_TINT,
         },
-        speed: 1,
+        speed: 200,
       }),
     );
   });

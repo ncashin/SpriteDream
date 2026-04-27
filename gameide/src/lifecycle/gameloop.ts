@@ -1,4 +1,5 @@
 import { createCallbackRegistry } from "./callbackRegistry.js";
+import { saveSceneSnapshot } from "../scene/snapshot.js";
 import { GameIDEMode, getMode, onModeChange } from "./mode.js";
 
 type StartCallback = () => void;
@@ -37,6 +38,8 @@ export function editorUpdate(callback: UpdateCallback): void {
 }
 
 onModeChange((mode) => {
+  // Editor → Game: snapshot is taken in setMode() before any listeners, so
+  // it cannot include gameStart/always side effects.
   alwaysStartRegistry.run();
   switch (mode) {
     case GameIDEMode.Game:
@@ -52,6 +55,9 @@ onModeChange((mode) => {
 
 export function startGameloop(): void {
   const initialMode = getMode();
+  if (initialMode === GameIDEMode.Game) {
+    saveSceneSnapshot();
+  }
   alwaysStartRegistry.run();
   switch (initialMode) {
     case GameIDEMode.Game:

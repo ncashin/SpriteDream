@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture } from "pixi.js";
+import { Assets, Container, Sprite, Texture } from "pixi.js";
 import type { IconSlug } from "../lucide/lucideIconSlug.js";
 import { getScene } from "../scene/scene.js";
 import {
@@ -38,6 +38,22 @@ function isTexturableRef(ref: string): boolean {
   }
   const path = trimmed.split(/[?#]/)[0] ?? trimmed;
   return /\.(png|jpe?g|webp|gif|bmp|ktx2|svg|avif)$/i.test(path);
+}
+
+export function isSvgAssetRef(ref: string): boolean {
+  const path = ref.trim().split(/[?#]/)[0] ?? ref.trim();
+  return path.toLowerCase().endsWith(".svg");
+}
+
+function hashString(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h, 33) ^ s.charCodeAt(i);
+  return (h >>> 0).toString(36);
+}
+
+function svgLoaderSrc(url: string, width: number, height: number, resolution: number): string {
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}__gameideSvg=${width}x${height}x${resolution}`;
 }
 
 function resolveAssetUrl(
@@ -88,26 +104,69 @@ function setSpriteFromItem(sprite: Sprite, item: SpriteRenderable): void {
   sprite.zIndex = position.z;
 }
 
+export type SyncPixiSpritesOptions = {
+  textureResolution?: number;
+  svgInflight?: Map<string, Promise<void>>;
+};
+
 function resolveTexture(
   item: SpriteRenderable,
   url: string | undefined,
   textureByKey: Map<string, Texture>,
+  syncOptions: SyncPixiSpritesOptions | undefined,
 ): { texture: Texture; signature: string } {
   const spec = item.sprite;
   const assetKey = spec.asset?.trim() ?? "";
   const sig = buildSignature(item, url);
 
-  if (assetKey && url && isTexturableRef(assetKey)) {
-    const cached = textureByKey.get(assetKey);
+  if (!(assetKey && url && isTexturableRef(assetKey))) {
+    return { texture: Texture.WHITE, signature: sig };
+  }
+
+  const res = syncOptions?.textureResolution ?? 1;
+  const rw = Math.max(1, Math.round(spec.width));
+  const rh = Math.max(1, Math.round(spec.height));
+
+  if (isSvgAssetRef(assetKey)) {
+    const svgKey = `${assetKey}|${rw}|${rh}|${res}`;
+    const cached = textureByKey.get(svgKey);
     if (cached) {
       return { texture: cached, signature: sig };
     }
-    const next = Texture.from(url);
-    textureByKey.set(assetKey, next);
-    return { texture: next, signature: sig };
+    const inflight = syncOptions?.svgInflight;
+    if (inflight && !inflight.has(svgKey)) {
+      const alias = `__gameideSvg_${hashString(svgKey)}`;
+      const uniqueSrc = svgLoaderSrc(url, rw, rh, res);
+      const load = Assets.load({
+        alias,
+        src: uniqueSrc,
+        data: {
+          width: rw,
+          height: rh,
+          resolution: res,
+        },
+      })
+        .then((texture) => {
+          textureByKey.set(svgKey, texture as Texture);
+        })
+        .catch((err) => {
+          console.error("[gameide] failed to rasterize SVG", assetKey, err);
+        })
+        .finally(() => {
+          inflight.delete(svgKey);
+        });
+      inflight.set(svgKey, load.then(() => {}));
+    }
+    return { texture: textureByKey.get(svgKey) ?? Texture.WHITE, signature: sig };
   }
 
-  return { texture: Texture.WHITE, signature: sig };
+  const cached = textureByKey.get(assetKey);
+  if (cached) {
+    return { texture: cached, signature: sig };
+  }
+  const next = Texture.from(url);
+  textureByKey.set(assetKey, next);
+  return { texture: next, signature: sig };
 }
 
 export function syncPixiSprites(
@@ -115,6 +174,7 @@ export function syncPixiSprites(
   assets: Readonly<Record<string, string>> | undefined,
   textureByKey: Map<string, Texture>,
   spriteByEntity: Map<SpriteRenderable, { sprite: Sprite; signature: string }>,
+  syncOptions?: SyncPixiSpritesOptions,
 ): void {
 
   const syncOne = (item: SpriteRenderable): void => {
@@ -122,11 +182,11 @@ export function syncPixiSprites(
     const assetKey = spec.asset?.trim() ?? "";
     const url = resolveAssetUrl(assets, assetKey);
 
-    const { texture, signature } = resolveTexture(item, url, textureByKey);
+    const { texture, signature } = resolveTexture(item, url, textureByKey, syncOptions);
     const existing = spriteByEntity.get(item);
 
     if (existing) {
-      if (existing.signature !== signature) {
+      if (existing.signature !== signature || existing.sprite.texture !== texture) {
         existing.sprite.texture = texture;
         existing.signature = signature;
       }
@@ -158,6 +218,7 @@ export function disposePixiSprites(
   stage: Container,
   textureByKey: Map<string, Texture>,
   spriteByEntity: Map<SpriteRenderable, { sprite: Sprite; signature: string }>,
+  svgInflight?: Map<string, Promise<void>>,
 ): void {
   for (const { sprite } of spriteByEntity.values()) {
     stage.removeChild(sprite);
@@ -168,5 +229,6 @@ export function disposePixiSprites(
     texture.destroy(true);
   }
   textureByKey.clear();
+  svgInflight?.clear();
 }
 

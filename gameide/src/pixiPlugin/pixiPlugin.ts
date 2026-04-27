@@ -10,6 +10,7 @@ import { update } from "../lifecycle/gameloop.js";
 import type { Plugin } from "../lifecycle/plugin.js";
 import {
   disposePixiSprites,
+  isSvgAssetRef,
   syncPixiSprites,
   type SpriteRenderable,
 } from "./sprite.js";
@@ -27,7 +28,6 @@ export type Viewport = ReturnType<typeof createViewport>;
 
 export type PixiPluginAPI = {
   app: Application;
-  /** World root for sprite placement; 0,0 is viewport center (with default camera). */
   world: Container;
   viewport: Viewport;
   dispose: () => void;
@@ -64,7 +64,7 @@ export function pixiPlugin(
           (value): value is string => typeof value === "string" && value.trim().length > 0,
         ),
       ),
-    ];
+    ].filter((u) => !isSvgAssetRef(u));
     if (urls.length > 0) {
       await Assets.load(urls);
     }
@@ -92,9 +92,13 @@ export function pixiPlugin(
 
     const textureByKey = new Map<string, Texture>();
     const spriteByEntity = new Map<SpriteRenderable, { sprite: Sprite; signature: string }>();
+    const svgInflight = new Map<string, Promise<void>>();
     update(() => {
       if (disposed) return;
-      syncPixiSprites(world, options.assets, textureByKey, spriteByEntity);
+      syncPixiSprites(world, options.assets, textureByKey, spriteByEntity, {
+        textureResolution: app.renderer.resolution,
+        svgInflight,
+      });
     });
 
     const pixi: PixiPluginAPI = {
@@ -105,7 +109,7 @@ export function pixiPlugin(
         disposed = true;
         ro.disconnect();
         unsubscribeViewport();
-        disposePixiSprites(world, textureByKey, spriteByEntity);
+        disposePixiSprites(world, textureByKey, spriteByEntity, svgInflight);
         app.destroy(true, true);
       },
     };

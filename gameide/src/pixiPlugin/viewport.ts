@@ -2,13 +2,10 @@ import type { Container } from "pixi.js";
 import { createCallbackRegistry } from "../lifecycle/callbackRegistry.js";
 
 export type ViewportState = {
-  /** World x at the horizontal center of the view (+x = right). */
   centerX: number;
-  /** World y at the vertical center of the view (+y = up in game space). */
   centerY: number;
   width: number;
   height: number;
-  /** Pixels per world unit (higher = zoomed in). */
   scale: number;
 };
 
