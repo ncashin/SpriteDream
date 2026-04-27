@@ -128,7 +128,7 @@ function assetKey(workspaceRootFsPath: string, assetFsPath: string): string {
 function generateVirtualGameIDEAssetsDts(workspaceRootFsPath: string, assetFsPaths: string[]): string {
   if (assetFsPaths.length === 0) {
     return `${LOAD_SCENE_DECL_HEADER}declare module "virtual:gameide-assets" {
-  export type GameIDEAssets = Record<string, never>;
+  export type GameIDEAssets = { readonly importPath: string };
   export function loadAssets(): GameIDEAssets;
 }
 `;
@@ -141,6 +141,7 @@ function generateVirtualGameIDEAssetsDts(workspaceRootFsPath: string, assetFsPat
 
   return `${LOAD_SCENE_DECL_HEADER}declare module "virtual:gameide-assets" {
   export type GameIDEAssets = {
+    readonly importPath: string;
 ${typeLines.join("\n")}
   };
   export function loadAssets(): GameIDEAssets;

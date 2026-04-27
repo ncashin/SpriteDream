@@ -5,4 +5,7 @@ import { gameidePlugin } from "gameide/vite";
 
 export default defineConfig({
   plugins: [gameidePlugin(), react(), tailwindcss()],
+  build: {
+    assetsInlineLimit: 0,
+  },
 });

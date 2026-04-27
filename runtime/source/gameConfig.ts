@@ -4,7 +4,7 @@ import {
   editorPlugin,
   networkingPlugin,
   gameUIPlugin,
-  threePlugin,
+  pixiPlugin,
 } from "gameide";
 import { loadScenes } from "virtual:gameide-scenes";
 import { loadAssets } from "virtual:gameide-assets";
@@ -40,14 +40,6 @@ const mainFunction = game({
           negative: ["KeyS"],
           positive: ["KeyW"],
         },
-        EditorHorizontal: {
-          negative: ["KeyA"],
-          positive: ["KeyD"],
-        },
-        EditorVertical: {
-          negative: ["KeyS"],
-          positive: ["KeyW"],
-        },
       },
       buttons: {
         EditorMoveUp: ["KeySpace"],
@@ -55,13 +47,11 @@ const mainFunction = game({
         LookCamera: ["Mouse0"],
       },
     }),
-    threePlugin({
-      clearColor: 0x0f1419,
-      assets: loadAssets(),
-      camera: {
-        z: 8,
+    pixiPlugin({
+      initOptions: {
+        backgroundAlpha: 0,
       },
-      editorCamera: true,
+      assets: loadAssets(),
     }),
   ],
 });

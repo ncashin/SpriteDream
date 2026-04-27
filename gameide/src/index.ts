@@ -89,19 +89,13 @@ export type {
   InputPluginOptions,
 } from "./inputPlugin/inputPlugin.js";
 export {
-  threePlugin,
-  normalRenderTrait,
-  type EditorCameraInThreePluginOptions,
-} from "./threePlugin/threePlugin.js";
+  pixiPlugin,
+  type PixiPluginAPI,
+  type PixiPluginOptions,
+  type Viewport,
+} from "./pixiPlugin/pixiPlugin.js";
 export {
-  createEditorCameraController,
-  type EditorCameraController,
-  type EditorCameraControllerOptions,
-} from "./threePlugin/editorCamera.js";
-export {
-  createGameideSceneCamera,
-  createThreePluginCamera,
-  type GameideSceneCamera,
-  type ThreePluginCameraOptions,
-  type ThreePluginCameraController,
-} from "./threePlugin/camera.js";
+  type ViewportState,
+  applyViewportToWorldContainer,
+} from "./pixiPlugin/viewport.js";
+export { spriteTrait } from "./pixiPlugin/sprite.js";

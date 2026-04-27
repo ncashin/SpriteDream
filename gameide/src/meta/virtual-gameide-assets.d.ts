@@ -1,4 +1,4 @@
 declare module "virtual:gameide-assets" {
-  export type GameIDEAssets = Record<string, never>;
+  export type GameIDEAssets = { readonly importPath: string };
   export function loadAssets(): GameIDEAssets;
 }

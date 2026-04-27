@@ -10,7 +10,7 @@ import {
 } from "../trait/trait.js";
 import { getScene } from "../scene/scene.js";
 import { getValueAtPath } from "../scene/path.js";
-import "../threePlugin/threePlugin.js";
+import "../pixiPlugin/sprite.js";
 
 function defaultFromSchemaValue(v: SchemaValue): unknown {
   if (v === $number) return 0;
