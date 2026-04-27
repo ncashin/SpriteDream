@@ -1,6 +1,6 @@
 import type { PerspectiveCamera } from "three";
 
-type CreateEditorCameraControllerOptions = {
+export type EditorCameraControllerOptions = {
   input: {
     axes: { EditorHorizontal: number; EditorVertical: number };
     buttons: {
@@ -24,7 +24,7 @@ export function createEditorCameraController({
   three,
   moveSpeed = 4,
   lookSensitivity = 0.0025,
-}: CreateEditorCameraControllerOptions): EditorCameraController {
+}: EditorCameraControllerOptions): EditorCameraController {
   const maxPitch = Math.PI / 2 - 0.01;
   const camera = three.camera;
   camera.rotation.order = "YXZ";

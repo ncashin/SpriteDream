@@ -14,6 +14,13 @@ export type ThreePluginCameraController = {
   lookAt(x: number, y: number, z: number): void;
 };
 
+/** Generic 3D view: one perspective camera plus imperative position / lookAt helpers. */
+export type GameideSceneCamera = {
+  /** Same object as `controller.camera` — the camera passed to `renderer.render`. */
+  perspective: THREE.PerspectiveCamera;
+  controller: ThreePluginCameraController;
+};
+
 type CreateThreePluginCameraOptions = {
   width: number;
   height: number;
@@ -47,4 +54,11 @@ export function createThreePluginCamera({
       camera.lookAt(x, y, z);
     },
   };
+}
+
+export function createGameideSceneCamera(
+  args: CreateThreePluginCameraOptions
+): GameideSceneCamera {
+  const controller = createThreePluginCamera(args);
+  return { perspective: controller.camera, controller };
 }

@@ -444,7 +444,7 @@ function ObjectNode({
   templates,
   mergeTraitInto,
 }: ObjectNodeProps) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const keys = Object.keys(sceneObject).filter((k) => !SCENE_TREE_META_KEYS.has(k));
 
   let childBody: ReactNode = null;

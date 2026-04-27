@@ -6,17 +6,32 @@ import { transformTrait } from "../trait/transform.js";
 import { getScene } from "../scene/scene.js";
 import { update } from "../lifecycle/gameloop.js";
 import type { Plugin } from "../lifecycle/plugin.js";
+import { GameIDEMode, getMode } from "../lifecycle/mode.js";
 import {
-  createThreePluginCamera,
+  createGameideSceneCamera,
+  type GameideSceneCamera,
   type ThreePluginCameraOptions,
-  type ThreePluginCameraController,
 } from "./camera.js";
+import { createEditorCameraController } from "./editorCamera.js";
+import type { EditorCameraControllerOptions } from "./editorCamera.js";
+
+export type EditorCameraInThreePluginOptions = {
+  moveSpeed?: number;
+  lookSensitivity?: number;
+};
 
 type ThreePluginOptions = {
   antialias?: boolean;
   alpha?: boolean;
   clearColor?: number;
   camera?: ThreePluginCameraOptions;
+  /**
+   * When set, the scene camera is driven with editor fly controls (arrows, Q/E,
+   * mouse+LookCamera) only while `getMode()` is `GameIDEMode.Editor` (play mode
+   * leaves the camera to game code). Requires `inputPlugin` with matching axes
+   * and buttons, and it must be listed **before** `threePlugin` in the game config.
+   */
+  editorCamera?: boolean | EditorCameraInThreePluginOptions;
   /**
    * Map from project-relative asset keys (e.g. `"assets/model.glb"`) to resolved URLs.
    * Typically `import { loadAssets } from "virtual:gameide-assets";` then `loadAssets()`.
@@ -26,11 +41,14 @@ type ThreePluginOptions = {
 
 export type ThreePluginRequiredContext = { rootElement: HTMLElement };
 
+type ThreePluginContextWithEditor = ThreePluginRequiredContext &
+  Pick<EditorCameraControllerOptions, "input">;
+
 export type ThreePluginApi = {
   THREE: typeof THREE;
   scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
-  cameraController: ThreePluginCameraController;
+  /** View camera for the WebGL view (the same object optional editor fly controls use). */
+  sceneCamera: GameideSceneCamera;
   renderer: THREE.WebGLRenderer;
   draw: () => void;
   addMesh: (
@@ -109,6 +127,14 @@ function pickAssetUrl(
 }
 
 export function threePlugin(
+  options:
+    | (ThreePluginOptions & { editorCamera: true })
+    | (ThreePluginOptions & { editorCamera: EditorCameraInThreePluginOptions })
+): Plugin<ThreePluginContextWithEditor, { three: ThreePluginApi }>;
+export function threePlugin(
+  options?: ThreePluginOptions
+): Plugin<ThreePluginRequiredContext, { three: ThreePluginApi }>;
+export function threePlugin(
   options: ThreePluginOptions = {}
 ): Plugin<ThreePluginRequiredContext, { three: ThreePluginApi }> {
   return (context) => {
@@ -127,12 +153,35 @@ export function threePlugin(
     renderer.setClearColor(options.clearColor ?? 0x000000, options.alpha ? 0 : 1);
     rootElement.appendChild(renderer.domElement);
 
-    const cameraController = createThreePluginCamera({
+    const sceneCamera = createGameideSceneCamera({
       width,
       height,
       options: options.camera,
     });
-    const camera = cameraController.camera;
+    const camera = sceneCamera.perspective;
+
+    const editorConfig = options.editorCamera;
+    const editorCameraEnabled =
+      editorConfig === true ||
+      (typeof editorConfig === "object" && editorConfig !== null);
+    let editorCameraController:
+      | ReturnType<typeof createEditorCameraController>
+      | undefined;
+    if (editorCameraEnabled) {
+      if (!("input" in context) || context.input === undefined) {
+        throw new Error(
+          "threePlugin: editorCamera requires inputPlugin before threePlugin, with editor axes and LookCamera / EditorMoveUp / EditorMoveDown buttons."
+        );
+      }
+      const navOpts: EditorCameraInThreePluginOptions =
+        editorConfig === true ? {} : (editorConfig as EditorCameraInThreePluginOptions);
+      editorCameraController = createEditorCameraController({
+        input: (context as ThreePluginContextWithEditor).input,
+        three: { camera },
+        moveSpeed: navOpts.moveSpeed,
+        lookSensitivity: navOpts.lookSensitivity,
+      });
+    }
 
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(1, 1, 1);
@@ -340,8 +389,11 @@ export function threePlugin(
     };
 
     let disposed = false;
-    update(() => {
+    update((deltaTime) => {
       if (disposed) return;
+      if (getMode() === GameIDEMode.Editor) {
+        editorCameraController?.update(deltaTime);
+      }
       const renderables = sceneState.query(renderablePredicate);
       const activeKeys = new Set<object>();
       for (const item of renderables) {
@@ -361,8 +413,7 @@ export function threePlugin(
     const three: ThreePluginApi = {
       THREE,
       scene,
-      camera,
-      cameraController,
+      sceneCamera,
       renderer,
       draw,
       addMesh,

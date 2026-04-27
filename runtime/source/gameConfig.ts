@@ -30,13 +30,6 @@ const mainFunction = game({
       room: "default",
       url: "ws://localhost:5174/room",
     }),
-    threePlugin({
-      clearColor: 0x0f1419,
-      assets: loadAssets(),
-      camera: {
-        z: 8,
-      },
-    }),
     inputPlugin({
       axes: {
         Horizontal: {
@@ -48,19 +41,27 @@ const mainFunction = game({
           positive: ["KeyW"],
         },
         EditorHorizontal: {
-          negative: ["KeyArrowLeft"],
-          positive: ["KeyArrowRight"],
+          negative: ["KeyA"],
+          positive: ["KeyD"],
         },
         EditorVertical: {
-          negative: ["KeyArrowDown"],
-          positive: ["KeyArrowUp"],
+          negative: ["KeyS"],
+          positive: ["KeyW"],
         },
       },
       buttons: {
-        EditorMoveUp: ["KeyE"],
-        EditorMoveDown: ["KeyQ"],
+        EditorMoveUp: ["KeySpace"],
+        EditorMoveDown: ["KeyShiftLeft", "KeyShiftRight"],
         LookCamera: ["Mouse0"],
       },
+    }),
+    threePlugin({
+      clearColor: 0x0f1419,
+      assets: loadAssets(),
+      camera: {
+        z: 8,
+      },
+      editorCamera: true,
     }),
   ],
 });

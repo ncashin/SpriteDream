@@ -10,13 +10,12 @@ import {
   normalRenderTrait,
 } from "gameide";
 import type { MainContext } from "./gameConfig";
-import { createEditorCameraController } from "../../gameide/src/threePlugin/editorCamera";
 
 const playerTrait = defineTrait([
   normalRenderTrait,
   {
     [OWNER_ID]: $string,
-    speed: 200,
+    speed: 1,
   },
 ]);
 
@@ -28,9 +27,8 @@ function playerColor(id: string): string {
   return `hsl(${Math.abs(hash) % 360} 55% 52%)`;
 }
 
-export function main({ input, networking, three }: MainContext): void {
+export function main({ input, networking }: MainContext): void {
   const scene = getScene();
-  const editorCamera = createEditorCameraController({ input, three });
 
   gameStart(() => {
     scene.createObject(
@@ -46,7 +44,7 @@ export function main({ input, networking, three }: MainContext): void {
           depth: 0.8,
           color: playerColor(networking.peerId),
         },
-        speed: 200,
+        speed: 1,
       }),
     );
   });
@@ -54,7 +52,6 @@ export function main({ input, networking, three }: MainContext): void {
   gameUpdate((deltaTime: number) => {
     const horizontal = input.axes.Horizontal;
     const vertical = input.axes.Vertical;
-    editorCamera.update(deltaTime);
 
     for (const player of scene.query(implementsTrait(playerTrait))) {
       if (!networking.isOwned(player)) continue;

@@ -88,9 +88,20 @@ export type {
   InputPluginRequiredContext,
   InputPluginOptions,
 } from "./inputPlugin/inputPlugin.js";
-export { threePlugin, normalRenderTrait } from "./threePlugin/threePlugin.js";
 export {
+  threePlugin,
+  normalRenderTrait,
+  type EditorCameraInThreePluginOptions,
+} from "./threePlugin/threePlugin.js";
+export {
+  createEditorCameraController,
+  type EditorCameraController,
+  type EditorCameraControllerOptions,
+} from "./threePlugin/editorCamera.js";
+export {
+  createGameideSceneCamera,
   createThreePluginCamera,
+  type GameideSceneCamera,
   type ThreePluginCameraOptions,
   type ThreePluginCameraController,
 } from "./threePlugin/camera.js";
