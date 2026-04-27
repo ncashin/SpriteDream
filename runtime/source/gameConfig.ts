@@ -6,7 +6,8 @@ import {
   gameUIPlugin,
   threePlugin,
 } from "gameide";
-import sampleScene from "./sample.scene";
+import { loadScenes } from "virtual:gameide-scenes";
+import { loadAssets } from "virtual:gameide-assets";
 import "./style.css";
 import invariant from "tiny-invariant";
 import { Editor } from "./Editor";
@@ -16,10 +17,12 @@ import { main } from "./main";
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
+const scenes = loadScenes();
+
 const mainFunction = game({
   rootElement,
   initialContext: {},
-  initialScene: sampleScene,
+  initialScene: scenes["source/sample.scene"],
   plugins: [
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
@@ -29,6 +32,7 @@ const mainFunction = game({
     }),
     threePlugin({
       clearColor: 0x0f1419,
+      assets: loadAssets(),
       camera: {
         z: 8,
       },

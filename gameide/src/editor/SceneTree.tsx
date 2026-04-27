@@ -546,16 +546,22 @@ function TreeNode({
   );
 }
 
-function SceneViewHeader() {
+function SceneViewHeader({ trailing }: { trailing?: ReactNode }) {
   return (
     <header
       className={cn(
-        "w-full flex items-center font-semibold px-1.5 py-2 text-xs",
+        "relative w-full pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
         font,
         foreground,
+        trailing && "pr-7",
       )}
     >
-      Scene
+      <span className="shrink-0 font-semibold">Scene</span>
+      {trailing ? (
+        <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+          {trailing}
+        </div>
+      ) : null}
     </header>
   );
 }
@@ -573,6 +579,15 @@ export function SceneTree() {
     setValueAtPath(getScene() as Record<PropertyKey, unknown>, scenePath, next);
   }, []);
 
+  const headerTrailing = rootObject ? (
+    <ObjectAddSelect
+      objectPath={[]}
+      setAtPath={setAtPath}
+      templates={templates}
+      mergeTraitInto={mergeTraitInto}
+    />
+  ) : undefined;
+
   if (!rootObject) {
     return (
       <div className="w-full h-full min-w-0 flex flex-col bg-[var(--vscode-editor-background)] p-2">
@@ -583,23 +598,8 @@ export function SceneTree() {
 
   return (
     <div className="w-full h-full min-w-0 flex flex-col bg-[var(--vscode-editor-background)] p-2">
-      <SceneViewHeader />
-      <div
-        className={cn(
-          "flex items-center gap-2 px-1.5 py-1.5",
-          textSize,
-          font,
-        )}
-      >
-        <span className={cn(muted, "shrink-0")}>root</span>
-        <ObjectAddSelect
-          objectPath={[]}
-          setAtPath={setAtPath}
-          templates={templates}
-          mergeTraitInto={mergeTraitInto}
-        />
-      </div>
-      <div className="flex-1 min-h-0 overflow-auto">
+      <SceneViewHeader trailing={headerTrailing} />
+      <div className="flex-1 min-h-0 pt-2.5 overflow-auto">
         {Object.keys(rootObject).map((key) => (
           <TreeNode
             name={key}

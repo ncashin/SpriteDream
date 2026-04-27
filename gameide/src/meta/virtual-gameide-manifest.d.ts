@@ -1,9 +1,6 @@
+import type { GameIDEMetadata } from "./gameideManifestTypes.js";
+
 declare module "virtual:gameide-manifest" {
-  const manifest: {
-    id?: string;
-    name?: string;
-    version?: string;
-    description?: string;
-  };
+  const manifest: GameIDEMetadata;
   export default manifest;
 }

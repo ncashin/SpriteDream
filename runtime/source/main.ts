@@ -7,13 +7,13 @@ import {
   gameUpdate,
   $string,
   transformTrait,
-  meshRenderTrait,
+  normalRenderTrait,
 } from "gameide";
 import type { MainContext } from "./gameConfig";
 import { createEditorCameraController } from "../../gameide/src/threePlugin/editorCamera";
 
 const playerTrait = defineTrait([
-  meshRenderTrait,
+  normalRenderTrait,
   {
     [OWNER_ID]: $string,
     speed: 200,
@@ -37,9 +37,10 @@ export function main({ input, networking, three }: MainContext): void {
       networking.peerId,
       networking.withOwnership({
         ...transformTrait,
-        ...meshRenderTrait,
-        mesh: {
-          ...meshRenderTrait.mesh,
+        ...normalRenderTrait,
+        model: {
+          ...normalRenderTrait.model,
+          asset: "assets/SheenChair.glb",
           width: 0.8,
           height: 0.8,
           depth: 0.8,

@@ -28,7 +28,7 @@ out
 *.vsix
 
 .env
-.gameide-types
+.gameide
 
 
 volumes/

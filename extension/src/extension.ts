@@ -3,8 +3,11 @@ import type { SceneData } from "gameide";
 import { ViteDevServer, resolveRuntimeDir } from "./viteDevServer";
 import { SceneEditorProvider } from "./sceneEditorProvider";
 import {
+  deleteAssetDeclaration,
   deleteSceneDeclaration,
+  syncAllAssetsDeclarations,
   syncAllSceneDeclarations,
+  syncAssetDeclaration,
   syncSceneDeclaration,
 } from "./sceneTypeDeclarations";
 import { registerUploadGameCommand } from "./uploadGame";
@@ -46,8 +49,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const sceneWatcher = vscode.workspace.createFileSystemWatcher("**/*.scene");
   const pendingUri = new Map<string, ReturnType<typeof setTimeout>>();
+  const assetWatchers: vscode.FileSystemWatcher[] = [];
+  const assetPendingUri = new Map<string, ReturnType<typeof setTimeout>>();
 
   await syncAllSceneDeclarations();
+  await syncAllAssetsDeclarations();
 
   async function syncSceneFromDisk(uri: vscode.Uri): Promise<void> {
     try {
@@ -78,6 +84,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     );
   }
 
+  function scheduleAssetSync(uri: vscode.Uri): void {
+    const key = uri.toString();
+    const existing = assetPendingUri.get(key);
+    if (existing) clearTimeout(existing);
+    assetPendingUri.set(
+      key,
+      setTimeout(() => {
+        assetPendingUri.delete(key);
+        void syncAssetDeclaration(uri);
+      }, SCENE_FILE_DEBOUNCE_MS)
+    );
+  }
+
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    const w = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(folder, "assets/**")
+    );
+    assetWatchers.push(w);
+  }
+
   context.subscriptions.push(
     sceneWatcher.onDidChange((uri) => scheduleSync(uri)),
     sceneWatcher.onDidCreate((uri) => scheduleSync(uri)),
@@ -91,6 +117,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     sceneWatcher,
     { dispose: () => pendingUri.forEach((t) => clearTimeout(t)) }
   );
+
+  for (const w of assetWatchers) {
+    context.subscriptions.push(
+      w.onDidChange((uri) => scheduleAssetSync(uri)),
+      w.onDidCreate((uri) => scheduleAssetSync(uri)),
+      w.onDidDelete((uri) => {
+        const key = uri.toString();
+        const pending = assetPendingUri.get(key);
+        if (pending) clearTimeout(pending);
+        assetPendingUri.delete(key);
+        void deleteAssetDeclaration(uri);
+      }),
+      w
+    );
+  }
+  context.subscriptions.push({
+    dispose: () => assetPendingUri.forEach((t) => clearTimeout(t)),
+  });
 
   registerUploadGameCommand(context);
 }

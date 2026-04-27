@@ -88,7 +88,7 @@ export type {
   InputPluginRequiredContext,
   InputPluginOptions,
 } from "./inputPlugin/inputPlugin.js";
-export { threePlugin, meshRenderTrait } from "./threePlugin/threePlugin.js";
+export { threePlugin, normalRenderTrait } from "./threePlugin/threePlugin.js";
 export {
   createThreePluginCamera,
   type ThreePluginCameraOptions,

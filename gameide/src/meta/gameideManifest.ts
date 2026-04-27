@@ -1,11 +1,7 @@
 import manifest from "virtual:gameide-manifest";
+import type { GameIDEMetadata } from "./gameideManifestTypes.js";
 
-export type GameIDEMetadata = {
-  id?: string;
-  name?: string;
-  version?: string;
-  description?: string;
-};
+export type { GameIDEMetadata } from "./gameideManifestTypes.js";
 
 export function getGameIDEMetadata(): GameIDEMetadata {
   return manifest;
@@ -21,7 +17,7 @@ export function getGameIDESignalingUrl(
   const id = m.id;
   if (!id) {
     throw new Error(
-      'gameide.json must include "id" (your game UUID from gameide.app).'
+      'gameide.json must include "id" (your game UUID from GameIDE at gameide.app).'
     );
   }
   const base = origin.replace(/\/$/, "");

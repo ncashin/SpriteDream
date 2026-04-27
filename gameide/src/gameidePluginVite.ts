@@ -1,30 +1,41 @@
-import type { Plugin, ResolvedConfig } from "vite";
+import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
+import { normalizePath } from "vite";
 import fs from "node:fs";
 import path from "node:path";
+import type { GameIDEMetadata } from "./meta/gameideManifestTypes.js";
 
 const MANIFEST_VIRTUAL = "\0virtual:gameide-manifest";
+const SCENES_VIRTUAL = "\0virtual:gameide-scenes";
+const ASSETS_VIRTUAL = "\0virtual:gameide-assets";
 
-function loadManifestModuleSource(root: string): string {
+const SKIP_DIR_NAMES = new Set([".gameide", ".git", "dist", "node_modules"]);
+
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+
+function readManifestData(root: string): GameIDEMetadata {
   const manifestPath = path.join(root, "gameide.json");
   if (!fs.existsSync(manifestPath)) {
-    return "export default {};\n";
+    return {};
   }
   try {
     const raw = fs.readFileSync(manifestPath, "utf8");
-    const data = JSON.parse(raw) as unknown;
-    return `export default ${JSON.stringify(data)};\n`;
+    return JSON.parse(raw) as GameIDEMetadata;
   } catch {
-    return "export default {};\n";
+    return {};
   }
 }
 
-const GENERATED_SCENE_DECLARATION_HEADER = `
-// This file is generated from the matching .scene file.
-// Do not edit directly.
+function loadManifestModuleSource(root: string): string {
+  const data = readManifestData(root);
+  return `export default ${JSON.stringify(data)};\n`;
+}
 
-`;
+function parseSceneJson(raw: string): JsonValue {
+  return JSON.parse(raw) as JsonValue;
+}
 
-function createSceneModuleCode(data: unknown): string {
+function createSceneModuleCode(data: JsonValue): string {
   return `const data = ${JSON.stringify(data)};
 export default data;
 `;
@@ -38,7 +49,7 @@ function formatObjectKey(key: string): string {
   return isIdentifier(key) ? key : JSON.stringify(key);
 }
 
-function formatLiteralType(value: unknown, depth = 0): string {
+function formatLiteralType(value: JsonValue, depth = 0): string {
   const indent = "  ".repeat(depth);
   const childIndent = "  ".repeat(depth + 1);
 
@@ -59,7 +70,7 @@ function formatLiteralType(value: unknown, depth = 0): string {
     case "boolean":
       return value ? "true" : "false";
     case "object": {
-      const entries = Object.entries(value as Record<string, unknown>);
+      const entries = Object.entries(value as { [key: string]: JsonValue });
       if (entries.length === 0) return "{}";
       return `{\n${entries
         .map(
@@ -73,25 +84,6 @@ function formatLiteralType(value: unknown, depth = 0): string {
   }
 }
 
-function createSceneDeclarationCode(data: unknown): string {
-  return `${GENERATED_SCENE_DECLARATION_HEADER}declare const data: ${formatLiteralType(data)};
-export default data;
-`;
-}
-
-function getSceneDeclarationPath(scenePath: string, rootDir: string): string {
-  const relativeScenePath = path.relative(rootDir, scenePath);
-  return path.join(
-    rootDir,
-    ".gameide-types",
-    relativeScenePath.replace(/\.scene$/, ".d.scene.ts")
-  );
-}
-
-function getLegacySceneDeclarationPath(scenePath: string): string {
-  return scenePath.replace(/\.scene$/, ".d.scene.ts");
-}
-
 function ensureParentDirectory(filePath: string): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
 }
@@ -103,72 +95,192 @@ function writeIfChanged(filePath: string, content: string): void {
   fs.writeFileSync(filePath, content);
 }
 
-function syncSceneDeclaration(scenePath: string, rootDir: string): void {
-  if (!scenePath.endsWith(".scene")) return;
+function listSceneFiles(scanDir: string): string[] {
+  const out: string[] = [];
 
-  const declarationPath = getSceneDeclarationPath(scenePath, rootDir);
-  const legacyDeclarationPath = getLegacySceneDeclarationPath(scenePath);
-  if (!fs.existsSync(scenePath)) {
-    if (fs.existsSync(declarationPath)) fs.unlinkSync(declarationPath);
-    if (fs.existsSync(legacyDeclarationPath)) fs.unlinkSync(legacyDeclarationPath);
-    return;
-  }
+  function walk(dir: string): void {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (SKIP_DIR_NAMES.has(entry.name)) continue;
 
-  const raw = fs.readFileSync(scenePath, "utf8");
-  const data = JSON.parse(raw) as unknown;
-  writeIfChanged(declarationPath, createSceneDeclarationCode(data));
-  if (fs.existsSync(legacyDeclarationPath)) fs.unlinkSync(legacyDeclarationPath);
-}
-
-function syncSceneDeclarationsInDirectory(scanDir: string, rootDir: string): void {
-  if (!fs.existsSync(scanDir)) return;
-
-  for (const entry of fs.readdirSync(scanDir, { withFileTypes: true })) {
-    if (
-      entry.name === ".gameide-types" ||
-      entry.name === ".git" ||
-      entry.name === "dist" ||
-      entry.name === "node_modules"
-    ) {
-      continue;
-    }
-
-    const fullPath = path.join(scanDir, entry.name);
-    if (entry.isDirectory()) {
-      syncSceneDeclarationsInDirectory(fullPath, rootDir);
-      continue;
-    }
-
-    if (entry.isFile() && fullPath.endsWith(".scene")) {
-      syncSceneDeclaration(fullPath, rootDir);
-    }
-  }
-}
-
-function pruneStaleSceneDeclarations(rootDir: string): void {
-  const generatedRoot = path.join(rootDir, ".gameide-types");
-  if (!fs.existsSync(generatedRoot)) return;
-
-  function walk(dirPath: string): void {
-    for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
-      const fullPath = path.join(dirPath, entry.name);
+      const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(fullPath);
-        if (fs.readdirSync(fullPath).length === 0) fs.rmdirSync(fullPath);
         continue;
       }
-
-      if (!entry.isFile() || !fullPath.endsWith(".d.scene.ts")) continue;
-      const relativeDeclarationPath = path.relative(generatedRoot, fullPath);
-      const sourceScenePath = path.join(
-        rootDir,
-        relativeDeclarationPath.replace(/\.d\.scene\.ts$/, ".scene")
-      );
-      if (!fs.existsSync(sourceScenePath)) fs.unlinkSync(fullPath);
+      if (entry.isFile() && fullPath.endsWith(".scene")) {
+        out.push(fullPath);
+      }
     }
   }
 
-  walk(generatedRoot);
+  walk(scanDir);
+  out.sort();
+  return out;
+}
+
+function listAssetFiles(assetsDir: string): string[] {
+  if (!fs.existsSync(assetsDir)) return [];
+  const out: string[] = [];
+
+  function walk(dir: string): void {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (SKIP_DIR_NAMES.has(entry.name)) continue;
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+        continue;
+      }
+      if (entry.isFile()) {
+        out.push(fullPath);
+      }
+    }
+  }
+
+  walk(assetsDir);
+  out.sort();
+  return out;
+}
+
+function sceneKey(rootDir: string, scenePath: string): string {
+  return normalizePath(path.relative(rootDir, scenePath));
+}
+
+function generateLoadScenesModule(rootDir: string, scenePaths: string[]): string {
+  if (scenePaths.length === 0) {
+    return `export function loadScenes() {
+  return {};
+}
+`;
+  }
+
+  const imports = scenePaths.map(
+    (p, i) => `import _gide_scene${i} from ${JSON.stringify(normalizePath(p))};`
+  );
+  const keys = scenePaths.map((p) => sceneKey(rootDir, p));
+  const objLines = keys.map((k, i) => `    ${JSON.stringify(k)}: _gide_scene${i},`);
+
+  return `${imports.join("\n")}
+
+export function loadScenes() {
+  return {
+${objLines.join("\n")}
+  };
+}
+`;
+}
+
+const LOAD_ASSETS_DECL_HEADER = `// Generated by GameIDE vite plugin — do not edit.
+
+`;
+
+function generateLoadAssetsModule(rootDir: string, assetPaths: string[]): string {
+  if (assetPaths.length === 0) {
+    return `export function loadAssets() {
+  return {};
+}
+`;
+  }
+
+  const imports = assetPaths.map(
+    (p, i) => `import _gide_asset${i} from ${JSON.stringify(`${normalizePath(p)}?url`)};`
+  );
+  const keys = assetPaths.map((p) => sceneKey(rootDir, p));
+  const objLines = keys.map((k, i) => `    ${JSON.stringify(k)}: _gide_asset${i},`);
+
+  return `${imports.join("\n")}
+
+export function loadAssets() {
+  return {
+${objLines.join("\n")}
+  };
+}
+`;
+}
+
+function generateLoadAssetsDeclarationFile(rootDir: string, assetPaths: string[]): string {
+  if (assetPaths.length === 0) {
+    return `${LOAD_ASSETS_DECL_HEADER}declare module "virtual:gameide-assets" {
+  export type GameIDEAssets = Record<string, never>;
+  export function loadAssets(): GameIDEAssets;
+}
+`;
+  }
+
+  const typeLines = assetPaths.map((p) => {
+    const k = sceneKey(rootDir, p);
+    return `    readonly ${JSON.stringify(k)}: string;`;
+  });
+
+  return `${LOAD_ASSETS_DECL_HEADER}declare module "virtual:gameide-assets" {
+  export type GameIDEAssets = {
+${typeLines.join("\n")}
+  };
+  export function loadAssets(): GameIDEAssets;
+}
+`;
+}
+
+function syncLoadAssetsDeclaration(rootDir: string): void {
+  const assetsDir = path.join(rootDir, "assets");
+  const paths = listAssetFiles(assetsDir);
+  const declPath = path.join(rootDir, ".gameide", "virtual-gameide-assets.d.ts");
+  writeIfChanged(declPath, generateLoadAssetsDeclarationFile(rootDir, paths));
+}
+
+const LOAD_SCENE_DECL_HEADER = `// Generated by GameIDE vite plugin — do not edit.
+
+`;
+
+function generateLoadScenesDeclarationFile(rootDir: string, scenePaths: string[]): string {
+  if (scenePaths.length === 0) {
+    return `${LOAD_SCENE_DECL_HEADER}declare module "virtual:gameide-scenes" {
+  export type GameIDEScenes = Record<string, never>;
+  export function loadScenes(): GameIDEScenes;
+}
+`;
+  }
+
+  const typeLines = scenePaths.map((p) => {
+    const raw = fs.readFileSync(p, "utf8");
+    const data = parseSceneJson(raw);
+    const k = sceneKey(rootDir, p);
+    return `    readonly ${JSON.stringify(k)}: ${formatLiteralType(data)};`;
+  });
+
+  return `${LOAD_SCENE_DECL_HEADER}declare module "virtual:gameide-scenes" {
+  export type GameIDEScenes = {
+${typeLines.join("\n")}
+  };
+  export function loadScenes(): GameIDEScenes;
+}
+`;
+}
+
+function syncLoadScenesDeclaration(rootDir: string): void {
+  const paths = listSceneFiles(rootDir);
+  const declPath = path.join(rootDir, ".gameide", "virtual-gameide-scenes.d.ts");
+  writeIfChanged(declPath, generateLoadScenesDeclarationFile(rootDir, paths));
+  const legacyTypesRoot = path.join(rootDir, ".gameide-types");
+  if (fs.existsSync(legacyTypesRoot)) {
+    fs.rmSync(legacyTypesRoot, { recursive: true, force: true });
+  }
+}
+
+function isUnderProjectAssets(rootDir: string, changedPath: string): boolean {
+  const assetsRoot = path.join(rootDir, "assets");
+  const rel = path.relative(path.resolve(assetsRoot), path.resolve(changedPath));
+  return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+}
+
+function syncSceneDeclarationsInDirectory(rootDir: string): void {
+  syncLoadScenesDeclaration(rootDir);
+  syncLoadAssetsDeclaration(rootDir);
+}
+
+function invalidateVirtualModule(server: ViteDevServer, virtualId: string): void {
+  const mod = server.moduleGraph.getModuleById(virtualId);
+  if (mod) server.moduleGraph.invalidateModule(mod);
 }
 
 export function gameidePlugin(): Plugin {
@@ -178,34 +290,65 @@ export function gameidePlugin(): Plugin {
     name: "gameide-plugin",
     configResolved(resolvedConfig) {
       config = resolvedConfig;
-      syncSceneDeclarationsInDirectory(config.root, config.root);
-      pruneStaleSceneDeclarations(config.root);
+      syncSceneDeclarationsInDirectory(config.root);
     },
     configureServer(server) {
       const manifestPath = path.join(server.config.root, "gameide.json");
       server.watcher.add(manifestPath);
+
+      const onMaybeSceneTreeChange = (changedPath: string): void => {
+        if (!changedPath.endsWith(".scene")) return;
+        if (!config) return;
+        syncSceneDeclarationsInDirectory(config.root);
+        invalidateVirtualModule(server, SCENES_VIRTUAL);
+      };
+
+      const onMaybeAssetTreeChange = (changedPath: string): void => {
+        if (!config) return;
+        if (!isUnderProjectAssets(config.root, changedPath)) return;
+        syncLoadAssetsDeclaration(config.root);
+        invalidateVirtualModule(server, ASSETS_VIRTUAL);
+      };
+
+      const assetsPath = path.join(server.config.root, "assets");
+      if (fs.existsSync(assetsPath)) {
+        server.watcher.add(assetsPath);
+      }
+
       server.watcher.on("change", (changedPath) => {
-        if (path.normalize(changedPath) !== path.normalize(manifestPath)) {
+        if (path.normalize(changedPath) === path.normalize(manifestPath)) {
+          invalidateVirtualModule(server, MANIFEST_VIRTUAL);
           return;
         }
-        const mod = server.moduleGraph.getModuleById(MANIFEST_VIRTUAL);
-        if (mod) {
-          server.moduleGraph.invalidateModule(mod);
-        }
+        onMaybeSceneTreeChange(changedPath);
+        onMaybeAssetTreeChange(changedPath);
+      });
+      server.watcher.on("add", (changedPath) => {
+        onMaybeSceneTreeChange(changedPath);
+        onMaybeAssetTreeChange(changedPath);
+      });
+      server.watcher.on("unlink", (changedPath) => {
+        onMaybeSceneTreeChange(changedPath);
+        onMaybeAssetTreeChange(changedPath);
       });
     },
     buildStart() {
       if (!config) return;
-      syncSceneDeclarationsInDirectory(config.root, config.root);
-      pruneStaleSceneDeclarations(config.root);
+      syncSceneDeclarationsInDirectory(config.root);
     },
-    resolveId(id) {
+    resolveId(id: string) {
       if (id === "virtual:gameide-manifest") {
         return MANIFEST_VIRTUAL;
       }
+      if (id === "virtual:gameide-scenes") {
+        return SCENES_VIRTUAL;
+      }
+      if (id === "virtual:gameide-assets") {
+        return ASSETS_VIRTUAL;
+      }
       return;
     },
-    load(id) {
+    load(id: string) {
       if (id === MANIFEST_VIRTUAL) {
         const root = config?.root;
         if (!root) {
@@ -213,16 +356,45 @@ export function gameidePlugin(): Plugin {
         }
         return loadManifestModuleSource(root);
       }
+      if (id === SCENES_VIRTUAL) {
+        const root = config?.root;
+        if (!root) {
+          return `export function loadScenes() {
+  return {};
+}
+`;
+        }
+        const paths = listSceneFiles(root);
+        syncLoadScenesDeclaration(root);
+        return generateLoadScenesModule(root, paths);
+      }
+      if (id === ASSETS_VIRTUAL) {
+        const root = config?.root;
+        if (!root) {
+          return `export function loadAssets() {
+  return {};
+}
+`;
+        }
+        const assetsDir = path.join(root, "assets");
+        const paths = listAssetFiles(assetsDir);
+        syncLoadAssetsDeclaration(root);
+        return generateLoadAssetsModule(root, paths);
+      }
       const cleanId = id.replace(/\?.*$/, "");
       if (!cleanId.endsWith(".scene")) return;
-      if (config) syncSceneDeclaration(cleanId, config.root);
+      if (config) syncLoadScenesDeclaration(config.root);
       const raw = fs.readFileSync(cleanId, "utf8");
-      const data = JSON.parse(raw) as unknown;
+      const data = parseSceneJson(raw);
       return createSceneModuleCode(data);
     },
-    watchChange(id) {
-      if (id.endsWith(".scene") && config) {
-        syncSceneDeclaration(id, config.root);
+    watchChange(id: string) {
+      if (!config) return;
+      if (id.endsWith(".scene")) {
+        syncLoadScenesDeclaration(config.root);
+      }
+      if (isUnderProjectAssets(config.root, id)) {
+        syncLoadAssetsDeclaration(config.root);
       }
     },
   };

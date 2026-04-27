@@ -7,7 +7,7 @@
     "types": ["vite/client"],
     "skipLibCheck": true,
     "baseUrl": ".",
-    "rootDirs": ["source", ".gameide-types/source"],
+    "rootDirs": ["source"],
     "jsx": "react-jsx",
 
     /* Bundler mode */
@@ -27,5 +27,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["source", ".gameide-types/source"]
+  "include": ["source", ".gameide/**/*.d.ts"]
 }

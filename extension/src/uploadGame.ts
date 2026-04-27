@@ -9,7 +9,7 @@ type BundleUploadFile = {
   contentBase64: string;
 };
 
-type GameideManifest = {
+type GameIDEManifest = {
   id?: string;
   name?: string;
   version?: string;
@@ -18,7 +18,7 @@ type GameideManifest = {
 
 async function readGameIDEManifest(
   projectRoot: vscode.Uri
-): Promise<GameideManifest | undefined> {
+): Promise<GameIDEManifest | undefined> {
   const uri = vscode.Uri.joinPath(projectRoot, "gameide.json");
   try {
     const raw = await vscode.workspace.fs.readFile(uri);
@@ -26,13 +26,13 @@ async function readGameIDEManifest(
     if (!parsed || typeof parsed !== "object") {
       return undefined;
     }
-    return parsed as GameideManifest;
+    return parsed as GameIDEManifest;
   } catch {
     return undefined;
   }
 }
 
-async function gameideJSONFileExists(projectRoot: vscode.Uri): Promise<boolean> {
+async function gameIDEJsonFileExists(projectRoot: vscode.Uri): Promise<boolean> {
   const uri = vscode.Uri.joinPath(projectRoot, "gameide.json");
   try {
     await vscode.workspace.fs.stat(uri);
@@ -77,7 +77,7 @@ async function readPackageJsonBasics(
 
 async function promptUploadManifestFields(
   projectRoot: vscode.Uri,
-  manifest?: GameideManifest
+  manifest?: GameIDEManifest
 ): Promise<FirstUploadManifestFields | undefined> {
   const pkg = await readPackageJsonBasics(projectRoot);
   const version =
@@ -121,7 +121,7 @@ async function promptUploadManifestFields(
   return { name, description, version };
 }
 
-async function writeGameideManifest(
+async function writeGameIDEManifest(
   projectRoot: vscode.Uri,
   gameId: string,
   fields: FirstUploadManifestFields,
@@ -290,7 +290,7 @@ async function getProjectDirectory(
     canSelectFiles: false,
     canSelectFolders: true,
     openLabel: "Select Game Project",
-    title: "Choose project folder (must contain package.json; gameide.json optional)",
+    title: "Choose project folder (must contain package.json; gameide.json optional for GameIDE)",
   });
   return selected?.[0];
 }
@@ -303,7 +303,7 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
 
   const manifest = await readGameIDEManifest(projectDirectory);
   const manifestGameId = manifest?.id?.trim() ?? "";
-  const hadGameideJson = await gameideJSONFileExists(projectDirectory);
+  const hadGameIDEJson = await gameIDEJsonFileExists(projectDirectory);
 
   let manifestFieldsForNewGame: FirstUploadManifestFields | undefined;
   if (!manifestGameId) {
@@ -325,17 +325,17 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
     async (progress) => {
       let targetGameId = manifestGameId;
       if (!targetGameId) {
-        progress.report({ message: "Creating game on gameide.app..." });
+        progress.report({ message: "Creating game on GameIDE..." });
         targetGameId = await createGameOnServer(
           UPLOAD_BASE_URL,
           manifestFieldsForNewGame!
         );
-        progress.report({ message: "Saving gameide.json..." });
-        await writeGameideManifest(
+        progress.report({ message: "Saving GameIDE manifest..." });
+        await writeGameIDEManifest(
           projectDirectory,
           targetGameId,
           manifestFieldsForNewGame!,
-          hadGameideJson
+          hadGameIDEJson
         );
       }
 
@@ -358,7 +358,7 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
       const endpointPath = `/game/${encodeURIComponent(targetGameId)}/upload`;
       const endpoint = new URL(endpointPath, UPLOAD_BASE_URL);
 
-      progress.report({ message: "Uploading bundle to gameide.app..." });
+      progress.report({ message: "Uploading bundle to GameIDE..." });
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
