@@ -24,3 +24,13 @@ export function withOwnership<T extends Record<string, unknown>>(
 ): T & Record<typeof OWNER_ID, string> {
   return { ...object, [OWNER_ID]: peerId };
 }
+
+/** When `__ownerId` is set, only that peer integrates Planck for the object; others mirror it as kinematic. */
+export function simulatesPhysicsForObject(
+  object: BaseSceneObject,
+  localPeerId: string,
+): boolean {
+  const owner = object[OWNER_ID];
+  if (typeof owner !== "string") return true;
+  return owner === localPeerId;
+}

@@ -94,12 +94,16 @@ function buildSignature(item: SpriteRenderable, url: string | undefined): string
 function setSpriteFromItem(sprite: Sprite, item: SpriteRenderable): void {
   const position = item.position;
   const itemScale = item.scale;
-  sprite.position.set(position.x, -position.y);
+  // Match planckPlugin: transform `position` is the body/collider center, not a corner.
+  sprite.anchor.set(0.5, 0.5);
+  sprite.position.set(position.x, position.y);
   sprite.rotation = item.rotation.z;
   sprite.scale.set(itemScale.x, itemScale.y);
   const spec = item.sprite;
   sprite.width = spec.width;
   sprite.height = spec.height;
+  // World container uses scale.y < 0 (scene +Y up); flip local Y so textures aren’t mirrored.
+  sprite.scale.y *= -1;
   sprite.tint = parseHexTint(spec.tint);
   sprite.zIndex = position.z;
 }

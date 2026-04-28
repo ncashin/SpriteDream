@@ -5,6 +5,7 @@ import {
   networkingPlugin,
   gameUIPlugin,
   pixiPlugin,
+  planckPlugin,
 } from "gameide";
 import { loadScenes } from "virtual:gameide-scenes";
 import { loadAssets } from "virtual:gameide-assets";
@@ -33,15 +34,12 @@ const mainFunction = game({
     inputPlugin({
       axes: {
         Horizontal: {
-          negative: ["KeyA"],
-          positive: ["KeyD"],
-        },
-        Vertical: {
-          negative: ["KeyS"],
-          positive: ["KeyW"],
+          negative: ["KeyA", "KeyArrowLeft"],
+          positive: ["KeyD", "KeyArrowRight"],
         },
       },
       buttons: {
+        Jump: ["KeyW", "KeySpace", "KeyArrowUp"],
         EditorMoveUp: ["KeySpace"],
         EditorMoveDown: ["KeyShiftLeft", "KeyShiftRight"],
         LookCamera: ["Mouse0"],
@@ -52,7 +50,9 @@ const mainFunction = game({
         backgroundAlpha: 0,
       },
       assets: loadAssets(),
+      debugDrawColliders: true,
     }),
+    planckPlugin(),
   ],
 });
 

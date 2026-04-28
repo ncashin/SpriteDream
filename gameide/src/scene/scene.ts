@@ -26,6 +26,12 @@ type SceneSubscriber = (update: SceneReflectUpdate) => void;
 
 const subscribers = new Set<SceneSubscriber>();
 
+const objectProxyCache = new WeakMap<object, BaseSceneObject>();
+
+function isNestedSceneRecord(value: unknown): value is BaseSceneObject {
+  return value !== null && typeof value === "object";
+}
+
 function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<BaseSceneObject> {
   return {
     get(target, property, receiver) {
@@ -35,14 +41,19 @@ function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<BaseSceneObj
       }
 
       const value = Reflect.get(target, property, receiver);
-      if (value && typeof value === "object") {
-        return new Proxy(value, createSceneProxyHandler([...path, property]));
+      if (isNestedSceneRecord(value)) {
+        let cached = objectProxyCache.get(value);
+        if (!cached) {
+          cached = new Proxy(value, createSceneProxyHandler([...path, property]));
+          objectProxyCache.set(value, cached);
+        }
+        return cached;
       }
       return value;
     },
     set(target, property, value, receiver) {
       if (value === undefined) {
-        return Reflect.deleteProperty(receiver as object, property);
+        return Reflect.deleteProperty(receiver, property);
       }
       const previousValue = target[property];
       const result = Reflect.set(target, property, value, receiver);
@@ -66,7 +77,13 @@ function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<BaseSceneObj
   };
 }
 
-const scene = new Proxy(sceneTarget, createSceneProxyHandler([])) as SceneObject;
+const scene = new Proxy(sceneTarget, createSceneProxyHandler([]));
+
+function assertRootSceneProxy(root: BaseSceneObject): asserts root is SceneObject {
+  if (root !== scene) {
+    throw new Error("expected root scene proxy");
+  }
+}
 
 export function subscribeToScene(callback: SceneSubscriber): () => void {
   subscribers.add(callback);
@@ -75,7 +92,8 @@ export function subscribeToScene(callback: SceneSubscriber): () => void {
   };
 }
 
-export const getScene = () => {
+export const getScene = (): SceneObject => {
+  assertRootSceneProxy(scene);
   return scene;
 };
 

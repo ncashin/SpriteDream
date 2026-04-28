@@ -12,6 +12,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+import type { IconSlug } from "../lucide/lucideIconSlug.js";
 import type { BaseSceneObject } from "../scene/scene.js";
 import { getScene } from "../scene/scene.js";
 import { deleteValueAtPath, setValueAtPath } from "../scene/path.js";
@@ -84,6 +85,13 @@ const rowHover = "hover:bg-[var(--vscode-list-hoverBackground)]";
 const inputClass = `w-full min-w-0 flex-1 py-0.5 border-0 bg-transparent text-inherit ${textSize} font-[inherit] outline-none`;
 
 const SCENE_TREE_META_KEYS = new Set(["__icon"]);
+
+/** Scene-tree row icon when a nested object omits `__icon` (e.g. hand-authored collider payloads). */
+const SCENE_OBJECT_PROPERTY_ICONS: Partial<Record<string, IconSlug>> = {
+  boxCollider: "square",
+  circleCollider: "circle",
+  collisionBody: "atom",
+};
 
 type LeadIconComponent = typeof Box;
 
@@ -483,7 +491,9 @@ function ObjectNode({
       templates={templates}
       mergeTraitInto={mergeTraitInto}
       dropInto
-      objectLeadIconKey={sceneObject.__icon}
+      objectLeadIconKey={
+        sceneObject.__icon ?? SCENE_OBJECT_PROPERTY_ICONS[name]
+      }
       trailing={
         <SceneTreeRowIconFrame>
           <ChevronRight size={iconSize} className={chevronClass} aria-hidden />

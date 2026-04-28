@@ -63,8 +63,9 @@ export {
   isOwnedSceneUpdate,
   isOwnedSceneObject,
   withOwnership,
+  simulatesPhysicsForObject,
 } from "./networking/networkingPlugin.js";
-export type { NetworkingPluginOptions } from "./networking/networkingPlugin.js";
+export type { NetworkingApi, NetworkingPluginOptions } from "./networking/networkingPlugin.js";
 export { gameUIPlugin } from "./editor/gameUIPlugin/gameUIPlugin.js";
 export { ExampleGameUI } from "./editor/gameUIPlugin/ExampleGameUI.js";
 export { Game } from "./editor/gameUIPlugin/Game.js";
@@ -94,8 +95,32 @@ export {
   type PixiPluginOptions,
   type Viewport,
 } from "./pixiPlugin/pixiPlugin.js";
+export type { ColliderDebugOptions } from "./pixiPlugin/colliderDebug.js";
 export {
   type ViewportState,
   applyViewportToWorldContainer,
 } from "./pixiPlugin/viewport.js";
 export { spriteTrait } from "./pixiPlugin/sprite.js";
+export {
+  planckPlugin,
+  type PlanckPluginAPI,
+  type PlanckPluginOptions,
+  type PlanckCallbackEvent,
+  type PlanckCollisionHandler,
+  type PlanckContactPhase,
+} from "./planckPlugin/planckPlugin.js";
+export type { Rigidbody2D } from "./planckPlugin/rigidbody2d.js";
+export {
+  getSceneBodyType,
+  getEffectivePlanckBodyType,
+  sceneBodyIsStatic,
+  sceneBodyIsKinematic,
+  sceneBodyIsDynamic,
+} from "./planckPlugin/physicsTypes.js";
+export {
+  boxColliderTrait,
+  circleColliderTrait,
+  type BoxColliderObject,
+  type CircleColliderObject,
+} from "./planckPlugin/colliderComponents.js";
+export { collisionBodyTrait, type CollisionBodyObject } from "./planckPlugin/collisionBody.js";

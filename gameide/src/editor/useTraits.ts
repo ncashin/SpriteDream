@@ -11,6 +11,8 @@ import {
 import { getScene } from "../scene/scene.js";
 import { getValueAtPath } from "../scene/path.js";
 import "../pixiPlugin/sprite.js";
+import "../planckPlugin/collisionBody.js";
+import "../planckPlugin/colliderComponents.js";
 
 function defaultFromSchemaValue(v: SchemaValue): unknown {
   if (v === $number) return 0;

@@ -9,6 +9,12 @@ import {
 import { update } from "../lifecycle/gameloop.js";
 import type { Plugin } from "../lifecycle/plugin.js";
 import {
+  createColliderDebugGraphics,
+  destroyColliderDebugGraphics,
+  type ColliderDebugOptions,
+  syncColliderDebugDraw,
+} from "./colliderDebug.js";
+import {
   disposePixiSprites,
   isSvgAssetRef,
   syncPixiSprites,
@@ -22,6 +28,11 @@ import {
 export type PixiPluginOptions = {
   initOptions?: Omit<Partial<ApplicationOptions>, "resizeTo">;
   assets?: Readonly<Record<string, string>>;
+  /**
+   * Draw wireframes for any scene object with a `boxCollider` or `circleCollider` (same properties
+   * as the `planckPlugin` / collider component traits use for bodies).
+   */
+  debugDrawColliders?: boolean | ColliderDebugOptions;
 };
 
 export type Viewport = ReturnType<typeof createViewport>;
@@ -93,12 +104,28 @@ export function pixiPlugin(
     const textureByKey = new Map<string, Texture>();
     const spriteByEntity = new Map<SpriteRenderable, { sprite: Sprite; signature: string }>();
     const svgInflight = new Map<string, Promise<void>>();
+
+    const colliderDebugOpt = options.debugDrawColliders;
+    const colliderDebug =
+      colliderDebugOpt != null && colliderDebugOpt !== false
+        ? {
+            g: createColliderDebugGraphics(
+              world,
+              colliderDebugOpt === true ? {} : colliderDebugOpt,
+            ),
+            opt: (colliderDebugOpt === true ? {} : colliderDebugOpt) as ColliderDebugOptions,
+          }
+        : null;
+
     update(() => {
       if (disposed) return;
       syncPixiSprites(world, options.assets, textureByKey, spriteByEntity, {
         textureResolution: app.renderer.resolution,
         svgInflight,
       });
+      if (colliderDebug) {
+        syncColliderDebugDraw(world, colliderDebug.g, colliderDebug.opt);
+      }
     });
 
     const pixi: PixiPluginAPI = {
@@ -110,6 +137,9 @@ export function pixiPlugin(
         ro.disconnect();
         unsubscribeViewport();
         disposePixiSprites(world, textureByKey, spriteByEntity, svgInflight);
+        if (colliderDebug) {
+          destroyColliderDebugGraphics(colliderDebug.g, world);
+        }
         app.destroy(true, true);
       },
     };

@@ -14,6 +14,7 @@ import {
   isOwnedSceneObject,
   withOwnership,
   OWNER_ID,
+  simulatesPhysicsForObject,
 } from "./distributedSimulation.js";
 
 export {
@@ -21,6 +22,7 @@ export {
   isOwnedSceneObject,
   isOwnedSceneUpdate,
   withOwnership,
+  simulatesPhysicsForObject,
 } from "./distributedSimulation.js";
 
 export type NetworkingPluginOptions = {
@@ -39,6 +41,8 @@ export type NetworkingApi = {
   onPeersChange: (handler: (peers: string[]) => void) => () => void;
   channel: SceneChannel;
   isOwned: (obj: BaseSceneObject) => boolean;
+  /** True if this client runs Box2D integration for `obj` (false for other peers' owned bodies — scene-driven kinematic proxy). */
+  simulatesPhysics: (obj: BaseSceneObject) => boolean;
   withOwnership: <T extends Record<string, unknown>>(
     obj: T
   ) => T & Record<typeof OWNER_ID, string>;
@@ -80,6 +84,8 @@ export const networkingPlugin = (
           transport.onPeersChange(handler),
         channel,
         isOwned: (obj: BaseSceneObject) => isOwnedSceneObject(obj, peerId),
+        simulatesPhysics: (obj: BaseSceneObject) =>
+          simulatesPhysicsForObject(obj, peerId),
         withOwnership: <T extends Record<string, unknown>>(obj: T) =>
           withOwnership(obj, peerId),
         dispose() {

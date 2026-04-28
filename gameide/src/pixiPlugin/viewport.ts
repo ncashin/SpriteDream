@@ -85,6 +85,7 @@ export function applyViewportToWorldContainer(
   viewport: Readonly<ViewportState>,
 ): void {
   const { width, height, centerX, centerY, scale } = viewport;
-  world.scale.set(scale, scale);
+  // Negative scale.y: scene +Y is up (Pixi stage is +Y down).
+  world.scale.set(scale, -scale);
   world.position.set(width / 2 - centerX * scale, height / 2 + centerY * scale);
 }

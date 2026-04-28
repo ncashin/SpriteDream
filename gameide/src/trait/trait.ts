@@ -49,11 +49,19 @@ type InferTraitInputItem<T extends TraitInputItem> = T extends TraitHandle<infer
     ? InferSchemaObject<T>
     : never;
 
-type TraitInputToObject<T extends TraitInput> = T extends readonly [
-  infer First extends TraitInputItem,
-  ...infer Rest extends TraitInputItem[],
+/** Folds a non-empty trait tuple into an intersection (fixes 3+ items: `Rest[number]` was a union). */
+type TraitTupleToIntersection<T extends readonly TraitInputItem[]> = T extends readonly [
+  infer Head extends TraitInputItem,
+  ...infer Tail extends TraitInputItem[],
 ]
-  ? InferTraitInputItem<First> & InferTraitInputItem<Rest[number]>
+  ? InferTraitInputItem<Head> & TraitTupleToIntersection<Tail>
+  : unknown;
+
+type TraitInputToObject<T extends TraitInput> = T extends readonly [
+  TraitInputItem,
+  ...TraitInputItem[],
+]
+  ? TraitTupleToIntersection<T>
   : T extends TraitInputItem
     ? InferTraitInputItem<T>
     : never;
