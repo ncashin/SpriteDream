@@ -1,5 +1,4 @@
 import {
-  type BaseSceneObject,
   implementsTrait,
   defineTrait,
   getScene,
@@ -26,8 +25,9 @@ const playerTrait = defineTrait([
       offset: { x: 0, y: 0 },
     },
     moveSpeed: 260,
-    jumpSpeed: 2000,
-    playerGravityY: -980,
+    jumpSpeed: 650,
+    playerGravityY: -1500,
+    grounded: false,
   },
 ]);
 
@@ -35,7 +35,6 @@ const PLAYER_SPRITE_TINT = "#ffffff";
 
 export function main({ input, networking, planck }: MainContext): void {
   const scene = getScene();
-  const supportTouches = new Map<BaseSceneObject, number>();
 
   gameStart(() => {
     scene.createObject("ground", {
@@ -90,23 +89,23 @@ export function main({ input, networking, planck }: MainContext): void {
           isTrigger: false,
           offset: { x: 0, y: 0 },
         },
-        collisionBody: { type: "dynamic", velocity: { x: 0, y: 0 } },
+        collisionBody: {
+          type: "dynamic",
+          velocity: { x: 0, y: 0 },
+          fixedRotation: true,
+        },
         moveSpeed: playerTrait.moveSpeed,
         jumpSpeed: playerTrait.jumpSpeed,
         playerGravityY: playerTrait.playerGravityY,
+        grounded: playerTrait.grounded,
       }),
     );
 
     for (const player of scene.query(implementsTrait(playerTrait))) {
       if (!networking.isOwned(player)) continue;
-      supportTouches.set(player, 0);
       void planck.onCollision(player, (other, e) => {
         if (!planck.isStatic(other)) return;
-        const prev = supportTouches.get(player) ?? 0;
-        supportTouches.set(
-          player,
-          e.phase === "enter" ? prev + 1 : Math.max(0, prev - 1),
-        );
+        player.grounded = e.phase === "enter";
       });
     }
   });
@@ -117,8 +116,7 @@ export function main({ input, networking, planck }: MainContext): void {
       if (!networking.isOwned(player)) continue;
 
       const gravity = player.playerGravityY * Math.min(deltaTime, 0.1);
-      const grounded = (supportTouches.get(player) ?? 0) > 0;
-      if (input.buttons.Jump.pressed && grounded) {
+      if (input.buttons.Jump.pressed && player.grounded) {
         player.collisionBody.velocity.y = player.jumpSpeed;
       }
 
