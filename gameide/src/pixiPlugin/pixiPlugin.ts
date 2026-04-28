@@ -28,10 +28,6 @@ import {
 export type PixiPluginOptions = {
   initOptions?: Omit<Partial<ApplicationOptions>, "resizeTo">;
   assets?: Readonly<Record<string, string>>;
-  /**
-   * Draw wireframes for any scene object with a `boxCollider` or `circleCollider` (same properties
-   * as the `planckPlugin` / collider component traits use for bodies).
-   */
   debugDrawColliders?: boolean | ColliderDebugOptions;
 };
 
@@ -45,6 +41,11 @@ export type PixiPluginAPI = {
 };
 
 type PixiPluginContext = { rootElement: HTMLElement };
+
+type ColliderDebugState = {
+  graphics: ReturnType<typeof createColliderDebugGraphics>;
+  drawOptions: ColliderDebugOptions;
+};
 
 export function pixiPlugin(
   options: PixiPluginOptions = {},
@@ -92,30 +93,35 @@ export function pixiPlugin(
       applyViewportToWorldContainer(world, next);
     });
 
-    const ro = new ResizeObserver(() => {
+    const resizeObserver = new ResizeObserver(() => {
       const w = rootElement.clientWidth;
       const h = rootElement.clientHeight;
       if (w > 0 && h > 0) {
         viewport.setScreenSize(w, h);
       }
     });
-    ro.observe(rootElement);
+    resizeObserver.observe(rootElement);
 
     const textureByKey = new Map<string, Texture>();
     const spriteByEntity = new Map<SpriteRenderable, { sprite: Sprite; signature: string }>();
     const svgInflight = new Map<string, Promise<void>>();
 
-    const colliderDebugOpt = options.debugDrawColliders;
-    const colliderDebug =
-      colliderDebugOpt != null && colliderDebugOpt !== false
-        ? {
-            g: createColliderDebugGraphics(
-              world,
-              colliderDebugOpt === true ? {} : colliderDebugOpt,
-            ),
-            opt: (colliderDebugOpt === true ? {} : colliderDebugOpt) as ColliderDebugOptions,
-          }
-        : null;
+    const colliderDebugOption = options.debugDrawColliders;
+    let resolvedColliderDebugOptions: ColliderDebugOptions | undefined;
+    if (colliderDebugOption === true) {
+      resolvedColliderDebugOptions = {};
+    } else if (colliderDebugOption != null && colliderDebugOption !== false) {
+      resolvedColliderDebugOptions = colliderDebugOption;
+    }
+
+    let colliderDebug: ColliderDebugState | null = null;
+    if (resolvedColliderDebugOptions !== undefined) {
+      const drawOptions = resolvedColliderDebugOptions;
+      colliderDebug = {
+        graphics: createColliderDebugGraphics(world, drawOptions),
+        drawOptions,
+      };
+    }
 
     update(() => {
       if (disposed) return;
@@ -124,7 +130,7 @@ export function pixiPlugin(
         svgInflight,
       });
       if (colliderDebug) {
-        syncColliderDebugDraw(world, colliderDebug.g, colliderDebug.opt);
+        syncColliderDebugDraw(world, colliderDebug.graphics, colliderDebug.drawOptions);
       }
     });
 
@@ -134,11 +140,11 @@ export function pixiPlugin(
       viewport,
       dispose() {
         disposed = true;
-        ro.disconnect();
+        resizeObserver.disconnect();
         unsubscribeViewport();
         disposePixiSprites(world, textureByKey, spriteByEntity, svgInflight);
         if (colliderDebug) {
-          destroyColliderDebugGraphics(colliderDebug.g, world);
+          destroyColliderDebugGraphics(colliderDebug.graphics, world);
         }
         app.destroy(true, true);
       },
