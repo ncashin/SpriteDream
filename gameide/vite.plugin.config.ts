@@ -9,7 +9,7 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: false,
     lib: {
-      entry: path.resolve(__dirname, "src/gameidePluginVite.ts"),
+      entry: path.resolve(__dirname, "src/vitePlugin/gameidePluginVite.ts"),
       formats: ["es"],
       fileName: () => "vite.js",
     },

@@ -63,8 +63,8 @@ export {
   isOwnedSceneUpdate,
   isOwnedSceneObject,
   withOwnership,
-  simulatesPhysicsForObject,
 } from "./networking/networkingPlugin.js";
+export { peerIntegratesPhysicsForObject } from "./networking/distributedSimulation.js";
 export type { NetworkingApi, NetworkingPluginOptions } from "./networking/networkingPlugin.js";
 export { gameUIPlugin } from "./editor/gameUIPlugin/gameUIPlugin.js";
 export { ExampleGameUI } from "./editor/gameUIPlugin/ExampleGameUI.js";

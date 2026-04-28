@@ -91,6 +91,7 @@ const SCENE_OBJECT_PROPERTY_ICONS: Partial<Record<string, IconSlug>> = {
   boxCollider: "square",
   circleCollider: "circle",
   collisionBody: "atom",
+  sprite: "image",
 };
 
 type LeadIconComponent = typeof Box;

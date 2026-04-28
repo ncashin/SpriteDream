@@ -28,8 +28,6 @@ export default defineConfig({
         "fs",
         "path",
         "virtual:gameide-manifest",
-        "virtual:gameide-scenes",
-        "virtual:gameide-assets",
       ],
       output: {
         globals: {

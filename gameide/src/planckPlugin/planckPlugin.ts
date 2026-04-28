@@ -1,22 +1,3 @@
-/**
- * Planck (Box2D) integration for the scene graph.
- *
- * **Setup:** Add {@link collisionBodyTrait} plus {@link boxColliderTrait} or {@link circleColliderTrait}
- * to objects. Collider-only objects default to a static body (good for walls).
- *
- * **Each frame**
- * 1. `update` — Match bodies to colliders in the scene (create / destroy / rebuild on signature change).
- * 2. `gameUpdate` — Push transform from scene → Planck for static & kinematic bodies, push
- *    `collisionBody.velocity` → Planck for dynamic bodies, step the world, then copy
- *    dynamic transforms and velocities back onto scene objects. Game code should register `gameUpdate`
- *    before the physics step runs (registration is deferred via `start` for that reason).
- *
- * **Multiplayer:** With `networkingPlugin` before this plugin, authored `dynamic` bodies whose
- * `__ownerId` is another peer are created as **kinematic** and follow replicated scene state so only
- * the owner integrates physics. Override with {@link PlanckPluginOptions.simulatesDynamics}.
- *
- * **Callbacks:** `onCollision` is solid contact; `onTrigger` fires when either fixture is a sensor.
- */
 import {
   type Body,
   type BodyType,
@@ -27,6 +8,7 @@ import {
 } from "planck";
 import { update, start, gameUpdate } from "../lifecycle/gameloop.js";
 import type { Plugin } from "../lifecycle/plugin.js";
+import { peerIntegratesPhysicsForObject } from "../networking/distributedSimulation.js";
 import type { BaseSceneObject } from "../scene/scene.js";
 import { getScene } from "../scene/scene.js";
 import { query } from "../scene/query/query.js";
@@ -48,31 +30,19 @@ import {
 import { wrapRigidbody2D, type Rigidbody2D } from "./rigidbody2d.js";
 
 export type PlanckPluginOptions = {
-  /**
-   * Planck multiplies Box2D internal length tolerances by this (global {@link Settings.lengthUnitsPerMeter}).
-   * Defaults to `64`: MKS defaults assume ~meters while common games use pixels as scene units (~hundreds px/s).
-   * Without scaling, the solver caps |v·dt| per step near ~2 pixels — a hard speed limit and coupled axes (moving
-   * sideways reduces how fast you can fall). Set higher if you use very fast projectiles or large timestep spikes.
-   */
   lengthUnitsPerMeter?: number;
-  /** In scene units per second²; scene +Y is up (negative y pulls downward). Default `{ x: 0, y: 0 }` (top-down). */
   gravity?: { x: number; y: number };
-  /**
-   * If false while the scene body type is `dynamic`, Planck uses a kinematic body driven from the scene
-   * (e.g. replicated transforms). Defaults to `networking.simulatesPhysics` when `networkingPlugin` ran first.
-   */
   simulatesDynamics?: (obj: BaseSceneObject) => boolean;
 };
 
 type PlanckPluginNetworkingContext = {
-  networking?: { simulatesPhysics: (obj: BaseSceneObject) => boolean };
+  networking?: { peerId: string };
 };
 
 export type PlanckContactPhase = "enter" | "exit";
 
 export type PlanckCallbackEvent = { phase: PlanckContactPhase };
 
-/** Callback for {@link PlanckPluginAPI.onCollision} and {@link PlanckPluginAPI.onTrigger}. */
 export type PlanckCollisionHandler = (
   other: BaseSceneObject,
   e: PlanckCallbackEvent,
@@ -80,23 +50,14 @@ export type PlanckCollisionHandler = (
 
 export type PlanckPluginAPI = {
   world: World;
-  /** Unity-style: solid contact (neither side is a trigger). `self` and `other` are scene object references. */
   onCollision: (self: BaseSceneObject, handler: PlanckCollisionHandler) => () => void;
-  /** Unity-style: overlap when at least one fixture is a `isTrigger` collider. */
   onTrigger: (self: BaseSceneObject, handler: PlanckCollisionHandler) => () => void;
-  /**
-   * Unity-style rigidbody for this object after the physics plugin has created a body (same frame as `gameUpdate` after sync).
-   * Prefer this over {@link getBody} in game code.
-   */
   getRigidbody: (self: BaseSceneObject) => Rigidbody2D | null;
-  /** Raw Planck body — escape hatch for joints and low-level APIs. */
   getBody: (self: BaseSceneObject) => Body | null;
-  /** Authored/scene body type (defaults to `static` if `collisionBody` is omitted). */
   getBodyType: (self: BaseSceneObject) => BodyType;
   isStatic: (self: BaseSceneObject) => boolean;
   isKinematic: (self: BaseSceneObject) => boolean;
   isDynamic: (self: BaseSceneObject) => boolean;
-  /** Stop stepping and clear listeners. */
   dispose: () => void;
 };
 
@@ -104,10 +65,13 @@ export function planckPlugin(
   options: PlanckPluginOptions = {},
 ): Plugin<PlanckPluginNetworkingContext, { planck: PlanckPluginAPI }> {
   return (context) => {
+    const networking = context.networking;
     const simulatesDynamics =
       options.simulatesDynamics ??
-      context.networking?.simulatesPhysics ??
-      (() => true);
+      (networking
+        ? (obj: BaseSceneObject) =>
+            peerIntegratesPhysicsForObject(obj, networking.peerId)
+        : () => true);
 
     const effectiveType = (obj: BaseSceneObject) =>
       getEffectivePlanckBodyType(obj, simulatesDynamics);
@@ -188,7 +152,6 @@ export function planckPlugin(
     };
     world.on("remove-body", onRemoveBody);
 
-    /** Add/update/remove Planck bodies so they match current collider objects in the scene. */
     const syncBodiesWithScene = () => {
       const scene = getScene();
       const colliders = query(scene, isColliderNode);
@@ -237,9 +200,10 @@ export function planckPlugin(
       for (const [obj, rec] of objectToRecord) {
         if (effectiveType(obj) !== "dynamic") continue;
         const vel =
-          (obj as { collisionBody?: { velocity?: { x: number; y: number } } }).collisionBody
-            ?.velocity ?? { x: 0, y: 0 };
+          (obj as { collisionBody?: { velocity?: { x: number; y: number; angular?: number } } })
+            .collisionBody?.velocity ?? { x: 0, y: 0, angular: 0 };
         rec.body.setLinearVelocity(new Vec2(vel.x, vel.y));
+        rec.body.setAngularVelocity(vel.angular ?? 0);
       }
     };
 
@@ -249,14 +213,19 @@ export function planckPlugin(
         const p = rec.body.getPosition();
         const a = rec.body.getAngle();
         const v = rec.body.getLinearVelocity();
+        const angVel = rec.body.getAngularVelocity();
         (obj as { position: { x: number; y: number } }).position.x = p.x;
         (obj as { position: { x: number; y: number } }).position.y = p.y;
-        (obj as { rotation: { z: number } }).rotation.z = a;
-        const cb = (obj as { collisionBody?: { velocity?: { x: number; y: number } } }).collisionBody;
+        const rot = (obj as { rotation: { x?: number; y?: number; z: number } }).rotation;
+        (obj as { rotation: { x?: number; y?: number; z: number } }).rotation = { ...rot, z: a };
+        const cb = (obj as {
+          collisionBody?: { velocity?: { x: number; y: number; angular?: number } };
+        }).collisionBody;
         if (cb) {
-          if (!cb.velocity) cb.velocity = { x: 0, y: 0 };
+          if (!cb.velocity) cb.velocity = { x: 0, y: 0, angular: 0 };
           cb.velocity.x = v.x;
           cb.velocity.y = v.y;
+          cb.velocity.angular = angVel;
         }
       }
     };
@@ -296,9 +265,6 @@ export function planckPlugin(
       syncBodiesWithScene();
     });
 
-    // Defer registration to `alwaysStartRegistry` so this runs after `main()` has
-    // registered its own `gameUpdate` handlers (e.g. input → collisionBody.velocity before step).
-    // `alwaysStartRegistry` also runs on mode changes; only register the physics step once.
     start(() => {
       if (physicsGameUpdateRegistered) return;
       physicsGameUpdateRegistered = true;
@@ -309,6 +275,7 @@ export function planckPlugin(
         syncDynamicVelocityFromScene();
         world.step(clamped, 8, 3);
         syncDynamicBodiesToScene();
+        syncKinematicAndStaticFromScene();
       });
     });
 

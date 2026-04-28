@@ -6,12 +6,31 @@ import {
   gameStart,
   gameUpdate,
   $string,
+  withOwnership,
   spriteTrait,
   transformTrait,
   collisionBodyTrait,
+  type ViewportState,
 } from "gameide";
 import type { MainContext } from "./gameConfig";
-import { loadAssets } from "virtual:gameide-assets";
+import typescriptSvgUrl from "../assets/typescript.svg?url";
+
+function screenToSceneWorld(
+  clientX: number,
+  clientY: number,
+  rootRect: DOMRectReadOnly,
+  v: Readonly<ViewportState>,
+): { x: number; y: number } {
+  const sx = clientX - rootRect.left;
+  const sy = clientY - rootRect.top;
+  const { width, height, centerX, centerY, scale } = v;
+  const px = width / 2 - centerX * scale;
+  const py = height / 2 + centerY * scale;
+  return {
+    x: (sx - px) / scale,
+    y: (py - sy) / scale,
+  };
+}
 
 const playerTrait = defineTrait([
   spriteTrait,
@@ -31,9 +50,26 @@ const playerTrait = defineTrait([
   },
 ]);
 
-const PLAYER_SPRITE_TINT = "#ffffff";
+const bouncyBallTrait = defineTrait([
+  spriteTrait,
+  collisionBodyTrait,
+  {
+    [OWNER_ID]: $string,
+    circleCollider: {
+      radius: 18,
+      isTrigger: false,
+      restitution: 0.88,
+      offset: { x: 0, y: 0 },
+    },
+    chaseAccel: 1550,
+    maxSpeed: 740,
+  },
+]);
 
-export function main({ input, networking, planck }: MainContext): void {
+const PLAYER_SPRITE_TINT = "#ffffff";
+const BALL_SPRITE_TINT = "#ff8c42";
+
+export function main({ input, networking, planck, pixi, rootElement }: MainContext): void {
   const scene = getScene();
 
   gameStart(() => {
@@ -78,7 +114,7 @@ export function main({ input, networking, planck }: MainContext): void {
         ...transformTrait,
         position: { x: 0, y: -280, z: 0 },
         sprite: {
-          asset: loadAssets()["assets/typescript.svg"],
+          asset: typescriptSvgUrl,
           width: 32,
           height: 32,
           tint: PLAYER_SPRITE_TINT,
@@ -91,7 +127,7 @@ export function main({ input, networking, planck }: MainContext): void {
         },
         collisionBody: {
           type: "dynamic",
-          velocity: { x: 0, y: 0 },
+          velocity: { x: 0, y: 0, angular: 0 },
           fixedRotation: true,
         },
         moveSpeed: playerTrait.moveSpeed,
@@ -108,20 +144,89 @@ export function main({ input, networking, planck }: MainContext): void {
         player.grounded = e.phase === "enter";
       });
     }
+
+    const bouncyBallOwnerId =
+      [...new Set([networking.peerId, ...networking.getPeers()])].sort()[0] ??
+      networking.peerId;
+
+    scene.createObject(
+      "bouncy_ball",
+      withOwnership(
+        {
+          ...transformTrait,
+          position: { x: -140, y: -200, z: 0 },
+          sprite: {
+            asset: typescriptSvgUrl,
+            width: 36,
+            height: 36,
+            tint: BALL_SPRITE_TINT,
+          },
+          circleCollider: {
+            radius: bouncyBallTrait.circleCollider.radius,
+            isTrigger: false,
+            restitution: bouncyBallTrait.circleCollider.restitution,
+            offset: { x: 0, y: 0 },
+          },
+          collisionBody: {
+            type: "dynamic",
+            velocity: { x: 0, y: 0, angular: 0 },
+            fixedRotation: false,
+          },
+          chaseAccel: bouncyBallTrait.chaseAccel,
+          maxSpeed: bouncyBallTrait.maxSpeed,
+        },
+        bouncyBallOwnerId,
+      ),
+    );
   });
 
   gameUpdate((deltaTime) => {
     const horizontal = input.axes.Horizontal;
+    const clampedDt = Math.min(deltaTime, 0.1);
+    const sharedGravity = playerTrait.playerGravityY * clampedDt;
+
     for (const player of scene.query(implementsTrait(playerTrait))) {
       if (!networking.isOwned(player)) continue;
 
-      const gravity = player.playerGravityY * Math.min(deltaTime, 0.1);
+      const gravity = player.playerGravityY * clampedDt;
       if (input.buttons.Jump.pressed && player.grounded) {
         player.collisionBody.velocity.y = player.jumpSpeed;
       }
 
       player.collisionBody.velocity.x = horizontal * player.moveSpeed;
       player.collisionBody.velocity.y += gravity;
+    }
+
+    const mouse = input.mouse.position;
+    const vp = pixi.viewport.state;
+    const rootRect = rootElement.getBoundingClientRect();
+
+    for (const ball of scene.query(implementsTrait(bouncyBallTrait))) {
+      if (!networking.isOwned(ball)) continue;
+
+      ball.collisionBody.velocity.y += sharedGravity;
+
+      if (mouse) {
+        const target = screenToSceneWorld(mouse.x, mouse.y, rootRect, vp);
+        const dx = target.x - ball.position.x;
+        const dy = target.y - ball.position.y;
+        const len = Math.hypot(dx, dy);
+        if (len > 8) {
+          const nx = dx / len;
+          const ny = dy / len;
+          const push = ball.chaseAccel * clampedDt;
+          ball.collisionBody.velocity.x += nx * push;
+          ball.collisionBody.velocity.y += ny * push;
+        }
+      }
+
+      const max = ball.maxSpeed;
+      const spd = Math.hypot(ball.collisionBody.velocity.x, ball.collisionBody.velocity.y);
+      if (spd > max) {
+        const s = max / spd;
+        ball.collisionBody.velocity.x *= s;
+        ball.collisionBody.velocity.y *= s;
+      }
     }
   });
 }

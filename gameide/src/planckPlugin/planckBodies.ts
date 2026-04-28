@@ -29,12 +29,21 @@ function collisionFixedRotation(obj: BaseSceneObject): boolean {
   );
 }
 
+/** Static bodies always use fixed rotation in Planck (pose comes from the scene each frame). */
+function effectiveFixedRotation(
+  obj: BaseSceneObject,
+  effectiveBodyType: BodyType,
+): boolean {
+  if (effectiveBodyType === "static") return true;
+  return collisionFixedRotation(obj);
+}
+
 export function colliderSignature(
   obj: BaseSceneObject,
   effectiveBodyType: BodyType,
 ): string {
   const bodyT = effectiveBodyType;
-  const fixedRotation = collisionFixedRotation(obj);
+  const fixedRotation = effectiveFixedRotation(obj, effectiveBodyType);
   const b = (obj as { boxCollider?: Record<string, unknown> }).boxCollider;
   if (b && typeof b === "object") {
     return JSON.stringify({
@@ -44,6 +53,7 @@ export function colliderSignature(
       w: b.width,
       h: b.height,
       t: b.isTrigger,
+      rest: b.restitution,
       ox: (b.offset as { x?: number })?.x,
       oy: (b.offset as { y?: number })?.y,
     });
@@ -56,6 +66,7 @@ export function colliderSignature(
       fixedRotation,
       r: c.radius,
       t: c.isTrigger,
+      rest: c.restitution,
       ox: (c.offset as { x?: number })?.x,
       oy: (c.offset as { y?: number })?.y,
     });
@@ -82,7 +93,7 @@ export function createBodyForObject(
   const pos = (obj as { position: { x: number; y: number } }).position;
   const rotZ = (obj as { rotation: { z: number } }).rotation.z;
   const bodyT = effectiveBodyType;
-  const fixedRotation = collisionFixedRotation(obj);
+  const fixedRotation = effectiveFixedRotation(obj, effectiveBodyType);
 
   const body = world.createBody({
     type: bodyT,
@@ -98,10 +109,11 @@ export function createBodyForObject(
     const h = Math.max(1e-6, Number(b.height) || 0) / 2;
     const isTrigger = Boolean(b.isTrigger);
     const off = (b.offset as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
+    const restitution = Math.max(0, Math.min(1, Number(b.restitution) || 0));
     const opt = {
       density: bodyT === "dynamic" ? 1 : 0,
       friction: 0.3,
-      restitution: 0,
+      restitution,
       isSensor: isTrigger,
     };
     body.createFixture(new Box(w, h, new Vec2(off.x, off.y)), opt);
@@ -111,10 +123,11 @@ export function createBodyForObject(
       const r = Math.max(1e-6, Number(c.radius) || 0);
       const isTrigger = Boolean(c.isTrigger);
       const off = (c.offset as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
+      const restitution = Math.max(0, Math.min(1, Number(c.restitution) || 0));
       const opt = {
         density: bodyT === "dynamic" ? 1 : 0,
         friction: 0.3,
-        restitution: 0,
+        restitution,
         isSensor: isTrigger,
       };
       body.createFixture(new Circle(new Vec2(off.x, off.y), r), opt);
@@ -126,9 +139,10 @@ export function createBodyForObject(
 
   if (bodyT === "dynamic") {
     const vel =
-      (obj as { collisionBody?: { velocity?: { x: number; y: number } } }).collisionBody?.velocity ??
-      { x: 0, y: 0 };
+      (obj as { collisionBody?: { velocity?: { x: number; y: number; angular?: number } } })
+        .collisionBody?.velocity ?? { x: 0, y: 0, angular: 0 };
     body.setLinearVelocity(sceneVec(vel.x, vel.y));
+    body.setAngularVelocity(vel.angular ?? 0);
   }
 
   return { body, signature };

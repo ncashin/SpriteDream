@@ -7,8 +7,7 @@ import {
   pixiPlugin,
   planckPlugin,
 } from "gameide";
-import { loadScenes } from "virtual:gameide-scenes";
-import { loadAssets } from "virtual:gameide-assets";
+import sampleScene from "./sample.scene";
 import "./style.css";
 import invariant from "tiny-invariant";
 import { Editor } from "./Editor";
@@ -18,12 +17,10 @@ import { main } from "./main";
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-const scenes = loadScenes();
-
 const mainFunction = game({
   rootElement,
   initialContext: {},
-  initialScene: scenes["source/sample.scene"],
+  initialScene: sampleScene,
   plugins: [
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
@@ -49,7 +46,6 @@ const mainFunction = game({
       initOptions: {
         backgroundAlpha: 0,
       },
-      assets: loadAssets(),
       debugDrawColliders: true,
     }),
     planckPlugin(),
