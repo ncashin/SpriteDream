@@ -19,7 +19,7 @@ export type TraitMetadata = {
   icon?: IconSlug;
 };
 
-type TraitInputItem = SchemaObject | TraitHandle<object>;
+export type TraitInputItem = SchemaObject | TraitHandle<object>;
 type TraitInput = TraitInputItem | readonly [TraitInputItem, ...TraitInputItem[]];
 
 type InferSchemaValue<T extends SchemaValue> =
@@ -50,7 +50,7 @@ type InferTraitInputItem<T extends TraitInputItem> = T extends TraitHandle<infer
     : never;
 
 /** Folds a non-empty trait tuple into an intersection (fixes 3+ items: `Rest[number]` was a union). */
-type TraitTupleToIntersection<T extends readonly TraitInputItem[]> = T extends readonly [
+export type TraitTupleToIntersection<T extends readonly TraitInputItem[]> = T extends readonly [
   infer Head extends TraitInputItem,
   ...infer Tail extends TraitInputItem[],
 ]
@@ -190,10 +190,27 @@ export function defineTrait<TInput extends TraitInput>(
 
 type TraitPredicate<T> = (value: unknown) => value is T;
 
+function traitInputItemToGuard(item: TraitInputItem): (value: unknown) => boolean {
+  if (isRegisteredTraitHandle(item)) {
+    const guard = traitGuards.get(item);
+    if (!guard) {
+      throw new Error("GameIDE: trait guard not registered");
+    }
+    return guard;
+  }
+  return createTraitGuard(resolveSchemaObject(item));
+}
+
 export function implementsTrait<TInput extends TraitInput>(
   t: TInput,
 ): TraitPredicate<TraitInputToObject<TInput>> {
-  if (!Array.isArray(t) && isRegisteredTraitHandle(t)) {
+  if (isTraitInputArray(t)) {
+    const guards = t.map(traitInputItemToGuard);
+    return (candidate: unknown): candidate is TraitInputToObject<TInput> =>
+      guards.every((g) => g(candidate));
+  }
+
+  if (isRegisteredTraitHandle(t)) {
     const guard = traitGuards.get(t);
     if (!guard) {
       throw new Error("GameIDE: trait guard not registered");
@@ -201,6 +218,6 @@ export function implementsTrait<TInput extends TraitInput>(
     return (candidate: unknown): candidate is TraitInputToObject<TInput> => guard(candidate);
   }
 
-  const guard = createTraitGuard(resolveSchemaInput(t));
+  const guard = createTraitGuard(resolveSchemaObject(t));
   return (candidate: unknown): candidate is TraitInputToObject<TInput> => guard(candidate);
 }

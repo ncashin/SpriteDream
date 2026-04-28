@@ -41,8 +41,10 @@ export {
   $string,
   $boolean,
 } from "./trait/trait.js";
-export type { TraitMetadata, DefinedTrait } from "./trait/trait.js";
+export type { TraitMetadata, DefinedTrait, TraitInputItem, TraitTupleToIntersection } from "./trait/trait.js";
 export { transformTrait } from "./trait/transform.js";
+export { gameObject } from "./trait/gameObject.js";
+export type { GameObjectParts } from "./trait/gameObject.js";
 export {
   game,
   plugins,

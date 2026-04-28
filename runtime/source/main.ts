@@ -1,6 +1,7 @@
 import {
   implementsTrait,
   defineTrait,
+  gameObject,
   getScene,
   OWNER_ID,
   gameStart,
@@ -10,10 +11,12 @@ import {
   spriteTrait,
   transformTrait,
   collisionBodyTrait,
+  boxColliderTrait,
+  circleColliderTrait,
   type ViewportState,
 } from "gameide";
 import type { MainContext } from "./gameConfig";
-import typescriptSvgUrl from "../assets/typescript.svg?url";
+import typescriptSVGURL from "../assets/typescript.svg?url";
 
 function screenToSceneWorld(
   clientX: number,
@@ -32,58 +35,51 @@ function screenToSceneWorld(
   };
 }
 
-const playerTrait = defineTrait([
-  spriteTrait,
-  collisionBodyTrait,
-  {
-    [OWNER_ID]: $string,
-    boxCollider: {
-      width: 32,
-      height: 32,
-      isTrigger: false,
-      offset: { x: 0, y: 0 },
-    },
-    moveSpeed: 260,
-    jumpSpeed: 650,
-    playerGravityY: -1500,
-    grounded: false,
-  },
-]);
+const playerTrait = defineTrait({
+  [OWNER_ID]: $string,
+  moveSpeed: 260,
+  jumpSpeed: 650,
+  playerGravityY: -1500,
+  grounded: false,
+});
 
-const bouncyBallTrait = defineTrait([
-  spriteTrait,
-  collisionBodyTrait,
-  {
-    [OWNER_ID]: $string,
-    circleCollider: {
-      radius: 18,
-      isTrigger: false,
-      restitution: 0.88,
-      offset: { x: 0, y: 0 },
-    },
-    chaseAccel: 1550,
-    maxSpeed: 740,
-  },
-]);
+const bouncyBallTrait = defineTrait({
+  [OWNER_ID]: $string,
+  chaseAccel: 1550,
+  maxSpeed: 740,
+});
 
 const PLAYER_SPRITE_TINT = "#ffffff";
 const BALL_SPRITE_TINT = "#ff8c42";
 
-export function main({ input, networking, planck, pixi, rootElement }: MainContext): void {
+export function main({
+  input,
+  networking,
+  planck,
+  pixi,
+  rootElement,
+}: MainContext): void {
   const scene = getScene();
 
   gameStart(() => {
-    scene.createObject("ground", {
-      ...transformTrait,
-      position: { x: 0, y: -420, z: 0 },
-      boxCollider: {
-        width: 2400,
-        height: 40,
-        isTrigger: false,
-        offset: { x: 0, y: 0 },
-      },
-      collisionBody: { type: "static" },
-    });
+    scene.createObject(
+      "ground",
+      gameObject([
+        transformTrait,
+        collisionBodyTrait,
+        boxColliderTrait,
+        {
+          position: { x: 0, y: -420, z: 0 },
+          boxCollider: {
+            width: 2400,
+            height: 40,
+            isTrigger: false,
+            offset: { x: 0, y: 0 },
+          },
+          collisionBody: { type: "static" },
+        },
+      ]),
+    );
 
     const platforms: { x: number; y: number; w: number }[] = [
       { x: -280, y: -320, w: 180 },
@@ -94,50 +90,68 @@ export function main({ input, networking, planck, pixi, rootElement }: MainConte
     ];
 
     for (let i = 0; i < platforms.length; i++) {
-      const p = platforms[i]!;
-      scene.createObject(`platform_${i}`, {
-        ...transformTrait,
-        position: { x: p.x, y: p.y, z: 0 },
-        boxCollider: {
-          width: p.w,
-          height: 24,
-          isTrigger: false,
-          offset: { x: 0, y: 0 },
-        },
-        collisionBody: { type: "static" },
-      });
+      const platform = platforms[i]!;
+      scene.createObject(
+        `platform_${i}`,
+        gameObject([
+          transformTrait,
+          collisionBodyTrait,
+          boxColliderTrait,
+          {
+            position: { x: platform.x, y: platform.y, z: 0 },
+            boxCollider: {
+              width: platform.w,
+              height: 24,
+              isTrigger: false,
+              offset: { x: 0, y: 0 },
+            },
+            collisionBody: { type: "static" },
+          },
+        ]),
+      );
     }
 
     scene.createObject(
       networking.peerId,
-      networking.withOwnership({
-        ...transformTrait,
-        position: { x: 0, y: -280, z: 0 },
-        sprite: {
-          asset: typescriptSvgUrl,
-          width: 32,
-          height: 32,
-          tint: PLAYER_SPRITE_TINT,
-        },
-        boxCollider: {
-          width: 32,
-          height: 32,
-          isTrigger: false,
-          offset: { x: 0, y: 0 },
-        },
-        collisionBody: {
-          type: "dynamic",
-          velocity: { x: 0, y: 0, angular: 0 },
-          fixedRotation: true,
-        },
-        moveSpeed: playerTrait.moveSpeed,
-        jumpSpeed: playerTrait.jumpSpeed,
-        playerGravityY: playerTrait.playerGravityY,
-        grounded: playerTrait.grounded,
-      }),
+      networking.withOwnership(
+        gameObject([
+          transformTrait,
+          playerTrait,
+          spriteTrait,
+          collisionBodyTrait,
+          boxColliderTrait,
+          {
+            position: { x: 0, y: -280, z: 0 },
+            sprite: {
+              asset: typescriptSVGURL,
+              width: 32,
+              height: 32,
+              tint: PLAYER_SPRITE_TINT,
+            },
+            boxCollider: {
+              width: 32,
+              height: 32,
+              isTrigger: false,
+              offset: { x: 0, y: 0 },
+            },
+            collisionBody: {
+              type: "dynamic",
+              velocity: { x: 0, y: 0, angular: 0 },
+              fixedRotation: true,
+            },
+          },
+        ]),
+      ),
     );
 
-    for (const player of scene.query(implementsTrait(playerTrait))) {
+    for (const player of scene.query(
+      implementsTrait([
+        playerTrait,
+        spriteTrait,
+        collisionBodyTrait,
+        boxColliderTrait,
+      ]),
+    )) {
       if (!networking.isOwned(player)) continue;
       void planck.onCollision(player, (other, e) => {
         if (!planck.isStatic(other)) return;
@@ -152,29 +166,33 @@ export function main({ input, networking, planck, pixi, rootElement }: MainConte
     scene.createObject(
       "bouncy_ball",
       withOwnership(
-        {
-          ...transformTrait,
-          position: { x: -140, y: -200, z: 0 },
-          sprite: {
-            asset: typescriptSvgUrl,
-            width: 36,
-            height: 36,
-            tint: BALL_SPRITE_TINT,
+        gameObject([
+          transformTrait,
+          bouncyBallTrait,
+          spriteTrait,
+          collisionBodyTrait,
+          circleColliderTrait,
+          {
+            position: { x: -140, y: -200, z: 0 },
+            sprite: {
+              asset: typescriptSVGURL,
+              width: 36,
+              height: 36,
+              tint: BALL_SPRITE_TINT,
+            },
+            circleCollider: {
+              radius: 18,
+              isTrigger: false,
+              restitution: 0.88,
+              offset: { x: 0, y: 0 },
+            },
+            collisionBody: {
+              type: "dynamic",
+              velocity: { x: 0, y: 0, angular: 0 },
+              fixedRotation: false,
+            },
           },
-          circleCollider: {
-            radius: bouncyBallTrait.circleCollider.radius,
-            isTrigger: false,
-            restitution: bouncyBallTrait.circleCollider.restitution,
-            offset: { x: 0, y: 0 },
-          },
-          collisionBody: {
-            type: "dynamic",
-            velocity: { x: 0, y: 0, angular: 0 },
-            fixedRotation: false,
-          },
-          chaseAccel: bouncyBallTrait.chaseAccel,
-          maxSpeed: bouncyBallTrait.maxSpeed,
-        },
+        ]),
         bouncyBallOwnerId,
       ),
     );
@@ -185,7 +203,14 @@ export function main({ input, networking, planck, pixi, rootElement }: MainConte
     const clampedDt = Math.min(deltaTime, 0.1);
     const sharedGravity = playerTrait.playerGravityY * clampedDt;
 
-    for (const player of scene.query(implementsTrait(playerTrait))) {
+    for (const player of scene.query(
+      implementsTrait([
+        playerTrait,
+        spriteTrait,
+        collisionBodyTrait,
+        boxColliderTrait,
+      ]),
+    )) {
       if (!networking.isOwned(player)) continue;
 
       const gravity = player.playerGravityY * clampedDt;
@@ -201,7 +226,14 @@ export function main({ input, networking, planck, pixi, rootElement }: MainConte
     const vp = pixi.viewport.state;
     const rootRect = rootElement.getBoundingClientRect();
 
-    for (const ball of scene.query(implementsTrait(bouncyBallTrait))) {
+    for (const ball of scene.query(
+      implementsTrait([
+        bouncyBallTrait,
+        spriteTrait,
+        collisionBodyTrait,
+        circleColliderTrait,
+      ]),
+    )) {
       if (!networking.isOwned(ball)) continue;
 
       ball.collisionBody.velocity.y += sharedGravity;
@@ -221,7 +253,10 @@ export function main({ input, networking, planck, pixi, rootElement }: MainConte
       }
 
       const max = ball.maxSpeed;
-      const spd = Math.hypot(ball.collisionBody.velocity.x, ball.collisionBody.velocity.y);
+      const spd = Math.hypot(
+        ball.collisionBody.velocity.x,
+        ball.collisionBody.velocity.y,
+      );
       if (spd > max) {
         const s = max / spd;
         ball.collisionBody.velocity.x *= s;
