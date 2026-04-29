@@ -27,13 +27,20 @@ function shallowChanged(
 export function createViewport(
   width: number,
   height: number,
-  options: { centerX?: number; centerY?: number; scale?: number } = {},
+  options: {
+    centerX?: number;
+    centerY?: number;
+    scale?: number;
+    /** Required for {@link Viewport#screenToWorld}. */
+    rootElement?: HTMLElement;
+  } = {},
 ): {
   get state(): Readonly<ViewportState>;
   setCenter(centerX: number, centerY: number): void;
   setScale(scale: number): void;
   setScreenSize(width: number, height: number): void;
   onChange(callback: ViewportListener): () => void;
+  screenToWorld(clientX: number, clientY: number): { x: number; y: number };
 } {
   const internal: ViewportState = {
     centerX: options.centerX ?? 0,
@@ -42,6 +49,8 @@ export function createViewport(
     height: Math.max(0, height),
     scale: options.scale ?? 1,
   };
+
+  const rootElement = options.rootElement;
 
   const registry = createCallbackRegistry<ViewportListener>();
 
@@ -77,6 +86,23 @@ export function createViewport(
       callback({ ...internal });
       return registry.register(callback);
     },
+    screenToWorld(clientX: number, clientY: number): { x: number; y: number } {
+      if (!rootElement) {
+        throw new Error(
+          "GameIDE: viewport.screenToWorld requires rootElement when creating the viewport.",
+        );
+      }
+      const rootRect = rootElement.getBoundingClientRect();
+      const sx = clientX - rootRect.left;
+      const sy = clientY - rootRect.top;
+      const { width: vw, height: vh, centerX, centerY, scale } = internal;
+      const px = vw / 2 - centerX * scale;
+      const py = vh / 2 + centerY * scale;
+      return {
+        x: (sx - px) / scale,
+        y: (py - sy) / scale,
+      };
+    },
   };
 }
 
@@ -88,21 +114,4 @@ export function applyViewportToWorldContainer(
   // Negative scale.y: scene +Y is up (Pixi stage is +Y down).
   world.scale.set(scale, -scale);
   world.position.set(width / 2 - centerX * scale, height / 2 + centerY * scale);
-}
-
-export function screenToSceneWorld(
-  clientX: number,
-  clientY: number,
-  rootRect: DOMRectReadOnly,
-  viewport: Readonly<ViewportState>,
-): { x: number; y: number } {
-  const sx = clientX - rootRect.left;
-  const sy = clientY - rootRect.top;
-  const { width, height, centerX, centerY, scale } = viewport;
-  const px = width / 2 - centerX * scale;
-  const py = height / 2 + centerY * scale;
-  return {
-    x: (sx - px) / scale,
-    y: (py - sy) / scale,
-  };
 }

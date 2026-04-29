@@ -14,13 +14,6 @@ import type { BaseSceneObject } from "../scene/scene.js";
 import { getScene } from "../scene/scene.js";
 import { query } from "../scene/query/query.js";
 import {
-  getEffectivePlanckBodyType,
-  getSceneBodyType,
-  sceneBodyIsDynamic,
-  sceneBodyIsKinematic,
-  sceneBodyIsStatic,
-} from "./physicsTypes.js";
-import {
   colliderSignature,
   createBodyForObject,
   getBodyData,
@@ -29,6 +22,34 @@ import {
   type PlanckRecord,
 } from "./planckBodies.js";
 import { wrapRigidbody2D, type Rigidbody2D } from "./rigidbody2d.js";
+
+export function getSceneBodyType(obj: BaseSceneObject): BodyType {
+  const raw = (obj as { collisionBody?: { type?: BodyType } }).collisionBody;
+  const t = raw?.type;
+  if (t === "static" || t === "kinematic" || t === "dynamic") return t;
+  return "static";
+}
+
+export function sceneBodyIsStatic(obj: BaseSceneObject): boolean {
+  return getSceneBodyType(obj) === "static";
+}
+
+export function sceneBodyIsKinematic(obj: BaseSceneObject): boolean {
+  return getSceneBodyType(obj) === "kinematic";
+}
+
+export function sceneBodyIsDynamic(obj: BaseSceneObject): boolean {
+  return getSceneBodyType(obj) === "dynamic";
+}
+
+export function getEffectivePlanckBodyType(
+  obj: BaseSceneObject,
+  simulatesDynamics: (obj: BaseSceneObject) => boolean,
+): BodyType {
+  const sceneT = getSceneBodyType(obj);
+  if (sceneT === "dynamic" && !simulatesDynamics(obj)) return "kinematic";
+  return sceneT;
+}
 
 export type PlanckPluginOptions = {
   lengthUnitsPerMeter?: number;
@@ -96,6 +117,58 @@ export function planckPlugin(
     >();
     const collisionHandlers = new Map<BaseSceneObject, Set<PlanckCollisionHandler>>();
     const triggerHandlers = new Map<BaseSceneObject, Set<PlanckCollisionHandler>>();
+
+    type ScenePosition = { x: number; y: number };
+    type SceneRotation = { x?: number; y?: number; z: number };
+    type CollisionBodyVelocity = { x: number; y: number; angular: number };
+
+    const readScenePosition = (sceneObject: BaseSceneObject): ScenePosition =>
+      (sceneObject as { position: ScenePosition }).position;
+
+    const readSceneRotation = (sceneObject: BaseSceneObject): SceneRotation =>
+      (sceneObject as { rotation: SceneRotation }).rotation;
+
+    const readSceneAngleRadians = (sceneObject: BaseSceneObject): number =>
+      readSceneRotation(sceneObject).z;
+
+    const readCollisionBodyVelocity = (
+      sceneObject: BaseSceneObject,
+    ): CollisionBodyVelocity => {
+      const velocity =
+        (sceneObject as { collisionBody?: { velocity?: Partial<CollisionBodyVelocity> } })
+          .collisionBody?.velocity ?? {};
+      return {
+        x: velocity.x ?? 0,
+        y: velocity.y ?? 0,
+        angular: velocity.angular ?? 0,
+      };
+    };
+
+    const writeDynamicPhysicsResultsToScene = (
+      sceneObject: BaseSceneObject,
+      physicsPosition: Vec2,
+      physicsAngleRadians: number,
+      linearVelocity: Vec2,
+      angularVelocity: number,
+    ): void => {
+      const position = readScenePosition(sceneObject);
+      position.x = physicsPosition.x;
+      position.y = physicsPosition.y;
+      const rotation = readSceneRotation(sceneObject);
+      (sceneObject as { rotation: SceneRotation }).rotation = {
+        ...rotation,
+        z: physicsAngleRadians,
+      };
+      const collisionBody = (sceneObject as { collisionBody?: { velocity?: CollisionBodyVelocity } })
+        .collisionBody;
+      if (!collisionBody) return;
+      if (!collisionBody.velocity) {
+        collisionBody.velocity = { x: 0, y: 0, angular: 0 };
+      }
+      collisionBody.velocity.x = linearVelocity.x;
+      collisionBody.velocity.y = linearVelocity.y;
+      collisionBody.velocity.angular = angularVelocity;
+    };
 
     const addHandler = (
       map: Map<BaseSceneObject, Set<PlanckCollisionHandler>>,
@@ -175,116 +248,141 @@ export function planckPlugin(
     };
     world.on("remove-body", onRemoveBody);
 
-    const syncBodiesWithScene = () => {
+    const syncColliderBodiesWithSceneGraph = () => {
       const scene = getScene();
-      const colliders = query(scene, isColliderNode);
-      const alive = new Set<BaseSceneObject>();
+      const collidersInScene = query(scene, isColliderNode);
+      const collidersStillPresent = new Set<BaseSceneObject>();
 
-      for (const obj of colliders) {
-        alive.add(obj);
-        const eff = effectiveType(obj);
-        const nextSig = colliderSignature(obj, eff);
-        if (!nextSig) continue;
-        const rec = objectToRecord.get(obj);
-        if (rec) {
-          if (rec.signature === nextSig) continue;
-          world.destroyBody(rec.body);
+      for (const sceneObject of collidersInScene) {
+        collidersStillPresent.add(sceneObject);
+        const effectiveBodyType = effectiveType(sceneObject);
+        const nextColliderSignature = colliderSignature(sceneObject, effectiveBodyType);
+        if (!nextColliderSignature) continue;
+
+        const existingPlanckRecord = objectToRecord.get(sceneObject);
+        if (existingPlanckRecord) {
+          if (existingPlanckRecord.signature === nextColliderSignature) continue;
+          world.destroyBody(existingPlanckRecord.body);
         }
-        const next = createBodyForObject(world, obj, eff);
-        if (next) {
-          objectToRecord.set(obj, next);
+
+        const createdPlanckRecord = createBodyForObject(
+          world,
+          sceneObject,
+          effectiveBodyType,
+        );
+        if (createdPlanckRecord) {
+          objectToRecord.set(sceneObject, createdPlanckRecord);
         }
       }
 
-      const toRemove: BaseSceneObject[] = [];
-      for (const obj of objectToRecord.keys()) {
-        if (!alive.has(obj)) toRemove.push(obj);
-      }
-      for (const obj of toRemove) {
-        const rec = objectToRecord.get(obj);
-        if (rec) {
-          world.destroyBody(rec.body);
+      const sceneObjectsToRemove: BaseSceneObject[] = [];
+      for (const trackedSceneObject of objectToRecord.keys()) {
+        if (!collidersStillPresent.has(trackedSceneObject)) {
+          sceneObjectsToRemove.push(trackedSceneObject);
         }
-        objectToRecord.delete(obj);
+      }
+      for (const sceneObjectToRemove of sceneObjectsToRemove) {
+        const planckRecord = objectToRecord.get(sceneObjectToRemove);
+        if (planckRecord) {
+          world.destroyBody(planckRecord.body);
+        }
+        objectToRecord.delete(sceneObjectToRemove);
       }
     };
 
-    const syncKinematicAndStaticFromSceneBeforeStep = (stepDt: number) => {
-      const invDt = stepDt > 0 ? 1 / stepDt : 0;
-      for (const [obj, rec] of objectToRecord) {
-        const t = effectiveType(obj);
-        if (t !== "static" && t !== "kinematic") continue;
-        const pos = (obj as { position: { x: number; y: number } }).position;
-        const rotZ = (obj as { rotation: { z: number } }).rotation.z;
-        rec.body.setTransform(sceneVec(pos.x, pos.y), rotZ);
-        if (t === "kinematic") {
-          const prev = kinematicScenePosePrev.get(obj);
-          if (prev && stepDt > 0) {
-            rec.body.setLinearVelocity(
-              new Vec2((pos.x - prev.x) * invDt, (pos.y - prev.y) * invDt),
+    const syncStaticAndKinematicBodiesFromSceneBeforePhysicsStep = (
+      physicsStepSeconds: number,
+    ) => {
+      const inverseDeltaTime = physicsStepSeconds > 0 ? 1 / physicsStepSeconds : 0;
+
+      for (const [sceneObject, planckRecord] of objectToRecord) {
+        const bodyType = effectiveType(sceneObject);
+        if (bodyType !== "static" && bodyType !== "kinematic") continue;
+
+        const scenePosition = readScenePosition(sceneObject);
+        const sceneAngleRadians = readSceneAngleRadians(sceneObject);
+        planckRecord.body.setTransform(
+          sceneVec(scenePosition.x, scenePosition.y),
+          sceneAngleRadians,
+        );
+
+        if (bodyType !== "kinematic") continue;
+
+        const useReplicatedDynamicVelocity =
+          getSceneBodyType(sceneObject) === "dynamic" && !simulatesDynamics(sceneObject);
+        if (useReplicatedDynamicVelocity) {
+          const v = readCollisionBodyVelocity(sceneObject);
+          planckRecord.body.setLinearVelocity(new Vec2(v.x, v.y));
+          planckRecord.body.setAngularVelocity(v.angular);
+        } else {
+          const previousScenePose = kinematicScenePosePrev.get(sceneObject);
+          if (previousScenePose && physicsStepSeconds > 0) {
+            planckRecord.body.setLinearVelocity(
+              new Vec2(
+                (scenePosition.x - previousScenePose.x) * inverseDeltaTime,
+                (scenePosition.y - previousScenePose.y) * inverseDeltaTime,
+              ),
             );
-            rec.body.setAngularVelocity((rotZ - prev.angle) * invDt);
+            planckRecord.body.setAngularVelocity(
+              (sceneAngleRadians - previousScenePose.angle) * inverseDeltaTime,
+            );
           } else {
-            rec.body.setLinearVelocity(new Vec2(0, 0));
-            rec.body.setAngularVelocity(0);
+            planckRecord.body.setLinearVelocity(new Vec2(0, 0));
+            planckRecord.body.setAngularVelocity(0);
           }
-          kinematicScenePosePrev.set(obj, { x: pos.x, y: pos.y, angle: rotZ });
         }
+        kinematicScenePosePrev.set(sceneObject, {
+          x: scenePosition.x,
+          y: scenePosition.y,
+          angle: sceneAngleRadians,
+        });
       }
     };
 
-    /** After dynamics integrate, snap static/kinematic transforms to scene (transform only). */
-    const syncKinematicAndStaticFromSceneAfterStep = () => {
-      for (const [obj, rec] of objectToRecord) {
-        const t = effectiveType(obj);
-        if (t !== "static" && t !== "kinematic") continue;
-        const pos = (obj as { position: { x: number; y: number } }).position;
-        const rotZ = (obj as { rotation: { z: number } }).rotation.z;
-        rec.body.setTransform(sceneVec(pos.x, pos.y), rotZ);
+    const syncStaticAndKinematicBodiesFromSceneAfterPhysicsStep = () => {
+      for (const [sceneObject, planckRecord] of objectToRecord) {
+        const bodyType = effectiveType(sceneObject);
+        if (bodyType !== "static" && bodyType !== "kinematic") continue;
+
+        const scenePosition = readScenePosition(sceneObject);
+        const sceneAngleRadians = readSceneAngleRadians(sceneObject);
+        planckRecord.body.setTransform(
+          sceneVec(scenePosition.x, scenePosition.y),
+          sceneAngleRadians,
+        );
       }
     };
 
-    /** Scene transform → physics before step so inspector/teleports/scripts can move dynamics; otherwise we'd only integrate from last-frame body state. */
-    const syncDynamicTransformFromScene = () => {
-      for (const [obj, rec] of objectToRecord) {
-        if (effectiveType(obj) !== "dynamic") continue;
-        const pos = (obj as { position: { x: number; y: number } }).position;
-        const rotZ = (obj as { rotation: { z: number } }).rotation.z;
-        rec.body.setTransform(sceneVec(pos.x, pos.y), rotZ);
+    const syncDynamicBodiesFromSceneBeforePhysicsStep = () => {
+      for (const [sceneObject, planckRecord] of objectToRecord) {
+        if (effectiveType(sceneObject) !== "dynamic") continue;
+
+        const scenePosition = readScenePosition(sceneObject);
+        const sceneAngleRadians = readSceneAngleRadians(sceneObject);
+        planckRecord.body.setTransform(
+          sceneVec(scenePosition.x, scenePosition.y),
+          sceneAngleRadians,
+        );
+
+        const authoredVelocity = readCollisionBodyVelocity(sceneObject);
+        planckRecord.body.setLinearVelocity(
+          new Vec2(authoredVelocity.x, authoredVelocity.y),
+        );
+        planckRecord.body.setAngularVelocity(authoredVelocity.angular);
       }
     };
 
-    const syncDynamicVelocityFromScene = () => {
-      for (const [obj, rec] of objectToRecord) {
-        if (effectiveType(obj) !== "dynamic") continue;
-        const vel =
-          (obj as { collisionBody?: { velocity?: { x: number; y: number; angular?: number } } })
-            .collisionBody?.velocity ?? { x: 0, y: 0, angular: 0 };
-        rec.body.setLinearVelocity(new Vec2(vel.x, vel.y));
-        rec.body.setAngularVelocity(vel.angular ?? 0);
-      }
-    };
+    const syncDynamicBodiesToSceneAfterPhysicsStep = () => {
+      for (const [sceneObject, planckRecord] of objectToRecord) {
+        if (effectiveType(sceneObject) !== "dynamic") continue;
 
-    const syncDynamicBodiesToScene = () => {
-      for (const [obj, rec] of objectToRecord) {
-        if (effectiveType(obj) !== "dynamic") continue;
-        const p = rec.body.getPosition();
-        const a = rec.body.getAngle();
-        const v = rec.body.getLinearVelocity();
-        const angVel = rec.body.getAngularVelocity();
-        (obj as { position: { x: number; y: number } }).position.x = p.x;
-        (obj as { position: { x: number; y: number } }).position.y = p.y;
-        const rot = (obj as { rotation: { x?: number; y?: number; z: number } }).rotation;
-        (obj as { rotation: { x?: number; y?: number; z: number } }).rotation = { ...rot, z: a };
-        const cb = (obj as {
-          collisionBody?: { velocity?: { x: number; y: number; angular?: number } };
-        }).collisionBody;
-        if (cb) {
-          if (!cb.velocity) cb.velocity = { x: 0, y: 0, angular: 0 };
-          cb.velocity.x = v.x;
-          cb.velocity.y = v.y;
-          cb.velocity.angular = angVel;
-        }
+        writeDynamicPhysicsResultsToScene(
+          sceneObject,
+          planckRecord.body.getPosition(),
+          planckRecord.body.getAngle(),
+          planckRecord.body.getLinearVelocity(),
+          planckRecord.body.getAngularVelocity(),
+        );
       }
     };
 
@@ -305,11 +403,11 @@ export function planckPlugin(
         world.off("begin-contact", onBegin);
         world.off("end-contact", onEnd);
         world.off("remove-body", onRemoveBody);
-        let b = world.getBodyList();
-        while (b) {
-          const next = b.getNext();
-          world.destroyBody(b);
-          b = next;
+        let bodyList = world.getBodyList();
+        while (bodyList) {
+          const next = bodyList.getNext();
+          world.destroyBody(bodyList);
+          bodyList = next;
         }
         collisionHandlers.clear();
         triggerHandlers.clear();
@@ -320,23 +418,27 @@ export function planckPlugin(
     let physicsGameUpdateRegistered = false;
     update(() => {
       if (disposed) return;
-      syncBodiesWithScene();
+      syncColliderBodiesWithSceneGraph();
     });
 
     start(() => {
       if (physicsGameUpdateRegistered) return;
       physicsGameUpdateRegistered = true;
-      gameUpdate((dt) => {
+      gameUpdate((deltaTime) => {
         if (disposed) return;
-        const clamped = Math.min(dt, 0.1);
-        /** After game code mutates `collisionBody` (e.g. `disabled`), pick up changes before the step. */
-        syncBodiesWithScene();
-        syncKinematicAndStaticFromSceneBeforeStep(clamped);
-        syncDynamicTransformFromScene();
-        syncDynamicVelocityFromScene();
-        world.step(clamped, 8, 3);
-        syncDynamicBodiesToScene();
-        syncKinematicAndStaticFromSceneAfterStep();
+        const clampedDeltaSeconds = Math.min(deltaTime, 0.1);
+
+        syncColliderBodiesWithSceneGraph();
+
+        syncStaticAndKinematicBodiesFromSceneBeforePhysicsStep(clampedDeltaSeconds);
+
+        syncDynamicBodiesFromSceneBeforePhysicsStep();
+
+        world.step(clampedDeltaSeconds, 8, 3);
+
+        syncDynamicBodiesToSceneAfterPhysicsStep();
+
+        syncStaticAndKinematicBodiesFromSceneAfterPhysicsStep();
       });
     });
 

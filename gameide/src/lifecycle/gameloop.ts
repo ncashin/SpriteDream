@@ -38,8 +38,6 @@ export function editorUpdate(callback: UpdateCallback): void {
 }
 
 onModeChange((mode) => {
-  // Editor → Game: snapshot is taken in setMode() before any listeners, so
-  // it cannot include gameStart/always side effects.
   alwaysStartRegistry.run();
   switch (mode) {
     case GameIDEMode.Game:

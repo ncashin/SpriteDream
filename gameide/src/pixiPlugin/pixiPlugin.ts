@@ -88,7 +88,9 @@ export function pixiPlugin(
     world.sortableChildren = true;
     app.stage.addChild(world);
 
-    const viewport = createViewport(app.screen.width, app.screen.height);
+    const viewport = createViewport(app.screen.width, app.screen.height, {
+      rootElement,
+    });
     const unsubscribeViewport = viewport.onChange((next) => {
       if (disposed) return;
       applyViewportToWorldContainer(world, next);

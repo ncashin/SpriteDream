@@ -37,7 +37,7 @@ const mainFunction = game({
       },
       buttons: {
         Jump: ["KeyW", "KeySpace", "KeyArrowUp"],
-        GrabInteract: ["KeyE"],
+        Interact: ["KeyE"],
         Throw: ["Mouse0"],
         EditorMoveUp: ["KeySpace"],
         EditorMoveDown: ["KeyShiftLeft", "KeyShiftRight"],

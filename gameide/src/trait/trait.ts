@@ -79,7 +79,8 @@ function isSchemaObject(value: unknown): value is SchemaObject {
 
 const traitGuards = new WeakMap<object, (value: unknown) => boolean>();
 
-function isRegisteredTraitHandle(value: unknown): value is TraitHandle<object> {
+/** Whether `value` is a handle from {@link defineTrait}. Trait handles merge as atomic values at each key—never flattened into adjacent plain objects. */
+export function isTraitHandle(value: unknown): value is TraitHandle<object> {
   return isSchemaObject(value) && traitGuards.has(value);
 }
 
@@ -191,7 +192,7 @@ export function defineTrait<TInput extends TraitInput>(
 type TraitPredicate<T> = (value: unknown) => value is T;
 
 function traitInputItemToGuard(item: TraitInputItem): (value: unknown) => boolean {
-  if (isRegisteredTraitHandle(item)) {
+  if (isTraitHandle(item)) {
     const guard = traitGuards.get(item);
     if (!guard) {
       throw new Error("GameIDE: trait guard not registered");
@@ -210,7 +211,7 @@ export function implementsTrait<TInput extends TraitInput>(
       guards.every((g) => g(candidate));
   }
 
-  if (isRegisteredTraitHandle(t)) {
+  if (isTraitHandle(t)) {
     const guard = traitGuards.get(t);
     if (!guard) {
       throw new Error("GameIDE: trait guard not registered");

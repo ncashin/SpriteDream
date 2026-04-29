@@ -100,11 +100,15 @@ export type { ColliderDebugOptions } from "./pixiPlugin/colliderDebug.js";
 export {
   type ViewportState,
   applyViewportToWorldContainer,
-  screenToSceneWorld,
 } from "./pixiPlugin/viewport.js";
 export { spriteTrait } from "./pixiPlugin/sprite.js";
 export {
   planckPlugin,
+  getSceneBodyType,
+  getEffectivePlanckBodyType,
+  sceneBodyIsStatic,
+  sceneBodyIsKinematic,
+  sceneBodyIsDynamic,
   type PlanckPluginAPI,
   type PlanckPluginOptions,
   type PlanckCallbackEvent,
@@ -113,17 +117,8 @@ export {
 } from "./planckPlugin/planckPlugin.js";
 export type { Rigidbody2D } from "./planckPlugin/rigidbody2d.js";
 export {
-  getSceneBodyType,
-  getEffectivePlanckBodyType,
-  sceneBodyIsStatic,
-  sceneBodyIsKinematic,
-  sceneBodyIsDynamic,
-} from "./planckPlugin/physicsTypes.js";
-export {
   boxColliderTrait,
   circleColliderTrait,
-  type BoxColliderObject,
-  type CircleColliderObject,
+
 } from "./planckPlugin/colliderComponents.js";
-export { collisionBodyTrait, type CollisionBodyObject } from "./planckPlugin/collisionBody.js";
-export { contactSupportsSelfFromBelow } from "./planckPlugin/floorContact.js";
+export { collisionBodyTrait } from "./planckPlugin/collisionBody.js";
