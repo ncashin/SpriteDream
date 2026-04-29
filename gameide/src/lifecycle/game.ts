@@ -12,53 +12,42 @@ export type GameContext<Initial extends object> = Initial & {
   dispose: DisposeCallback;
 };
 
-export type GameMain<
-  Initial extends object,
-  Plugins extends readonly unknown[],
-> = (
-  context: ApplyPlugins<GameContext<Initial>, Plugins>,
+type WithPlugins<Initial extends object, Plugins extends readonly unknown[]> = ApplyPlugins<
+  GameContext<Initial>,
+  Plugins
+>;
+
+export type GameMain<Initial extends object, Plugins extends readonly unknown[]> = (
+  context: WithPlugins<Initial, Plugins>,
 ) => void | Promise<void>;
 
-export type GameConfig<
-  Initial extends object,
-  Plugins extends readonly unknown[],
-> = {
+export type GameConfig<Initial extends object, Plugins extends readonly unknown[]> = {
   rootElement: HTMLElement;
   initialContext: Initial;
   initialScene?: BaseSceneObject;
   plugins?: Plugins;
 };
 
-export type GameOptions<
-  Initial extends object,
-  Plugins extends readonly unknown[],
-> = GameConfig<Initial, Plugins> & {
+export type GameOptions<Initial extends object, Plugins extends readonly unknown[]> = GameConfig<
+  Initial,
+  Plugins
+> & {
   main: GameMain<Initial, Plugins>;
 };
 
-export function game<
-  Initial extends object,
-  const Plugins extends readonly unknown[],
->(
+export function game<Initial extends object, const Plugins extends readonly unknown[]>(
   config: GameConfig<Initial, Plugins>,
-): (
-  main: GameMain<Initial, Plugins>,
-) => Promise<ApplyPlugins<GameContext<Initial>, Plugins>> {
+): (main: GameMain<Initial, Plugins>) => Promise<WithPlugins<Initial, Plugins>> {
   return (main) => runGame({ ...config, main });
 }
 
-async function runGame<
-  Initial extends object,
-  const Plugins extends readonly unknown[],
->(
+async function runGame<Initial extends object, const Plugins extends readonly unknown[]>(
   options: GameOptions<Initial, Plugins>,
-): Promise<ApplyPlugins<GameContext<Initial>, Plugins>> {
+): Promise<WithPlugins<Initial, Plugins>> {
   const { rootElement, initialContext, initialScene, main } = options;
   const pluginList = (options.plugins ?? []) as Plugins;
 
-  async function bootstrapRound(): Promise<
-    ApplyPlugins<GameContext<Initial>, Plugins>
-  > {
+  async function bootstrapRound(): Promise<WithPlugins<Initial, Plugins>> {
     runScheduledDisposes();
 
     resetLifecycle();
@@ -88,9 +77,11 @@ async function runGame<
   const initialContextResult = await bootstrapRound();
 
   onModeChange(() => {
-    sequentialBootstrap = sequentialBootstrap.then(() =>
-      bootstrapRound().then(() => {}),
-    );
+    const previous = sequentialBootstrap;
+    sequentialBootstrap = (async () => {
+      await previous;
+      await bootstrapRound();
+    })();
   });
 
   startGameloop();
