@@ -59,6 +59,7 @@ export type PlanckPluginOptions = {
 
 type PlanckPluginNetworkingContext = {
   networking?: { peerId: string };
+  dispose: (fn: () => void) => void;
 };
 
 export type PlanckContactPhase = "enter" | "exit";
@@ -86,7 +87,6 @@ export type PlanckPluginAPI = {
   isStatic: (self: BaseSceneObject) => boolean;
   isKinematic: (self: BaseSceneObject) => boolean;
   isDynamic: (self: BaseSceneObject) => boolean;
-  dispose: () => void;
 };
 
 export function planckPlugin(
@@ -399,20 +399,21 @@ export function planckPlugin(
       isStatic: (self) => sceneBodyIsStatic(self),
       isKinematic: (self) => sceneBodyIsKinematic(self),
       isDynamic: (self) => sceneBodyIsDynamic(self),
-      dispose: () => {
-        world.off("begin-contact", onBegin);
-        world.off("end-contact", onEnd);
-        world.off("remove-body", onRemoveBody);
-        let bodyList = world.getBodyList();
-        while (bodyList) {
-          const next = bodyList.getNext();
-          world.destroyBody(bodyList);
-          bodyList = next;
-        }
-        collisionHandlers.clear();
-        triggerHandlers.clear();
-      },
     };
+
+    context.dispose(() => {
+      world.off("begin-contact", onBegin);
+      world.off("end-contact", onEnd);
+      world.off("remove-body", onRemoveBody);
+      let bodyList = world.getBodyList();
+      while (bodyList) {
+        const next = bodyList.getNext();
+        world.destroyBody(bodyList);
+        bodyList = next;
+      }
+      collisionHandlers.clear();
+      triggerHandlers.clear();
+    });
 
     let disposed = false;
     let physicsGameUpdateRegistered = false;

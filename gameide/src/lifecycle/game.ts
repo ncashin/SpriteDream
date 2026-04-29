@@ -1,11 +1,15 @@
-import { startGameloop } from "./gameloop.js";
-import type { BaseSceneObject } from "../scene/scene.js";
-import { saveSceneSnapshot, setScene } from "../scene/scene.js";
+import { resetLifecycle, runStartsForCurrentMode, startGameloop } from "./gameloop.js";
+import { setScene, type BaseSceneObject } from "../scene/scene.js";
 import { reducePlugins, type ApplyPlugins } from "./plugin.js";
+import { onModeChange } from "./mode.js";
+import { dispose, runScheduledDisposes } from "./disposeRegistry.js";
+
+export type DisposeCallback = (callback: () => void) => void;
 
 export type GameContext<Initial extends object> = Initial & {
   rootElement: HTMLElement;
   initialScene?: BaseSceneObject;
+  dispose: DisposeCallback;
 };
 
 export type GameMain<
@@ -52,19 +56,44 @@ async function runGame<
   const { rootElement, initialContext, initialScene, main } = options;
   const pluginList = (options.plugins ?? []) as Plugins;
 
-  if (initialScene !== undefined) {
-    setScene(initialScene);
+  async function bootstrapRound(): Promise<
+    ApplyPlugins<GameContext<Initial>, Plugins>
+  > {
+    runScheduledDisposes();
+
+    resetLifecycle();
+
+    if (initialScene !== undefined) {
+      setScene(initialScene);
+    }
+
+    const seed = {
+      ...initialContext,
+      rootElement,
+      dispose,
+      ...(initialScene !== undefined && { initialScene }),
+    } as GameContext<Initial>;
+
+    const context = await reducePlugins(seed, pluginList);
+
+    void main(context);
+
+    runStartsForCurrentMode();
+
+    return context;
   }
 
-  const seed = {
-    ...initialContext,
-    rootElement,
-    ...(initialScene !== undefined && { initialScene }),
-  } as GameContext<Initial>;
+  let sequentialBootstrap = Promise.resolve();
 
-  const context = await reducePlugins(seed, pluginList);
+  const initialContextResult = await bootstrapRound();
 
-  void main(context);
+  onModeChange(() => {
+    sequentialBootstrap = sequentialBootstrap.then(() =>
+      bootstrapRound().then(() => {}),
+    );
+  });
+
   startGameloop();
-  return context;
+
+  return initialContextResult;
 }

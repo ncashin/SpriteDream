@@ -1,14 +1,14 @@
 import { createSceneTransportPostMessage } from "../scene/sceneChannel/sceneChannelTransport.js";
 import { createSceneChannel } from "../scene/sceneChannel/sceneChannel.js";
-import type { BaseSceneObject } from "../scene/scene.js";
+import type { SceneChannel } from "../scene/sceneChannel/sceneChannel.js";
 import {
   getScene,
   getRawScene,
   setScene,
   subscribeToScene,
-  saveSceneSnapshot,
-  restoreSceneSnapshot,
   applyPatch,
+  restoreSceneSnapshot,
+  saveSceneSnapshot,
 } from "../scene/scene.js";
 import { GameIDEMode, getMode, onModeChange } from "../lifecycle/mode.js";
 import { createEditorUI } from "./createEditorUI.js";
@@ -17,7 +17,7 @@ import type { EditorWithGameViewReference } from "./createEditorUI.js";
 
 export const editorPlugin =
   (Editor?: EditorWithGameViewReference) =>
-  async (input: { rootElement: HTMLElement }) => {
+  async (input: { rootElement: HTMLElement; dispose: (fn: () => void) => void }) => {
     if (process.env.NODE_ENV !== "development") {
       return input;
     }
@@ -37,27 +37,35 @@ export const editorPlugin =
       initializeScene: false,
     });
 
-    const gameViewRoot = await createEditorUI(
+    const releaseModeWatcher = onModeChange((mode, previousMode) => {
+      if (
+        previousMode === GameIDEMode.Editor &&
+        mode === GameIDEMode.Game
+      ) {
+        saveSceneSnapshot();
+        channel.pause();
+      }
+    });
+
+    const mount = await createEditorUI(
       input.rootElement,
       Editor ?? DefaultEditor,
     );
 
-    onModeChange((mode) => {
-      switch (mode) {
-        case GameIDEMode.Editor:
-          restoreSceneSnapshot();
-          channel.unpause();
-          break;
+    if (getMode() === GameIDEMode.Editor) {
+      restoreSceneSnapshot();
+      channel.unpause();
+    }
 
-        case GameIDEMode.Game:
-          saveSceneSnapshot();
-          channel.pause();
-          break;
-
-        default:
-          break;
-      }
+    input.dispose(() => {
+      releaseModeWatcher();
+      channel.dispose();
+      mount.dispose();
     });
 
-    return { ...input, rootElement: gameViewRoot };
+    return {
+      ...input,
+      rootElement: mount.gameViewRoot,
+      editorSceneChannel: channel as SceneChannel,
+    };
   };

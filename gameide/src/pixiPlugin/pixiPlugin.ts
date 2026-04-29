@@ -38,10 +38,12 @@ export type PixiPluginAPI = {
   app: Application;
   world: Container;
   viewport: Viewport;
-  dispose: () => void;
 };
 
-type PixiPluginContext = { rootElement: HTMLElement };
+type PixiPluginContext = {
+  rootElement: HTMLElement;
+  dispose: (fn: () => void) => void;
+};
 
 type ColliderDebugState = {
   graphics: ReturnType<typeof createColliderDebugGraphics>;
@@ -157,17 +159,18 @@ export function pixiPlugin(
       app,
       world,
       viewport,
-      dispose() {
-        disposed = true;
-        resizeObserver.disconnect();
-        unsubscribeViewport();
-        disposePixiSprites(world, textureByKey, spriteByEntity, svgInflight);
-        if (colliderDebug) {
-          destroyColliderDebugGraphics(colliderDebug.graphics, world);
-        }
-        app.destroy(true, true);
-      },
     };
+
+    context.dispose(() => {
+      disposed = true;
+      resizeObserver.disconnect();
+      unsubscribeViewport();
+      disposePixiSprites(world, textureByKey, spriteByEntity, svgInflight);
+      if (colliderDebug) {
+        destroyColliderDebugGraphics(colliderDebug.graphics, world);
+      }
+      app.destroy(true, true);
+    });
 
     return { ...context, pixi };
   };

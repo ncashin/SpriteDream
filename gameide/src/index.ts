@@ -20,6 +20,8 @@ export {
   editorStart,
   editorUpdate,
   startGameloop,
+  resetLifecycle,
+  runStartsForCurrentMode,
 } from "./lifecycle/gameloop.js";
 export { query } from "./scene/query/query.js";
 export {
@@ -48,12 +50,14 @@ export type { GameObjectParts } from "./trait/gameObject.js";
 export {
   game,
   plugins,
+  dispose,
   type ApplyPlugins,
   type Plugin,
   type GameOptions,
   type GameConfig,
   type GameMain,
   type GameContext,
+  type DisposeCallback,
 } from "./lifecycle/index.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
 export type { EditorWithGameViewReference } from "./editor/createEditorUI.js";

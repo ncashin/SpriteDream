@@ -4,12 +4,19 @@ import { ExampleGameUI } from "./ExampleGameUI.js";
 
 export const gameUIPlugin =
   (GameUI?: ComponentType) =>
-  async (input: { rootElement: HTMLElement }) => {
-    const rootElement = await createGameUI(
+  async (input: { rootElement: HTMLElement; dispose: (fn: () => void) => void }) => {
+    const mount = await createGameUI(
       input.rootElement,
       GameUI ?? ExampleGameUI,
     );
 
-    return { ...input, rootElement };
+    input.dispose(() => {
+      mount.dispose();
+    });
+
+    return {
+      ...input,
+      rootElement: mount.rootElement,
+    };
   };
 

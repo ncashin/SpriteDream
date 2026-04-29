@@ -20,9 +20,14 @@ export function createCallbackRegistry<
     for (const callbackFunction of callbackList) callbackFunction(...argumentList);
   }
 
+  function clearCallbacks(): void {
+    callbackList.length = 0;
+  }
+
   return {
     register: registerCallback,
     run: runCallbacks,
+    clear: clearCallbacks,
     get callbacks(): readonly CallbackType[] {
       return callbackList;
     },

@@ -33,6 +33,7 @@ export type NetworkingPluginOptions = {
 export type NetworkingPluginRequiredContext = {
   rootElement: HTMLElement;
   initialScene?: BaseSceneObject;
+  dispose: (fn: () => void) => void;
 };
 
 export type NetworkingApi = {
@@ -44,7 +45,6 @@ export type NetworkingApi = {
   withOwnership: <T extends Record<string, unknown>>(
     obj: T
   ) => T & Record<typeof OWNER_ID, string>;
-  dispose(): void;
 };
 
 export const networkingPlugin = (
@@ -73,21 +73,24 @@ export const networkingPlugin = (
       initializeScene: !shouldBootstrapScene,
     });
 
+    const networking: NetworkingApi = {
+      peerId,
+      getPeers: () => transport.getPeers(),
+      onPeersChange: (handler: (peers: string[]) => void) =>
+        transport.onPeersChange(handler),
+      channel,
+      isOwned: (obj: BaseSceneObject) => isOwnedSceneObject(obj, peerId),
+      withOwnership: <T extends Record<string, unknown>>(obj: T) =>
+        withOwnership(obj, peerId),
+    };
+
+    input.dispose(() => {
+      channel.dispose();
+      disposeTransport();
+    });
+
     return {
       ...input,
-      networking: {
-        peerId,
-        getPeers: () => transport.getPeers(),
-        onPeersChange: (handler: (peers: string[]) => void) =>
-          transport.onPeersChange(handler),
-        channel,
-        isOwned: (obj: BaseSceneObject) => isOwnedSceneObject(obj, peerId),
-        withOwnership: <T extends Record<string, unknown>>(obj: T) =>
-          withOwnership(obj, peerId),
-        dispose() {
-          channel.dispose();
-          disposeTransport();
-        },
-      },
+      networking,
     };
   };

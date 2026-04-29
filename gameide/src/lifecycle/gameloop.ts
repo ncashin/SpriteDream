@@ -1,5 +1,5 @@
 import { createCallbackRegistry } from "./callbackRegistry.js";
-import { GameIDEMode, getMode, onModeChange } from "./mode.js";
+import { GameIDEMode, getMode } from "./mode.js";
 
 type StartCallback = () => void;
 type UpdateCallback = (deltaTime: number) => void;
@@ -14,6 +14,16 @@ const alwaysStartRegistry = createCallbackRegistry<StartCallback>();
 const alwaysUpdateRegistry = createCallbackRegistry<UpdateCallback>();
 
 let frameId: number | undefined;
+
+/** Clears all lifecycle registrations (starts and updates). Used before re-running plugins + main. */
+export function resetLifecycle(): void {
+  gameStartRegistry.clear();
+  gameUpdateRegistry.clear();
+  editorStartRegistry.clear();
+  editorUpdateRegistry.clear();
+  alwaysStartRegistry.clear();
+  alwaysUpdateRegistry.clear();
+}
 
 export function start(callback: StartCallback): void {
   alwaysStartRegistry.register(callback);
@@ -36,33 +46,10 @@ export function editorUpdate(callback: UpdateCallback): void {
   editorUpdateRegistry.register(callback);
 }
 
-let modeChangeListenerRegistered = false;
-
-function registerModeChangeListener(): void {
-  if (modeChangeListenerRegistered) return;
-  modeChangeListenerRegistered = true;
-  // Register after plugins (see startGameloop) so listeners like editor saveSceneSnapshot run before gameStart.
-  onModeChange((mode) => {
-    alwaysStartRegistry.run();
-    switch (mode) {
-      case GameIDEMode.Game:
-        gameStartRegistry.run();
-        break;
-      case GameIDEMode.Editor:
-        editorStartRegistry.run();
-        break;
-      default:
-        break;
-    }
-  });
-}
-
-export function startGameloop(): void {
-  registerModeChangeListener();
-  const initialMode = getMode();
-
+/** Runs registered start callbacks for the current mode (always + mode-specific). */
+export function runStartsForCurrentMode(): void {
   alwaysStartRegistry.run();
-  switch (initialMode) {
+  switch (getMode()) {
     case GameIDEMode.Game:
       gameStartRegistry.run();
       break;
@@ -72,7 +59,9 @@ export function startGameloop(): void {
     default:
       break;
   }
+}
 
+export function startGameloop(): void {
   if (frameId !== undefined) return;
   let lastTime = performance.now();
 
