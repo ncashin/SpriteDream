@@ -5,7 +5,8 @@ export function merge(
 ): void {
   for (const propertyKey of Object.keys(patch)) {
     const patchValue = patch[propertyKey];
-    if (patchValue === undefined) {
+    // `null` matches `undefined`: patches survive JSON (undefined keys are dropped).
+    if (patchValue === undefined || patchValue === null) {
       Reflect.deleteProperty(target, propertyKey);
       continue;
     }

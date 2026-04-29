@@ -62,7 +62,7 @@ export function buildScenePatchFromDiff(
     const keyExistsInFromObject = Object.prototype.hasOwnProperty.call(fromObject, key);
 
     if (!keyExistsInToObject) {
-      patchObject[key] = undefined;
+      patchObject[key] = null;
       continue;
     }
     if (!keyExistsInFromObject) {
@@ -104,8 +104,8 @@ export function mergeSceneReflectUpdateIntoPatch(
     }
     node = next as BaseSceneObject;
   }
-  if (update.value === undefined) {
-    Reflect.deleteProperty(node, update.property);
+  if (update.value === undefined || update.value === null) {
+    node[update.property] = null;
     return;
   }
   node[update.property] = cloneScenePatchValue(update.value);

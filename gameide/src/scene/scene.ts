@@ -52,7 +52,7 @@ function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<BaseSceneObj
       return value;
     },
     set(target, property, value, receiver) {
-      if (value === undefined) {
+      if (value === undefined || value === null) {
         return Reflect.deleteProperty(receiver, property);
       }
       const previousValue = target[property];
