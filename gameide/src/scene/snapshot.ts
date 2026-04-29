@@ -5,6 +5,7 @@ let sceneSnapshot: BaseSceneObject | undefined = undefined;
 
 export function saveSceneSnapshot() {
   sceneSnapshot = structuredClone(sceneTarget);
+  console.log("Scene snapshot saved:", sceneSnapshot);
 }
 
 export function restoreSceneSnapshot() {

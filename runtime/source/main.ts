@@ -46,13 +46,9 @@ const bouncyBallTrait = defineTrait({});
 
 const BALL_SPRITE_TINT = "#ff8c42";
 
-/** Squared distance from player center at which E can pick up the ball. Left click throws toward the cursor while carrying. */
 const PICKUP_RADIUS_SQ = 96 * 96;
-/** Hold position offset from player center (scene units). */
 const BALL_HOLD_OFFSET_Y = 34;
-/** Launch speed toward the cursor (scene units / second). */
 const THROW_SPEED = 560;
-/** Blend of player velocity mixed into the throw direction. */
 const THROW_PLAYER_BLEND = 0.22;
 
 const isBouncyBallObject = implementsTrait([

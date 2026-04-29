@@ -13,10 +13,10 @@ import {
 import { GameIDEMode, getMode, onModeChange } from "../lifecycle/mode.js";
 import { createEditorUI } from "./createEditorUI.js";
 import { DefaultEditor } from "./DefaultEditor.js";
-import type { EditorWithGameViewRef } from "./createEditorUI.js";
+import type { EditorWithGameViewReference } from "./createEditorUI.js";
 
 export const editorPlugin =
-  (Editor?: EditorWithGameViewRef) =>
+  (Editor?: EditorWithGameViewReference) =>
   async (input: { rootElement: HTMLElement }) => {
     if (process.env.NODE_ENV !== "development") {
       return input;
@@ -42,10 +42,6 @@ export const editorPlugin =
       Editor ?? DefaultEditor,
     );
 
-    if (getMode() === GameIDEMode.Editor) {
-      saveSceneSnapshot();
-    }
-
     onModeChange((mode) => {
       switch (mode) {
         case GameIDEMode.Editor:
@@ -54,6 +50,7 @@ export const editorPlugin =
           break;
 
         case GameIDEMode.Game:
+          saveSceneSnapshot();
           channel.pause();
           break;
 

@@ -56,7 +56,7 @@ export {
   type GameContext,
 } from "./lifecycle/index.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
-export type { EditorWithGameViewRef } from "./editor/createEditorUI.js";
+export type { EditorWithGameViewReference } from "./editor/createEditorUI.js";
 export {
   networkingPlugin,
   OWNER_ID,

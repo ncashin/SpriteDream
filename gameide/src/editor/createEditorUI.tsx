@@ -2,7 +2,7 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import type { ComponentType, Ref } from "react";
 
-export type EditorWithGameViewRef = ComponentType<{
+export type EditorWithGameViewReference = ComponentType<{
   gameViewRef?: Ref<HTMLDivElement>;
 }>;
 
@@ -12,7 +12,7 @@ export type EditorWithGameViewRef = ComponentType<{
  */
 export function createEditorUI(
   parentRoot: HTMLElement,
-  Editor: EditorWithGameViewRef,
+  Editor: EditorWithGameViewReference,
 ): Promise<HTMLDivElement> {
   return new Promise((resolve) => {
     let settled = false;

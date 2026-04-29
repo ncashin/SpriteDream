@@ -1,6 +1,6 @@
 import { startGameloop } from "./gameloop.js";
 import type { BaseSceneObject } from "../scene/scene.js";
-import { setScene } from "../scene/scene.js";
+import { saveSceneSnapshot, setScene } from "../scene/scene.js";
 import { reducePlugins, type ApplyPlugins } from "./plugin.js";
 
 export type GameContext<Initial extends object> = Initial & {
@@ -63,6 +63,7 @@ async function runGame<
   } as GameContext<Initial>;
 
   const context = await reducePlugins(seed, pluginList);
+
   void main(context);
   startGameloop();
   return context;

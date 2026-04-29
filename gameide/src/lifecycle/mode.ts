@@ -1,5 +1,3 @@
-import { saveSceneSnapshot } from "../scene/snapshot.js";
-
 export enum GameIDEMode {
   Editor = "editor",
   Game = "game",
@@ -18,14 +16,11 @@ type ModeChangeListener = (mode: GameIDEMode, previousMode: GameIDEMode) => void
 const modeChangeListeners: ModeChangeListener[] = [];
 
 export function setMode(mode: GameIDEMode): GameIDEMode {
-  const prev = currentMode;
-  if (mode === prev) return prev;
-  if (prev === GameIDEMode.Editor && mode === GameIDEMode.Game) {
-    saveSceneSnapshot();
-  }
+  const previous = currentMode;
+  if (mode === previous) return previous;
   currentMode = mode;
-  for (const listener of modeChangeListeners) listener(currentMode, prev);
-  return prev;
+  for (const listener of modeChangeListeners) listener(currentMode, previous);
+  return previous;
 }
 
 

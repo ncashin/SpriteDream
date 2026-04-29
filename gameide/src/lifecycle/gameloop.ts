@@ -1,5 +1,4 @@
 import { createCallbackRegistry } from "./callbackRegistry.js";
-import { saveSceneSnapshot } from "../scene/snapshot.js";
 import { GameIDEMode, getMode, onModeChange } from "./mode.js";
 
 type StartCallback = () => void;
@@ -37,25 +36,31 @@ export function editorUpdate(callback: UpdateCallback): void {
   editorUpdateRegistry.register(callback);
 }
 
-onModeChange((mode) => {
-  alwaysStartRegistry.run();
-  switch (mode) {
-    case GameIDEMode.Game:
-      gameStartRegistry.run();
-      break;
-    case GameIDEMode.Editor:
-      editorStartRegistry.run();
-      break;
-    default:
-      break;
-  }
-});
+let modeChangeListenerRegistered = false;
+
+function registerModeChangeListener(): void {
+  if (modeChangeListenerRegistered) return;
+  modeChangeListenerRegistered = true;
+  // Register after plugins (see startGameloop) so listeners like editor saveSceneSnapshot run before gameStart.
+  onModeChange((mode) => {
+    alwaysStartRegistry.run();
+    switch (mode) {
+      case GameIDEMode.Game:
+        gameStartRegistry.run();
+        break;
+      case GameIDEMode.Editor:
+        editorStartRegistry.run();
+        break;
+      default:
+        break;
+    }
+  });
+}
 
 export function startGameloop(): void {
+  registerModeChangeListener();
   const initialMode = getMode();
-  if (initialMode === GameIDEMode.Game) {
-    saveSceneSnapshot();
-  }
+
   alwaysStartRegistry.run();
   switch (initialMode) {
     case GameIDEMode.Game:
