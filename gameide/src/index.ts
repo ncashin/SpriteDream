@@ -10,6 +10,7 @@ export {
 export type {
   CreateSceneChannelOptions,
   SceneChannel,
+  SceneChannelMessage,
 } from "./scene/sceneChannel/sceneChannel.js";
 
 export {
@@ -32,8 +33,16 @@ export {
   restoreSceneSnapshot,
 } from "./scene/scene.js";
 export { getValueAtPath, setValueAtPath } from "./scene/path.js";
-export { applyPatch as applyScenePatch } from "./scene/patch.js";
-export type { BaseSceneObject, SceneObject } from "./scene/scene.js";
+export {
+  applyPatch as applyScenePatch,
+  buildScenePatchFromDiff,
+} from "./scene/patch.js";
+export type {
+  BaseSceneObject,
+  SceneObject,
+  BaseSceneObject as SceneData,
+  BaseSceneObject as ScenePatch,
+} from "./scene/scene.js";
 export {
   defineTrait,
   implementsTrait,

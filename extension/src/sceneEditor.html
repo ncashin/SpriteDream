@@ -43,19 +43,51 @@
           });
         }
 
+        /** `event.data` or one optional VS Code `{ data: payload }` hop. */
+        function typedWindowMessagePayload(raw) {
+          var d = raw;
+          if (d && typeof d === "object" && typeof d.type === "string") return d;
+          if (
+            d &&
+            typeof d === "object" &&
+            d.data &&
+            typeof d.data === "object" &&
+            typeof d.data.type === "string"
+          )
+            return d.data;
+          return null;
+        }
+
+        iframe.addEventListener("load", function () {
+          if (pendingSceneContent !== null) {
+            sendInitialSceneToIframe(pendingSceneContent);
+          }
+        });
+
         window.addEventListener("message", function (event) {
-          var message = event.data?.data ?? event.data;
+          var message = typedWindowMessagePayload(event.data);
           if (!message || typeof message.type !== "string") return;
 
-          var fromIframe = event.source === iframe?.contentWindow;
+          var fromRuntimeIframe = event.source === iframe?.contentWindow;
 
-          if (fromIframe) {
+          if (
+            !fromRuntimeIframe &&
+            message.type.indexOf("gameide.editor.") === 0
+          ) {
+            postToIframe(message);
+            return;
+          }
+
+          if (fromRuntimeIframe) {
             switch (message.type) {
               case "gameide.editor.requestInitialScene":
                 runtimeRequestedInitialScene = true;
                 if (pendingSceneContent !== null)
                   sendInitialSceneToIframe(pendingSceneContent);
-                else postToVscode({ type: "requestInitialScene" });
+                else
+                  postToVscode({
+                    type: "gameide.editor.requestInitialScene",
+                  });
                 break;
               case "gameide.editor.scenePatch":
                 if (message.patch)

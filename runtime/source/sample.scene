@@ -1,5 +1,24 @@
 {
   "__metadata": {
     "name": "test"
-  }
+  },
+  "position": {
+    "__icon": "move-3d",
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "rotation": {
+    "__icon": "rotate-3d",
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "scale": {
+    "__icon": "scaling",
+    "x": 1,
+    "y": 1,
+    "z": 1
+  },
+  "__icon": "axis-3d"
 }

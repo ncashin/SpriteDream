@@ -4,13 +4,21 @@ import {
   buildScenePatchFromDiff,
   createSceneChannel,
   SCENE_CHANNEL,
-  type SceneChannelInMessage,
+  type SceneChannelMessage,
   type SceneChannelTransport,
   type SceneData,
   type ScenePatch,
 } from "gameide";
 import type { ViteDevServer } from "./viteDevServer";
 import sceneEditorHTML from "./sceneEditor.html?raw";
+
+function isInboundWebviewMessage(
+  raw: unknown,
+): raw is { type: string; content?: string; patch?: ScenePatch } {
+  if (raw === null || typeof raw !== "object") return false;
+  const message = raw as Record<string, unknown>;
+  return typeof message.type === "string";
+}
 
 const UNDOABLE_MESSAGE_TYPES = new Set<string>([SCENE_CHANNEL.scenePatch]);
 
@@ -184,29 +192,20 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
 
     const transport: SceneChannelTransport = {
       send: (message: unknown): void => {
-        const castMessage = message as { type: string; content?: string };
-        if (typeof castMessage.content !== "undefined") {
-          webview.postMessage({
-            type: "scene",
-            content: castMessage.content,
-          });
-        }
+        webview.postMessage(message);
       },
       onMessage: (
-        handler: (message: SceneChannelInMessage) => void
+        handler: (message: SceneChannelMessage) => void
       ): () => void => {
         const disposable = webview.onDidReceiveMessage((raw: unknown) => {
-          const message = raw as {
-            type: string;
-            content?: string;
-            patch?: ScenePatch;
-          };
+          if (!isInboundWebviewMessage(raw)) return;
+          const message = raw;
           const isUndoable = UNDOABLE_MESSAGE_TYPES.has(message.type);
           let previous: SceneData | null = null;
           if (isUndoable) {
             previous = JSON.parse(JSON.stringify(document.getData()));
           }
-          handler(message as SceneChannelInMessage);
+          handler(message as SceneChannelMessage);
           if (isUndoable && previous) {
             const next = JSON.parse(JSON.stringify(document.getData()));
             const actuallyChanged =
@@ -230,6 +229,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
 
     await createSceneChannel({
       transport,
+      initializeScene: false,
       getScene: () => document.getSceneRoot(),
       setScene: (data: SceneData) => document.mergeSceneFromRuntime(data),
       applyPatch: (_scene: SceneData, patch: ScenePatch) =>
@@ -237,6 +237,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       getInitialSceneContent: () =>
         JSON.stringify(document.getDocumentData(), null, 2),
     });
+    document.broadcastScene();
   }
 
   async saveCustomDocument(

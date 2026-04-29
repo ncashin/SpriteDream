@@ -254,7 +254,7 @@ export function main({ input, networking, planck, pixi }: MainContext): void {
         localPlayer.collisionBody.velocity.y = localPlayer.jumpSpeed;
       }
 
-      localPlayer.collisionBody.velocity.x = horizontal * localPlayer.moveSpeed * 3;
+      localPlayer.collisionBody.velocity.x = horizontal * localPlayer.moveSpeed * 10;
       localPlayer.collisionBody.velocity.y += gravity;
     }
 

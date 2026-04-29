@@ -48,6 +48,47 @@ function cloneScenePatchValue(value: unknown): unknown {
   return structuredClone(value);
 }
 
+export function buildScenePatchFromDiff(
+  fromObject: Record<string, unknown>,
+  toObject: Record<string, unknown>,
+): Record<string, unknown> {
+  const patchObject: Record<string, unknown> = {};
+  const allKeys: Set<string> = new Set([
+    ...Object.keys(fromObject),
+    ...Object.keys(toObject),
+  ]);
+  for (const key of allKeys) {
+    const keyExistsInToObject = Object.prototype.hasOwnProperty.call(toObject, key);
+    const keyExistsInFromObject = Object.prototype.hasOwnProperty.call(fromObject, key);
+
+    if (!keyExistsInToObject) {
+      patchObject[key] = undefined;
+      continue;
+    }
+    if (!keyExistsInFromObject) {
+      patchObject[key] = cloneScenePatchValue(toObject[key]);
+      continue;
+    }
+    const fromValue = fromObject[key];
+    const toValue = toObject[key];
+    if (
+      fromValue !== null &&
+      typeof fromValue === "object" &&
+      toValue !== null &&
+      typeof toValue === "object"
+    ) {
+      const nestedPatch = buildScenePatchFromDiff(
+        fromValue as Record<string, unknown>,
+        toValue as Record<string, unknown>,
+      );
+      if (Object.keys(nestedPatch).length > 0) patchObject[key] = nestedPatch;
+      continue;
+    }
+    if (fromValue !== toValue) patchObject[key] = cloneScenePatchValue(toValue);
+  }
+  return patchObject;
+}
+
 export function mergeSceneReflectUpdateIntoPatch(
   patch: BaseSceneObject,
   update: SceneReflectUpdate,

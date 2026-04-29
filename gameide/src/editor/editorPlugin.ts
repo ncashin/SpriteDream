@@ -22,6 +22,9 @@ export const editorPlugin =
       return input;
     }
 
+    const embeddedInParentFrame =
+      typeof window !== "undefined" && window.parent !== window;
+
     const channel = await createSceneChannel({
       transport: createSceneTransportPostMessage({
         target: window.parent,
@@ -34,8 +37,9 @@ export const editorPlugin =
 
       applyPatch,
 
-      initializeScene: false,
+      initializeScene: embeddedInParentFrame,
     });
+
 
     const releaseModeWatcher = onModeChange((mode, previousMode) => {
       if (
@@ -56,6 +60,9 @@ export const editorPlugin =
       restoreSceneSnapshot();
       channel.unpause();
     }
+    if (getMode() === GameIDEMode.Game) {
+      channel.pause();
+    }
 
     input.dispose(() => {
       releaseModeWatcher();
@@ -66,6 +73,6 @@ export const editorPlugin =
     return {
       ...input,
       rootElement: mount.gameViewRoot,
-      editorSceneChannel: channel as SceneChannel,
+      editorSceneChannel: channel,
     };
   };
