@@ -8,6 +8,7 @@ import dynamicIconImports from "lucide-react/dynamicIconImports";
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type MouseEvent,
   type ReactNode,
@@ -393,6 +394,7 @@ function PropertyNode({
   mergeTraitInto,
 }: PropertyNodeProps) {
   const [draft, setDraft] = useState<string | null>(null);
+  const skipCommitOnBlurRef = useRef(false);
   let displayText: string;
   if (draft !== null) {
     displayText = draft;
@@ -402,6 +404,14 @@ function PropertyNode({
   const commitEdit = () => {
     setAtPath(path, parseInput(displayText));
     setDraft(null);
+  };
+  const endEdit = () => {
+    if (skipCommitOnBlurRef.current) {
+      skipCommitOnBlurRef.current = false;
+      setDraft(null);
+      return;
+    }
+    commitEdit();
   };
 
   return (
@@ -420,11 +430,17 @@ function PropertyNode({
           <input
             type="text"
             value={displayText}
+            onFocus={() => setDraft(formatValue(value))}
             onChange={(e) => setDraft(e.target.value)}
-            onBlur={commitEdit}
+            onBlur={endEdit}
             onKeyDown={(e) => {
-              if (e.key === "Enter") commitEdit();
-              if (e.key === "Escape") setDraft(null);
+              if (e.key === "Enter") {
+                e.currentTarget.blur();
+              }
+              if (e.key === "Escape") {
+                skipCommitOnBlurRef.current = true;
+                e.currentTarget.blur();
+              }
             }}
             className={inputClass}
           />
