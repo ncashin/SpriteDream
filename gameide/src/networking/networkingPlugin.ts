@@ -15,6 +15,7 @@ import {
   withOwnership,
   OWNER_ID,
 } from "./distributedSimulation.js";
+import { ownerTrait } from "./ownerTrait.js";
 
 export {
   OWNER_ID as OWNER_ID,
@@ -22,6 +23,7 @@ export {
   isOwnedSceneUpdate,
   withOwnership,
 } from "./distributedSimulation.js";
+export { ownerTrait };
 
 export type NetworkingPluginOptions = {
   room?: string;

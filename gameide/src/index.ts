@@ -55,13 +55,12 @@ export {
   type GameMain,
   type GameContext,
 } from "./lifecycle/index.js";
-export type { GameIDEMetadata } from "./meta/gameideManifest.js";
-export { getGameIDEMetadata } from "./meta/gameideManifest.js";
 export { editorPlugin } from "./editor/editorPlugin.js";
 export type { EditorWithGameViewRef } from "./editor/createEditorUI.js";
 export {
   networkingPlugin,
   OWNER_ID,
+  ownerTrait,
   isOwnedSceneUpdate,
   isOwnedSceneObject,
   withOwnership,
@@ -101,6 +100,7 @@ export type { ColliderDebugOptions } from "./pixiPlugin/colliderDebug.js";
 export {
   type ViewportState,
   applyViewportToWorldContainer,
+  screenToSceneWorld,
 } from "./pixiPlugin/viewport.js";
 export { spriteTrait } from "./pixiPlugin/sprite.js";
 export {
@@ -126,3 +126,4 @@ export {
   type CircleColliderObject,
 } from "./planckPlugin/colliderComponents.js";
 export { collisionBodyTrait, type CollisionBodyObject } from "./planckPlugin/collisionBody.js";
+export { contactSupportsSelfFromBelow } from "./planckPlugin/floorContact.js";

@@ -10,12 +10,10 @@ export const boxColliderTrait = defineTrait(
   [
     transformTrait,
     {
-      boxCollider: {
+        boxCollider: {
         __icon: "square" satisfies IconSlug,
         width: 32,
         height: 32,
-        isTrigger: false,
-        restitution: 0,
         offset: { x: 0, y: 0 },
       },
     },
@@ -37,8 +35,6 @@ export const circleColliderTrait = defineTrait(
       circleCollider: {
         __icon: "circle" satisfies IconSlug,
         radius: 16,
-        isTrigger: false,
-        restitution: 0,
         offset: { x: 0, y: 0 },
       },
     },

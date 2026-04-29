@@ -89,3 +89,20 @@ export function applyViewportToWorldContainer(
   world.scale.set(scale, -scale);
   world.position.set(width / 2 - centerX * scale, height / 2 + centerY * scale);
 }
+
+export function screenToSceneWorld(
+  clientX: number,
+  clientY: number,
+  rootRect: DOMRectReadOnly,
+  viewport: Readonly<ViewportState>,
+): { x: number; y: number } {
+  const sx = clientX - rootRect.left;
+  const sy = clientY - rootRect.top;
+  const { width, height, centerX, centerY, scale } = viewport;
+  const px = width / 2 - centerX * scale;
+  const py = height / 2 + centerY * scale;
+  return {
+    x: (sx - px) / scale,
+    y: (py - sy) / scale,
+  };
+}

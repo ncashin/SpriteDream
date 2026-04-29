@@ -37,18 +37,20 @@ const mainFunction = game({
       },
       buttons: {
         Jump: ["KeyW", "KeySpace", "KeyArrowUp"],
+        GrabInteract: ["KeyE"],
+        Throw: ["Mouse0"],
         EditorMoveUp: ["KeySpace"],
         EditorMoveDown: ["KeyShiftLeft", "KeyShiftRight"],
         LookCamera: ["Mouse0"],
       },
     }),
+    planckPlugin(),
     pixiPlugin({
       initOptions: {
         backgroundAlpha: 0,
       },
       debugDrawColliders: true,
     }),
-    planckPlugin(),
   ],
 });
 

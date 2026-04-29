@@ -6,7 +6,8 @@ import {
   Sprite,
   type Texture,
 } from "pixi.js";
-import { update } from "../lifecycle/gameloop.js";
+import { gameUpdate, start, update } from "../lifecycle/gameloop.js";
+import { GameIDEMode, getMode } from "../lifecycle/mode.js";
 import type { Plugin } from "../lifecycle/plugin.js";
 import {
   createColliderDebugGraphics,
@@ -123,8 +124,7 @@ export function pixiPlugin(
       };
     }
 
-    update(() => {
-      if (disposed) return;
+    const syncFrame = () => {
       syncPixiSprites(world, options.assets, textureByKey, spriteByEntity, {
         textureResolution: app.renderer.resolution,
         svgInflight,
@@ -132,6 +132,23 @@ export function pixiPlugin(
       if (colliderDebug) {
         syncColliderDebugDraw(world, colliderDebug.graphics, colliderDebug.drawOptions);
       }
+    };
+
+    // In Game mode, sync after physics (gameUpdate). alwaysUpdate runs too early.
+    update(() => {
+      if (disposed) return;
+      if (getMode() === GameIDEMode.Game) return;
+      syncFrame();
+    });
+
+    let pixiGameUpdateRegistered = false;
+    start(() => {
+      if (pixiGameUpdateRegistered) return;
+      pixiGameUpdateRegistered = true;
+      gameUpdate(() => {
+        if (disposed || getMode() !== GameIDEMode.Game) return;
+        syncFrame();
+      });
     });
 
     const pixi: PixiPluginAPI = {

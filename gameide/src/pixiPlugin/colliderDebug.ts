@@ -28,8 +28,8 @@ function sceneToPixi(x: number, y: number): { x: number; y: number } {
   return { x, y };
 }
 
-type BoxSpec = { width: number; height: number; isTrigger: boolean; ox: number; oy: number };
-type CircleSpec = { radius: number; isTrigger: boolean; ox: number; oy: number };
+type BoxSpec = { width: number; height: number; ox: number; oy: number };
+type CircleSpec = { radius: number; ox: number; oy: number };
 
 function readBox(
   o: { boxCollider?: Record<string, unknown> },
@@ -43,7 +43,6 @@ function readBox(
   return {
     width: w,
     height: h,
-    isTrigger: Boolean(b.isTrigger),
     ox: Number(off.x) || 0,
     oy: Number(off.y) || 0,
   };
@@ -59,7 +58,6 @@ function readCircle(
   const off = (c.offset as { x?: number; y?: number } | undefined) ?? {};
   return {
     radius: r,
-    isTrigger: Boolean(c.isTrigger),
     ox: Number(off.x) || 0,
     oy: Number(off.y) || 0,
   };
@@ -95,7 +93,15 @@ export function syncColliderDebugDraw(
   for (const obj of colliders) {
     const pos = (obj as { position?: { x: number; y: number } }).position;
     if (!pos) continue;
+    if (
+      (obj as { collisionBody?: { disabled?: boolean } }).collisionBody?.disabled === true
+    ) {
+      continue;
+    }
     const rotZ = (obj as { rotation?: { z: number } }).rotation?.z ?? 0;
+    const isTrigger = Boolean(
+      (obj as { collisionBody?: { isTrigger?: boolean } }).collisionBody?.isTrigger,
+    );
     const box = readBox(obj);
     const circ = readCircle(obj);
     if (box) {
@@ -120,14 +126,14 @@ export function syncColliderDebugDraw(
         graphics.lineTo(w.x, w.y);
       }
       graphics.closePath();
-      const color = box.isTrigger ? triggerColor : solidColor;
+      const color = isTrigger ? triggerColor : solidColor;
       graphics.stroke({ width: lineWidth, color, alpha: 0.95 });
     } else if (circ) {
       const off = rotateScenePoint(circ.ox, circ.oy, rotZ);
       const cx = pos.x + off.x;
       const cy = pos.y + off.y;
       const p = sceneToPixi(cx, cy);
-      const color = circ.isTrigger ? triggerColor : solidColor;
+      const color = isTrigger ? triggerColor : solidColor;
       graphics.circle(p.x, p.y, circ.radius);
       graphics.stroke({ width: lineWidth, color, alpha: 0.95 });
     }

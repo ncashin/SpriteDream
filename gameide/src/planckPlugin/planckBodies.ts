@@ -1,7 +1,7 @@
 /**
  * Scene objects with `boxCollider` / `circleCollider` traits are mirrored into Planck {@link Body}
  * instances. This module builds those bodies and fingerprints collider data so we can recreate a
- * body when width, radius, offsets, trigger flag, or authored {@link collisionBodyTrait} type changes.
+ * body when width, radius, offsets, material on {@link collisionBodyTrait}, or body type changes.
  */
 import { type Body, type BodyType, type World, Vec2, Box, Circle } from "planck";
 import type { BaseSceneObject } from "../scene/scene.js";
@@ -29,6 +29,32 @@ function collisionFixedRotation(obj: BaseSceneObject): boolean {
   );
 }
 
+/** When true, no Planck {@link Body} is created until disabled is cleared — no collisions or contact callbacks. */
+export function collisionBodyDisabled(obj: BaseSceneObject): boolean {
+  const cb = (obj as { collisionBody?: { disabled?: unknown } }).collisionBody;
+  return cb?.disabled === true;
+}
+
+function collisionMaterial(obj: BaseSceneObject): {
+  isTrigger: boolean;
+  restitution: number;
+  friction: number;
+} {
+  const cb = (obj as {
+    collisionBody?: { isTrigger?: boolean; restitution?: unknown; friction?: unknown };
+  }).collisionBody;
+  const restitution = Number(cb?.restitution);
+  const friction = Number(cb?.friction);
+  return {
+    isTrigger: Boolean(cb?.isTrigger),
+    restitution: Math.max(
+      0,
+      Math.min(1, Number.isFinite(restitution) ? restitution : 0),
+    ),
+    friction: Number.isFinite(friction) ? Math.max(0, friction) : 0.3,
+  };
+}
+
 /** Static bodies always use fixed rotation in Planck (pose comes from the scene each frame). */
 function effectiveFixedRotation(
   obj: BaseSceneObject,
@@ -44,6 +70,8 @@ export function colliderSignature(
 ): string {
   const bodyT = effectiveBodyType;
   const fixedRotation = effectiveFixedRotation(obj, effectiveBodyType);
+  const { isTrigger: t, restitution: rest, friction: fr } = collisionMaterial(obj);
+  const dis = collisionBodyDisabled(obj) ? 1 : 0;
   const b = (obj as { boxCollider?: Record<string, unknown> }).boxCollider;
   if (b && typeof b === "object") {
     return JSON.stringify({
@@ -52,8 +80,10 @@ export function colliderSignature(
       fixedRotation,
       w: b.width,
       h: b.height,
-      t: b.isTrigger,
-      rest: b.restitution,
+      t,
+      rest,
+      fr,
+      dis,
       ox: (b.offset as { x?: number })?.x,
       oy: (b.offset as { y?: number })?.y,
     });
@@ -65,8 +95,10 @@ export function colliderSignature(
       bodyT,
       fixedRotation,
       r: c.radius,
-      t: c.isTrigger,
-      rest: c.restitution,
+      t,
+      rest,
+      fr,
+      dis,
       ox: (c.offset as { x?: number })?.x,
       oy: (c.offset as { y?: number })?.y,
     });
@@ -79,6 +111,9 @@ export function createBodyForObject(
   obj: BaseSceneObject,
   effectiveBodyType: BodyType,
 ): PlanckRecord | null {
+  if (collisionBodyDisabled(obj)) {
+    return null;
+  }
   const signature = colliderSignature(obj, effectiveBodyType);
   if (!signature) return null;
   if (
@@ -103,16 +138,16 @@ export function createBodyForObject(
     fixedRotation,
   });
 
+  const { isTrigger, restitution, friction } = collisionMaterial(obj);
+
   const b = (obj as { boxCollider?: Record<string, unknown> }).boxCollider;
   if (b && typeof b === "object") {
     const w = Math.max(1e-6, Number(b.width) || 0) / 2;
     const h = Math.max(1e-6, Number(b.height) || 0) / 2;
-    const isTrigger = Boolean(b.isTrigger);
     const off = (b.offset as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
-    const restitution = Math.max(0, Math.min(1, Number(b.restitution) || 0));
     const opt = {
       density: bodyT === "dynamic" ? 1 : 0,
-      friction: 0.3,
+      friction,
       restitution,
       isSensor: isTrigger,
     };
@@ -121,12 +156,10 @@ export function createBodyForObject(
     const c = (obj as { circleCollider?: Record<string, unknown> }).circleCollider;
     if (c && typeof c === "object") {
       const r = Math.max(1e-6, Number(c.radius) || 0);
-      const isTrigger = Boolean(c.isTrigger);
       const off = (c.offset as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
-      const restitution = Math.max(0, Math.min(1, Number(c.restitution) || 0));
       const opt = {
         density: bodyT === "dynamic" ? 1 : 0,
-        friction: 0.3,
+        friction,
         restitution,
         isSensor: isTrigger,
       };

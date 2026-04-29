@@ -27,7 +27,6 @@ export default defineConfig({
         "node:path",
         "fs",
         "path",
-        "virtual:gameide-manifest",
       ],
       output: {
         globals: {

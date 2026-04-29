@@ -2,6 +2,7 @@ import {
   type Body,
   type BodyType,
   type Contact,
+  type Fixture,
   Settings,
   World,
   Vec2,
@@ -40,8 +41,14 @@ type PlanckPluginNetworkingContext = {
 };
 
 export type PlanckContactPhase = "enter" | "exit";
-
-export type PlanckCallbackEvent = { phase: PlanckContactPhase };
+export type PlanckCallbackEvent = {
+  phase: PlanckContactPhase;
+  self: BaseSceneObject;
+  other: BaseSceneObject;
+  contact: Contact;
+  selfFixture: Fixture;
+  otherFixture: Fixture;
+};
 
 export type PlanckCollisionHandler = (
   other: BaseSceneObject,
@@ -82,6 +89,11 @@ export function planckPlugin(
     });
 
     const objectToRecord = new Map<BaseSceneObject, PlanckRecord>();
+    /** Last scene pose before the current step — used to set Planck velocities on kinematic bodies. */
+    const kinematicScenePosePrev = new WeakMap<
+      BaseSceneObject,
+      { x: number; y: number; angle: number }
+    >();
     const collisionHandlers = new Map<BaseSceneObject, Set<PlanckCollisionHandler>>();
     const triggerHandlers = new Map<BaseSceneObject, Set<PlanckCollisionHandler>>();
 
@@ -109,12 +121,23 @@ export function planckPlugin(
       self: BaseSceneObject,
       other: BaseSceneObject,
       phase: PlanckContactPhase,
+      contact: Contact,
+      selfFixture: Fixture,
+      otherFixture: Fixture,
     ) => {
       const set = map.get(self);
       if (!set) return;
+      const e: PlanckCallbackEvent = {
+        phase,
+        self,
+        other,
+        contact,
+        selfFixture,
+        otherFixture,
+      };
       for (const fn of set) {
         try {
-          fn(other, { phase });
+          fn(other, e);
         } catch (err) {
           console.error("planckPlugin handler error", err);
         }
@@ -131,11 +154,11 @@ export function planckPlugin(
       const fb = contact.getFixtureB();
       const isTrigger = fa.isSensor() || fb.isSensor();
       if (isTrigger) {
-        notifyContactHandlers(triggerHandlers, a, b, phase);
-        notifyContactHandlers(triggerHandlers, b, a, phase);
+        notifyContactHandlers(triggerHandlers, a, b, phase, contact, fa, fb);
+        notifyContactHandlers(triggerHandlers, b, a, phase, contact, fb, fa);
       } else {
-        notifyContactHandlers(collisionHandlers, a, b, phase);
-        notifyContactHandlers(collisionHandlers, b, a, phase);
+        notifyContactHandlers(collisionHandlers, a, b, phase, contact, fa, fb);
+        notifyContactHandlers(collisionHandlers, b, a, phase, contact, fb, fa);
       }
     };
 
@@ -186,10 +209,45 @@ export function planckPlugin(
       }
     };
 
-    const syncKinematicAndStaticFromScene = () => {
+    const syncKinematicAndStaticFromSceneBeforeStep = (stepDt: number) => {
+      const invDt = stepDt > 0 ? 1 / stepDt : 0;
       for (const [obj, rec] of objectToRecord) {
         const t = effectiveType(obj);
         if (t !== "static" && t !== "kinematic") continue;
+        const pos = (obj as { position: { x: number; y: number } }).position;
+        const rotZ = (obj as { rotation: { z: number } }).rotation.z;
+        rec.body.setTransform(sceneVec(pos.x, pos.y), rotZ);
+        if (t === "kinematic") {
+          const prev = kinematicScenePosePrev.get(obj);
+          if (prev && stepDt > 0) {
+            rec.body.setLinearVelocity(
+              new Vec2((pos.x - prev.x) * invDt, (pos.y - prev.y) * invDt),
+            );
+            rec.body.setAngularVelocity((rotZ - prev.angle) * invDt);
+          } else {
+            rec.body.setLinearVelocity(new Vec2(0, 0));
+            rec.body.setAngularVelocity(0);
+          }
+          kinematicScenePosePrev.set(obj, { x: pos.x, y: pos.y, angle: rotZ });
+        }
+      }
+    };
+
+    /** After dynamics integrate, snap static/kinematic transforms to scene (transform only). */
+    const syncKinematicAndStaticFromSceneAfterStep = () => {
+      for (const [obj, rec] of objectToRecord) {
+        const t = effectiveType(obj);
+        if (t !== "static" && t !== "kinematic") continue;
+        const pos = (obj as { position: { x: number; y: number } }).position;
+        const rotZ = (obj as { rotation: { z: number } }).rotation.z;
+        rec.body.setTransform(sceneVec(pos.x, pos.y), rotZ);
+      }
+    };
+
+    /** Scene transform → physics before step so inspector/teleports/scripts can move dynamics; otherwise we'd only integrate from last-frame body state. */
+    const syncDynamicTransformFromScene = () => {
+      for (const [obj, rec] of objectToRecord) {
+        if (effectiveType(obj) !== "dynamic") continue;
         const pos = (obj as { position: { x: number; y: number } }).position;
         const rotZ = (obj as { rotation: { z: number } }).rotation.z;
         rec.body.setTransform(sceneVec(pos.x, pos.y), rotZ);
@@ -271,11 +329,14 @@ export function planckPlugin(
       gameUpdate((dt) => {
         if (disposed) return;
         const clamped = Math.min(dt, 0.1);
-        syncKinematicAndStaticFromScene();
+        /** After game code mutates `collisionBody` (e.g. `disabled`), pick up changes before the step. */
+        syncBodiesWithScene();
+        syncKinematicAndStaticFromSceneBeforeStep(clamped);
+        syncDynamicTransformFromScene();
         syncDynamicVelocityFromScene();
         world.step(clamped, 8, 3);
         syncDynamicBodiesToScene();
-        syncKinematicAndStaticFromScene();
+        syncKinematicAndStaticFromSceneAfterStep();
       });
     });
 

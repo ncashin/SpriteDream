@@ -53,12 +53,9 @@ function sceneKey(workspaceRootFsPath: string, sceneFsPath: string): string {
   return path.relative(workspaceRootFsPath, sceneFsPath).split(path.sep).join("/");
 }
 
-function generateVirtualGameIDEScenesDts(workspaceRootFsPath: string, sceneFsPaths: string[]): string {
+function generateSceneTypesGenTs(workspaceRootFsPath: string, sceneFsPaths: string[]): string {
   if (sceneFsPaths.length === 0) {
-    return `${LOAD_SCENE_DECL_HEADER}declare module "virtual:gameide-scenes" {
-  export type GameIDEScenes = Record<string, never>;
-  export function loadScenes(): GameIDEScenes;
-}
+    return `${LOAD_SCENE_DECL_HEADER}export type GameIDEScenes = Record<string, never>;
 `;
   }
 
@@ -66,57 +63,76 @@ function generateVirtualGameIDEScenesDts(workspaceRootFsPath: string, sceneFsPat
     const raw = fs.readFileSync(scenePath, "utf8");
     const data = JSON.parse(raw) as unknown;
     const k = sceneKey(workspaceRootFsPath, scenePath);
-    return `    readonly ${JSON.stringify(k)}: ${formatLiteralType(data)};`;
+    return `  readonly ${JSON.stringify(k)}: ${formatLiteralType(data)};`;
   });
 
-  return `${LOAD_SCENE_DECL_HEADER}declare module "virtual:gameide-scenes" {
-  export type GameIDEScenes = {
+  return `${LOAD_SCENE_DECL_HEADER}export type GameIDEScenes = {
 ${typeLines.join("\n")}
-  };
-  export function loadScenes(): GameIDEScenes;
+};
+`;
+}
+
+function generateGameideSceneDts(): string {
+  return `${LOAD_SCENE_DECL_HEADER}declare module "*.scene" {
+  const data: import("./sceneTypes.gen").GameIDEScenes[keyof import("./sceneTypes.gen").GameIDEScenes];
+  export default data;
 }
 `;
 }
 
-async function writeVirtualGameIDEScenesDeclaration(
-  workspaceFolder: vscode.WorkspaceFolder
-): Promise<void> {
+async function writeGameideSceneDeclarations(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
   const root = workspaceFolder.uri.fsPath;
   const pattern = new vscode.RelativePattern(workspaceFolder, "**/*.scene");
   const sceneUris = await vscode.workspace.findFiles(pattern, "**/node_modules/**");
   const sceneFsPaths = sceneUris.map((u) => u.fsPath).sort();
-  const content = generateVirtualGameIDEScenesDts(root, sceneFsPaths);
-  const outPath = path.join(root, ".gameide", "virtual-gameide-scenes.d.ts");
-  const outDir = path.dirname(outPath);
+  const outDir = path.join(root, ".gameide");
   await vscode.workspace.fs.createDirectory(vscode.Uri.file(outDir));
-  const uri = vscode.Uri.file(outPath);
-  const nextBytes = Buffer.from(content, "utf8");
-  let current: Buffer | undefined;
+
+  const legacyVirtual = path.join(outDir, "virtual-gameide-scenes.d.ts");
   try {
-    current = Buffer.from(await vscode.workspace.fs.readFile(uri));
+    await vscode.workspace.fs.delete(vscode.Uri.file(legacyVirtual));
   } catch {
-    current = undefined;
+    // ignore if absent
   }
-  if (current && current.equals(nextBytes)) return;
-  await vscode.workspace.fs.writeFile(uri, nextBytes);
+
+  const genPath = path.join(outDir, "sceneTypes.gen.ts");
+  const dtsPath = path.join(outDir, "gameide-scene.d.ts");
+  const genContent = generateSceneTypesGenTs(root, sceneFsPaths);
+  const dtsContent = generateGameideSceneDts();
+
+  async function writeIfChanged(filePath: string, body: string): Promise<void> {
+    const uri = vscode.Uri.file(filePath);
+    const nextBytes = Buffer.from(body, "utf8");
+    let current: Buffer | undefined;
+    try {
+      current = Buffer.from(await vscode.workspace.fs.readFile(uri));
+    } catch {
+      current = undefined;
+    }
+    if (current && current.equals(nextBytes)) return;
+    await vscode.workspace.fs.writeFile(uri, nextBytes);
+  }
+
+  await writeIfChanged(genPath, genContent);
+  await writeIfChanged(dtsPath, dtsContent);
 }
 
 export async function syncSceneDeclaration(sceneUri: vscode.Uri): Promise<void> {
   const folder = vscode.workspace.getWorkspaceFolder(sceneUri);
   if (!folder) return;
-  await writeVirtualGameIDEScenesDeclaration(folder);
+  await writeGameideSceneDeclarations(folder);
 }
 
 export async function deleteSceneDeclaration(sceneUri: vscode.Uri): Promise<void> {
   const folder = vscode.workspace.getWorkspaceFolder(sceneUri);
   if (!folder) return;
-  await writeVirtualGameIDEScenesDeclaration(folder);
+  await writeGameideSceneDeclarations(folder);
 }
 
 export async function syncAllSceneDeclarations(): Promise<void> {
   await Promise.allSettled(
     (vscode.workspace.workspaceFolders ?? []).map((folder) =>
-      writeVirtualGameIDEScenesDeclaration(folder)
+      writeGameideSceneDeclarations(folder)
     )
   );
 }
