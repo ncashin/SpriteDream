@@ -6,6 +6,7 @@
   "module": "./dist/gameide.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
+    "./styles.css": "./styles.css",
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/gameide.es.js",
@@ -19,7 +20,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "styles.css"
   ],
   "scripts": {
     "build": "vite build && vite build --config vite.plugin.config.ts",
