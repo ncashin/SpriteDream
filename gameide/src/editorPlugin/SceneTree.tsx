@@ -17,8 +17,8 @@ import type { IconSlug } from "../lucide/lucideIconSlug.js";
 import type { BaseSceneObject } from "../scene/scene.js";
 import { getScene } from "../scene/scene.js";
 import { deleteValueAtPath, setValueAtPath } from "../scene/path.js";
-import { useScene } from "./useScene.js";
-import { useTraits } from "./useTraits.js";
+import { useScene } from "../hooks/useScene.js";
+import { useTraits } from "../hooks/useTraits.js";
 import {
   SceneTreeRowIconFrame,
   sceneTreeRowIconFrameSizeClass,

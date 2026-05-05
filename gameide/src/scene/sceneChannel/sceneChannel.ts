@@ -1,5 +1,5 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
-import { invalidateUseSceneSnapshot } from "../../editor/useSceneSnapshot.js";
+import { invalidateUseSceneSnapshot } from "../../hooks/useSceneSnapshot.js";
 import {
   type BaseSceneObject,
   type SceneReflectUpdate,

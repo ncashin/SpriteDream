@@ -68,8 +68,8 @@ export {
   type GameContext,
   type DisposeCallback,
 } from "./lifecycle/index.js";
-export { editorPlugin } from "./editor/editorPlugin.js";
-export type { EditorWithGameViewReference } from "./editor/createEditorUI.js";
+export { editorPlugin } from "./editorPlugin/editorPlugin.js";
+export type { EditorWithGameViewReference } from "./editorPlugin/createEditorUI.js";
 export {
   networkingPlugin,
   OWNER_ID,
@@ -80,20 +80,20 @@ export {
 } from "./networking/networkingPlugin.js";
 export { peerIntegratesPhysicsForObject } from "./networking/distributedSimulation.js";
 export type { NetworkingApi, NetworkingPluginOptions } from "./networking/networkingPlugin.js";
-export { gameUIPlugin } from "./editor/gameUIPlugin/gameUIPlugin.js";
-export { ExampleGameUI } from "./editor/gameUIPlugin/ExampleGameUI.js";
-export { Game } from "./editor/gameUIPlugin/Game.js";
-export { DefaultEditor } from "./editor/DefaultEditor.js";
-export { EditorRoot } from "./editor/EditorRoot.js";
-export { SceneTree } from "./editor/SceneTree.js";
-export { Sidebar } from "./editor/Sidebar.js";
-export { GameView } from "./editor/GameView.js";
-export { OverlayButton } from "./editor/OverlayButton.js";
-export { OverlayInput } from "./editor/OverlayInput.js";
-export { useScene } from "./editor/useScene.js";
-export { useTraits } from "./editor/useTraits.js";
-export type { TraitTemplate } from "./editor/useTraits.js";
-export { useGameIDEMode } from "./editor/useGameIDEMode.js";
+export { gameUIPlugin } from "./gameUIPlugin/gameUIPlugin.js";
+export { ExampleGameUI } from "./gameUIPlugin/ExampleGameUI.js";
+export { Game } from "./gameUIPlugin/Game.js";
+export { DefaultEditor } from "./editorPlugin/DefaultEditor.js";
+export { EditorRoot } from "./editorPlugin/EditorRoot.js";
+export { SceneTree } from "./editorPlugin/SceneTree.js";
+export { Sidebar } from "./editorPlugin/Sidebar.js";
+export { GameView } from "./editorPlugin/GameView.js";
+export { OverlayButton } from "./editorPlugin/OverlayButton.js";
+export { OverlayInput } from "./editorPlugin/OverlayInput.js";
+export { useScene } from "./hooks/useScene.js";
+export { useTraits } from "./hooks/useTraits.js";
+export type { TraitTemplate } from "./hooks/useTraits.js";
+export { useGameIDEMode } from "./hooks/useGameIDEMode.js";
 export { GameIDEMode, getMode, setMode, onModeChange } from "./lifecycle/mode.js";
 export { inputPlugin } from "./inputPlugin/inputPlugin.js";
 export type {

@@ -7,10 +7,10 @@ import { OverlayButton } from "./OverlayButton.js";
 import { OverlayInput } from "./OverlayInput.js";
 import { Cuboid, MoveLeft, Play, Square } from "lucide-react";
 import { GameIDEMode, setMode } from "../lifecycle/mode.js";
-import { useGameIDEMode } from "./useGameIDEMode.js";
+import { useGameIDEMode } from "../hooks/useGameIDEMode.js";
 import { getScene } from "../scene/scene.js";
 import { getValueAtPath, setValueAtPath } from "../scene/path.js";
-import { useScene } from "./useScene.js";
+import { useScene } from "../hooks/useScene.js";
 import { EditorRoot } from "./EditorRoot.js";
 
 export function DefaultEditor({

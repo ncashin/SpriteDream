@@ -1,4 +1,4 @@
-import { invalidateUseSceneSnapshot } from "../editor/useSceneSnapshot.js";
+import { invalidateUseSceneSnapshot } from "../hooks/useSceneSnapshot.js";
 import { getSceneAddition } from "./sceneAdditions/index.js";
 import type { SceneAdditions } from "./sceneAdditions/index.js";
 
