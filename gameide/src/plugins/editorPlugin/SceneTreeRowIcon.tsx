@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { cn } from "../utils/cn.js";
+import { cn } from "../../utils/cn.js";
 
 const rowHover = "hover:bg-[var(--vscode-list-hoverBackground)]";
 

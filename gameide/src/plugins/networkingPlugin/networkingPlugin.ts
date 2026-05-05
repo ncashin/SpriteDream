@@ -1,15 +1,15 @@
 import { connectWebSocketRoomTransport } from "./websocketRoomTransport.js";
-import { createSceneChannel } from "../scene/sceneChannel/sceneChannel.js";
-import type { SceneChannel } from "../scene/sceneChannel/sceneChannel.js";
+import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
+import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import {
   getScene,
   getRawScene,
   setScene,
   subscribeToScene,
   applyPatch as applyScenePatch,
-} from "../scene/scene.js";
-import type { BaseSceneObject } from "../scene/scene.js";
-import type { Plugin } from "../lifecycle/plugin.js";
+} from "../../scene/scene.js";
+import type { BaseSceneObject } from "../../scene/scene.js";
+import type { Plugin } from "../../lifecycle/plugin.js";
 import {
   isOwnedSceneObject,
   withOwnership,

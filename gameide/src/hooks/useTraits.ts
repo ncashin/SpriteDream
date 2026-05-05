@@ -10,9 +10,9 @@ import {
 } from "../trait/trait.js";
 import { getScene } from "../scene/scene.js";
 import { getValueAtPath } from "../scene/path.js";
-import "../pixiPlugin/sprite.js";
-import "../planckPlugin/collisionBody.js";
-import "../planckPlugin/colliderComponents.js";
+import "../plugins/pixiPlugin/sprite.js";
+import "../plugins/planckPlugin/collisionBody.js";
+import "../plugins/planckPlugin/colliderComponents.js";
 
 function defaultFromSchemaValue(v: SchemaValue): unknown {
   if (v === $number) return 0;

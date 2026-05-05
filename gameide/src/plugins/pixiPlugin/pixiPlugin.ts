@@ -6,9 +6,9 @@ import {
   Sprite,
   type Texture,
 } from "pixi.js";
-import { gameUpdate, start, update } from "../lifecycle/gameloop.js";
-import { GameIDEMode, getMode } from "../lifecycle/mode.js";
-import type { Plugin } from "../lifecycle/plugin.js";
+import { gameUpdate, start, update } from "../../lifecycle/gameloop.js";
+import { GameIDEMode, getMode } from "../../lifecycle/mode.js";
+import type { Plugin } from "../../lifecycle/plugin.js";
 import {
   createColliderDebugGraphics,
   destroyColliderDebugGraphics,

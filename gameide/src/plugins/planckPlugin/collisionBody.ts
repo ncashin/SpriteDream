@@ -1,5 +1,5 @@
-import type { IconSlug } from "../lucide/lucideIconSlug.js";
-import { defineTrait, type DefinedTrait } from "../trait/trait.js";
+import type { IconSlug } from "../../lucide/lucideIconSlug.js";
+import { defineTrait, type DefinedTrait } from "../../trait/trait.js";
 
 export const collisionBodyTrait = defineTrait(
   {

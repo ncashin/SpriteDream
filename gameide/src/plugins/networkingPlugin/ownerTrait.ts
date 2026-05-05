@@ -1,4 +1,4 @@
-import { defineTrait, $string } from "../trait/trait.js";
+import { defineTrait, $string } from "../../trait/trait.js";
 import { OWNER_ID } from "./distributedSimulation.js";
 
 export const ownerTrait = defineTrait(

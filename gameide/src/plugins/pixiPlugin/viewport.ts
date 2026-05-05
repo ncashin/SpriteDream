@@ -1,5 +1,5 @@
 import type { Container } from "pixi.js";
-import { createCallbackRegistry } from "../lifecycle/callbackRegistry.js";
+import { createCallbackRegistry } from "../../lifecycle/callbackRegistry.js";
 
 export type ViewportState = {
   centerX: number;

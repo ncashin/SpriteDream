@@ -4,7 +4,7 @@
  * body when width, radius, offsets, material on {@link collisionBodyTrait}, or body type changes.
  */
 import { type Body, type BodyType, type World, Vec2, Box, Circle } from "planck";
-import type { BaseSceneObject } from "../scene/scene.js";
+import type { BaseSceneObject } from "../../scene/scene.js";
 
 export type PhysicsUserData = { object: BaseSceneObject };
 

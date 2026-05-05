@@ -1,7 +1,7 @@
 import { Graphics, Matrix, type Container } from "pixi.js";
-import { getScene } from "../scene/scene.js";
-import { query } from "../scene/query/query.js";
-import type { BaseSceneObject } from "../scene/scene.js";
+import { getScene } from "../../scene/scene.js";
+import { query } from "../../scene/query/query.js";
+import type { BaseSceneObject } from "../../scene/scene.js";
 
 export type ColliderDebugOptions = {
   /** Stroke for non-trigger box/circle. Default `0x33ff66`. */

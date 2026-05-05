@@ -68,8 +68,8 @@ export {
   type GameContext,
   type DisposeCallback,
 } from "./lifecycle/index.js";
-export { editorPlugin } from "./editorPlugin/editorPlugin.js";
-export type { EditorWithGameViewReference } from "./editorPlugin/createEditorUI.js";
+export { editorPlugin } from "./plugins/editorPlugin/editorPlugin.js";
+export type { EditorWithGameViewReference } from "./plugins/editorPlugin/createEditorUI.js";
 export {
   networkingPlugin,
   OWNER_ID,
@@ -77,44 +77,44 @@ export {
   isOwnedSceneUpdate,
   isOwnedSceneObject,
   withOwnership,
-} from "./networking/networkingPlugin.js";
-export { peerIntegratesPhysicsForObject } from "./networking/distributedSimulation.js";
-export type { NetworkingApi, NetworkingPluginOptions } from "./networking/networkingPlugin.js";
-export { gameUIPlugin } from "./gameUIPlugin/gameUIPlugin.js";
-export { ExampleGameUI } from "./gameUIPlugin/ExampleGameUI.js";
-export { Game } from "./gameUIPlugin/Game.js";
-export { DefaultEditor } from "./editorPlugin/DefaultEditor.js";
-export { EditorRoot } from "./editorPlugin/EditorRoot.js";
-export { SceneTree } from "./editorPlugin/SceneTree.js";
-export { Sidebar } from "./editorPlugin/Sidebar.js";
-export { GameView } from "./editorPlugin/GameView.js";
-export { OverlayButton } from "./editorPlugin/OverlayButton.js";
-export { OverlayInput } from "./editorPlugin/OverlayInput.js";
+} from "./plugins/networkingPlugin/networkingPlugin.js";
+export { peerIntegratesPhysicsForObject } from "./plugins/networkingPlugin/distributedSimulation.js";
+export type { NetworkingApi, NetworkingPluginOptions } from "./plugins/networkingPlugin/networkingPlugin.js";
+export { gameUIPlugin } from "./plugins/gameUIPlugin/gameUIPlugin.js";
+export { ExampleGameUI } from "./plugins/gameUIPlugin/ExampleGameUI.js";
+export { Game } from "./plugins/gameUIPlugin/Game.js";
+export { DefaultEditor } from "./plugins/editorPlugin/DefaultEditor.js";
+export { EditorRoot } from "./plugins/editorPlugin/EditorRoot.js";
+export { SceneTree } from "./plugins/editorPlugin/SceneTree.js";
+export { Sidebar } from "./plugins/editorPlugin/Sidebar.js";
+export { GameView } from "./plugins/editorPlugin/GameView.js";
+export { OverlayButton } from "./plugins/editorPlugin/OverlayButton.js";
+export { OverlayInput } from "./plugins/editorPlugin/OverlayInput.js";
 export { useScene } from "./hooks/useScene.js";
 export { useTraits } from "./hooks/useTraits.js";
 export type { TraitTemplate } from "./hooks/useTraits.js";
 export { useGameIDEMode } from "./hooks/useGameIDEMode.js";
 export { GameIDEMode, getMode, setMode, onModeChange } from "./lifecycle/mode.js";
-export { inputPlugin } from "./inputPlugin/inputPlugin.js";
+export { inputPlugin } from "./plugins/inputPlugin/inputPlugin.js";
 export type {
   InputBinding,
   AxisConfig,
   ButtonConfig,
   InputPluginRequiredContext,
   InputPluginOptions,
-} from "./inputPlugin/inputPlugin.js";
+} from "./plugins/inputPlugin/inputPlugin.js";
 export {
   pixiPlugin,
   type PixiPluginAPI,
   type PixiPluginOptions,
   type Viewport,
-} from "./pixiPlugin/pixiPlugin.js";
-export type { ColliderDebugOptions } from "./pixiPlugin/colliderDebug.js";
+} from "./plugins/pixiPlugin/pixiPlugin.js";
+export type { ColliderDebugOptions } from "./plugins/pixiPlugin/colliderDebug.js";
 export {
   type ViewportState,
   applyViewportToWorldContainer,
-} from "./pixiPlugin/viewport.js";
-export { spriteTrait } from "./pixiPlugin/sprite.js";
+} from "./plugins/pixiPlugin/viewport.js";
+export { spriteTrait } from "./plugins/pixiPlugin/sprite.js";
 export {
   planckPlugin,
   getSceneBodyType,
@@ -127,11 +127,11 @@ export {
   type PlanckCallbackEvent,
   type PlanckCollisionHandler,
   type PlanckContactPhase,
-} from "./planckPlugin/planckPlugin.js";
-export type { Rigidbody2D } from "./planckPlugin/rigidbody2d.js";
+} from "./plugins/planckPlugin/planckPlugin.js";
+export type { Rigidbody2D } from "./plugins/planckPlugin/rigidbody2d.js";
 export {
   boxColliderTrait,
   circleColliderTrait,
 
-} from "./planckPlugin/colliderComponents.js";
-export { collisionBodyTrait } from "./planckPlugin/collisionBody.js";
+} from "./plugins/planckPlugin/colliderComponents.js";
+export { collisionBodyTrait } from "./plugins/planckPlugin/collisionBody.js";

@@ -1,6 +1,6 @@
-import type { IconSlug } from "../lucide/lucideIconSlug.js";
-import { defineTrait, type DefinedTrait } from "../trait/trait.js";
-import { transformTrait } from "../trait/transform.js";
+import type { IconSlug } from "../../lucide/lucideIconSlug.js";
+import { defineTrait, type DefinedTrait } from "../../trait/trait.js";
+import { transformTrait } from "../../trait/transform.js";
 
 export const boxColliderTrait = defineTrait(
   [

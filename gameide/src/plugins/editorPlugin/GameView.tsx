@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { cn } from "../utils/cn.js";
+import { cn } from "../../utils/cn.js";
 
 type GameViewProps = {
   className?: string;

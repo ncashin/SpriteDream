@@ -13,17 +13,17 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import type { IconSlug } from "../lucide/lucideIconSlug.js";
-import type { BaseSceneObject } from "../scene/scene.js";
-import { getScene } from "../scene/scene.js";
-import { deleteValueAtPath, setValueAtPath } from "../scene/path.js";
-import { useScene } from "../hooks/useScene.js";
-import { useTraits } from "../hooks/useTraits.js";
+import type { IconSlug } from "../../lucide/lucideIconSlug.js";
+import type { BaseSceneObject } from "../../scene/scene.js";
+import { getScene } from "../../scene/scene.js";
+import { deleteValueAtPath, setValueAtPath } from "../../scene/path.js";
+import { useScene } from "../../hooks/useScene.js";
+import { useTraits } from "../../hooks/useTraits.js";
 import {
   SceneTreeRowIconFrame,
   sceneTreeRowIconFrameSizeClass,
 } from "./SceneTreeRowIcon.js";
-import { cn } from "../utils/cn.js";
+import { cn } from "../../utils/cn.js";
 
 function isExpandable(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

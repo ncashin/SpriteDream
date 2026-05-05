@@ -1,4 +1,4 @@
-import type { BaseSceneObject, SceneReflectUpdate } from "../scene/scene.js";
+import type { BaseSceneObject, SceneReflectUpdate } from "../../scene/scene.js";
 
 export const OWNER_ID = "__ownerId" as const;
 

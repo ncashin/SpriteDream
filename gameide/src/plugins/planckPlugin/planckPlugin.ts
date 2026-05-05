@@ -7,12 +7,12 @@ import {
   World,
   Vec2,
 } from "planck";
-import { update, start, gameUpdate } from "../lifecycle/gameloop.js";
-import type { Plugin } from "../lifecycle/plugin.js";
-import { peerIntegratesPhysicsForObject } from "../networking/distributedSimulation.js";
-import type { BaseSceneObject } from "../scene/scene.js";
-import { getScene } from "../scene/scene.js";
-import { query } from "../scene/query/query.js";
+import { update, start, gameUpdate } from "../../lifecycle/gameloop.js";
+import type { Plugin } from "../../lifecycle/plugin.js";
+import { peerIntegratesPhysicsForObject } from "../networkingPlugin/distributedSimulation.js";
+import type { BaseSceneObject } from "../../scene/scene.js";
+import { getScene } from "../../scene/scene.js";
+import { query } from "../../scene/query/query.js";
 import {
   colliderSignature,
   createBodyForObject,

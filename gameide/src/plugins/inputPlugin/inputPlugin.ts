@@ -1,5 +1,5 @@
-import { update } from "../lifecycle/gameloop.js";
-import type { Plugin } from "../lifecycle/plugin.js";
+import { update } from "../../lifecycle/gameloop.js";
+import type { Plugin } from "../../lifecycle/plugin.js";
 
 export type InputBinding =
   | `Key${string}`

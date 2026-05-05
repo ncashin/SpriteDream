@@ -2,15 +2,15 @@ import { useState, type Ref } from "react";
 import { SceneTree } from "./SceneTree.js";
 import { GameView } from "./GameView.js";
 import { Sidebar } from "./Sidebar.js";
-import { cn } from "../utils/cn.js";
+import { cn } from "../../utils/cn.js";
 import { OverlayButton } from "./OverlayButton.js";
 import { OverlayInput } from "./OverlayInput.js";
 import { Cuboid, MoveLeft, Play, Square } from "lucide-react";
-import { GameIDEMode, setMode } from "../lifecycle/mode.js";
-import { useGameIDEMode } from "../hooks/useGameIDEMode.js";
-import { getScene } from "../scene/scene.js";
-import { getValueAtPath, setValueAtPath } from "../scene/path.js";
-import { useScene } from "../hooks/useScene.js";
+import { GameIDEMode, setMode } from "../../lifecycle/mode.js";
+import { useGameIDEMode } from "../../hooks/useGameIDEMode.js";
+import { getScene } from "../../scene/scene.js";
+import { getValueAtPath, setValueAtPath } from "../../scene/path.js";
+import { useScene } from "../../hooks/useScene.js";
 import { EditorRoot } from "./EditorRoot.js";
 
 export function DefaultEditor({

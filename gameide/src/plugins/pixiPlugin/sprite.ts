@@ -1,12 +1,12 @@
 import { Assets, Container, Sprite, Texture } from "pixi.js";
-import type { IconSlug } from "../lucide/lucideIconSlug.js";
-import { getScene } from "../scene/scene.js";
+import type { IconSlug } from "../../lucide/lucideIconSlug.js";
+import { getScene } from "../../scene/scene.js";
 import {
   type DefinedTrait,
   defineTrait,
   implementsTrait,
-} from "../trait/trait.js";
-import { transformTrait } from "../trait/transform.js";
+} from "../../trait/trait.js";
+import { transformTrait } from "../../trait/transform.js";
 
 export const spriteTrait = defineTrait(
   [

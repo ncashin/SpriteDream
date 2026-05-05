@@ -1,6 +1,6 @@
-import { createSceneTransportPostMessage } from "../scene/sceneChannel/sceneChannelTransport.js";
-import { createSceneChannel } from "../scene/sceneChannel/sceneChannel.js";
-import type { SceneChannel } from "../scene/sceneChannel/sceneChannel.js";
+import { createSceneTransportPostMessage } from "../../scene/sceneChannel/sceneChannelTransport.js";
+import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
+import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import {
   getScene,
   getRawScene,
@@ -9,8 +9,8 @@ import {
   applyPatch,
   restoreSceneSnapshot,
   saveSceneSnapshot,
-} from "../scene/scene.js";
-import { GameIDEMode, getMode, onModeChange } from "../lifecycle/mode.js";
+} from "../../scene/scene.js";
+import { GameIDEMode, getMode, onModeChange } from "../../lifecycle/mode.js";
 import { createEditorUI } from "./createEditorUI.js";
 import { DefaultEditor } from "./DefaultEditor.js";
 import type { EditorWithGameViewReference } from "./createEditorUI.js";
