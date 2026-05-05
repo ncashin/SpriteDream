@@ -102,6 +102,7 @@ export function pixiPlugin(
       const w = rootElement.clientWidth;
       const h = rootElement.clientHeight;
       if (w > 0 && h > 0) {
+        app.resize();
         viewport.setScreenSize(w, h);
       }
     });

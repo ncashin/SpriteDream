@@ -12,8 +12,7 @@
     "extension"
   ],
   "scripts": {
-    "dev": "sh -c 'npm run watch -w gameide & while [ ! -f gameide/dist/vite.js ]; do sleep 1; done; npm run dev --prefix webapp & npm run dev:runtime -w runtime'",
-    "watch": "npm run watch -w gameide -w extension",
-    "watch:gameide": "npm run watch -w gameide"
+    "dev": "sh -c 'npm run build -w gameide && npm run dev --prefix webapp & npm run dev -w runtime'",
+    "watch": "npm run watch -w extension"
   }
 }
