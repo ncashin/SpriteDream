@@ -57,16 +57,15 @@ export { transformTrait } from "./trait/transform.js";
 export { gameObject } from "./trait/gameObject.js";
 export type { GameObjectParts } from "./trait/gameObject.js";
 export {
-  game,
+  gameide,
   plugins,
   dispose,
   type ApplyPlugins,
   type Plugin,
-  type GameOptions,
   type GameConfig,
-  type GameMain,
   type GameContext,
   type DisposeCallback,
+  type GameAPI,
 } from "./lifecycle/index.js";
 export { editorPlugin } from "./plugins/editorPlugin/editorPlugin.js";
 export type { EditorWithGameViewReference } from "./plugins/editorPlugin/createEditorUI.js";

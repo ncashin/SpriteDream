@@ -1,26 +1,25 @@
 import {
-  game,
-  inputPlugin,
+  gameide,
   editorPlugin,
-  networkingPlugin,
   gameUIPlugin,
+  inputPlugin,
+  networkingPlugin,
   pixiPlugin,
   planckPlugin,
 } from "gameide";
-import sampleScene from "./sample.scene";
+import exampleScene from "./example.scene";
 import "./style.css";
 import invariant from "tiny-invariant";
 import { Editor } from "./Editor";
 import { GameUI } from "./GameUI";
-import { main } from "./main";
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-const mainFunction = game({
+export const { gameContext } = gameide({
   rootElement,
   initialContext: {},
-  initialScene: sampleScene,
+  initialScene: exampleScene,
   plugins: [
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
@@ -53,7 +52,3 @@ const mainFunction = game({
     }),
   ],
 });
-
-export type MainContext = Parameters<Parameters<typeof mainFunction>[0]>[0];
-
-void mainFunction(main);

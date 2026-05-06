@@ -1,22 +1,22 @@
 import {
   type BaseSceneObject,
   type PlanckCallbackEvent,
+  gameStart,
+  gameUpdate,
+  getScene,
   implementsTrait,
   defineTrait,
   gameObject,
-  getScene,
-  gameStart,
-  gameUpdate,
   ownerTrait,
   spriteTrait,
-  transformTrait,
   collisionBodyTrait,
   boxColliderTrait,
   circleColliderTrait,
 } from "gameide";
 import { WorldManifold } from "planck";
-import type { MainContext } from "./gameConfig";
 import typescriptSVGURL from "../assets/typescript.svg?url";
+import { gameContext } from "./gameConfig";
+import playerPrefab from "./player.scene";
 
 const playerTrait = defineTrait({
   moveSpeed: 260,
@@ -51,6 +51,17 @@ const BALL_HOLD_OFFSET_Y = 34;
 const THROW_SPEED = 560;
 const THROW_PLAYER_BLEND = 0.22;
 
+function sceneObjectFromPlayerPrefab(spriteAsset: string): BaseSceneObject {
+  const raw = playerPrefab as Record<string, unknown>;
+  const { __metadata: _, ...body } = raw;
+  const sprite = body.sprite;
+  const spriteMerged =
+    sprite && typeof sprite === "object" && !Array.isArray(sprite)
+      ? { ...(sprite as Record<string, unknown>), asset: spriteAsset }
+      : { asset: spriteAsset, width: 32, height: 32, tint: "#ffffff" };
+  return { ...body, sprite: spriteMerged } as BaseSceneObject;
+}
+
 const isBouncyBallObject = implementsTrait([
   bouncyBallTrait,
   spriteTrait,
@@ -58,93 +69,27 @@ const isBouncyBallObject = implementsTrait([
   circleColliderTrait,
 ]);
 
-export function main({ input, networking, planck, pixi }: MainContext): void {
+let carriedBall: BaseSceneObject | null = null;
+
+gameStart(() => {
+  const { networking, planck } = gameContext;
   const scene = getScene();
-  let carriedBall: BaseSceneObject | null = null;
-
-  gameStart(() => {
-    scene.createObject(
-      "ground",
-      gameObject([
-        transformTrait,
-        collisionBodyTrait,
-        boxColliderTrait,
-        {
-          position: { x: 0, y: -420, z: 0 },
-          boxCollider: {
-            width: 2400,
-            height: 40,
-          },
-          collisionBody: { type: "static" },
-        },
-      ]),
-    );
-
-    const platforms = [
-      { x: -280, y: -320, w: 180 },
-      { x: 120, y: -260, w: 200 },
-      { x: 420, y: -200, w: 160 },
-      { x: -520, y: -200, w: 140 },
-      { x: 640, y: -300, w: 220 },
-    ];
-
-    for (let i = 0; i < platforms.length; i++) {
-      const platform = platforms[i]!;
-      scene.createObject(
-        `platform_${i}`,
-        gameObject([
-          transformTrait,
-          collisionBodyTrait,
-          boxColliderTrait,
-          {
-            position: { x: platform.x, y: platform.y, z: 0 },
-            boxCollider: {
-              width: platform.w,
-              height: 24,
-            },
-            collisionBody: { type: "static"},
-          },
-        ]),
-      );
-    }
 
     scene.createObject(
       networking.peerId,
-      networking.withOwnership(
-        gameObject([
-          transformTrait,
-          ownerTrait,
-          playerTrait,
-          spriteTrait,
-          collisionBodyTrait,
-          boxColliderTrait,
-          {
-            position: { x: 0, y: -280, z: 0 },
-            sprite: {
-              asset: typescriptSVGURL,
-              width: 32,
-              height: 32,
-            },
-            collisionBody: {
-              type: "dynamic",
-              fixedRotation: true,
-              friction: 0,
-            },
-          },
-        ]),
-      ),
+      networking.withOwnership(sceneObjectFromPlayerPrefab(typescriptSVGURL)),
     );
 
-    const localPlayer = scene[networking.peerId];
-    if (localPlayer && isPlayerObject(localPlayer)) {
+    const peerPlayer = scene[networking.peerId];
+    if (peerPlayer && isPlayerObject(peerPlayer)) {
       let floorSupportContacts = 0;
       void planck.onCollision(
-        localPlayer,
+        peerPlayer,
         (other: BaseSceneObject, e: PlanckCallbackEvent) => {
           if (!planck.isStatic(other) || !isFloorSupportContact(e)) return;
           floorSupportContacts += e.phase === "enter" ? 1 : -1;
           floorSupportContacts = Math.max(0, floorSupportContacts);
-          localPlayer.grounded = floorSupportContacts > 0;
+          peerPlayer.grounded = floorSupportContacts > 0;
         },
       );
     }
@@ -153,7 +98,6 @@ export function main({ input, networking, planck, pixi }: MainContext): void {
       "bouncy_ball",
       networking.withOwnership(
         gameObject([
-          transformTrait,
           ownerTrait,
           bouncyBallTrait,
           spriteTrait,
@@ -176,10 +120,12 @@ export function main({ input, networking, planck, pixi }: MainContext): void {
         ]),
       ),
     );
-  });
+});
 
-  gameUpdate((deltaTime) => {
-    const horizontal = input.axes.Horizontal;
+gameUpdate((deltaTime) => {
+  const { input, networking, pixi } = gameContext;
+  const scene = getScene();
+  const horizontal = input.axes.Horizontal;
     const clampedDt = Math.min(deltaTime, 0.1);
     const sharedGravity = playerTrait.playerGravityY * clampedDt;
 
@@ -270,5 +216,4 @@ export function main({ input, networking, planck, pixi }: MainContext): void {
       if (carriedBall === ball) continue;
       ball.collisionBody.velocity.y += sharedGravity;
     }
-  });
-}
+});
