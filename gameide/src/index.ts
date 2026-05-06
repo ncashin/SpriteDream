@@ -22,8 +22,6 @@ export {
   editorUpdate,
   startGameloop,
   resetLifecycle,
-  runStartsForCurrentMode,
-  logLifecycleRegistries,
 } from "./lifecycle/gameloop.js";
 export { query } from "./scene/query/query.js";
 export {

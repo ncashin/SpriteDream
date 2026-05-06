@@ -11,7 +11,6 @@ import {
   getScene,
   implementsTrait,
   inputPlugin,
-  logLifecycleRegistries,
   networkingPlugin,
   ownerTrait,
   pixiPlugin,
@@ -143,6 +142,7 @@ gameStart(() => {
 });
 
 gameUpdate((deltaTime) => {
+  console.log("UPDATE")
   const { input, networking, pixi } = gameContext;
   const scene = getScene();
   const horizontalAxis = input.axes.Horizontal;
@@ -158,6 +158,7 @@ gameUpdate((deltaTime) => {
       boxColliderTrait,
     ]),
   );
+
   const ball = scene.getObject(
     "bouncyBall",
     implementsTrait([
@@ -246,5 +247,3 @@ gameUpdate((deltaTime) => {
     bouncyBall.collisionBody.velocity.y += sharedGravity;
   }
 });
-
-logLifecycleRegistries("main.ts: lifecycle registries after registration");

@@ -42,12 +42,15 @@ export const editorPlugin =
 
 
     const releaseModeWatcher = onModeChange((mode, previousMode) => {
-      if (
-        previousMode === GameIDEMode.Editor &&
-        mode === GameIDEMode.Game
-      ) {
-        saveSceneSnapshot();
-        channel.pause();
+      switch (mode) {
+        case GameIDEMode.Game:
+          saveSceneSnapshot();
+          channel.pause();
+          break;
+        case GameIDEMode.Editor:
+          restoreSceneSnapshot();
+          channel.unpause();
+          break;
       }
     });
 

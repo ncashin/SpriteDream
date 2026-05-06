@@ -1,7 +1,5 @@
 import {
   resetLifecycle,
-  beginBootstrapLifecycle,
-  endBootstrapLifecycle,
   startGameloop,
   start,
   update,
@@ -18,7 +16,6 @@ import {
 } from "../scene/scene.js";
 import { reducePlugins, type ApplyPlugins } from "./plugin.js";
 import { dispose, runScheduledDisposes } from "./disposeRegistry.js";
-import { onModeChange } from "./mode.js";
 
 export type DisposeCallback = (callback: () => void) => void;
 
@@ -100,33 +97,19 @@ async function runGame<Initial extends object, const Plugins extends readonly un
     runScheduledDisposes();
     resetLifecycle();
     installedContext = undefined;
-    beginBootstrapLifecycle();
 
-    try {
-      if (initialScene !== undefined) {
-        setScene(initialScene);
-      }
-
-      const seed: GameContext<Initial> = { ...initialContext, rootElement, dispose, initialScene };
-      const context = await reducePlugins(seed, pluginList);
-
-      installedContext = context;
-      return context;
-    } finally {
-      endBootstrapLifecycle();
+    if (initialScene !== undefined) {
+      setScene(initialScene);
     }
+
+    const seed: GameContext<Initial> = { ...initialContext, rootElement, dispose, initialScene };
+    const context = await reducePlugins(seed, pluginList);
+
+    installedContext = context;
+    return context;
   }
 
-  let sequentialBootstrap = Promise.resolve();
   await bootstrapRound();
-
-  onModeChange(() => {
-    const previous = sequentialBootstrap;
-    sequentialBootstrap = (async () => {
-      await previous;
-      await bootstrapRound();
-    })();
-  });
 
   startGameloop();
 }
