@@ -15,10 +15,19 @@ export const sceneAdditions = {
       return sceneNode[key];
     };
   },
+  getObject(sceneNode: BaseSceneObject) {
+    return <T>(key: PropertyKey, guard: (value: unknown) => value is T): T | null => {
+      const raw = Reflect.get(sceneNode, key);
+      return raw != null && guard(raw) ? raw : null;
+    };
+  },
 } satisfies Record<string, SceneAddition>;
 
-export type SceneAdditions = {
-  [K in keyof typeof sceneAdditions]: ReturnType<(typeof sceneAdditions)[K]>;
+export type SceneAdditions = Omit<
+  { [K in keyof typeof sceneAdditions]: ReturnType<(typeof sceneAdditions)[K]> },
+  "getObject"
+> & {
+  getObject: <T>(key: PropertyKey, guard: (value: unknown) => value is T) => T | null;
 };
 
 export const hasSceneAddition = (

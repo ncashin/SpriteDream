@@ -8,6 +8,7 @@ import {
   planckPlugin,
 } from "gameide";
 import exampleScene from "./example.scene";
+import typescriptSvgUrl from "../assets/typescript.svg?url";
 import "./style.css";
 import invariant from "tiny-invariant";
 import { Editor } from "./Editor";
@@ -49,6 +50,9 @@ export const { gameContext } = gameide({
         backgroundAlpha: 0,
       },
       debugDrawColliders: true,
+      assets: {
+        "assets/typescript.svg": typescriptSvgUrl,
+      },
     }),
   ],
 });

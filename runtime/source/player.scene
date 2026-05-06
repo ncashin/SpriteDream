@@ -22,7 +22,7 @@
   "playerGravityY": -1500,
   "grounded": false,
   "sprite": {
-    "asset": "",
+    "asset": "assets/typescript.svg",
     "width": 32,
     "height": 32,
     "tint": "#ffffff"
