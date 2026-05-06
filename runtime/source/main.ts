@@ -75,9 +75,9 @@ gameStart(() => {
     let floorSupportContacts = 0;
     void planck.onCollision(
       peerPlayer,
-      (other: BaseSceneObject, e: PlanckCallbackEvent) => {
-        if (!planck.isStatic(other) || !isFloorSupportContact(e)) return;
-        floorSupportContacts += e.phase === "enter" ? 1 : -1;
+      (other: BaseSceneObject, event: PlanckCallbackEvent) => {
+        if (!planck.isStatic(other) || !isFloorSupportContact(event)) return;
+        floorSupportContacts += event.phase === "enter" ? 1 : -1;
         floorSupportContacts = Math.max(0, floorSupportContacts);
         peerPlayer.grounded = floorSupportContacts > 0;
       },
@@ -115,45 +115,45 @@ gameStart(() => {
 gameUpdate((deltaTime) => {
   const { input, networking, pixi } = gameContext;
   const scene = getScene();
-  const horizontal = input.axes.Horizontal;
-  const clampedDt = Math.min(deltaTime, 0.1);
-  const sharedGravity = playerTrait.playerGravityY * clampedDt;
+  const horizontalAxis = input.axes.Horizontal;
+  const clampedDeltaTime = Math.min(deltaTime, 0.1);
+  const sharedGravity = playerTrait.playerGravityY * clampedDeltaTime;
 
   const player = scene.getObject(networking.peerId, isPlayerObject);
-
   const ball = scene.getObject("bouncy_ball", isBouncyBallObject);
-  const heldBall = ball && carriedBall === ball ? ball : null;
+  const heldBall = carriedBall === ball ? ball : null;
 
   if (heldBall && player) {
     heldBall.position.x = player.position.x;
     heldBall.position.y = player.position.y + BALL_HOLD_OFFSET_Y;
-  }
 
-  if (heldBall && player && input.buttons.Throw.pressed) {
-    const bx = heldBall.position.x;
-    const by = heldBall.position.y;
-    let nx = 1;
-    let ny = 0;
-    const mouse = input.mouse.position;
-    if (mouse) {
-      const { x: tx, y: ty } = pixi.viewport.screenToWorld(mouse.x, mouse.y);
-      const dx = tx - bx;
-      const dy = ty - by;
-      const len = Math.hypot(dx, dy);
-      if (len > 1e-3) {
-        nx = dx / len;
-        ny = dy / len;
+    if (input.buttons.Throw.pressed) {
+      let throwDirectionX = 1;
+      let throwDirectionY = 0;
+      const mousePosition = input.mouse.position;
+      if (mousePosition) {
+        const { x: targetWorldX, y: targetWorldY } = pixi.viewport.screenToWorld(
+          mousePosition.x,
+          mousePosition.y,
+        );
+        const aimDeltaX = targetWorldX - heldBall.position.x;
+        const aimDeltaY = targetWorldY - heldBall.position.y;
+        const aimDistance = Math.hypot(aimDeltaX, aimDeltaY);
+        if (aimDistance > 1e-3) {
+          throwDirectionX = aimDeltaX / aimDistance;
+          throwDirectionY = aimDeltaY / aimDistance;
+        }
       }
+      const playerVelocityX = player.collisionBody.velocity.x;
+      const playerVelocityY = player.collisionBody.velocity.y;
+      carriedBall = null;
+      heldBall.collisionBody.disabled = false;
+      heldBall.collisionBody.velocity = {
+        x: throwDirectionX * THROW_SPEED + playerVelocityX * THROW_PLAYER_BLEND,
+        y: throwDirectionY * THROW_SPEED + playerVelocityY * THROW_PLAYER_BLEND,
+        angular: 0,
+      };
     }
-    const pvx = player.collisionBody.velocity.x;
-    const pvy = player.collisionBody.velocity.y;
-    carriedBall = null;
-    heldBall.collisionBody.disabled = false;
-    heldBall.collisionBody.velocity = {
-      x: nx * THROW_SPEED + pvx * THROW_PLAYER_BLEND,
-      y: ny * THROW_SPEED + pvy * THROW_PLAYER_BLEND,
-      angular: 0,
-    };
   }
 
   if (
@@ -162,9 +162,9 @@ gameUpdate((deltaTime) => {
     input.buttons.Interact.pressed &&
     carriedBall !== ball
   ) {
-    const dx = ball.position.x - player.position.x;
-    const dy = ball.position.y - player.position.y;
-    if (dx * dx + dy * dy <= PICKUP_RADIUS_SQ) {
+    const pickupDeltaX = ball.position.x - player.position.x;
+    const pickupDeltaY = ball.position.y - player.position.y;
+    if (pickupDeltaX * pickupDeltaX + pickupDeltaY * pickupDeltaY <= PICKUP_RADIUS_SQ) {
       carriedBall = ball;
       ball.collisionBody.disabled = true;
       ball.collisionBody.velocity = { x: 0, y: 0, angular: 0 };
@@ -172,16 +172,16 @@ gameUpdate((deltaTime) => {
   }
 
   if (player) {
-    const gravity = player.playerGravityY * clampedDt;
+    const gravityStep = player.playerGravityY * clampedDeltaTime;
     if (input.buttons.Jump.pressed && player.grounded) {
       player.collisionBody.velocity.y = player.jumpSpeed;
     }
-    player.collisionBody.velocity.x = horizontal * player.moveSpeed;
-    player.collisionBody.velocity.y += gravity;
+    player.collisionBody.velocity.x = horizontalAxis * player.moveSpeed;
+    player.collisionBody.velocity.y += gravityStep;
   }
 
-  for (const b of scene.query(isBouncyBallObject)) {
-    if (!networking.isOwned(b) || carriedBall === b) continue;
-    b.collisionBody.velocity.y += sharedGravity;
+  for (const bouncyBall of scene.query(isBouncyBallObject)) {
+    if (!networking.isOwned(bouncyBall) || carriedBall === bouncyBall) continue;
+    bouncyBall.collisionBody.velocity.y += sharedGravity;
   }
 });
