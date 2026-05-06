@@ -3,15 +3,32 @@
     "name": "example"
   },
   "ground": {
-    "position": { "x": 0, "y": -420, "z": 0 },
-    "rotation": { "x": 0, "y": 0, "z": 0 },
-    "scale": { "x": 1, "y": 1, "z": 1 },
+    "position": {
+      "__icon": "move-3d",
+      "x": 0,
+      "y": -420,
+      "z": 0
+    },
+    "rotation": {
+      "__icon": "rotate-3d",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "scale": {
+      "__icon": "scaling",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
     "boxCollider": {
+      "__icon": "square",
       "width": 2400,
       "height": 40,
       "offset": { "x": 0, "y": 0 }
     },
     "collisionBody": {
+      "__icon": "atom",
       "type": "static",
       "velocity": { "x": 0, "y": 0, "angular": 0 },
       "fixedRotation": false,
@@ -22,15 +39,32 @@
     }
   },
   "platform_0": {
-    "position": { "x": -280, "y": -320, "z": 0 },
-    "rotation": { "x": 0, "y": 0, "z": 0 },
-    "scale": { "x": 1, "y": 1, "z": 1 },
+    "position": {
+      "__icon": "move-3d",
+      "x": -280,
+      "y": -320,
+      "z": 0
+    },
+    "rotation": {
+      "__icon": "rotate-3d",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "scale": {
+      "__icon": "scaling",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
     "boxCollider": {
+      "__icon": "square",
       "width": 180,
       "height": 24,
       "offset": { "x": 0, "y": 0 }
     },
     "collisionBody": {
+      "__icon": "atom",
       "type": "static",
       "velocity": { "x": 0, "y": 0, "angular": 0 },
       "fixedRotation": false,
@@ -41,15 +75,32 @@
     }
   },
   "platform_1": {
-    "position": { "x": 120, "y": -260, "z": 0 },
-    "rotation": { "x": 0, "y": 0, "z": 0 },
-    "scale": { "x": 1, "y": 1, "z": 1 },
+    "position": {
+      "__icon": "move-3d",
+      "x": 120,
+      "y": -260,
+      "z": 0
+    },
+    "rotation": {
+      "__icon": "rotate-3d",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "scale": {
+      "__icon": "scaling",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
     "boxCollider": {
+      "__icon": "square",
       "width": 200,
       "height": 24,
       "offset": { "x": 0, "y": 0 }
     },
     "collisionBody": {
+      "__icon": "atom",
       "type": "static",
       "velocity": { "x": 0, "y": 0, "angular": 0 },
       "fixedRotation": false,
@@ -60,15 +111,32 @@
     }
   },
   "platform_2": {
-    "position": { "x": 420, "y": -200, "z": 0 },
-    "rotation": { "x": 0, "y": 0, "z": 0 },
-    "scale": { "x": 1, "y": 1, "z": 1 },
+    "position": {
+      "__icon": "move-3d",
+      "x": 420,
+      "y": -200,
+      "z": 0
+    },
+    "rotation": {
+      "__icon": "rotate-3d",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "scale": {
+      "__icon": "scaling",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
     "boxCollider": {
+      "__icon": "square",
       "width": 160,
       "height": 24,
       "offset": { "x": 0, "y": 0 }
     },
     "collisionBody": {
+      "__icon": "atom",
       "type": "static",
       "velocity": { "x": 0, "y": 0, "angular": 0 },
       "fixedRotation": false,
@@ -79,15 +147,32 @@
     }
   },
   "platform_3": {
-    "position": { "x": -520, "y": -200, "z": 0 },
-    "rotation": { "x": 0, "y": 0, "z": 0 },
-    "scale": { "x": 1, "y": 1, "z": 1 },
+    "position": {
+      "__icon": "move-3d",
+      "x": -520,
+      "y": -200,
+      "z": 0
+    },
+    "rotation": {
+      "__icon": "rotate-3d",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "scale": {
+      "__icon": "scaling",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
     "boxCollider": {
+      "__icon": "square",
       "width": 140,
       "height": 24,
       "offset": { "x": 0, "y": 0 }
     },
     "collisionBody": {
+      "__icon": "atom",
       "type": "static",
       "velocity": { "x": 0, "y": 0, "angular": 0 },
       "fixedRotation": false,
@@ -98,15 +183,32 @@
     }
   },
   "platform_4": {
-    "position": { "x": 640, "y": -300, "z": 0 },
-    "rotation": { "x": 0, "y": 0, "z": 0 },
-    "scale": { "x": 1, "y": 1, "z": 1 },
+    "position": {
+      "__icon": "move-3d",
+      "x": 640,
+      "y": -300,
+      "z": 0
+    },
+    "rotation": {
+      "__icon": "rotate-3d",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "scale": {
+      "__icon": "scaling",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
     "boxCollider": {
+      "__icon": "square",
       "width": 220,
       "height": 24,
       "offset": { "x": 0, "y": 0 }
     },
     "collisionBody": {
+      "__icon": "atom",
       "type": "static",
       "velocity": { "x": 0, "y": 0, "angular": 0 },
       "fixedRotation": false,

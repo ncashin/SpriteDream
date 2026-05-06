@@ -3,16 +3,19 @@
     "name": "bouncyBall"
   },
   "position": {
+    "__icon": "move-3d",
     "x": -140,
     "y": -200,
     "z": 0
   },
   "rotation": {
+    "__icon": "rotate-3d",
     "x": 0,
     "y": 0,
     "z": 0
   },
   "scale": {
+    "__icon": "scaling",
     "x": 1,
     "y": 1,
     "z": 1
@@ -22,16 +25,19 @@
   "throwSpeed": 560,
   "throwPlayerBlend": 0.22,
   "sprite": {
+    "__icon": "image",
     "asset": "assets/typescript.svg",
     "width": 36,
     "height": 36,
     "tint": "#ff8c42"
   },
   "circleCollider": {
+    "__icon": "circle",
     "radius": 18,
     "offset": { "x": 0, "y": 0 }
   },
   "collisionBody": {
+    "__icon": "atom",
     "type": "dynamic",
     "velocity": { "x": 0, "y": 0, "angular": 0 },
     "fixedRotation": false,

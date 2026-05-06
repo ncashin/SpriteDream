@@ -1,6 +1,7 @@
 import {
   resetLifecycle,
-  runStartsForCurrentMode,
+  beginBootstrapLifecycle,
+  endBootstrapLifecycle,
   startGameloop,
   start,
   update,
@@ -77,10 +78,10 @@ const gameLifecycleAPI: GameLifecycleAPI = {
   setScene,
 };
 
-export function gameide<Initial extends object, const Plugins extends readonly unknown[]>(
+export async function gameide<Initial extends object, const Plugins extends readonly unknown[]>(
   config: GameConfig<Initial, Plugins>,
-): GameAPI<WithPlugins<Initial, Plugins>> {
-  void runGame(config);
+): Promise<GameAPI<WithPlugins<Initial, Plugins>>> {
+  await runGame(config);
   return {
     ...gameLifecycleAPI,
     get gameContext() {
@@ -99,22 +100,23 @@ async function runGame<Initial extends object, const Plugins extends readonly un
     runScheduledDisposes();
     resetLifecycle();
     installedContext = undefined;
+    beginBootstrapLifecycle();
 
-    if (initialScene !== undefined) {
-      setScene(initialScene);
+    try {
+      if (initialScene !== undefined) {
+        setScene(initialScene);
+      }
+
+      const seed: GameContext<Initial> = { ...initialContext, rootElement, dispose, initialScene };
+      const context = await reducePlugins(seed, pluginList);
+
+      installedContext = context;
+      return context;
+    } finally {
+      endBootstrapLifecycle();
     }
-
-    const seed: GameContext<Initial> = { ...initialContext, rootElement, dispose, initialScene };
-    const context = await reducePlugins(seed, pluginList);
-
-    installedContext = context;
-
-    runStartsForCurrentMode();
-
-    return context;
   }
 
-  // When Changing mode I.E. going from editor -> game rebootstrap
   let sequentialBootstrap = Promise.resolve();
   await bootstrapRound();
 

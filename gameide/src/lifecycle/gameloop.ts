@@ -4,61 +4,133 @@ import { GameIDEMode, getMode } from "./mode.js";
 type StartCallback = () => void;
 type UpdateCallback = (deltaTime: number) => void;
 
-const gameStartRegistry = createCallbackRegistry<StartCallback>();
 const gameUpdateRegistry = createCallbackRegistry<UpdateCallback>();
-
-const editorStartRegistry = createCallbackRegistry<StartCallback>();
 const editorUpdateRegistry = createCallbackRegistry<UpdateCallback>();
-
-const alwaysStartRegistry = createCallbackRegistry<StartCallback>();
 const alwaysUpdateRegistry = createCallbackRegistry<UpdateCallback>();
+
+/** Queued when mode is not Game or while `beginBootstrapLifecycle` is active. */
+const pendingGameStarts: StartCallback[] = [];
+/** Queued when mode is not Editor or while `beginBootstrapLifecycle` is active. */
+const pendingEditorStarts: StartCallback[] = [];
+
+let bootstrapLifecycleDepth = 0;
 
 let frameId: number | undefined;
 
-/** Clears all lifecycle registrations (starts and updates). Used before re-running plugins + main. */
+/** Clears per-frame update registrations. Start hooks are not stored; pending mode starts are kept. */
 export function resetLifecycle(): void {
-  gameStartRegistry.clear();
   gameUpdateRegistry.clear();
-  editorStartRegistry.clear();
   editorUpdateRegistry.clear();
-  alwaysStartRegistry.clear();
   alwaysUpdateRegistry.clear();
 }
 
-export function start(callback: StartCallback): void {
-  alwaysStartRegistry.register(callback);
+export function beginBootstrapLifecycle(): void {
+  bootstrapLifecycleDepth++;
 }
+
+export function endBootstrapLifecycle(): void {
+  bootstrapLifecycleDepth--;
+  if (bootstrapLifecycleDepth < 0) {
+    bootstrapLifecycleDepth = 0;
+  }
+  if (bootstrapLifecycleDepth === 0) {
+    flushPendingStartsForCurrentMode();
+  }
+}
+
+function deferringModeStarts(): boolean {
+  return bootstrapLifecycleDepth > 0;
+}
+
+function flushPendingStartsForCurrentMode(): void {
+  switch (getMode()) {
+    case GameIDEMode.Game: {
+      const queued = pendingGameStarts.splice(0);
+      for (const fn of queued) {
+        fn();
+      }
+      break;
+    }
+    case GameIDEMode.Editor: {
+      const queued = pendingEditorStarts.splice(0);
+      for (const fn of queued) {
+        fn();
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+/** Runs immediately. */
+export function start(callback: StartCallback): void {
+  callback();
+}
+
 export function update(callback: UpdateCallback): void {
   alwaysUpdateRegistry.register(callback);
 }
 
 export function gameStart(callback: StartCallback): void {
-  gameStartRegistry.register(callback);
+  if (getMode() !== GameIDEMode.Game || deferringModeStarts()) {
+    pendingGameStarts.push(callback);
+    return;
+  }
+  callback();
 }
+
 export function gameUpdate(callback: UpdateCallback): void {
   gameUpdateRegistry.register(callback);
 }
 
 export function editorStart(callback: StartCallback): void {
-  editorStartRegistry.register(callback);
+  if (getMode() !== GameIDEMode.Editor || deferringModeStarts()) {
+    pendingEditorStarts.push(callback);
+    return;
+  }
+  callback();
 }
+
 export function editorUpdate(callback: UpdateCallback): void {
   editorUpdateRegistry.register(callback);
 }
 
-/** Runs registered start callbacks for the current mode (always + mode-specific). */
+/** Logs update registry callbacks and counts of queued mode starts. */
+export function logLifecycleRegistries(message = "Lifecycle registries"): void {
+  console.log(message, {
+    start: "immediate",
+    gameStart: "immediate when Game (else queued)",
+    editorStart: "immediate when Editor (else queued)",
+    pendingGameStarts: { count: pendingGameStarts.length },
+    pendingEditorStarts: { count: pendingEditorStarts.length },
+    alwaysUpdate: {
+      count: alwaysUpdateRegistry.callbacks.length,
+      callbacks: alwaysUpdateRegistry.callbacks.map(
+        (fn, index) => fn.name || `anonymous@${index}`,
+      ),
+    },
+    gameUpdate: {
+      count: gameUpdateRegistry.callbacks.length,
+      callbacks: gameUpdateRegistry.callbacks.map(
+        (fn, index) => fn.name || `anonymous@${index}`,
+      ),
+    },
+    editorUpdate: {
+      count: editorUpdateRegistry.callbacks.length,
+      callbacks: editorUpdateRegistry.callbacks.map(
+        (fn, index) => fn.name || `anonymous@${index}`,
+      ),
+    },
+  });
+}
+
+/**
+ * Runs any `gameStart` / `editorStart` callbacks that were queued for the current mode.
+ * Normally invoked from `endBootstrapLifecycle`; exposed for unusual embedding scenarios.
+ */
 export function runStartsForCurrentMode(): void {
-  alwaysStartRegistry.run();
-  switch (getMode()) {
-    case GameIDEMode.Game:
-      gameStartRegistry.run();
-      break;
-    case GameIDEMode.Editor:
-      editorStartRegistry.run();
-      break;
-    default:
-      break;
-  }
+  flushPendingStartsForCurrentMode();
 }
 
 export function startGameloop(): void {

@@ -14,7 +14,16 @@ export default defineConfig({
       fileName: () => "vite.js",
     },
     rollupOptions: {
-      external: ["vite", "node:fs", "node:path", "fs", "path"],
+      external: [
+        "vite",
+        "node:fs",
+        "node:path",
+        "node:http",
+        "node:stream",
+        "fs",
+        "path",
+        "ws",
+      ],
     },
     sourcemap: true,
     target: "node20",

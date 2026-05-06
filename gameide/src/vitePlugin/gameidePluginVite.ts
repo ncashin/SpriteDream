@@ -1,5 +1,6 @@
 import type { Plugin } from "vite";
 import fs from "node:fs";
+import { attachRoomWebSocket } from "./roomWebSocket";
 
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
@@ -17,6 +18,13 @@ export default data;
 export function gameidePlugin(): Plugin {
   return {
     name: "gameide-plugin",
+    configureServer(server) {
+      return () => {
+        if (server.httpServer) {
+          attachRoomWebSocket(server.httpServer);
+        }
+      };
+    },
     load(id: string) {
       const cleanId = id.replace(/\?.*$/, "");
       if (!cleanId.endsWith(".scene")) return;
