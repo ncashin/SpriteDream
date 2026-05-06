@@ -6,7 +6,6 @@ import {
   getScene,
   implementsTrait,
   defineTrait,
-  gameObject,
   ownerTrait,
   spriteTrait,
   collisionBodyTrait,
@@ -14,9 +13,9 @@ import {
   circleColliderTrait,
 } from "gameide";
 import { WorldManifold } from "planck";
-import typescriptSVGURL from "../assets/typescript.svg?url";
 import { gameContext } from "./gameConfig";
-import playerScene from "./player.scene";
+import bouncyBallScene from "./scenes/bouncyBall.scene";
+import playerScene from "./scenes/player.scene";
 
 const playerTrait = defineTrait({
   moveSpeed: 260,
@@ -25,31 +24,12 @@ const playerTrait = defineTrait({
   grounded: false,
 });
 
-const isPlayerObject = implementsTrait([
-  playerTrait,
-  spriteTrait,
-  collisionBodyTrait,
-  boxColliderTrait,
-]);
-
-const floorContactWorldManifold = new WorldManifold();
-
-function isFloorSupportContact(event: PlanckCallbackEvent): boolean {
-  const worldManifold = event.contact.getWorldManifold(floorContactWorldManifold);
-  if (!worldManifold) return false;
-  const normalY = worldManifold.normal.y;
-  const selfIsFixtureA = event.selfFixture === event.contact.getFixtureA();
-  return (selfIsFixtureA ? -normalY : normalY) >= 0.5;
-}
-
-const bouncyBallTrait = defineTrait({});
-
-const BALL_SPRITE_TINT = "#ff8c42";
-
-const PICKUP_RADIUS_SQ = 96 * 96;
-const BALL_HOLD_OFFSET_Y = 34;
-const THROW_SPEED = 560;
-const THROW_PLAYER_BLEND = 0.22;
+const bouncyBallTrait = defineTrait({
+  pickupRadiusSq: 96 * 96,
+  ballHoldOffsetY: 34,
+  throwSpeed: 560,
+  throwPlayerBlend: 0.22,
+});
 
 const isBouncyBallObject = implementsTrait([
   bouncyBallTrait,
@@ -71,12 +51,27 @@ gameStart(() => {
     networking.peerId,
     networking.withOwnership(playerScene),
   );
-  if (isPlayerObject(peerPlayer)) {
+  if (
+    implementsTrait([
+      playerTrait,
+      spriteTrait,
+      collisionBodyTrait,
+      boxColliderTrait,
+    ])(peerPlayer)
+  ) {
     let floorSupportContacts = 0;
+    const floorContactWorldManifold = new WorldManifold();
     void planck.onCollision(
       peerPlayer,
       (other: BaseSceneObject, event: PlanckCallbackEvent) => {
-        if (!planck.isStatic(other) || !isFloorSupportContact(event)) return;
+        if (!planck.isStatic(other)) return;
+        const worldManifold = event.contact.getWorldManifold(
+          floorContactWorldManifold,
+        );
+        if (!worldManifold) return;
+        const normalY = worldManifold.normal.y;
+        const selfIsFixtureA = event.selfFixture === event.contact.getFixtureA();
+        if ((selfIsFixtureA ? -normalY : normalY) < 0.5) return;
         floorSupportContacts += event.phase === "enter" ? 1 : -1;
         floorSupportContacts = Math.max(0, floorSupportContacts);
         peerPlayer.grounded = floorSupportContacts > 0;
@@ -85,30 +80,8 @@ gameStart(() => {
   }
 
   scene.createObject(
-    "bouncy_ball",
-    networking.withOwnership(
-      gameObject([
-        ownerTrait,
-        bouncyBallTrait,
-        spriteTrait,
-        collisionBodyTrait,
-        circleColliderTrait,
-        {
-          position: { x: -140, y: -200, z: 0 },
-          sprite: {
-            asset: typescriptSVGURL,
-            width: 36,
-            height: 36,
-            tint: BALL_SPRITE_TINT,
-          },
-          circleCollider: { radius: 18 },
-          collisionBody: {
-            type: "dynamic",
-            restitution: 0.88,
-          },
-        },
-      ]),
-    ),
+    "bouncyBall",
+    networking.withOwnership(bouncyBallScene),
   );
 });
 
@@ -119,13 +92,21 @@ gameUpdate((deltaTime) => {
   const clampedDeltaTime = Math.min(deltaTime, 0.1);
   const sharedGravity = playerTrait.playerGravityY * clampedDeltaTime;
 
-  const player = scene.getObject(networking.peerId, isPlayerObject);
-  const ball = scene.getObject("bouncy_ball", isBouncyBallObject);
+  const player = scene.getObject(
+    networking.peerId,
+    implementsTrait([
+      playerTrait,
+      spriteTrait,
+      collisionBodyTrait,
+      boxColliderTrait,
+    ]),
+  );
+  const ball = scene.getObject("bouncyBall", isBouncyBallObject);
   const heldBall = carriedBall === ball ? ball : null;
 
   if (heldBall && player) {
     heldBall.position.x = player.position.x;
-    heldBall.position.y = player.position.y + BALL_HOLD_OFFSET_Y;
+    heldBall.position.y = player.position.y + heldBall.ballHoldOffsetY;
 
     if (input.buttons.Throw.pressed) {
       let throwDirectionX = 1;
@@ -149,8 +130,12 @@ gameUpdate((deltaTime) => {
       carriedBall = null;
       heldBall.collisionBody.disabled = false;
       heldBall.collisionBody.velocity = {
-        x: throwDirectionX * THROW_SPEED + playerVelocityX * THROW_PLAYER_BLEND,
-        y: throwDirectionY * THROW_SPEED + playerVelocityY * THROW_PLAYER_BLEND,
+        x:
+          throwDirectionX * heldBall.throwSpeed +
+          playerVelocityX * heldBall.throwPlayerBlend,
+        y:
+          throwDirectionY * heldBall.throwSpeed +
+          playerVelocityY * heldBall.throwPlayerBlend,
         angular: 0,
       };
     }
@@ -164,7 +149,9 @@ gameUpdate((deltaTime) => {
   ) {
     const pickupDeltaX = ball.position.x - player.position.x;
     const pickupDeltaY = ball.position.y - player.position.y;
-    if (pickupDeltaX * pickupDeltaX + pickupDeltaY * pickupDeltaY <= PICKUP_RADIUS_SQ) {
+    if (
+      pickupDeltaX * pickupDeltaX + pickupDeltaY * pickupDeltaY <= ball.pickupRadiusSq
+    ) {
       carriedBall = ball;
       ball.collisionBody.disabled = true;
       ball.collisionBody.velocity = { x: 0, y: 0, angular: 0 };

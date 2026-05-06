@@ -7,7 +7,7 @@ import {
   pixiPlugin,
   planckPlugin,
 } from "gameide";
-import exampleScene from "./example.scene";
+import exampleScene from "./scenes/example.scene";
 import typescriptSvgUrl from "../assets/typescript.svg?url";
 import "./style.css";
 import invariant from "tiny-invariant";
