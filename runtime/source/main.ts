@@ -1,6 +1,7 @@
 import {
   type BaseSceneObject,
   type PlanckCallbackEvent,
+  type TraitTupleToIntersection,
   gameStart,
   gameUpdate,
   getScene,
@@ -31,15 +32,15 @@ const bouncyBallTrait = defineTrait({
   throwPlayerBlend: 0.22,
 });
 
-const isBouncyBallObject = implementsTrait([
-  bouncyBallTrait,
-  spriteTrait,
-  collisionBodyTrait,
-  circleColliderTrait,
-  ownerTrait,
-]);
-
-type BouncyBallObject = typeof isBouncyBallObject extends (x: unknown) => x is infer R ? R : never;
+type BouncyBallObject = TraitTupleToIntersection<
+  readonly [
+    typeof bouncyBallTrait,
+    typeof spriteTrait,
+    typeof collisionBodyTrait,
+    typeof circleColliderTrait,
+    typeof ownerTrait,
+  ]
+>;
 
 let carriedBall: BouncyBallObject | null = null;
 
@@ -101,7 +102,16 @@ gameUpdate((deltaTime) => {
       boxColliderTrait,
     ]),
   );
-  const ball = scene.getObject("bouncyBall", isBouncyBallObject);
+  const ball = scene.getObject(
+    "bouncyBall",
+    implementsTrait([
+      bouncyBallTrait,
+      spriteTrait,
+      collisionBodyTrait,
+      circleColliderTrait,
+      ownerTrait,
+    ]),
+  );
   const heldBall = carriedBall === ball ? ball : null;
 
   if (heldBall && player) {
@@ -167,7 +177,15 @@ gameUpdate((deltaTime) => {
     player.collisionBody.velocity.y += gravityStep;
   }
 
-  for (const bouncyBall of scene.query(isBouncyBallObject)) {
+  for (const bouncyBall of scene.query(
+    implementsTrait([
+      bouncyBallTrait,
+      spriteTrait,
+      collisionBodyTrait,
+      circleColliderTrait,
+      ownerTrait,
+    ]),
+  )) {
     if (!networking.isOwned(bouncyBall) || carriedBall === bouncyBall) continue;
     bouncyBall.collisionBody.velocity.y += sharedGravity;
   }
