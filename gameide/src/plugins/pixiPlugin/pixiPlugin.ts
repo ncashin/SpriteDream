@@ -28,7 +28,8 @@ import {
 
 export type PixiPluginOptions = {
   initOptions?: Omit<Partial<ApplicationOptions>, "resizeTo">;
-  assets?: Readonly<Record<string, string>>;
+  /** Per-path URL map, or a single base URL for resolving relative sprite `asset` paths. */
+  assets?: Readonly<Record<string, string>> | string;
   debugDrawColliders?: boolean | ColliderDebugOptions;
 };
 
@@ -73,9 +74,13 @@ export function pixiPlugin(
     rootElement.appendChild(app.canvas);
 
     await Assets.init();
+    const assetMap =
+      typeof options.assets === "string" ? undefined : options.assets;
+    const assetsBaseUrl =
+      typeof options.assets === "string" ? options.assets.trim() : undefined;
     const urls = [
       ...new Set(
-        Object.values(options.assets ?? {}).filter(
+        Object.values(assetMap ?? {}).filter(
           (value): value is string => typeof value === "string" && value.trim().length > 0,
         ),
       ),
@@ -130,7 +135,7 @@ export function pixiPlugin(
     }
 
     const syncFrame = () => {
-      syncPixiSprites(world, options.assets, textureByKey, spriteByEntity, {
+      syncPixiSprites(world, assetMap, assetsBaseUrl, textureByKey, spriteByEntity, {
         textureResolution: app.renderer.resolution,
         svgInflight,
       });

@@ -58,6 +58,7 @@ function svgLoaderSrc(url: string, width: number, height: number, resolution: nu
 
 function resolveAssetUrl(
   assets: Readonly<Record<string, string>> | undefined,
+  assetsBaseUrl: string | undefined,
   assetKey: string,
 ): string | undefined {
   if (!assetKey) return undefined;
@@ -71,6 +72,15 @@ function resolveAssetUrl(
     trimmedKey.startsWith("/")
   ) {
     return trimmedKey;
+  }
+  if (assetsBaseUrl && trimmedKey) {
+    const base = assetsBaseUrl.endsWith("/") ? assetsBaseUrl : `${assetsBaseUrl}/`;
+    const pathPart = trimmedKey.replace(/^assets\//, "");
+    try {
+      return new URL(pathPart, base).href;
+    } catch {
+      return undefined;
+    }
   }
   return undefined;
 }
@@ -176,6 +186,7 @@ function resolveTexture(
 export function syncPixiSprites(
   stage: Container,
   assets: Readonly<Record<string, string>> | undefined,
+  assetsBaseUrl: string | undefined,
   textureByKey: Map<string, Texture>,
   spriteByEntity: Map<SpriteRenderable, { sprite: Sprite; signature: string }>,
   syncOptions?: SyncPixiSpritesOptions,
@@ -184,7 +195,7 @@ export function syncPixiSprites(
   const syncOne = (item: SpriteRenderable): void => {
     const spec = item.sprite;
     const assetKey = spec.asset?.trim() ?? "";
-    const url = resolveAssetUrl(assets, assetKey);
+    const url = resolveAssetUrl(assets, assetsBaseUrl, assetKey);
 
     const { texture, signature } = resolveTexture(item, url, textureByKey, syncOptions);
     const existing = spriteByEntity.get(item);

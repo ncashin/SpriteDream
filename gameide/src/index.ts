@@ -60,6 +60,7 @@ export { gameObject } from "./trait/gameObject.js";
 export type { GameObjectParts } from "./trait/gameObject.js";
 export {
   gameide,
+  getGameContext,
   plugins,
   type ApplyPlugins,
   type Plugin,

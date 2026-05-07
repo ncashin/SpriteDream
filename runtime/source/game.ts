@@ -12,13 +12,13 @@ import {
   boxColliderTrait,
   circleColliderTrait,
   gameUpdate,
+  getGameContext,
 } from "gameide";
 import { WorldManifold } from "planck";
 import playerScene from "./scenes/player.scene";
 import "./style.css";
 import bouncyBallScene from "./scenes/bouncyBall.scene";
-import { gameContext } from "source";
-
+import type { RuntimeGameContext } from "./index";
 
 const playerTrait = defineTrait({
   moveSpeed: 260,
@@ -47,8 +47,7 @@ type BouncyBallObject = TraitTupleToIntersection<
 let carriedBall: BouncyBallObject | null = null;
 
 gameStart(() => {
-  console.log("HIT")
-  const { networking, planck } = gameContext;
+  const { networking, planck } = getGameContext<RuntimeGameContext>();
   const scene = getScene();
 
   const peerPlayer = scene.createObject(
@@ -87,10 +86,14 @@ gameStart(() => {
     "bouncyBall",
     networking.withOwnership(bouncyBallScene),
   );
+  scene.createObject(
+    "testing",
+    networking.withOwnership(bouncyBallScene),
+  );
 });
 
 gameUpdate((deltaTime) => {
-  const { input, networking, pixi } = gameContext;
+  const { input, networking, pixi } = getGameContext<RuntimeGameContext>();
   const scene = getScene();
   const horizontalAxis = input.axes.Horizontal;
   const clampedDeltaTime = Math.min(deltaTime, 0.1);
@@ -188,7 +191,7 @@ gameUpdate((deltaTime) => {
       collisionBodyTrait,
       circleColliderTrait,
       ownerTrait,
-]),
+    ]),
   )) {
     if (!networking.isOwned(bouncyBall) || carriedBall === bouncyBall) continue;
     bouncyBall.collisionBody.velocity.y += sharedGravity;

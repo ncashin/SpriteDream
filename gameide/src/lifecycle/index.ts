@@ -1,5 +1,6 @@
 export {
   gameide,
+  getGameContext,
   type GameConfig,
   type GameContext,
   type DisposeCallback,

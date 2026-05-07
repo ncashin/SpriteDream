@@ -59,6 +59,10 @@ function currentScopeId(): string | undefined {
   return activeHotScopes[activeHotScopes.length - 1]?.id;
 }
 
+function normalizeHotScopeId(scopeId: string): string {
+  return scopeId.replace(/[?#].*$/, "");
+}
+
 function shouldRunStartImmediately(): boolean {
   return activeHotScopes[activeHotScopes.length - 1]?.isReplacement !== true;
 }
@@ -148,25 +152,31 @@ function removeScopedRegistrations(scopeId: string): number {
 }
 
 export function __beginHotModule(scopeId: string): string {
+  const normalizedScopeId = normalizeHotScopeId(scopeId);
   const isReplacement =
-    disposedHotScopes.delete(scopeId) || removeScopedRegistrations(scopeId) > 0;
-  activeHotScopes.push({ id: scopeId, isReplacement });
-  return scopeId;
+    disposedHotScopes.delete(normalizedScopeId) ||
+    removeScopedRegistrations(normalizedScopeId) > 0;
+  activeHotScopes.push({ id: normalizedScopeId, isReplacement });
+  return normalizedScopeId;
 }
 
 export function __endHotModule(scopeId: string): void {
+  const normalizedScopeId = normalizeHotScopeId(scopeId);
   for (let index = activeHotScopes.length - 1; index >= 0; index -= 1) {
-    if (activeHotScopes[index]?.id !== scopeId) continue;
+    if (activeHotScopes[index]?.id !== normalizedScopeId) continue;
     activeHotScopes.splice(index, 1);
     return;
   }
 }
 
 export function __disposeHotModule(scopeId: string): void {
-  removeScopedRegistrations(scopeId);
-  disposedHotScopes.add(scopeId);
+  const normalizedScopeId = normalizeHotScopeId(scopeId);
+  removeScopedRegistrations(normalizedScopeId);
+  disposedHotScopes.add(normalizedScopeId);
   for (let index = activeHotScopes.length - 1; index >= 0; index -= 1) {
-    if (activeHotScopes[index]?.id === scopeId) activeHotScopes.splice(index, 1);
+    if (activeHotScopes[index]?.id === normalizedScopeId) {
+      activeHotScopes.splice(index, 1);
+    }
   }
 }
 

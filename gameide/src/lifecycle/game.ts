@@ -39,7 +39,7 @@ export type GameConfig<Initial extends object, Plugins extends readonly unknown[
 
 let installedContext: unknown;
 
-function contextOrThrow<Context extends object>(): Context {
+export function getGameContext<Context extends object = object>(): Context {
   if (installedContext === undefined) {
     throw new Error("Game context was read before the game finished initializing.");
   }
@@ -82,7 +82,7 @@ export async function gameide<Initial extends object, const Plugins extends read
   return {
     ...gameLifecycleAPI,
     get gameContext() {
-      return contextOrThrow<WithPlugins<Initial, Plugins>>();
+      return getGameContext<WithPlugins<Initial, Plugins>>();
     },
   };
 }

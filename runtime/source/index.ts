@@ -9,17 +9,14 @@ import {
 } from "gameide";
 import invariant from "tiny-invariant";
 import exampleScene from "./scenes/example.scene";
-import typescriptSvgUrl from "../assets/typescript.svg?url";
 import "./style.css";
 import { Editor } from "./Editor";
 import { GameUI } from "./GameUI";
-await import("./game.ts");
-
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-export const { gameContext } = await gameide({
+const game = await gameide({
   rootElement,
   initialContext: {},
   initialScene: exampleScene,
@@ -51,9 +48,12 @@ export const { gameContext } = await gameide({
         backgroundAlpha: 0,
       },
       debugDrawColliders: true,
-      assets: {
-        "assets/typescript.svg": typescriptSvgUrl,
-      },
+      assets: new URL(`${import.meta.env.BASE_URL}assets/`, window.location.href)
+        .href,
     }),
   ],
 });
+
+export const { gameContext } = game;
+export type RuntimeGameContext = typeof gameContext;
+await import("./game.ts");
