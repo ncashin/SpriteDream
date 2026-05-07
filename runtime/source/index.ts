@@ -57,7 +57,3 @@ export const { gameContext } = await gameide({
     }),
   ],
 });
-
-if (import.meta.hot) {
-  import.meta.hot.accept();
-}

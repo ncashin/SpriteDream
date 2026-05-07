@@ -22,6 +22,9 @@ export {
   editorUpdate,
   startGameloop,
   dispose,
+  __beginHotModule,
+  __endHotModule,
+  __disposeHotModule,
 } from "./lifecycle/gameloop.js";
 export { query } from "./scene/query/query.js";
 export {

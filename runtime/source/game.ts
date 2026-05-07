@@ -90,7 +90,6 @@ gameStart(() => {
 });
 
 gameUpdate((deltaTime) => {
-  console.log("UPDATE")
   const { input, networking, pixi } = gameContext;
   const scene = getScene();
   const horizontalAxis = input.axes.Horizontal;
