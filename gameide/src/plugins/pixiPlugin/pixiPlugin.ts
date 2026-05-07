@@ -15,12 +15,7 @@ import {
   type ColliderDebugOptions,
   syncColliderDebugDraw,
 } from "./colliderDebug.js";
-import {
-  disposePixiSprites,
-  isSvgAssetRef,
-  syncPixiSprites,
-  type SpriteRenderable,
-} from "./sprite.js";
+import { disposePixiSprites, syncPixiSprites, type SpriteRenderable } from "./sprite.js";
 import {
   applyViewportToWorldContainer,
   createViewport,
@@ -28,10 +23,19 @@ import {
 
 export type PixiPluginOptions = {
   initOptions?: Omit<Partial<ApplicationOptions>, "resizeTo">;
-  /** Per-path URL map, or a single base URL for resolving relative sprite `asset` paths. */
-  assets?: Readonly<Record<string, string>> | string;
   debugDrawColliders?: boolean | ColliderDebugOptions;
 };
+
+function defaultAssetsBaseUrl(): string | undefined {
+  if (typeof globalThis.location?.href !== "string") return undefined;
+  const base =
+    typeof import.meta.env?.BASE_URL === "string" ? import.meta.env.BASE_URL : "/";
+  try {
+    return new URL(`${base}assets/`, globalThis.location.href).href;
+  } catch {
+    return undefined;
+  }
+}
 
 export type Viewport = ReturnType<typeof createViewport>;
 
@@ -74,20 +78,7 @@ export function pixiPlugin(
     rootElement.appendChild(app.canvas);
 
     await Assets.init();
-    const assetMap =
-      typeof options.assets === "string" ? undefined : options.assets;
-    const assetsBaseUrl =
-      typeof options.assets === "string" ? options.assets.trim() : undefined;
-    const urls = [
-      ...new Set(
-        Object.values(assetMap ?? {}).filter(
-          (value): value is string => typeof value === "string" && value.trim().length > 0,
-        ),
-      ),
-    ].filter((u) => !isSvgAssetRef(u));
-    if (urls.length > 0) {
-      await Assets.load(urls);
-    }
+    const assetsBaseUrl = defaultAssetsBaseUrl();
 
     let disposed = false;
 
@@ -135,7 +126,7 @@ export function pixiPlugin(
     }
 
     const syncFrame = () => {
-      syncPixiSprites(world, assetMap, assetsBaseUrl, textureByKey, spriteByEntity, {
+      syncPixiSprites(world, undefined, assetsBaseUrl, textureByKey, spriteByEntity, {
         textureResolution: app.renderer.resolution,
         svgInflight,
       });
@@ -144,7 +135,6 @@ export function pixiPlugin(
       }
     };
 
-    // In Game mode, sync after physics (gameUpdate). alwaysUpdate runs too early.
     update(() => {
       if (disposed) return;
       if (getMode() === GameIDEMode.Game) return;

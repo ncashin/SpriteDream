@@ -48,8 +48,6 @@ const game = await gameide({
         backgroundAlpha: 0,
       },
       debugDrawColliders: true,
-      assets: new URL(`${import.meta.env.BASE_URL}assets/`, window.location.href)
-        .href,
     }),
   ],
 });

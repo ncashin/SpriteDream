@@ -1,4 +1,5 @@
 import type { IncomingMessage, Server } from "node:http";
+import type { Http2SecureServer } from "node:http2";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, WebSocket } from "ws";
 
@@ -39,7 +40,7 @@ function messageDataToUTF8(data: Buffer | ArrayBuffer | Buffer[]): string {
   return Buffer.from(data).toString("utf8");
 }
 
-export function attachRoomWebSocket(httpServer: Server): WebSocketServer {
+export function attachRoomWebSocket(httpServer: Server | Http2SecureServer): WebSocketServer {
   const wss = new WebSocketServer({ noServer: true });
 
   httpServer.on("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {

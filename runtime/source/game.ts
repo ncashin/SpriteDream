@@ -86,10 +86,6 @@ gameStart(() => {
     "bouncyBall",
     networking.withOwnership(bouncyBallScene),
   );
-  scene.createObject(
-    "testing",
-    networking.withOwnership(bouncyBallScene),
-  );
 });
 
 gameUpdate((deltaTime) => {
