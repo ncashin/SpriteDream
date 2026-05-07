@@ -1,5 +1,5 @@
 import {
-  resetLifecycle,
+  flushScheduledDisposes,
   startGameloop,
   start,
   update,
@@ -7,6 +7,7 @@ import {
   gameUpdate,
   editorStart,
   editorUpdate,
+  dispose,
 } from "./gameloop.js";
 import {
   setScene,
@@ -15,7 +16,6 @@ import {
   type BaseSceneObject,
 } from "../scene/scene.js";
 import { reducePlugins, type ApplyPlugins } from "./plugin.js";
-import { dispose, runScheduledDisposes } from "./disposeRegistry.js";
 
 export type DisposeCallback = (callback: () => void) => void;
 
@@ -41,7 +41,7 @@ let installedContext: unknown;
 
 function contextOrThrow<Context extends object>(): Context {
   if (installedContext === undefined) {
-    throw new Error("Game context was read before the game finished a bootstrap round.");
+    throw new Error("Game context was read before the game finished initializing.");
   }
   return installedContext as Context;
 }
@@ -93,23 +93,15 @@ async function runGame<Initial extends object, const Plugins extends readonly un
   const { rootElement, initialContext, initialScene } = options;
   const pluginList = (options.plugins ?? []) as Plugins;
 
-  async function bootstrapRound(): Promise<WithPlugins<Initial, Plugins>> {
-    runScheduledDisposes();
-    resetLifecycle();
-    installedContext = undefined;
+  installedContext = undefined;
+  flushScheduledDisposes();
 
-    if (initialScene !== undefined) {
-      setScene(initialScene);
-    }
-
-    const seed: GameContext<Initial> = { ...initialContext, rootElement, dispose, initialScene };
-    const context = await reducePlugins(seed, pluginList);
-
-    installedContext = context;
-    return context;
+  if (initialScene !== undefined) {
+    setScene(initialScene);
   }
 
-  await bootstrapRound();
+  const seed: GameContext<Initial> = { ...initialContext, rootElement, dispose, initialScene };
+  installedContext = await reducePlugins(seed, pluginList);
 
   startGameloop();
 }

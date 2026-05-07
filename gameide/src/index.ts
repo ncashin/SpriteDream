@@ -21,7 +21,7 @@ export {
   editorStart,
   editorUpdate,
   startGameloop,
-  resetLifecycle,
+  dispose,
 } from "./lifecycle/gameloop.js";
 export { query } from "./scene/query/query.js";
 export {
@@ -58,7 +58,6 @@ export type { GameObjectParts } from "./trait/gameObject.js";
 export {
   gameide,
   plugins,
-  dispose,
   type ApplyPlugins,
   type Plugin,
   type GameConfig,
@@ -77,7 +76,7 @@ export {
   withOwnership,
 } from "./plugins/networkingPlugin/networkingPlugin.js";
 export { peerIntegratesPhysicsForObject } from "./plugins/networkingPlugin/distributedSimulation.js";
-export type { NetworkingApi, NetworkingPluginOptions } from "./plugins/networkingPlugin/networkingPlugin.js";
+export type { NetworkingAPI as NetworkingApi, NetworkingPluginOptions } from "./plugins/networkingPlugin/networkingPlugin.js";
 export { gameUIPlugin } from "./plugins/gameUIPlugin/gameUIPlugin.js";
 export { ExampleGameUI } from "./plugins/gameUIPlugin/ExampleGameUI.js";
 export { Game } from "./plugins/gameUIPlugin/Game.js";

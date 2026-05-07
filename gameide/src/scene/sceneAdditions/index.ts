@@ -11,7 +11,11 @@ export const sceneAdditions = {
   },
   createObject(sceneNode: BaseSceneObject) {
     return (key: PropertyKey, value: unknown) => {
-      sceneNode[key] = value;
+      const stored =
+        value !== null && typeof value === "object"
+          ? structuredClone(value)
+          : value;
+      sceneNode[key] = stored;
       return sceneNode[key];
     };
   },

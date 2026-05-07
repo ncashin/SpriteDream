@@ -7,19 +7,30 @@ const gameUpdates: UpdateCallback[] = [];
 const editorUpdates: UpdateCallback[] = [];
 const alwaysUpdates: UpdateCallback[] = [];
 
+const scheduledDisposes: (() => void)[] = [];
+
 let frameId: number | undefined;
+
+export function dispose(fn: () => void): void {
+  scheduledDisposes.push(fn);
+}
+
+function runScheduledDisposes(): void {
+  while (scheduledDisposes.length > 0) {
+    const callback = scheduledDisposes.pop();
+    callback?.();
+  }
+}
+
+export function flushScheduledDisposes(): void {
+  runScheduledDisposes();
+}
 
 function runUpdates(
   callbacks: readonly UpdateCallback[],
   deltaTime: number,
 ): void {
   for (const callback of callbacks) callback(deltaTime);
-}
-
-export function resetLifecycle(): void {
-  gameUpdates.length = 0;
-  editorUpdates.length = 0;
-  alwaysUpdates.length = 0;
 }
 
 export function start(callback: StartCallback): void {

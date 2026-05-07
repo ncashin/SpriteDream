@@ -36,7 +36,7 @@ export type NetworkingPluginRequiredContext = {
   dispose: (fn: () => void) => void;
 };
 
-export type NetworkingApi = {
+export type NetworkingAPI = {
   peerId: string;
   getPeers: () => string[];
   onPeersChange: (handler: (peers: string[]) => void) => () => void;
@@ -49,7 +49,7 @@ export type NetworkingApi = {
 
 export const networkingPlugin = (
   options: NetworkingPluginOptions = {},
-): Plugin<NetworkingPluginRequiredContext, { networking: NetworkingApi }> =>
+): Plugin<NetworkingPluginRequiredContext, { networking: NetworkingAPI }> =>
   async (input) => {
     const room = options.room ?? "default";
 
@@ -73,7 +73,7 @@ export const networkingPlugin = (
       initializeScene: !shouldBootstrapScene,
     });
 
-    const networking: NetworkingApi = {
+    const networking: NetworkingAPI = {
       peerId,
       getPeers: () => transport.getPeers(),
       onPeersChange: (handler: (peers: string[]) => void) =>

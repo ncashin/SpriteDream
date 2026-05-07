@@ -41,32 +41,28 @@ export const editorPlugin =
     });
 
 
-    const releaseModeWatcher = onModeChange((mode, previousMode) => {
+    const handleModeChange = (mode: GameIDEMode) => {
       switch (mode) {
         case GameIDEMode.Game:
           saveSceneSnapshot();
           channel.pause();
           break;
         case GameIDEMode.Editor:
+          console.log("Restoring scene snapshot...");
           restoreSceneSnapshot();
           channel.unpause();
           break;
       }
-    });
+    };
+
+    handleModeChange(getMode());
+    const releaseModeWatcher = onModeChange(handleModeChange);
 
     const mount = await createEditorUI(
       input.rootElement,
       Editor ?? DefaultEditor,
     );
-
-    if (getMode() === GameIDEMode.Editor) {
-      restoreSceneSnapshot();
-      channel.unpause();
-    }
-    if (getMode() === GameIDEMode.Game) {
-      channel.pause();
-    }
-
+    
     input.dispose(() => {
       releaseModeWatcher();
       channel.dispose();
