@@ -2,7 +2,15 @@ import * as path from "path";
 import { spawn } from "node:child_process";
 import * as vscode from "vscode";
 
-const UPLOAD_BASE_URL = "https://gameide.app";
+const PRODUCTION_UPLOAD_BASE_URL = "https://gameide.app";
+/** Local webapp (Vite default) when running the extension via “Run Extension”. */
+const DEVELOPMENT_UPLOAD_BASE_URL = "http://localhost:5173";
+
+function getUploadBaseURL(context: vscode.ExtensionContext): string {
+  return context.extensionMode === vscode.ExtensionMode.Development
+    ? DEVELOPMENT_UPLOAD_BASE_URL
+    : PRODUCTION_UPLOAD_BASE_URL;
+}
 
 type BundleUploadFile = {
   path: string;
@@ -295,7 +303,11 @@ async function getProjectDirectory(
   return selected?.[0];
 }
 
-async function uploadGame(resource?: vscode.Uri): Promise<void> {
+async function uploadGame(
+  context: vscode.ExtensionContext,
+  resource?: vscode.Uri
+): Promise<void> {
+  const baseURL = getUploadBaseURL(context);
   const projectDirectory = await getProjectDirectory(resource);
   if (!projectDirectory) {
     return;
@@ -327,7 +339,7 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
       if (!targetGameId) {
         progress.report({ message: "Creating game on GameIDE..." });
         targetGameId = await createGameOnServer(
-          UPLOAD_BASE_URL,
+          baseURL,
           manifestFieldsForNewGame!
         );
         progress.report({ message: "Saving GameIDE manifest..." });
@@ -356,7 +368,7 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
       }
 
       const endpointPath = `/game/${encodeURIComponent(targetGameId)}/upload`;
-      const endpoint = new URL(endpointPath, UPLOAD_BASE_URL);
+      const endpoint = new URL(endpointPath, baseURL);
 
       progress.report({ message: "Uploading bundle to GameIDE..." });
       const response = await fetch(endpoint, {
@@ -373,7 +385,7 @@ async function uploadGame(resource?: vscode.Uri): Promise<void> {
       }
 
       vscode.window.showInformationMessage(
-        `Uploaded ${files.length} files to game ${targetGameId}.`
+        `Uploaded ${files.length} files to game ${targetGameId} (${baseURL}).`
       );
     }
   );
@@ -384,7 +396,7 @@ export function registerUploadGameCommand(
 ): void {
   const disposable = vscode.commands.registerCommand(
     "gameide.uploadGame",
-    uploadGame
+    (resource?: vscode.Uri) => uploadGame(context, resource)
   );
   context.subscriptions.push(disposable);
 }

@@ -10,13 +10,13 @@ export const sceneAdditions = {
       query(sceneNode, predicate);
   },
   createObject(sceneNode: BaseSceneObject) {
-    return (key: PropertyKey, value: unknown) => {
+    return <T>(key: PropertyKey, value: T): T => {
       const stored =
         value !== null && typeof value === "object"
           ? structuredClone(value)
           : value;
-      sceneNode[key] = stored;
-      return sceneNode[key];
+      sceneNode[key] = stored as BaseSceneObject[PropertyKey];
+      return sceneNode[key] as T;
     };
   },
   getObject(sceneNode: BaseSceneObject) {
@@ -29,8 +29,9 @@ export const sceneAdditions = {
 
 export type SceneAdditions = Omit<
   { [K in keyof typeof sceneAdditions]: ReturnType<(typeof sceneAdditions)[K]> },
-  "getObject"
+  "getObject" | "createObject"
 > & {
+  createObject: <T>(key: PropertyKey, value: T) => T;
   getObject: <T>(key: PropertyKey, guard: (value: unknown) => value is T) => T | null;
 };
 

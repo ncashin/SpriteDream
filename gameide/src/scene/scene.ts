@@ -1,6 +1,6 @@
 import { invalidateUseSceneSnapshot } from "../hooks/useSceneSnapshot.js";
-import { getSceneAddition } from "./sceneAdditions/index.js";
-import type { SceneAdditions } from "./sceneAdditions/index.js";
+import { getSceneAddition } from "./sceneAdditions/sceneAdditions.js";
+import type { SceneAdditions } from "./sceneAdditions/sceneAdditions.js";
 
 export { saveSceneSnapshot, restoreSceneSnapshot } from "./snapshot.js";
 export {
