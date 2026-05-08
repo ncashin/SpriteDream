@@ -55,7 +55,7 @@ export default function main(gameContext: RuntimeGameContext): void {
     if (player) {
       const gravityStep = player.playerGravityY * deltaTime;
       if (input.buttons.Jump.pressed && player.grounded) {
-        player.collisionBody.velocity.y = player.jumpSpeed * 5;
+        player.collisionBody.velocity.y = player.jumpSpeed;
       }
       player.collisionBody.velocity.x =
         input.axes.Horizontal * player.moveSpeed;

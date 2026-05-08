@@ -2,13 +2,21 @@ import {
   Application,
   Assets,
   Container,
+  Graphics,
   type ApplicationOptions,
+  Point,
   Sprite,
   type Texture,
 } from "pixi.js";
-import { gameUpdate, start, update } from "../../lifecycle/gameloop.js";
+import { editorUpdate, gameUpdate, start, update } from "../../lifecycle/gameloop.js";
 import { GameIDEMode, getMode } from "../../lifecycle/mode.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
+import {
+  deselectObject,
+  selectObject,
+  selectedObject,
+} from "../../scene/objectSelection.js";
+import type { BaseSceneObject } from "../../scene/scene.js";
 import {
   createColliderDebugGraphics,
   destroyColliderDebugGraphics,
@@ -50,6 +58,66 @@ type PixiPluginContext = {
   dispose: (fn: () => void) => void;
 };
 
+/** Pixi sprite picking expects a `Click` button (e.g. `Mouse0`) from {@link inputPlugin}. */
+export type PixiPluginInputContext = PixiPluginContext & {
+  input: {
+    buttons: { Click: { pressed: boolean } };
+    mouse: { position: { x: number; y: number } | null };
+  };
+};
+
+const SELECTION_Z = 1_000_001;
+const pickScratchWorld = new Point();
+const pickScratchLocal = new Point();
+
+function pickSpriteAtWorld(
+  worldX: number,
+  worldY: number,
+  world: Container,
+  spriteByEntity: Map<SpriteRenderable, { sprite: Sprite }>,
+): SpriteRenderable | null {
+  const entries = [...spriteByEntity.entries()].sort(
+    (a, b) => (b[1].sprite.zIndex ?? 0) - (a[1].sprite.zIndex ?? 0),
+  );
+  for (const [entity, { sprite }] of entries) {
+    pickScratchWorld.set(worldX, worldY);
+    sprite.toLocal(pickScratchWorld, world, pickScratchLocal);
+    if (sprite.containsPoint(pickScratchLocal)) {
+      return entity;
+    }
+  }
+  return null;
+}
+
+function syncSpriteSelectionOutline(
+  graphics: Graphics,
+  selected: BaseSceneObject | null,
+  spriteByEntity: Map<SpriteRenderable, { sprite: Sprite }>,
+): void {
+  graphics.clear();
+  graphics.zIndex = SELECTION_Z;
+  if (!selected) return;
+  const entry = spriteByEntity.get(selected as SpriteRenderable);
+  if (!entry) return;
+  const sprite = entry.sprite;
+  const lb = sprite.getLocalBounds();
+  const t = sprite.localTransform;
+  const corners: [number, number][] = [
+    [lb.x, lb.y],
+    [lb.x + lb.width, lb.y],
+    [lb.x + lb.width, lb.y + lb.height],
+    [lb.x, lb.y + lb.height],
+  ];
+  const p0 = t.apply({ x: corners[0]![0], y: corners[0]![1] });
+  graphics.moveTo(p0.x, p0.y);
+  for (let i = 1; i < 4; i++) {
+    const p = t.apply({ x: corners[i]![0], y: corners[i]![1] });
+    graphics.lineTo(p.x, p.y);
+  }
+  graphics.closePath();
+  graphics.stroke({ width: 1.5, color: 0x33ccff, alpha: 0.95 });
+}
+
 type ColliderDebugState = {
   graphics: ReturnType<typeof createColliderDebugGraphics>;
   drawOptions: ColliderDebugOptions;
@@ -57,7 +125,7 @@ type ColliderDebugState = {
 
 export function pixiPlugin(
   options: PixiPluginOptions = {},
-): Plugin<PixiPluginContext, { pixi: PixiPluginAPI }> {
+): Plugin<PixiPluginInputContext, { pixi: PixiPluginAPI }> {
   return async (context) => {
     const rootElement = context.rootElement;
     rootElement.style.position = "absolute";
@@ -125,6 +193,26 @@ export function pixiPlugin(
       };
     }
 
+    const selectionOutline = new Graphics();
+    selectionOutline.label = "gameide:spriteSelection";
+    selectionOutline.eventMode = "none";
+    selectionOutline.zIndex = SELECTION_Z;
+    world.addChild(selectionOutline);
+
+    const input = context.input;
+
+    const releaseEditorPick = editorUpdate((_dt) => {
+      if (disposed) return;
+      syncSpriteSelectionOutline(selectionOutline, selectedObject, spriteByEntity);
+      if (!input.buttons.Click.pressed) return;
+      const pos = input.mouse.position;
+      if (!pos) return;
+      const { x: wx, y: wy } = viewport.screenToWorld(pos.x, pos.y);
+      const hit = pickSpriteAtWorld(wx, wy, world, spriteByEntity);
+      if (hit) selectObject(hit);
+      else deselectObject();
+    });
+
     const syncFrame = () => {
       syncPixiSprites(world, undefined, assetsBaseUrl, textureByKey, spriteByEntity, {
         textureResolution: app.renderer.resolution,
@@ -159,8 +247,13 @@ export function pixiPlugin(
 
     context.dispose(() => {
       disposed = true;
+      releaseEditorPick();
       resizeObserver.disconnect();
       unsubscribeViewport();
+      if (selectionOutline.parent === world) {
+        world.removeChild(selectionOutline);
+      }
+      selectionOutline.destroy();
       disposePixiSprites(world, textureByKey, spriteByEntity, svgInflight);
       if (colliderDebug) {
         destroyColliderDebugGraphics(colliderDebug.graphics, world);

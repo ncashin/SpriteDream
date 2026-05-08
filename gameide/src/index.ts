@@ -115,6 +115,7 @@ export type {
 export {
   pixiPlugin,
   type PixiPluginAPI,
+  type PixiPluginInputContext,
   type PixiPluginOptions,
   type Viewport,
 } from "./plugins/pixiPlugin/pixiPlugin.js";

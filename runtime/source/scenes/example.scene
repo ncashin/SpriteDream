@@ -88,7 +88,15 @@
       "restitution": 0,
       "friction": 0.3,
       "disabled": false
-    }
+    },
+    "sprite": {
+      "__icon": "image",
+      "asset": "assets/vite.svg",
+      "width": 180,
+      "height": 32,
+      "tint": "#ffffff"
+    },
+    "__icon": "image"
   },
   "platform_1": {
     "position": {

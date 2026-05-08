@@ -1,5 +1,3 @@
-/** Read/write nested keys on a scene object (plain records; not proxy-aware). */
-
 export function getValueAtPath(
   root: Record<PropertyKey, unknown>,
   path: PropertyKey[],
@@ -55,7 +53,6 @@ export function deleteValueAtPath(
   Reflect.deleteProperty(node, path[path.length - 1]);
 }
 
-/** Rebuild `parent` with keys in `orderedKeys` (missing keys are dropped). */
 export function setChildKeyOrder(
   parent: Record<PropertyKey, unknown>,
   orderedKeys: string[],

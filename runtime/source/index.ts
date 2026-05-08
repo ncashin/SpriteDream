@@ -38,6 +38,7 @@ const game = await gameide({
         Jump: ["KeyW", "KeySpace", "KeyArrowUp"],
         Interact: ["KeyE"],
         Throw: ["Mouse0"],
+        Click: ["Mouse0"],
         EditorMoveUp: ["KeySpace"],
         EditorMoveDown: ["KeyShiftLeft", "KeyShiftRight"],
         LookCamera: ["Mouse0"],
