@@ -6,14 +6,12 @@ import {
   ownerTrait,
   spriteTrait,
   collisionBodyTrait,
-  boxColliderTrait,
-  circleColliderTrait,
   gameUpdate,
 } from "gameide";
 import playerScene from "./scenes/player.scene";
 import "./style.css";
 import bouncyBallScene from "./scenes/bouncyBall.scene";
-import { gameContext } from "./index";
+import type { RuntimeGameContext } from "./index";
 
 const playerTrait = defineTrait({
   moveSpeed: 260,
@@ -22,8 +20,9 @@ const playerTrait = defineTrait({
   grounded: false,
 });
 
-gameStart(() => {
-  const { networking, planck } = gameContext;
+export function main(gameContext: RuntimeGameContext): void {
+  gameStart(() => {
+    const { networking, planck } = gameContext;
   const scene = getScene();
 
   const ownedPlayer = networking.withOwnership(playerScene);
@@ -39,22 +38,17 @@ gameStart(() => {
   });
 
   scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));
-});
+  });
 
-gameUpdate((deltaTime) => {
-  const { input, networking } = gameContext;
+  gameUpdate((deltaTime) => {
+    const { input, networking } = gameContext;
   const scene = getScene();
   const horizontalAxis = input.axes.Horizontal;
   const sharedGravity = playerTrait.playerGravityY * deltaTime;
 
   const player = scene.getObject(
     networking.peerId,
-    implementsTrait([
-      playerTrait,
-      spriteTrait,
-      collisionBodyTrait,
-      boxColliderTrait,
-    ]),
+    implementsTrait([playerTrait, spriteTrait, collisionBodyTrait]),
   );
 
   if (player) {
@@ -68,15 +62,11 @@ gameUpdate((deltaTime) => {
 
   const ball = scene.getObject(
     "bouncyBall",
-    implementsTrait([
-      spriteTrait,
-      collisionBodyTrait,
-      circleColliderTrait,
-      ownerTrait,
-    ]),
+    implementsTrait([spriteTrait, collisionBodyTrait, ownerTrait]),
   );
 
-  if (ball && networking.isOwned(ball)) {
-    ball.collisionBody.velocity.y += sharedGravity;
-  }
-});
+    if (ball && networking.isOwned(ball)) {
+      ball.collisionBody.velocity.y += sharedGravity;
+    }
+  });
+}

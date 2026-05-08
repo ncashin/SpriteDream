@@ -12,6 +12,7 @@ import exampleScene from "./scenes/example.scene";
 import "./style.css";
 import { Editor } from "./Editor";
 import { GameUI } from "./GameUI";
+import { main } from "./game";
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
@@ -54,4 +55,4 @@ const game = await gameide({
 
 export const { gameContext } = game;
 export type RuntimeGameContext = typeof gameContext;
-await import("./game.ts");
+main(gameContext);
