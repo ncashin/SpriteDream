@@ -40,7 +40,7 @@ export {
   selectObject,
   deselectObject,
 } from "./scene/objectSelection.js";
-export { getValueAtPath, setValueAtPath } from "./scene/path.js";
+export { getValueAtPath, setValueAtPath, findSceneObjectPath } from "./scene/path.js";
 export {
   applyPatch as applyScenePatch,
   buildScenePatchFromDiff,
@@ -100,6 +100,7 @@ export { GameView } from "./plugins/editorPlugin/GameView.js";
 export { OverlayButton } from "./plugins/editorPlugin/OverlayButton.js";
 export { OverlayInput } from "./plugins/editorPlugin/OverlayInput.js";
 export { useScene } from "./hooks/useScene.js";
+export { useSelectedObject } from "./hooks/useSelectedObject.js";
 export { useTraits } from "./hooks/useTraits.js";
 export type { TraitTemplate } from "./hooks/useTraits.js";
 export { useGameIDEMode } from "./hooks/useGameIDEMode.js";
@@ -109,6 +110,7 @@ export type {
   InputBinding,
   AxisConfig,
   ButtonConfig,
+  InputMouseHandling,
   InputPluginRequiredContext,
   InputPluginOptions,
 } from "./plugins/inputPlugin/inputPlugin.js";
@@ -122,7 +124,14 @@ export {
 export type { ColliderDebugOptions } from "./plugins/pixiPlugin/colliderDebug.js";
 export {
   type ViewportState,
+  type ViewportController,
+  type EditorViewportGestureState,
+  type EditorViewportFrameOptions,
+  type EditorViewportFrameResult,
+  createEditorViewportGestureState,
+  editorViewportEditorFrame,
   applyViewportToWorldContainer,
+  createViewport,
 } from "./plugins/pixiPlugin/viewport.js";
 export { spriteTrait } from "./plugins/pixiPlugin/sprite.js";
 export {

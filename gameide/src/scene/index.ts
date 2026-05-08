@@ -23,7 +23,7 @@ export {
   mergeSceneReflectUpdateIntoPatch,
 } from "./scene.js";
 
-export { getValueAtPath, setValueAtPath } from "./path.js";
+export { getValueAtPath, setValueAtPath, findSceneObjectPath } from "./path.js";
 
 export { merge } from "./merge.js";
 export {

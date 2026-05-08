@@ -1,3 +1,5 @@
+import type { BaseSceneObject } from "./scene.js";
+
 export function getValueAtPath(
   root: Record<PropertyKey, unknown>,
   path: PropertyKey[],
@@ -84,6 +86,29 @@ export function pathsEqual(a: PropertyKey[], b: PropertyKey[]): boolean {
     if (a[i] !== b[i]) return false;
   }
   return true;
+}
+
+/** DFS from `root` using reference equality (matches proxied scene nodes). */
+export function findSceneObjectPath(
+  root: BaseSceneObject,
+  target: BaseSceneObject,
+): PropertyKey[] | null {
+  const visited = new WeakSet<object>();
+
+  const walk = (node: unknown, path: PropertyKey[]): PropertyKey[] | null => {
+    if (node === target) return path;
+    if (!node || typeof node !== "object") return null;
+    if (visited.has(node)) return null;
+    visited.add(node);
+    const record = node as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      const found = walk(record[key], path.concat(key));
+      if (found !== null) return found;
+    }
+    return null;
+  };
+
+  return walk(root, []);
 }
 
 export function getRecordAtPath(

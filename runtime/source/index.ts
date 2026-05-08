@@ -34,6 +34,7 @@ const game = await gameide({
           positive: ["KeyD", "KeyArrowRight"],
         },
       },
+      mouseHandling: "editor",
       buttons: {
         Jump: ["KeyW", "KeySpace", "KeyArrowUp"],
         Interact: ["KeyE"],

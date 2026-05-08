@@ -3,6 +3,7 @@ import {
   ChevronRight,
   Plus,
   Trash2,
+  X,
 } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import {
@@ -15,9 +16,15 @@ import {
 } from "react";
 import type { IconSlug } from "../../lucide/lucideIconSlug.js";
 import type { BaseSceneObject } from "../../scene/scene.js";
+import { deselectObject } from "../../scene/objectSelection.js";
 import { getScene } from "../../scene/scene.js";
-import { deleteValueAtPath, setValueAtPath } from "../../scene/path.js";
+import {
+  deleteValueAtPath,
+  getRecordAtPath,
+  setValueAtPath,
+} from "../../scene/path.js";
 import { useScene } from "../../hooks/useScene.js";
+import { useSelectedObject } from "../../hooks/useSelectedObject.js";
 import { useTraits } from "../../hooks/useTraits.js";
 import {
   SceneTreeRowIconFrame,
@@ -458,6 +465,7 @@ type ObjectNodeProps = {
   onDelete: () => void;
   templates: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
+  expandObjectsByDefault?: boolean;
 };
 
 function ObjectNode({
@@ -468,8 +476,9 @@ function ObjectNode({
   onDelete,
   templates,
   mergeTraitInto,
+  expandObjectsByDefault = false,
 }: ObjectNodeProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(expandObjectsByDefault);
   const keys = Object.keys(sceneObject).filter((k) => !SCENE_TREE_META_KEYS.has(k));
 
   let childBody: ReactNode = null;
@@ -484,6 +493,7 @@ function ObjectNode({
             setAtPath={setAtPath}
             templates={templates}
             mergeTraitInto={mergeTraitInto}
+            expandObjectsByDefault={expandObjectsByDefault}
             key={key}
           />
         ))}
@@ -533,6 +543,7 @@ type TreeNodeProps = {
   setAtPath: (path: PropertyKey[], value: unknown) => void;
   templates: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
+  expandObjectsByDefault?: boolean;
 };
 
 function TreeNode({
@@ -542,6 +553,7 @@ function TreeNode({
   setAtPath,
   templates,
   mergeTraitInto,
+  expandObjectsByDefault = false,
 }: TreeNodeProps) {
   const root = getScene() as Record<PropertyKey, unknown>;
   const onDelete = () => deleteValueAtPath(root, path);
@@ -569,25 +581,74 @@ function TreeNode({
       onDelete={onDelete}
       templates={templates}
       mergeTraitInto={mergeTraitInto}
+      expandObjectsByDefault={expandObjectsByDefault}
     />
   );
 }
 
-function SceneViewHeader({ trailing }: { trailing?: ReactNode }) {
+function formatScenePathSlash(pathKeys: PropertyKey[]): string {
+  return pathKeys.map(String).join("/");
+}
+
+function elementIsTextInputLike(el: Element): boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  const tag = el.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  return el.isContentEditable;
+}
+
+function SceneTreeExitFocusButton({
+  onClick,
+}: {
+  onClick: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "relative flex items-center justify-center self-center rounded p-0.5",
+        sceneTreeRowIconFrameSizeClass,
+        rowHover,
+        "opacity-70 hover:opacity-100",
+      )}
+      title="Deselect (Esc)"
+    >
+      <button
+        type="button"
+        aria-label="Deselect"
+        className="absolute inset-0 cursor-pointer rounded border-0 bg-transparent p-0 outline-none focus-visible:ring-1 focus-visible:ring-[var(--vscode-focusBorder)]"
+        onClick={onClick}
+      />
+      <X
+        size={iconSize}
+        className={cn("block pointer-events-none", iconClass)}
+        aria-hidden
+      />
+    </div>
+  );
+}
+
+function SceneViewHeader({
+  title,
+  trailing,
+}: {
+  title?: ReactNode;
+  trailing?: ReactNode;
+}) {
   return (
     <header
       className={cn(
-        "relative w-full pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
+        "flex w-full min-w-0 items-center gap-2 pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
         font,
         foreground,
-        trailing && "pr-7",
       )}
     >
-      <span className="shrink-0 font-semibold">Scene</span>
+      <div className="min-w-0 flex-1 truncate leading-none">
+        {title ?? (
+          <span className="block min-w-0 truncate font-semibold">Scene</span>
+        )}
+      </div>
       {trailing ? (
-        <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
-          {trailing}
-        </div>
+        <div className="flex shrink-0 items-center gap-0.5">{trailing}</div>
       ) : null}
     </header>
   );
@@ -596,24 +657,73 @@ function SceneViewHeader({ trailing }: { trailing?: ReactNode }) {
 export function SceneTree() {
   const [root] = useScene();
   const { templates, mergeTraitInto } = useTraits();
+  const { selectedPath } = useSelectedObject();
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!selectedPath?.length) return;
+      if (e.key !== "Escape" && e.key !== "x" && e.key !== "X") return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (elementIsTextInputLike(e.target as Element)) return;
+      e.preventDefault();
+      deselectObject();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedPath]);
 
   let rootObject: BaseSceneObject | undefined;
   if (isExpandable(root)) {
     rootObject = root as BaseSceneObject;
   }
 
+  const sceneRoot = getScene() as Record<PropertyKey, unknown>;
+  let displayRoot: BaseSceneObject | undefined = rootObject;
+  let nodePathPrefix: PropertyKey[] = [];
+
+  if (rootObject && selectedPath?.length) {
+    const sub = getRecordAtPath(sceneRoot, selectedPath);
+    if (sub) {
+      displayRoot = sub as BaseSceneObject;
+      nodePathPrefix = selectedPath;
+    }
+  }
+
   const setAtPath = useCallback((scenePath: PropertyKey[], next: unknown) => {
     setValueAtPath(getScene() as Record<PropertyKey, unknown>, scenePath, next);
   }, []);
 
-  const headerTrailing = rootObject ? (
-    <ObjectAddSelect
-      objectPath={[]}
-      setAtPath={setAtPath}
-      templates={templates}
-      mergeTraitInto={mergeTraitInto}
-    />
+  const viewingSelectionSubtree = Boolean(selectedPath?.length);
+
+  const headerTrailing = displayRoot ? (
+    <>
+      <div
+        className={cn(
+          !viewingSelectionSubtree && "invisible pointer-events-none",
+        )}
+      >
+        <SceneTreeExitFocusButton onClick={() => deselectObject()} />
+      </div>
+      <ObjectAddSelect
+        objectPath={nodePathPrefix}
+        setAtPath={setAtPath}
+        templates={templates}
+        mergeTraitInto={mergeTraitInto}
+      />
+    </>
   ) : undefined;
+
+  const headerTitle =
+    viewingSelectionSubtree && selectedPath ? (
+      <span
+        className="block min-w-0 truncate font-semibold"
+        title={formatScenePathSlash(selectedPath)}
+      >
+        {formatScenePathSlash(selectedPath)}
+      </span>
+    ) : (
+      <span className="block min-w-0 truncate font-semibold">Scene</span>
+    );
 
   if (!rootObject) {
     return (
@@ -625,19 +735,21 @@ export function SceneTree() {
 
   return (
     <div className="w-full h-full min-w-0 flex flex-col bg-[var(--vscode-editor-background)] p-2">
-      <SceneViewHeader trailing={headerTrailing} />
+      <SceneViewHeader title={headerTitle} trailing={headerTrailing} />
       <div className="flex-1 min-h-0 pt-2.5 overflow-auto">
-        {Object.keys(rootObject).map((key) => (
-          <TreeNode
-            name={key}
-            path={[key]}
-            value={rootObject[key]}
-            setAtPath={setAtPath}
-            templates={templates}
-            mergeTraitInto={mergeTraitInto}
-            key={key}
-          />
-        ))}
+        {displayRoot &&
+          Object.keys(displayRoot).map((key) => (
+            <TreeNode
+              name={key}
+              path={nodePathPrefix.concat(key)}
+              value={displayRoot[key]}
+              setAtPath={setAtPath}
+              templates={templates}
+              mergeTraitInto={mergeTraitInto}
+              expandObjectsByDefault={viewingSelectionSubtree}
+              key={key}
+            />
+          ))}
       </div>
     </div>
   );

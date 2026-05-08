@@ -115,3 +115,129 @@ export function applyViewportToWorldContainer(
   world.scale.set(scale, -scale);
   world.position.set(width / 2 - centerX * scale, height / 2 + centerY * scale);
 }
+
+export type ViewportController = ReturnType<typeof createViewport>;
+
+/** Mutable state for editor pan (click–drag) vs click-to-select. */
+export type EditorViewportGestureState = {
+  panning: boolean;
+  anchorWorld: { x: number; y: number } | null;
+  pressClient: { x: number; y: number } | null;
+};
+
+export function createEditorViewportGestureState(): EditorViewportGestureState {
+  return { panning: false, anchorWorld: null, pressClient: null };
+}
+
+export type EditorViewportFrameOptions = {
+  rootElement: HTMLElement;
+  viewport: ViewportController;
+  /** Primary button: drag pans after slop; release without pan may be a click. */
+  panButton: { held: boolean; pressed: boolean; released: boolean };
+  clientPosition: { x: number; y: number } | null;
+  wheel: { x: number; y: number };
+  minScale?: number;
+  maxScale?: number;
+  /** Zoom factor uses `exp(-wheel.y * zoomSensitivity)`. */
+  zoomSensitivity?: number;
+  /** Movement past this distance (pixels) turns the gesture into a pan. @default 5 */
+  panSlopPx?: number;
+};
+
+export type EditorViewportFrameResult = {
+  /** True on the frame the pan button is released and the gesture was a click (no pan). */
+  shouldPickAtClick: boolean;
+};
+
+function zoomViewportAtClient(
+  viewport: ViewportController,
+  rootElement: HTMLElement,
+  clientX: number,
+  clientY: number,
+  factor: number,
+  minScale: number,
+  maxScale: number,
+): void {
+  const W = viewport.screenToWorld(clientX, clientY);
+  const rect = rootElement.getBoundingClientRect();
+  const sx = clientX - rect.left;
+  const sy = clientY - rect.top;
+  const { width: vw, height: vh, scale: s } = viewport.state;
+  const nextScale = Math.min(maxScale, Math.max(minScale, s * factor));
+  if (nextScale === s) return;
+  const newCx = W.x - (sx - vw / 2) / nextScale;
+  const newCy = W.y - (vh / 2 - sy) / nextScale;
+  viewport.setScale(nextScale);
+  viewport.setCenter(newCx, newCy);
+}
+
+/**
+ * Editor-only viewport: wheel zoom (toward cursor) and click-drag pan using {@link inputPlugin} mouse state.
+ * Invoke from the `editorUpdate` callback each frame.
+ */
+export function editorViewportEditorFrame(
+  gesture: EditorViewportGestureState,
+  options: EditorViewportFrameOptions,
+): EditorViewportFrameResult {
+  const {
+    viewport,
+    rootElement,
+    panButton,
+    clientPosition,
+    wheel,
+  } = options;
+  const minScale = options.minScale ?? 0.05;
+  const maxScale = options.maxScale ?? 64;
+  const zoomSensitivity = options.zoomSensitivity ?? 0.002;
+  const panSlopPx = options.panSlopPx ?? 5;
+  const slop2 = panSlopPx * panSlopPx;
+
+  let shouldPickAtClick = false;
+
+  if (wheel.y !== 0 && clientPosition) {
+    const factor = Math.exp(-wheel.y * zoomSensitivity);
+    zoomViewportAtClient(
+      viewport,
+      rootElement,
+      clientPosition.x,
+      clientPosition.y,
+      factor,
+      minScale,
+      maxScale,
+    );
+  }
+
+  if (panButton.pressed && clientPosition) {
+    gesture.panning = false;
+    gesture.pressClient = { x: clientPosition.x, y: clientPosition.y };
+    gesture.anchorWorld = viewport.screenToWorld(clientPosition.x, clientPosition.y);
+  }
+
+  if (panButton.held && clientPosition && gesture.pressClient) {
+    const dx = clientPosition.x - gesture.pressClient.x;
+    const dy = clientPosition.y - gesture.pressClient.y;
+    if (!gesture.panning && dx * dx + dy * dy >= slop2) {
+      gesture.panning = true;
+    }
+    if (gesture.panning && gesture.anchorWorld) {
+      const rect = rootElement.getBoundingClientRect();
+      const sx = clientPosition.x - rect.left;
+      const sy = clientPosition.y - rect.top;
+      const { width: vw, height: vh, scale: s } = viewport.state;
+      const cx = gesture.anchorWorld.x - (sx - vw / 2) / s;
+      const cy = gesture.anchorWorld.y - (vh / 2 - sy) / s;
+      viewport.setCenter(cx, cy);
+    }
+  }
+
+  if (panButton.released) {
+    if (!gesture.panning && gesture.pressClient !== null) {
+      shouldPickAtClick = true;
+    }
+    gesture.panning = false;
+    gesture.anchorWorld = null;
+    gesture.pressClient = null;
+  }
+
+  return { shouldPickAtClick };
+}

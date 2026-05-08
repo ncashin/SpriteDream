@@ -26,7 +26,9 @@ import {
 import { disposePixiSprites, syncPixiSprites, type SpriteRenderable } from "./sprite.js";
 import {
   applyViewportToWorldContainer,
+  createEditorViewportGestureState,
   createViewport,
+  editorViewportEditorFrame,
 } from "./viewport.js";
 
 export type PixiPluginOptions = {
@@ -58,11 +60,16 @@ type PixiPluginContext = {
   dispose: (fn: () => void) => void;
 };
 
-/** Pixi sprite picking expects a `Click` button (e.g. `Mouse0`) from {@link inputPlugin}. */
+/** Pixi: sprite pick and editor viewport use `Click` / `Mouse0` from {@link inputPlugin} with `mouseHandling: "editor"`. */
 export type PixiPluginInputContext = PixiPluginContext & {
   input: {
-    buttons: { Click: { pressed: boolean } };
-    mouse: { position: { x: number; y: number } | null };
+    buttons: {
+      Click: { held: boolean; pressed: boolean; released: boolean };
+    };
+    mouse: {
+      position: { x: number; y: number } | null;
+      wheel: { x: number; y: number };
+    };
   };
 };
 
@@ -200,11 +207,21 @@ export function pixiPlugin(
     world.addChild(selectionOutline);
 
     const input = context.input;
+    const editorViewportGesture = createEditorViewportGestureState();
 
     const releaseEditorPick = editorUpdate((_dt) => {
       if (disposed) return;
       syncSpriteSelectionOutline(selectionOutline, selectedObject, spriteByEntity);
-      if (!input.buttons.Click.pressed) return;
+
+      const { shouldPickAtClick } = editorViewportEditorFrame(editorViewportGesture, {
+        rootElement,
+        viewport,
+        panButton: input.buttons.Click,
+        clientPosition: input.mouse.position,
+        wheel: input.mouse.wheel,
+      });
+
+      if (!shouldPickAtClick) return;
       const pos = input.mouse.position;
       if (!pos) return;
       const { x: wx, y: wy } = viewport.screenToWorld(pos.x, pos.y);

@@ -1,4 +1,5 @@
 import { update } from "../../lifecycle/gameloop.js";
+import { GameIDEMode, getMode } from "../../lifecycle/mode.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
 
 export type InputBinding =
@@ -13,6 +14,8 @@ export type AxisConfig = {
 
 export type ButtonConfig = InputBinding[];
 
+export type InputMouseHandling = "default" | "editor";
+
 export type InputPluginRequiredContext = { rootElement: HTMLElement };
 export type InputPluginOptions = {
   axes: Record<string, AxisConfig>;
@@ -24,6 +27,11 @@ export type InputPluginOptions = {
     dragging: string;
     idle?: string;
   };
+  /**
+   * `editor`: capture wheel on the game view while in editor mode (pan/zoom) and
+   * call `preventDefault` so the page does not scroll. In game mode, wheel is ignored.
+   */
+  mouseHandling?: InputMouseHandling;
 };
 
 type AxisKeys<Options extends InputPluginOptions> = keyof Options["axes"] &
@@ -43,6 +51,8 @@ type InputShape<Options extends InputPluginOptions> = {
   mouse: {
     delta: { x: number; y: number };
     position: { x: number; y: number } | null;
+    /** Cleared after each frame. Only populated when {@link InputPluginOptions.mouseHandling} is `"editor"`. */
+    wheel: { x: number; y: number };
   };
 };
 
@@ -94,7 +104,28 @@ export function inputPlugin<Options extends InputPluginOptions>(
     const mouse = {
       delta: { x: 0, y: 0 },
       position: null as { x: number; y: number } | null,
+      wheel: { x: 0, y: 0 },
     };
+
+    let wheelAccX = 0;
+    let wheelAccY = 0;
+    const mouseHandling = options.mouseHandling ?? "default";
+    const rootEl = inputContext.rootElement;
+
+    if (mouseHandling === "editor") {
+      target.addEventListener(
+        "wheel",
+        (e) => {
+          if (getMode() !== GameIDEMode.Editor) return;
+          if (!(e.target instanceof Node) || !rootEl.contains(e.target)) return;
+          const ev = e as WheelEvent;
+          ev.preventDefault();
+          wheelAccX += ev.deltaX;
+          wheelAccY += ev.deltaY;
+        },
+        { passive: false },
+      );
+    }
 
     function setKey(binding: InputBinding, down: boolean) {
       if (binding.startsWith("Key")) {
@@ -231,11 +262,15 @@ export function inputPlugin<Options extends InputPluginOptions>(
       mouse.delta.x = mouseDeltaX;
       mouse.delta.y = mouseDeltaY;
       mouse.position = hasMousePosition ? { x: mouseX, y: mouseY } : null;
+      mouse.wheel.x = wheelAccX;
+      mouse.wheel.y = wheelAccY;
 
       Object.assign(previousKeyState, keyState);
       Object.assign(previousMouseState, mouseState);
       mouseDeltaX = 0;
       mouseDeltaY = 0;
+      wheelAccX = 0;
+      wheelAccY = 0;
     });
 
     return {
