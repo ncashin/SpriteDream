@@ -21,8 +21,9 @@ const playerTrait = defineTrait({
 });
 
 export default function main(gameContext: RuntimeGameContext): void {
+  const { input, networking } = gameContext;
+
   gameStart(() => {
-    const { networking } = gameContext;
     const scene = getScene();
 
     const peerPlayer = scene.createObject(
@@ -42,8 +43,8 @@ export default function main(gameContext: RuntimeGameContext): void {
   });
 
   gameUpdate((deltaTime) => {
-    const { input, networking } = gameContext;
     const scene = getScene();
+
     const sharedGravity = playerTrait.playerGravityY * deltaTime;
 
     const player = scene.getObject(
@@ -54,7 +55,7 @@ export default function main(gameContext: RuntimeGameContext): void {
     if (player) {
       const gravityStep = player.playerGravityY * deltaTime;
       if (input.buttons.Jump.pressed && player.grounded) {
-        player.collisionBody.velocity.y = player.jumpSpeed;
+        player.collisionBody.velocity.y = player.jumpSpeed * 5;
       }
       player.collisionBody.velocity.x =
         input.axes.Horizontal * player.moveSpeed;

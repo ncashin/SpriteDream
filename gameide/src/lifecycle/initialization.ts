@@ -8,6 +8,8 @@ import {
   editorStart,
   editorUpdate,
   dispose,
+  __suspendHotScopes,
+  __restoreHotScopes,
 } from "./gameloop.js";
 import {
   setScene,
@@ -101,7 +103,12 @@ async function runGame<Initial extends object, const Plugins extends readonly un
   }
 
   const seed: GameContext<Initial> = { ...initialContext, rootElement, dispose, initialScene };
-  installedContext = await reducePlugins(seed, pluginList);
+  const hotScopeSnapshot = __suspendHotScopes();
+  try {
+    installedContext = await reducePlugins(seed, pluginList);
+  } finally {
+    __restoreHotScopes(hotScopeSnapshot);
+  }
 
   startGameloop();
 }

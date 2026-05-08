@@ -25,6 +25,7 @@ export {
   __beginHotModule,
   __endHotModule,
   __disposeHotModule,
+  __runHotModuleReplay,
 } from "./lifecycle/gameloop.js";
 export { query } from "./scene/query/query.js";
 export {

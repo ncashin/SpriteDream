@@ -33,6 +33,16 @@ const disposedHotScopes = new Set<string>();
 let frameId: number | undefined;
 const activeHotScopes: HotModuleScope[] = [];
 
+/** Saved hot scopes while plugins run so they do not inherit the entry module's scopeId. */
+export function __suspendHotScopes(): HotModuleScope[] {
+  return activeHotScopes.splice(0);
+}
+
+export function __restoreHotScopes(snapshot: readonly HotModuleScope[]): void {
+  activeHotScopes.length = 0;
+  activeHotScopes.push(...snapshot);
+}
+
 export function dispose(fn: () => void): void {
   scheduledDisposes.push(fn);
 }
@@ -165,10 +175,9 @@ export function __endHotModule(scopeId: string): void {
   for (let index = activeHotScopes.length - 1; index >= 0; index -= 1) {
     const scope = activeHotScopes[index];
     if (scope?.id !== normalizedScopeId) continue;
-    // Keep the scope on the stack so lifecycle hooks registered later (e.g. entry
-    // calling `main()` after `await gameide()`) still get cleanup on HMR. Clear the
-    // replacement flag so deferred registration runs `gameStart` callbacks.
-    scope.isReplacement = false;
+    // Keep the scope on the stack so hooks registered later (e.g. `main()` after
+    // `await gameide()`) still get the right `scopeId` for HMR cleanup. Leave
+    // `isReplacement` set so `gameStart` / `editorStart` do not re-run on hot swap.
     return;
   }
 }
@@ -180,6 +189,28 @@ export function __disposeHotModule(scopeId: string): void {
   for (let index = activeHotScopes.length - 1; index >= 0; index -= 1) {
     if (activeHotScopes[index]?.id === normalizedScopeId) {
       activeHotScopes.splice(index, 1);
+    }
+  }
+}
+
+/** Ensures replay runs while this hot scope is active so hooks get correct `scopeId`. */
+export function __runHotModuleReplay(scopeId: string, replay: () => void): void {
+  const normalizedScopeId = normalizeHotScopeId(scopeId);
+  const topBefore = activeHotScopes.length - 1;
+  const alreadyActive =
+    topBefore >= 0 && activeHotScopes[topBefore]?.id === normalizedScopeId;
+  if (!alreadyActive) {
+    activeHotScopes.push({ id: normalizedScopeId, isReplacement: true });
+  }
+  try {
+    replay();
+  } finally {
+    if (!alreadyActive) {
+      const top = activeHotScopes.length - 1;
+      const scope = top >= 0 ? activeHotScopes[top] : undefined;
+      if (scope?.id === normalizedScopeId) {
+        activeHotScopes.splice(top, 1);
+      }
     }
   }
 }

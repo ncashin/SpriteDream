@@ -2,8 +2,11 @@ import type { Plugin } from "vite";
 import fs from "node:fs";
 import { attachRoomWebSocket } from "./roomWebSocket";
 
-type JsonPrimitive = string | number | boolean | null;
-type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+type JSONPrimitive = string | number | boolean | null;
+type JSONValue =
+  | JSONPrimitive
+  | JSONValue[]
+  | { [key: string]: JSONValue };
 
 const lifecycleExports = new Set([
   "start",
@@ -16,11 +19,11 @@ const lifecycleExports = new Set([
 
 const transformableModulePattern = /\.[cm]?[jt]sx?$/;
 
-function parseSceneJson(raw: string): JsonValue {
-  return JSON.parse(raw) as JsonValue;
+function parseSceneJSON(raw: string): JSONValue {
+  return JSON.parse(raw) as JSONValue;
 }
 
-function createSceneModuleCode(data: JsonValue): string {
+function createSceneModuleCode(data: JSONValue): string {
   return `const data = ${JSON.stringify(data)};
 export default data;
 `;
@@ -77,14 +80,15 @@ function shouldTransformHotModule(code: string, id: string): boolean {
 }
 
 function createHotModuleCode(code: string): string {
-  return `import { __beginHotModule, __endHotModule, __disposeHotModule, getGameContext } from "gameide";
+  return `import { __beginHotModule, __endHotModule, __disposeHotModule, __runHotModuleReplay, getGameContext } from "gameide";
 const __gameideHotScope = __beginHotModule(import.meta.url);
 ${code}
 __endHotModule(__gameideHotScope);
 if (import.meta.hot) {
   import.meta.hot.accept((mod) => {
-    const replay = mod.default;
-    if (typeof replay === "function") replay(getGameContext());
+    const replay = mod?.default;
+    if (typeof replay !== "function") return;
+    __runHotModuleReplay(__gameideHotScope, () => replay(getGameContext()));
   });
   import.meta.hot.dispose(() => __disposeHotModule(__gameideHotScope));
 }
@@ -111,7 +115,7 @@ export function gameidePlugin(): Plugin {
       if (!cleanId.endsWith(".scene")) return;
 
       const raw = fs.readFileSync(cleanId, "utf8");
-      const data = parseSceneJson(raw);
+      const data = parseSceneJSON(raw);
       return createSceneModuleCode(data);
     },
     transform(code, id) {
