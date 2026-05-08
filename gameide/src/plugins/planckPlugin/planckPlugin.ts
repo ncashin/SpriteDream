@@ -8,10 +8,15 @@ import {
   Vec2,
 } from "planck";
 import { update, start, gameUpdate } from "../../lifecycle/gameloop.js";
+import { getGameContext } from "../../lifecycle/game.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
 import { peerIntegratesPhysicsForObject } from "../networkingPlugin/distributedSimulation.js";
 import type { BaseSceneObject } from "../../scene/scene.js";
 import { getScene } from "../../scene/scene.js";
+import {
+  hasSceneAddition,
+  registerSceneAddition,
+} from "../../scene/sceneAdditions/sceneAdditions.js";
 import { query } from "../../scene/query/query.js";
 import {
   colliderSignature,
@@ -76,6 +81,17 @@ export type PlanckCollisionHandler = (
   other: BaseSceneObject,
   e: PlanckCallbackEvent,
 ) => void;
+
+/**
+ * Scene nodes expose this binding when `planckPlugin` is installed (`scene.createObject` return values may be intersected with this type).
+ */
+export type PlanckSceneCollisionBindings = {
+  onCollision: (handler: PlanckCollisionHandler) => () => void;
+};
+
+declare module "../../scene/scene.js" {
+  interface SceneNodeVirtualProperties extends PlanckSceneCollisionBindings {}
+}
 
 export type PlanckPluginAPI = {
   world: World;
@@ -400,6 +416,21 @@ export function planckPlugin(
       isKinematic: (self) => sceneBodyIsKinematic(self),
       isDynamic: (self) => sceneBodyIsDynamic(self),
     };
+
+    if (!hasSceneAddition("onCollision")) {
+      registerSceneAddition(
+        "onCollision",
+        (sceneNode: BaseSceneObject) => (handler: PlanckCollisionHandler) => {
+          const { planck } = getGameContext() as { planck?: PlanckPluginAPI };
+          if (!planck) {
+            throw new Error(
+              'Scene addition "onCollision" requires planckPlugin to be installed.',
+            );
+          }
+          return planck.onCollision(sceneNode, handler);
+        },
+      );
+    }
 
     context.dispose(() => {
       world.off("begin-contact", onBegin);

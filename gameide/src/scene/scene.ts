@@ -1,6 +1,8 @@
 import { invalidateUseSceneSnapshot } from "../hooks/useSceneSnapshot.js";
-import { getSceneAddition } from "./sceneAdditions/sceneAdditions.js";
-import type { SceneAdditions } from "./sceneAdditions/sceneAdditions.js";
+import {
+  getSceneAddition,
+  sceneAdditions,
+} from "./sceneAdditions/sceneAdditions.js";
 
 export { saveSceneSnapshot, restoreSceneSnapshot } from "./snapshot.js";
 export {
@@ -9,8 +11,13 @@ export {
   mergeSceneReflectUpdateIntoPatch,
 } from "./patch.js";
 
+export interface SceneNodeVirtualProperties {}
+
 export type BaseSceneObject = Record<PropertyKey, unknown>;
-export type SceneObject = BaseSceneObject & SceneAdditions;
+export type SceneGraphObject = BaseSceneObject & SceneNodeVirtualProperties;
+export type SceneObject = SceneGraphObject & {
+  [K in keyof typeof sceneAdditions]: ReturnType<(typeof sceneAdditions)[K]>;
+};
 
 export type SceneReflectUpdate = {
   path: PropertyKey[];

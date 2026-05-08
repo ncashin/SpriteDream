@@ -41,7 +41,9 @@ export {
 } from "./scene/patch.js";
 export type {
   BaseSceneObject,
+  SceneGraphObject,
   SceneObject,
+  SceneNodeVirtualProperties,
   BaseSceneObject as SceneData,
   BaseSceneObject as ScenePatch,
 } from "./scene/scene.js";
@@ -128,6 +130,7 @@ export {
   type PlanckCallbackEvent,
   type PlanckCollisionHandler,
   type PlanckContactPhase,
+  type PlanckSceneCollisionBindings,
 } from "./plugins/planckPlugin/planckPlugin.js";
 export type { Rigidbody2D } from "./plugins/planckPlugin/rigidbody2d.js";
 export {

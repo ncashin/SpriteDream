@@ -1,6 +1,5 @@
 import {
-  type BaseSceneObject,
-  type PlanckCallbackEvent,
+  type PlanckCollisionHandler,
   defineTrait,
   gameStart,
   getScene,
@@ -29,16 +28,13 @@ gameStart(() => {
   const { networking, planck } = gameContext;
   const scene = getScene();
 
-  const peerPlayer = scene.createObject(
-    networking.peerId,
-    networking.withOwnership(playerScene),
-  );
+  const ownedPlayer = networking.withOwnership(playerScene);
+  const peerPlayer = scene.createObject(networking.peerId, ownedPlayer);
 
   const floorSupportContacts = new Set<Contact>();
   const floorContactWorldManifold = new WorldManifold();
-  void planck.onCollision(
-    peerPlayer,
-    (other: BaseSceneObject, event: PlanckCallbackEvent) => {
+  void peerPlayer.onCollision(
+    ((other, event) => {
       if (!planck.isStatic(other)) return;
       const worldManifold = event.contact.getWorldManifold(
         floorContactWorldManifold,
@@ -56,7 +52,7 @@ gameStart(() => {
         floorSupportContacts.delete(event.contact);
       }
       peerPlayer.grounded = floorSupportContacts.size > 0;
-    },
+    }) 
   );
 
   scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));

@@ -1,4 +1,10 @@
-export type { BaseSceneObject, SceneObject, SceneReflectUpdate } from "./scene.js";
+export type {
+  BaseSceneObject,
+  SceneGraphObject,
+  SceneObject,
+  SceneNodeVirtualProperties,
+  SceneReflectUpdate,
+} from "./scene.js";
 export {
   sceneTarget,
   getScene,
@@ -15,7 +21,10 @@ export {
 export { getValueAtPath, setValueAtPath } from "./path.js";
 
 export { merge } from "./merge.js";
-export { sceneAdditions } from "./sceneAdditions/sceneAdditions.js";
+export {
+  sceneAdditions,
+  registerSceneAddition,
+} from "./sceneAdditions/sceneAdditions.js";
 
 export type { SceneChannelMessage } from "./sceneChannel/sceneChannel.js";
 export {
