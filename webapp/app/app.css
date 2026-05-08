@@ -16,11 +16,9 @@
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
+  @apply bg-black text-white antialiased;
 
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
-  }
+  color-scheme: dark;
 }
 
 ul {
