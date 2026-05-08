@@ -25,12 +25,19 @@
       "__icon": "square",
       "width": 2400,
       "height": 40,
-      "offset": { "x": 0, "y": 0 }
+      "offset": {
+        "x": 0,
+        "y": 0
+      }
     },
     "collisionBody": {
       "__icon": "atom",
       "type": "static",
-      "velocity": { "x": 0, "y": 0, "angular": 0 },
+      "velocity": {
+        "x": 0,
+        "y": 0,
+        "angular": 0
+      },
       "fixedRotation": false,
       "isTrigger": false,
       "restitution": 0,
@@ -61,12 +68,19 @@
       "__icon": "square",
       "width": 180,
       "height": 24,
-      "offset": { "x": 0, "y": 0 }
+      "offset": {
+        "x": 0,
+        "y": 0
+      }
     },
     "collisionBody": {
       "__icon": "atom",
       "type": "static",
-      "velocity": { "x": 0, "y": 0, "angular": 0 },
+      "velocity": {
+        "x": 0,
+        "y": 0,
+        "angular": 0
+      },
       "fixedRotation": false,
       "isTrigger": false,
       "restitution": 0,
@@ -97,12 +111,19 @@
       "__icon": "square",
       "width": 200,
       "height": 24,
-      "offset": { "x": 0, "y": 0 }
+      "offset": {
+        "x": 0,
+        "y": 0
+      }
     },
     "collisionBody": {
       "__icon": "atom",
       "type": "static",
-      "velocity": { "x": 0, "y": 0, "angular": 0 },
+      "velocity": {
+        "x": 0,
+        "y": 0,
+        "angular": 0
+      },
       "fixedRotation": false,
       "isTrigger": false,
       "restitution": 0,
@@ -133,12 +154,19 @@
       "__icon": "square",
       "width": 160,
       "height": 24,
-      "offset": { "x": 0, "y": 0 }
+      "offset": {
+        "x": 0,
+        "y": 0
+      }
     },
     "collisionBody": {
       "__icon": "atom",
       "type": "static",
-      "velocity": { "x": 0, "y": 0, "angular": 0 },
+      "velocity": {
+        "x": 0,
+        "y": 0,
+        "angular": 0
+      },
       "fixedRotation": false,
       "isTrigger": false,
       "restitution": 0,
@@ -169,12 +197,19 @@
       "__icon": "square",
       "width": 140,
       "height": 24,
-      "offset": { "x": 0, "y": 0 }
+      "offset": {
+        "x": 0,
+        "y": 0
+      }
     },
     "collisionBody": {
       "__icon": "atom",
       "type": "static",
-      "velocity": { "x": 0, "y": 0, "angular": 0 },
+      "velocity": {
+        "x": 0,
+        "y": 0,
+        "angular": 0
+      },
       "fixedRotation": false,
       "isTrigger": false,
       "restitution": 0,
@@ -205,12 +240,19 @@
       "__icon": "square",
       "width": 220,
       "height": 24,
-      "offset": { "x": 0, "y": 0 }
+      "offset": {
+        "x": 0,
+        "y": 0
+      }
     },
     "collisionBody": {
       "__icon": "atom",
       "type": "static",
-      "velocity": { "x": 0, "y": 0, "angular": 0 },
+      "velocity": {
+        "x": 0,
+        "y": 0,
+        "angular": 0
+      },
       "fixedRotation": false,
       "isTrigger": false,
       "restitution": 0,

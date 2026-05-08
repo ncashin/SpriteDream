@@ -5,7 +5,7 @@ export {
   type GameContext,
   type DisposeCallback,
   type GameAPI,
-} from "./game.js";
+} from "./initialization.js";
 export { plugins, type ApplyPlugins, type Plugin } from "./plugin.js";
 export {
   __beginHotModule,

@@ -91,7 +91,7 @@ async function runGame<Initial extends object, const Plugins extends readonly un
   options: GameConfig<Initial, Plugins>,
 ): Promise<void> {
   const { rootElement, initialContext, initialScene } = options;
-  const pluginList = (options.plugins ?? []) as Plugins;
+  const pluginList = (options.plugins ?? []);
 
   installedContext = undefined;
   flushScheduledDisposes();

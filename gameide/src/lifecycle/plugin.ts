@@ -3,10 +3,6 @@ export type Plugin<Needs extends object = object, Adds extends object = object> 
     | (Context & Adds)
     | Promise<Context & Adds>;
 
-/**
- * Per-plugin context: `Plugin<Needs, Adds>` adds `Adds` when `Context` satisfies `Needs`;
- * otherwise falls back to return-type inference for non-`Plugin` shapes.
- */
 export type ApplyPlugins<Context, Plugins extends readonly unknown[]> =
   Plugins extends readonly [infer Head, ...infer Rest extends readonly unknown[]]
     ? Head extends Plugin<infer Needs, infer Adds>

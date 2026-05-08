@@ -9,7 +9,7 @@ import {
   WorldManifold,
 } from "planck";
 import { update, start, gameUpdate } from "../../lifecycle/gameloop.js";
-import { getGameContext } from "../../lifecycle/game.js";
+import { getGameContext } from "../../lifecycle/initialization.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
 import { peerIntegratesPhysicsForObject } from "../networkingPlugin/distributedSimulation.js";
 import type { BaseSceneObject } from "../../scene/scene.js";
