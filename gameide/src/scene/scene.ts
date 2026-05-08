@@ -33,7 +33,16 @@ type SceneSubscriber = (update: SceneReflectUpdate) => void;
 
 const subscribers = new Set<SceneSubscriber>();
 
-const objectProxyCache = new WeakMap<object, BaseSceneObject>();
+const nestedProxyCache = new WeakMap<object, Map<string, BaseSceneObject>>();
+
+function cacheKeyForNestedPath(segments: PropertyKey[]): string {
+  let key = "";
+  for (let i = 0; i < segments.length; i++) {
+    if (i > 0) key += "\u0000";
+    key += String(segments[i]);
+  }
+  return key;
+}
 
 function isNestedSceneRecord(value: unknown): value is BaseSceneObject {
   return value !== null && typeof value === "object";
@@ -49,10 +58,17 @@ function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<BaseSceneObj
 
       const value = Reflect.get(target, property, receiver);
       if (isNestedSceneRecord(value)) {
-        let cached = objectProxyCache.get(value);
+        const childPath = [...path, property];
+        const segmentKey = cacheKeyForNestedPath(childPath);
+        let byPath = nestedProxyCache.get(value);
+        if (!byPath) {
+          byPath = new Map();
+          nestedProxyCache.set(value, byPath);
+        }
+        let cached = byPath.get(segmentKey);
         if (!cached) {
-          cached = new Proxy(value, createSceneProxyHandler([...path, property]));
-          objectProxyCache.set(value, cached);
+          cached = new Proxy(value, createSceneProxyHandler(childPath));
+          byPath.set(segmentKey, cached);
         }
         return cached;
       }

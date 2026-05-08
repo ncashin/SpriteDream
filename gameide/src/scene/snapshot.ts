@@ -1,3 +1,4 @@
+import { invalidateUseSceneSnapshot } from "../hooks/useSceneSnapshot.js";
 import type { BaseSceneObject } from "./scene.js";
 import { sceneTarget } from "./scene.js";
 
@@ -5,7 +6,6 @@ let sceneSnapshot: BaseSceneObject | undefined = undefined;
 
 export function saveSceneSnapshot() {
   sceneSnapshot = structuredClone(sceneTarget);
-  console.log("Scene snapshot saved:", sceneSnapshot);
 }
 
 export function restoreSceneSnapshot() {
@@ -15,4 +15,5 @@ export function restoreSceneSnapshot() {
     delete sceneTarget[key];
   }
   Object.assign(sceneTarget, next);
+  invalidateUseSceneSnapshot();
 }

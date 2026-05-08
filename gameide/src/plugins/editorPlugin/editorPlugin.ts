@@ -49,8 +49,8 @@ export const editorPlugin =
           break;
         case GameIDEMode.Editor:
           console.log("Restoring scene snapshot...");
-          restoreSceneSnapshot();
           channel.unpause();
+          restoreSceneSnapshot();
           break;
       }
     };

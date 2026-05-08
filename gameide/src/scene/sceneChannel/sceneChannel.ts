@@ -155,6 +155,7 @@ export async function createSceneChannel(
     },
     pause() {
       paused = true;
+      pendingPatch = {};
     },
     unpause() {
       paused = false;

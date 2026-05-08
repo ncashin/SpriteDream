@@ -9,6 +9,7 @@ import {
   WorldManifold,
 } from "planck";
 import { update, start, gameUpdate } from "../../lifecycle/gameloop.js";
+import { GameIDEMode, getMode } from "../../lifecycle/mode.js";
 import { getGameContext } from "../../lifecycle/initialization.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
 import { peerIntegratesPhysicsForObject } from "../networkingPlugin/distributedSimulation.js";
@@ -279,6 +280,9 @@ export function planckPlugin(
     const onRemoveBody = (body: Body) => {
       const sceneObjectFromBody = getBodyData(body);
       if (sceneObjectFromBody) {
+        collisionHandlers.delete(sceneObjectFromBody);
+        triggerHandlers.delete(sceneObjectFromBody);
+        kinematicScenePosePrev.delete(sceneObjectFromBody);
         objectToRecord.delete(sceneObjectFromBody);
       }
     };
@@ -486,6 +490,7 @@ export function planckPlugin(
     let physicsGameUpdateRegistered = false;
     update(() => {
       if (disposed) return;
+      if (getMode() !== GameIDEMode.Game) return;
       syncColliderBodiesWithSceneGraph();
     });
 
@@ -494,6 +499,7 @@ export function planckPlugin(
       physicsGameUpdateRegistered = true;
       gameUpdate((deltaTime) => {
         if (disposed) return;
+        if (getMode() !== GameIDEMode.Game) return;
         const clampedDeltaSeconds = Math.min(deltaTime, 0.1);
 
         syncColliderBodiesWithSceneGraph();
