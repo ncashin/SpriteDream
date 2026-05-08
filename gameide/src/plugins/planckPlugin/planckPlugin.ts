@@ -63,20 +63,10 @@ export function getEffectivePlanckBodyType(
 }
 
 export type PlanckPluginOptions = {
-  /**
-   * Scene units (pixels) per simulated meter. Positions, colliders, and `collisionBody.velocity` stay
-   * in pixels; they are divided by this value inside Planck. Default `30`.
-   *
-   * @see https://github.com/shakiba/planck.js/blob/master/docs/pages/api-conventions/units.md
-   */
   pixelsPerMeter?: number;
-  /**
-   * Passed to Planck `Settings.lengthUnitsPerMeter`. With {@link pixelsPerMeter}, internal coordinates
-   * are meters, so default `1` matches MKS tuning. Override only for custom tolerance scaling.
-   */
   lengthUnitsPerMeter?: number;
-  /** Gravity in m/s² in physics space (+Y typically up). */
   gravity?: { x: number; y: number };
+  jitterThreshold?: number;
   simulatesDynamics?: (obj: BaseSceneObject) => boolean;
 };
 
@@ -111,7 +101,6 @@ export type PlanckPluginAPI = {
   onCollision: (self: BaseSceneObject, handler: PlanckCollisionHandler) => () => void;
   onTrigger: (self: BaseSceneObject, handler: PlanckCollisionHandler) => () => void;
   getRigidbody: (self: BaseSceneObject) => Rigidbody2D | null;
-  /** Lower-level Planck body: positions & linear velocity are simulated meters per second — use `getRigidbody` for pixel space. */
   getBody: (self: BaseSceneObject) => Body | null;
   getBodyType: (self: BaseSceneObject) => BodyType;
   isStatic: (self: BaseSceneObject) => boolean;
@@ -142,6 +131,12 @@ export function planckPlugin(
     Settings.lengthUnitsPerMeter = options.lengthUnitsPerMeter ?? 1;
     const invPpm = 1 / pixelsPerMeter;
     const gravity = options.gravity ?? { x: 0, y: 0 };
+    const jitterThreshold =
+      typeof options.jitterThreshold === "number" &&
+      Number.isFinite(options.jitterThreshold) &&
+      options.jitterThreshold > 0
+        ? options.jitterThreshold
+        : undefined;
     const world = new World({
       gravity: new Vec2(gravity.x, gravity.y),
     });
@@ -420,12 +415,25 @@ export function planckPlugin(
       for (const [sceneObject, planckRecord] of objectToRecord) {
         if (effectiveType(sceneObject) !== "dynamic") continue;
 
+        const body = planckRecord.body;
+        const linearVelocity = body.getLinearVelocity();
+        let lvX = linearVelocity.x;
+        let lvY = linearVelocity.y;
+        if (jitterThreshold !== undefined) {
+          const speedPx = Math.hypot(lvX * pixelsPerMeter, lvY * pixelsPerMeter);
+          if (speedPx <= jitterThreshold) {
+            lvX = 0;
+            lvY = 0;
+            body.setLinearVelocity(new Vec2(0, 0));
+          }
+        }
+
         writeDynamicPhysicsResultsToScene(
           sceneObject,
-          planckRecord.body.getPosition(),
-          planckRecord.body.getAngle(),
-          planckRecord.body.getLinearVelocity(),
-          planckRecord.body.getAngularVelocity(),
+          body.getPosition(),
+          body.getAngle(),
+          new Vec2(lvX, lvY),
+          body.getAngularVelocity(),
         );
       }
     };
