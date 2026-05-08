@@ -8,6 +8,7 @@ export const collisionBodyTrait = defineTrait(
       type: "static",
       velocity: { x: 0, y: 0, angular: 0 },
       fixedRotation: false,
+      continuous: false,
       isTrigger: false,
       restitution: 0,
       friction: 0.3,

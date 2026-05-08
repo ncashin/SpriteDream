@@ -1,8 +1,3 @@
-/**
- * Scene objects with `boxCollider` / `circleCollider` traits are mirrored into Planck {@link Body}
- * instances. This module builds those bodies and fingerprints collider data so we can recreate a
- * body when width, radius, offsets, material on {@link collisionBodyTrait}, or body type changes.
- */
 import { type Body, type BodyType, type World, Vec2, Box, Circle } from "planck";
 import type { BaseSceneObject } from "../../scene/scene.js";
 
@@ -10,7 +5,6 @@ export type PhysicsUserData = { object: BaseSceneObject };
 
 export type PlanckRecord = {
   body: Body;
-  /** Hash of collider + body-type fields; mismatch means destroy and recreate the body. */
   signature: string;
 };
 
@@ -26,6 +20,12 @@ export function sceneVec(x: number, y: number): Vec2 {
 function collisionFixedRotation(obj: BaseSceneObject): boolean {
   return Boolean(
     (obj as { collisionBody?: { fixedRotation?: boolean } }).collisionBody?.fixedRotation,
+  );
+}
+
+function collisionContinuous(obj: BaseSceneObject): boolean {
+  return Boolean(
+    (obj as { collisionBody?: { continuous?: boolean } }).collisionBody?.continuous,
   );
 }
 
@@ -70,6 +70,7 @@ export function colliderSignature(
 ): string {
   const bodyT = effectiveBodyType;
   const fixedRotation = effectiveFixedRotation(obj, effectiveBodyType);
+  const continuous = collisionContinuous(obj);
   const { isTrigger: t, restitution: rest, friction: fr } = collisionMaterial(obj);
   const dis = collisionBodyDisabled(obj) ? 1 : 0;
   const b = (obj as { boxCollider?: Record<string, unknown> }).boxCollider;
@@ -78,6 +79,7 @@ export function colliderSignature(
       k: "box",
       bodyT,
       fixedRotation,
+      continuous,
       w: b.width,
       h: b.height,
       t,
@@ -94,6 +96,7 @@ export function colliderSignature(
       k: "circle",
       bodyT,
       fixedRotation,
+      continuous,
       r: c.radius,
       t,
       rest,
@@ -138,6 +141,7 @@ export function createBodyForObject(
     angle: rotZ,
     userData: { object: obj } satisfies PhysicsUserData,
     fixedRotation,
+    bullet: collisionContinuous(obj),
   });
 
   const { isTrigger, restitution, friction } = collisionMaterial(obj);

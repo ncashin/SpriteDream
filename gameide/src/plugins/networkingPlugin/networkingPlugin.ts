@@ -10,6 +10,7 @@ import {
 } from "../../scene/scene.js";
 import type { BaseSceneObject } from "../../scene/scene.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
+import { dispose } from "../../lifecycle/gameloop.js";
 import {
   isOwnedSceneObject,
   withOwnership,
@@ -33,7 +34,6 @@ export type NetworkingPluginOptions = {
 export type NetworkingPluginRequiredContext = {
   rootElement: HTMLElement;
   initialScene?: BaseSceneObject;
-  dispose: (fn: () => void) => void;
 };
 
 export type NetworkingAPI = {
@@ -41,9 +41,9 @@ export type NetworkingAPI = {
   getPeers: () => string[];
   onPeersChange: (handler: (peers: string[]) => void) => () => void;
   channel: SceneChannel;
-  isOwned: (obj: BaseSceneObject) => boolean;
+  isOwned: (object: BaseSceneObject) => boolean;
   withOwnership: <T extends Record<string, unknown>>(
-    obj: T
+    object: T
   ) => T & Record<typeof OWNER_ID, string>;
 };
 
@@ -84,7 +84,7 @@ export const networkingPlugin = (
         withOwnership(obj, peerId),
     };
 
-    input.dispose(() => {
+    dispose(() => {
       channel.dispose();
       disposeTransport();
     });
