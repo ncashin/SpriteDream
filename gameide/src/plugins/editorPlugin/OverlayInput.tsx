@@ -23,14 +23,14 @@ export function OverlayInput({
   return (
     <div
       className={cn(
-        "relative inline-flex items-stretch justify-center rounded font-[var(--vscode-font-family)]",
+        "relative inline-flex h-[22px] min-h-[22px] items-stretch justify-center rounded font-[var(--vscode-font-family)] box-border",
         className,
       )}
     >
       <span
         ref={measureRef}
         aria-hidden="true"
-        className="py-0.5 px-1.5 text-xs font-[var(--vscode-font-family)] whitespace-pre invisible"
+        className="flex h-full items-center px-1.5 py-0 text-xs font-[var(--vscode-font-family)] whitespace-pre invisible"
       >
         {displayText || " "}
       </span>
@@ -41,7 +41,7 @@ export function OverlayInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={cn(
-          "absolute inset-0 py-0.5 px-1.5 text-xs text-[var(--vscode-editor-foreground)]",
+          "absolute inset-0 flex items-center px-1.5 py-0 text-xs leading-none text-[var(--vscode-editor-foreground)]",
           "bg-[var(--vscode-editor-background)] hover:bg-[var(--vscode-editor-background)]",
           "border-none rounded outline-none font-[var(--vscode-font-family)]",
           "truncate",

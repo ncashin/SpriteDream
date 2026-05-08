@@ -23,7 +23,21 @@ import {
   type ColliderDebugOptions,
   syncColliderDebugDraw,
 } from "./colliderDebug.js";
-import { disposePixiSprites, syncPixiSprites, type SpriteRenderable } from "./sprite.js";
+import { disposePixiSprites, spriteTrait, syncPixiSprites, type SpriteRenderable } from "./sprite.js";
+import {
+  drawActiveTransformGizmo,
+  hitTestMoveGizmo,
+  hitTestRotateGizmo,
+  hitTestScaleGizmo,
+  type MoveGizmoHit,
+  type RotateGizmoHit,
+  type ScaleGizmoHit,
+} from "./transformGizmoPixi.js";
+import {
+  getTransformGizmoTool,
+  type TransformGizmoTool,
+} from "../editorPlugin/transformGizmoTool.js";
+import { implementsTrait } from "../../trait/trait.js";
 import {
   applyViewportToWorldContainer,
   createEditorViewportGestureState,
@@ -74,6 +88,34 @@ export type PixiPluginInputContext = PixiPluginContext & {
 };
 
 const SELECTION_Z = 1_000_001;
+const GIZMO_Z = SELECTION_Z + 2;
+
+type ActiveGizmoDrag =
+  | {
+      tool: "translate";
+      kind: "x" | "y" | "xy";
+      startObjX: number;
+      startObjY: number;
+      anchorWx: number;
+      anchorWy: number;
+    }
+  | {
+      tool: "rotate";
+      pivotX: number;
+      pivotY: number;
+      startRotZ: number;
+      anchorAngle: number;
+    }
+  | {
+      tool: "scale";
+      kind: "x" | "y" | "xy";
+      pivotX: number;
+      pivotY: number;
+      startScaleX: number;
+      startScaleY: number;
+      anchorWx: number;
+      anchorWy: number;
+    };
 const pickScratchWorld = new Point();
 const pickScratchLocal = new Point();
 
@@ -206,27 +248,201 @@ export function pixiPlugin(
     selectionOutline.zIndex = SELECTION_Z;
     world.addChild(selectionOutline);
 
+    const transformGizmoGfx = new Graphics();
+    transformGizmoGfx.label = "gameide:transformGizmo";
+    transformGizmoGfx.eventMode = "none";
+    transformGizmoGfx.zIndex = GIZMO_Z;
+    world.addChild(transformGizmoGfx);
+
     const input = context.input;
     const editorViewportGesture = createEditorViewportGestureState();
+
+    let gizmoDrag: ActiveGizmoDrag | null = null;
+
+    const syncTransformGizmoOverlay = (
+      tool: TransformGizmoTool,
+      moveH: MoveGizmoHit,
+      rotateH: RotateGizmoHit,
+      scaleH: ScaleGizmoHit,
+    ): void => {
+      transformGizmoGfx.clear();
+      const sel = selectedObject;
+      const inEditor = getMode() === GameIDEMode.Editor;
+      if (!inEditor || !sel || !implementsTrait(spriteTrait)(sel)) return;
+      if (!spriteByEntity.has(sel as SpriteRenderable)) return;
+      const pos = (sel as SpriteRenderable).position;
+      transformGizmoGfx.position.set(pos.x, pos.y);
+      transformGizmoGfx.zIndex = GIZMO_Z;
+      drawActiveTransformGizmo(
+        transformGizmoGfx,
+        viewport.state.scale,
+        tool,
+        moveH,
+        rotateH,
+        scaleH,
+      );
+    };
 
     const releaseEditorPick = editorUpdate((_dt) => {
       if (disposed) return;
       syncSpriteSelectionOutline(selectionOutline, selectedObject, spriteByEntity);
 
-      const { shouldPickAtClick } = editorViewportEditorFrame(editorViewportGesture, {
-        rootElement,
-        viewport,
-        panButton: input.buttons.Click,
-        clientPosition: input.mouse.position,
-        wheel: input.mouse.wheel,
-      });
+      const pos = input.mouse.position;
+      const vScale = viewport.state.scale;
+      let skipViewport = false;
+      let moveHover: MoveGizmoHit = "none";
+      let rotateHover: RotateGizmoHit = "none";
+      let scaleHover: ScaleGizmoHit = "none";
+
+      const editorMode = getMode() === GameIDEMode.Editor;
+      const gizmoTool = getTransformGizmoTool();
+      const spriteSel =
+        editorMode &&
+        selectedObject &&
+        implementsTrait(spriteTrait)(selectedObject) &&
+        spriteByEntity.has(selectedObject as SpriteRenderable)
+          ? (selectedObject as SpriteRenderable)
+          : null;
+
+      if (gizmoDrag && gizmoDrag.tool !== gizmoTool) {
+        gizmoDrag = null;
+      }
+
+      if (gizmoDrag) {
+        skipViewport = true;
+        const sel =
+          selectedObject &&
+          implementsTrait(spriteTrait)(selectedObject) &&
+          spriteByEntity.has(selectedObject as SpriteRenderable)
+            ? (selectedObject as SpriteRenderable)
+            : null;
+        if (pos && sel && input.buttons.Click.held) {
+          const w = viewport.screenToWorld(pos.x, pos.y);
+          if (gizmoDrag.tool === "translate") {
+            moveHover = gizmoDrag.kind;
+            if (gizmoDrag.kind === "x") {
+              sel.position.x = gizmoDrag.startObjX + (w.x - gizmoDrag.anchorWx);
+            } else if (gizmoDrag.kind === "y") {
+              sel.position.y = gizmoDrag.startObjY + (w.y - gizmoDrag.anchorWy);
+            } else {
+              sel.position.x = gizmoDrag.startObjX + (w.x - gizmoDrag.anchorWx);
+              sel.position.y = gizmoDrag.startObjY + (w.y - gizmoDrag.anchorWy);
+            }
+          } else if (gizmoDrag.tool === "rotate") {
+            rotateHover = "z";
+            const ang = Math.atan2(w.y - gizmoDrag.pivotY, w.x - gizmoDrag.pivotX);
+            sel.rotation.z = gizmoDrag.startRotZ + (ang - gizmoDrag.anchorAngle);
+          } else {
+            scaleHover = gizmoDrag.kind;
+            const px = gizmoDrag.pivotX;
+            const py = gizmoDrag.pivotY;
+            if (gizmoDrag.kind === "x") {
+              const ax0 = Math.abs(gizmoDrag.anchorWx - px);
+              const ax1 = Math.abs(w.x - px);
+              const f = ax0 > 1e-10 ? ax1 / ax0 : 1;
+              sel.scale.x = Math.max(0.02, gizmoDrag.startScaleX * f);
+            } else if (gizmoDrag.kind === "y") {
+              const ay0 = Math.abs(gizmoDrag.anchorWy - py);
+              const ay1 = Math.abs(w.y - py);
+              const f = ay0 > 1e-10 ? ay1 / ay0 : 1;
+              sel.scale.y = Math.max(0.02, gizmoDrag.startScaleY * f);
+            } else {
+              const d0 =
+                Math.abs(gizmoDrag.anchorWx - px) + Math.abs(gizmoDrag.anchorWy - py);
+              const d1 = Math.abs(w.x - px) + Math.abs(w.y - py);
+              const f = d0 > 1e-10 ? d1 / d0 : 1;
+              sel.scale.x = Math.max(0.02, gizmoDrag.startScaleX * f);
+              sel.scale.y = Math.max(0.02, gizmoDrag.startScaleY * f);
+            }
+          }
+        }
+        if (input.buttons.Click.released) {
+          gizmoDrag = null;
+        }
+      } else if (editorMode && input.buttons.Click.pressed && pos && spriteSel) {
+        const pivot = spriteSel.position;
+        const w = viewport.screenToWorld(pos.x, pos.y);
+
+        if (gizmoTool === "translate") {
+          const hit = hitTestMoveGizmo(w.x, w.y, pivot.x, pivot.y, vScale);
+          if (hit !== "none") {
+            skipViewport = true;
+            const kind = hit === "xy" ? "xy" : hit;
+            gizmoDrag = {
+              tool: "translate",
+              kind,
+              startObjX: pivot.x,
+              startObjY: pivot.y,
+              anchorWx: w.x,
+              anchorWy: w.y,
+            };
+            moveHover = hit;
+          }
+        } else if (gizmoTool === "rotate") {
+          const hit = hitTestRotateGizmo(w.x, w.y, pivot.x, pivot.y, vScale);
+          if (hit === "z") {
+            skipViewport = true;
+            const ang = Math.atan2(w.y - pivot.y, w.x - pivot.x);
+            gizmoDrag = {
+              tool: "rotate",
+              pivotX: pivot.x,
+              pivotY: pivot.y,
+              startRotZ: spriteSel.rotation.z,
+              anchorAngle: ang,
+            };
+            rotateHover = "z";
+          }
+        } else {
+          const hit = hitTestScaleGizmo(w.x, w.y, pivot.x, pivot.y, vScale);
+          if (hit !== "none") {
+            skipViewport = true;
+            const kind = hit === "xy" ? "xy" : hit;
+            gizmoDrag = {
+              tool: "scale",
+              kind,
+              pivotX: pivot.x,
+              pivotY: pivot.y,
+              startScaleX: spriteSel.scale.x,
+              startScaleY: spriteSel.scale.y,
+              anchorWx: w.x,
+              anchorWy: w.y,
+            };
+            scaleHover = hit;
+          }
+        }
+      }
+
+      let shouldPickAtClick = false;
+      if (!skipViewport) {
+        const frame = editorViewportEditorFrame(editorViewportGesture, {
+          rootElement,
+          viewport,
+          panButton: input.buttons.Click,
+          clientPosition: pos,
+          wheel: input.mouse.wheel,
+        });
+        shouldPickAtClick = frame.shouldPickAtClick;
+      }
+
+      if (!gizmoDrag && pos && spriteSel) {
+        const pivot = spriteSel.position;
+        const w = viewport.screenToWorld(pos.x, pos.y);
+        if (gizmoTool === "translate") {
+          moveHover = hitTestMoveGizmo(w.x, w.y, pivot.x, pivot.y, vScale);
+        } else if (gizmoTool === "rotate") {
+          rotateHover = hitTestRotateGizmo(w.x, w.y, pivot.x, pivot.y, vScale);
+        } else {
+          scaleHover = hitTestScaleGizmo(w.x, w.y, pivot.x, pivot.y, vScale);
+        }
+      }
+
+      syncTransformGizmoOverlay(gizmoTool, moveHover, rotateHover, scaleHover);
 
       if (!shouldPickAtClick) return;
-      const pos = input.mouse.position;
       if (!pos) return;
       const { x: wx, y: wy } = viewport.screenToWorld(pos.x, pos.y);
-      const hit = pickSpriteAtWorld(wx, wy, world, spriteByEntity);
-      if (hit) selectObject(hit);
+      const hitSprite = pickSpriteAtWorld(wx, wy, world, spriteByEntity);
+      if (hitSprite) selectObject(hitSprite);
       else deselectObject();
     });
 
@@ -271,6 +487,10 @@ export function pixiPlugin(
         world.removeChild(selectionOutline);
       }
       selectionOutline.destroy();
+      if (transformGizmoGfx.parent === world) {
+        world.removeChild(transformGizmoGfx);
+      }
+      transformGizmoGfx.destroy();
       disposePixiSprites(world, textureByKey, spriteByEntity, svgInflight);
       if (colliderDebug) {
         destroyColliderDebugGraphics(colliderDebug.graphics, world);

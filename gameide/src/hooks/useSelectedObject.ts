@@ -8,7 +8,6 @@ import {
   subscribeUseSceneSnapshot,
 } from "./useSceneSnapshot.js";
 
-/** Scene-tree selection: viewport picks set {@link selectedObject}; path is resolved against the live scene. */
 export function useSelectedObject(): {
   selectedObject: BaseSceneObject | null;
   selectedPath: PropertyKey[] | null;

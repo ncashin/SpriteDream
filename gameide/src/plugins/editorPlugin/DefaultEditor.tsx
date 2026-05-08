@@ -12,6 +12,7 @@ import { getScene } from "../../scene/scene.js";
 import { getValueAtPath, setValueAtPath } from "../../scene/path.js";
 import { useScene } from "../../hooks/useScene.js";
 import { EditorRoot } from "./EditorRoot.js";
+import { TransformGizmoBar } from "./TransformGizmoBar.js";
 
 export function DefaultEditor({
   gameViewRef,
@@ -41,7 +42,7 @@ export function DefaultEditor({
       <div className="relative flex-1 min-w-0 overflow-hidden">
         <GameView ref={gameViewRef} className="h-full" />
 
-        <div className="absolute top-3 flex items-center justify-between px-3 gap-3">
+        <div className="absolute top-3 left-0 right-0 flex h-[22px] min-h-[22px] items-center px-3 gap-3 box-border">
           <OverlayButton
             onClick={() => setSidebarOpen((o) => !o)}
             title={sidebarOpen ? "Close scene" : "Open scene"}
@@ -60,6 +61,7 @@ export function DefaultEditor({
           </OverlayButton>
 
           <OverlayInput
+            className="min-w-[10rem] flex-1 basis-0"
             value={
               typeof sceneName === "string" && sceneName.length > 0
                 ? sceneName
@@ -69,25 +71,28 @@ export function DefaultEditor({
             placeholder="Untitled Scene"
           />
 
-          <OverlayButton
-            variant={isRunning ? "danger" : "default"}
-            onClick={() =>
-              setMode(isRunning ? GameIDEMode.Editor : GameIDEMode.Game)
-            }
-            title={isRunning ? "Stop" : "Run"}
-          >
-            {isRunning ? (
-              <>
-                <Square size={12} aria-hidden />
-                Stop
-              </>
-            ) : (
-              <>
-                <Play size={12} aria-hidden />
-                Run
-              </>
-            )}
-          </OverlayButton>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <TransformGizmoBar />
+            <OverlayButton
+              variant={isRunning ? "danger" : "default"}
+              onClick={() =>
+                setMode(isRunning ? GameIDEMode.Editor : GameIDEMode.Game)
+              }
+              title={isRunning ? "Stop" : "Run"}
+            >
+              {isRunning ? (
+                <>
+                  <Square size={12} aria-hidden />
+                  Stop
+                </>
+              ) : (
+                <>
+                  <Play size={12} aria-hidden />
+                  Run
+                </>
+              )}
+            </OverlayButton>
+          </div>
         </div>
       </div>
     </EditorRoot>

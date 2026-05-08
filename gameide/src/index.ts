@@ -93,6 +93,15 @@ export { gameUIPlugin } from "./plugins/gameUIPlugin/gameUIPlugin.js";
 export { ExampleGameUI } from "./plugins/gameUIPlugin/ExampleGameUI.js";
 export { Game } from "./plugins/gameUIPlugin/Game.js";
 export { DefaultEditor } from "./plugins/editorPlugin/DefaultEditor.js";
+export { TransformGizmoBar } from "./plugins/editorPlugin/TransformGizmoBar.js";
+export {
+  getTransformGizmoTool,
+  setTransformGizmoTool,
+  subscribeTransformGizmoTool,
+  getTransformGizmoToolSnapshot,
+  type TransformGizmoTool,
+} from "./plugins/editorPlugin/transformGizmoTool.js";
+export { useTransformGizmoTool } from "./hooks/useTransformGizmoTool.js";
 export { EditorRoot } from "./plugins/editorPlugin/EditorRoot.js";
 export { SceneTree } from "./plugins/editorPlugin/SceneTree.js";
 export { Sidebar } from "./plugins/editorPlugin/Sidebar.js";
