@@ -1,4 +1,5 @@
 import { invalidateUseSceneSnapshot } from "../hooks/useSceneSnapshot.js";
+import { deselectObject } from "./objectSelection.js";
 import {
   getSceneAddition,
   sceneAdditions,
@@ -27,7 +28,6 @@ export type SceneReflectUpdate = {
 };
 
 export const sceneTarget: BaseSceneObject = {};
-
 
 type SceneSubscriber = (update: SceneReflectUpdate) => void;
 
@@ -125,6 +125,7 @@ export const getRawScene = () => {
 };
 
 export const setScene = (data: BaseSceneObject) => {
+  deselectObject();
   for (const key of Object.keys(sceneTarget)) {
     delete sceneTarget[key];
   }

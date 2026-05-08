@@ -6,6 +6,11 @@ export type {
   SceneReflectUpdate,
 } from "./scene.js";
 export {
+  selectedObject,
+  selectObject,
+  deselectObject,
+} from "./objectSelection.js";
+export {
   sceneTarget,
   getScene,
   getRawScene,

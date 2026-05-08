@@ -34,6 +34,11 @@ export {
   saveSceneSnapshot,
   restoreSceneSnapshot,
 } from "./scene/scene.js";
+export {
+  selectedObject,
+  selectObject,
+  deselectObject,
+} from "./scene/objectSelection.js";
 export { getValueAtPath, setValueAtPath } from "./scene/path.js";
 export {
   applyPatch as applyScenePatch,
