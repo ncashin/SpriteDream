@@ -77,12 +77,15 @@ function shouldTransformHotModule(code: string, id: string): boolean {
 }
 
 function createHotModuleCode(code: string): string {
-  return `import { __beginHotModule, __endHotModule, __disposeHotModule } from "gameide";
+  return `import { __beginHotModule, __endHotModule, __disposeHotModule, getGameContext } from "gameide";
 const __gameideHotScope = __beginHotModule(import.meta.url);
 ${code}
 __endHotModule(__gameideHotScope);
 if (import.meta.hot) {
-  import.meta.hot.accept();
+  import.meta.hot.accept((mod) => {
+    const replay = mod.default;
+    if (typeof replay === "function") replay(getGameContext());
+  });
   import.meta.hot.dispose(() => __disposeHotModule(__gameideHotScope));
 }
 `;

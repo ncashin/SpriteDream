@@ -20,7 +20,7 @@ const playerTrait = defineTrait({
   grounded: false,
 });
 
-export function main(gameContext: RuntimeGameContext): void {
+export default function main(gameContext: RuntimeGameContext): void {
   gameStart(() => {
     const { networking } = gameContext;
     const scene = getScene();

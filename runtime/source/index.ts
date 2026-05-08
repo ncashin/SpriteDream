@@ -12,7 +12,7 @@ import exampleScene from "./scenes/example.scene";
 import "./style.css";
 import { Editor } from "./Editor";
 import { GameUI } from "./GameUI";
-import { main } from "./game";
+import main from "./game";
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);

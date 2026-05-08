@@ -163,8 +163,12 @@ export function __beginHotModule(scopeId: string): string {
 export function __endHotModule(scopeId: string): void {
   const normalizedScopeId = normalizeHotScopeId(scopeId);
   for (let index = activeHotScopes.length - 1; index >= 0; index -= 1) {
-    if (activeHotScopes[index]?.id !== normalizedScopeId) continue;
-    activeHotScopes.splice(index, 1);
+    const scope = activeHotScopes[index];
+    if (scope?.id !== normalizedScopeId) continue;
+    // Keep the scope on the stack so lifecycle hooks registered later (e.g. entry
+    // calling `main()` after `await gameide()`) still get cleanup on HMR. Clear the
+    // replacement flag so deferred registration runs `gameStart` callbacks.
+    scope.isReplacement = false;
     return;
   }
 }
