@@ -110,7 +110,9 @@ export function createBodyForObject(
   world: World,
   obj: BaseSceneObject,
   effectiveBodyType: BodyType,
+  pixelsPerMeter: number,
 ): PlanckRecord | null {
+  const inv = 1 / pixelsPerMeter;
   if (collisionBodyDisabled(obj)) {
     return null;
   }
@@ -132,7 +134,7 @@ export function createBodyForObject(
 
   const body = world.createBody({
     type: bodyT,
-    position: sceneVec(pos.x, pos.y),
+    position: sceneVec(pos.x * inv, pos.y * inv),
     angle: rotZ,
     userData: { object: obj } satisfies PhysicsUserData,
     fixedRotation,
@@ -142,8 +144,8 @@ export function createBodyForObject(
 
   const b = (obj as { boxCollider?: Record<string, unknown> }).boxCollider;
   if (b && typeof b === "object") {
-    const w = Math.max(1e-6, Number(b.width) || 0) / 2;
-    const h = Math.max(1e-6, Number(b.height) || 0) / 2;
+    const w = (Math.max(1e-6, Number(b.width) || 0) / 2) * inv;
+    const h = (Math.max(1e-6, Number(b.height) || 0) / 2) * inv;
     const off = (b.offset as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
     const opt = {
       density: bodyT === "dynamic" ? 1 : 0,
@@ -151,11 +153,11 @@ export function createBodyForObject(
       restitution,
       isSensor: isTrigger,
     };
-    body.createFixture(new Box(w, h, new Vec2(off.x, off.y)), opt);
+    body.createFixture(new Box(w, h, new Vec2(off.x * inv, off.y * inv)), opt);
   } else {
     const c = (obj as { circleCollider?: Record<string, unknown> }).circleCollider;
     if (c && typeof c === "object") {
-      const r = Math.max(1e-6, Number(c.radius) || 0);
+      const r = Math.max(1e-6, Number(c.radius) || 0) * inv;
       const off = (c.offset as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
       const opt = {
         density: bodyT === "dynamic" ? 1 : 0,
@@ -163,7 +165,7 @@ export function createBodyForObject(
         restitution,
         isSensor: isTrigger,
       };
-      body.createFixture(new Circle(new Vec2(off.x, off.y), r), opt);
+      body.createFixture(new Circle(new Vec2(off.x * inv, off.y * inv), r), opt);
     } else {
       world.destroyBody(body);
       return null;
@@ -174,7 +176,7 @@ export function createBodyForObject(
     const vel =
       (obj as { collisionBody?: { velocity?: { x: number; y: number; angular?: number } } })
         .collisionBody?.velocity ?? { x: 0, y: 0, angular: 0 };
-    body.setLinearVelocity(sceneVec(vel.x, vel.y));
+    body.setLinearVelocity(sceneVec(vel.x * inv, vel.y * inv));
     body.setAngularVelocity(vel.angular ?? 0);
   }
 

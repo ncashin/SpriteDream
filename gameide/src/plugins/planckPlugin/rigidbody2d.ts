@@ -10,14 +10,16 @@ export type Rigidbody2D = {
   readonly isStatic: boolean;
   readonly isKinematic: boolean;
   readonly isDynamic: boolean;
+  /** Pixel units per second (matches scene `collisionBody.velocity`). */
   getLinearVelocity(): { x: number; y: number };
   getAngularVelocity(): number;
   setAngularVelocity(radiansPerSecond: number): void;
+  /** Scene/world pixel position. */
   getPosition(): { x: number; y: number };
   getAngle(): number;
 };
 
-export function wrapRigidbody2D(body: Body): Rigidbody2D {
+export function wrapRigidbody2D(body: Body, pixelsPerMeter: number): Rigidbody2D {
   return {
     get raw() {
       return body;
@@ -36,7 +38,7 @@ export function wrapRigidbody2D(body: Body): Rigidbody2D {
     },
     getLinearVelocity() {
       const v = body.getLinearVelocity();
-      return { x: v.x, y: v.y };
+      return { x: v.x * pixelsPerMeter, y: v.y * pixelsPerMeter };
     },
     getAngularVelocity() {
       return body.getAngularVelocity();
@@ -46,7 +48,7 @@ export function wrapRigidbody2D(body: Body): Rigidbody2D {
     },
     getPosition() {
       const p = body.getPosition();
-      return { x: p.x, y: p.y };
+      return { x: p.x * pixelsPerMeter, y: p.y * pixelsPerMeter };
     },
     getAngle() {
       return body.getAngle();

@@ -24,15 +24,20 @@ import {
   createBodyForObject,
   getBodyData,
   isColliderNode,
-  sceneVec,
   type PlanckRecord,
 } from "./planckBodies.js";
 import { wrapRigidbody2D, type Rigidbody2D } from "./rigidbody2d.js";
 
 export function getSceneBodyType(obj: BaseSceneObject): BodyType {
   const raw = (obj as { collisionBody?: { type?: BodyType } }).collisionBody;
-  const t = raw?.type;
-  if (t === "static" || t === "kinematic" || t === "dynamic") return t;
+  const declaredType = raw?.type;
+  if (
+    declaredType === "static" ||
+    declaredType === "kinematic" ||
+    declaredType === "dynamic"
+  ) {
+    return declaredType;
+  }
   return "static";
 }
 
@@ -52,13 +57,25 @@ export function getEffectivePlanckBodyType(
   obj: BaseSceneObject,
   simulatesDynamics: (obj: BaseSceneObject) => boolean,
 ): BodyType {
-  const sceneT = getSceneBodyType(obj);
-  if (sceneT === "dynamic" && !simulatesDynamics(obj)) return "kinematic";
-  return sceneT;
+  const sceneBodyType = getSceneBodyType(obj);
+  if (sceneBodyType === "dynamic" && !simulatesDynamics(obj)) return "kinematic";
+  return sceneBodyType;
 }
 
 export type PlanckPluginOptions = {
+  /**
+   * Scene units (pixels) per simulated meter. Positions, colliders, and `collisionBody.velocity` stay
+   * in pixels; they are divided by this value inside Planck. Default `30`.
+   *
+   * @see https://github.com/shakiba/planck.js/blob/master/docs/pages/api-conventions/units.md
+   */
+  pixelsPerMeter?: number;
+  /**
+   * Passed to Planck `Settings.lengthUnitsPerMeter`. With {@link pixelsPerMeter}, internal coordinates
+   * are meters, so default `1` matches MKS tuning. Override only for custom tolerance scaling.
+   */
   lengthUnitsPerMeter?: number;
+  /** Gravity in m/s² in physics space (+Y typically up). */
   gravity?: { x: number; y: number };
   simulatesDynamics?: (obj: BaseSceneObject) => boolean;
 };
@@ -70,13 +87,9 @@ type PlanckPluginNetworkingContext = {
 
 export type PlanckContactPhase = "enter" | "exit";
 
-/** Data for a collision/trigger callback; no Planck / fixture types exposed. */
 export type PlanckCollisionInfo = {
   phase: PlanckContactPhase;
   self: BaseSceneObject;
-  /**
-   * World-space separation normal for tests against `other` (e.g. floor/slope). Undefined when unavailable.
-   */
   normal?: { x: number; y: number };
 };
 
@@ -85,9 +98,6 @@ export type PlanckCollisionHandler = (
   collisionInfo: PlanckCollisionInfo,
 ) => void;
 
-/**
- * Scene nodes expose this binding when `planckPlugin` is installed (`scene.createObject` return values may be intersected with this type).
- */
 export type PlanckSceneCollisionBindings = {
   onCollision: (handler: PlanckCollisionHandler) => () => void;
 };
@@ -101,6 +111,7 @@ export type PlanckPluginAPI = {
   onCollision: (self: BaseSceneObject, handler: PlanckCollisionHandler) => () => void;
   onTrigger: (self: BaseSceneObject, handler: PlanckCollisionHandler) => () => void;
   getRigidbody: (self: BaseSceneObject) => Rigidbody2D | null;
+  /** Lower-level Planck body: positions & linear velocity are simulated meters per second — use `getRigidbody` for pixel space. */
   getBody: (self: BaseSceneObject) => Body | null;
   getBodyType: (self: BaseSceneObject) => BodyType;
   isStatic: (self: BaseSceneObject) => boolean;
@@ -122,14 +133,20 @@ export function planckPlugin(
 
     const effectiveType = (obj: BaseSceneObject) =>
       getEffectivePlanckBodyType(obj, simulatesDynamics);
-    Settings.lengthUnitsPerMeter = options.lengthUnitsPerMeter ?? 64;
-    const g = options.gravity ?? { x: 0, y: 0 };
+    const pixelsPerMeter =
+      typeof options.pixelsPerMeter === "number" &&
+      Number.isFinite(options.pixelsPerMeter) &&
+      options.pixelsPerMeter > 0
+        ? options.pixelsPerMeter
+        : 30;
+    Settings.lengthUnitsPerMeter = options.lengthUnitsPerMeter ?? 1;
+    const invPpm = 1 / pixelsPerMeter;
+    const gravity = options.gravity ?? { x: 0, y: 0 };
     const world = new World({
-      gravity: sceneVec(g.x, g.y),
+      gravity: new Vec2(gravity.x, gravity.y),
     });
 
     const objectToRecord = new Map<BaseSceneObject, PlanckRecord>();
-    /** Last scene pose before the current step — used to set Planck velocities on kinematic bodies. */
     const kinematicScenePosePrev = new WeakMap<
       BaseSceneObject,
       { x: number; y: number; angle: number }
@@ -172,8 +189,8 @@ export function planckPlugin(
       angularVelocity: number,
     ): void => {
       const position = readScenePosition(sceneObject);
-      position.x = physicsPosition.x;
-      position.y = physicsPosition.y;
+      position.x = physicsPosition.x * pixelsPerMeter;
+      position.y = physicsPosition.y * pixelsPerMeter;
       const rotation = readSceneRotation(sceneObject);
       (sceneObject as { rotation: SceneRotation }).rotation = {
         ...rotation,
@@ -185,8 +202,8 @@ export function planckPlugin(
       if (!collisionBody.velocity) {
         collisionBody.velocity = { x: 0, y: 0, angular: 0 };
       }
-      collisionBody.velocity.x = linearVelocity.x;
-      collisionBody.velocity.y = linearVelocity.y;
+      collisionBody.velocity.x = linearVelocity.x * pixelsPerMeter;
+      collisionBody.velocity.y = linearVelocity.y * pixelsPerMeter;
       collisionBody.velocity.angular = angularVelocity;
     };
 
@@ -195,15 +212,15 @@ export function planckPlugin(
       self: BaseSceneObject,
       handler: PlanckCollisionHandler,
     ) => {
-      let set = map.get(self);
-      if (!set) {
-        set = new Set();
-        map.set(self, set);
+      let handlerSet = map.get(self);
+      if (!handlerSet) {
+        handlerSet = new Set();
+        map.set(self, handlerSet);
       }
-      set.add(handler);
+      handlerSet.add(handler);
       return () => {
-        set?.delete(handler);
-        if (set && set.size === 0) {
+        handlerSet?.delete(handler);
+        if (handlerSet && handlerSet.size === 0) {
           map.delete(self);
         }
       };
@@ -216,26 +233,25 @@ export function planckPlugin(
       phase: PlanckContactPhase,
       contact: Contact,
       selfFixture: Fixture,
-      _otherFixture: Fixture,
     ) => {
-      const set = map.get(self);
-      if (!set) return;
+      const handlerSet = map.get(self);
+      if (!handlerSet) return;
       const worldManifold = contact.getWorldManifold(collisionWorldManifold);
       const manifoldNormal = worldManifold?.normal;
-      const selfIsA = selfFixture === contact.getFixtureA();
+      const selfIsFixtureA = selfFixture === contact.getFixtureA();
       const collisionInfo: PlanckCollisionInfo = {
         phase,
         self,
         normal: manifoldNormal
           ? {
-              x: selfIsA ? -manifoldNormal.x : manifoldNormal.x,
-              y: selfIsA ? -manifoldNormal.y : manifoldNormal.y,
+              x: selfIsFixtureA ? -manifoldNormal.x : manifoldNormal.x,
+              y: selfIsFixtureA ? -manifoldNormal.y : manifoldNormal.y,
             }
           : undefined,
       };
-      for (const fn of set) {
+      for (const handlerFn of handlerSet) {
         try {
-          fn(other, collisionInfo);
+          handlerFn(other, collisionInfo);
         } catch (err) {
           console.error("planckPlugin handler error", err);
         }
@@ -245,30 +261,30 @@ export function planckPlugin(
     const runContact = (contact: Contact, phase: PlanckContactPhase) => {
       const bodyA = contact.getFixtureA().getBody();
       const bodyB = contact.getFixtureB().getBody();
-      const a = getBodyData(bodyA);
-      const b = getBodyData(bodyB);
-      if (!a || !b || a === b) return;
-      const fa = contact.getFixtureA();
-      const fb = contact.getFixtureB();
-      const isTrigger = fa.isSensor() || fb.isSensor();
+      const bodyDataA = getBodyData(bodyA);
+      const bodyDataB = getBodyData(bodyB);
+      if (!bodyDataA || !bodyDataB || bodyDataA === bodyDataB) return;
+      const fixtureA = contact.getFixtureA();
+      const fixtureB = contact.getFixtureB();
+      const isTrigger = fixtureA.isSensor() || fixtureB.isSensor();
       if (isTrigger) {
-        notifyContactHandlers(triggerHandlers, a, b, phase, contact, fa, fb);
-        notifyContactHandlers(triggerHandlers, b, a, phase, contact, fb, fa);
+        notifyContactHandlers(triggerHandlers, bodyDataA, bodyDataB, phase, contact, fixtureA);
+        notifyContactHandlers(triggerHandlers, bodyDataB, bodyDataA, phase, contact, fixtureB);
       } else {
-        notifyContactHandlers(collisionHandlers, a, b, phase, contact, fa, fb);
-        notifyContactHandlers(collisionHandlers, b, a, phase, contact, fb, fa);
+        notifyContactHandlers(collisionHandlers, bodyDataA, bodyDataB, phase, contact, fixtureA);
+        notifyContactHandlers(collisionHandlers, bodyDataB, bodyDataA, phase, contact, fixtureB);
       }
     };
 
-    const onBegin = (c: Contact) => runContact(c, "enter");
-    const onEnd = (c: Contact) => runContact(c, "exit");
+    const onBegin = (contact: Contact) => runContact(contact, "enter");
+    const onEnd = (contact: Contact) => runContact(contact, "exit");
 
     world.on("begin-contact", onBegin);
     world.on("end-contact", onEnd);
-    const onRemoveBody = (b: Body) => {
-      const o = getBodyData(b);
-      if (o) {
-        objectToRecord.delete(o);
+    const onRemoveBody = (body: Body) => {
+      const sceneObjectFromBody = getBodyData(body);
+      if (sceneObjectFromBody) {
+        objectToRecord.delete(sceneObjectFromBody);
       }
     };
     world.on("remove-body", onRemoveBody);
@@ -294,6 +310,7 @@ export function planckPlugin(
           world,
           sceneObject,
           effectiveBodyType,
+          pixelsPerMeter,
         );
         if (createdPlanckRecord) {
           objectToRecord.set(sceneObject, createdPlanckRecord);
@@ -327,7 +344,7 @@ export function planckPlugin(
         const scenePosition = readScenePosition(sceneObject);
         const sceneAngleRadians = readSceneAngleRadians(sceneObject);
         planckRecord.body.setTransform(
-          sceneVec(scenePosition.x, scenePosition.y),
+          new Vec2(scenePosition.x * invPpm, scenePosition.y * invPpm),
           sceneAngleRadians,
         );
 
@@ -336,16 +353,18 @@ export function planckPlugin(
         const useReplicatedDynamicVelocity =
           getSceneBodyType(sceneObject) === "dynamic" && !simulatesDynamics(sceneObject);
         if (useReplicatedDynamicVelocity) {
-          const v = readCollisionBodyVelocity(sceneObject);
-          planckRecord.body.setLinearVelocity(new Vec2(v.x, v.y));
-          planckRecord.body.setAngularVelocity(v.angular);
+          const collisionVelocity = readCollisionBodyVelocity(sceneObject);
+          planckRecord.body.setLinearVelocity(
+            new Vec2(collisionVelocity.x * invPpm, collisionVelocity.y * invPpm),
+          );
+          planckRecord.body.setAngularVelocity(collisionVelocity.angular);
         } else {
           const previousScenePose = kinematicScenePosePrev.get(sceneObject);
           if (previousScenePose && physicsStepSeconds > 0) {
             planckRecord.body.setLinearVelocity(
               new Vec2(
-                (scenePosition.x - previousScenePose.x) * inverseDeltaTime,
-                (scenePosition.y - previousScenePose.y) * inverseDeltaTime,
+                ((scenePosition.x - previousScenePose.x) * inverseDeltaTime) * invPpm,
+                ((scenePosition.y - previousScenePose.y) * inverseDeltaTime) * invPpm,
               ),
             );
             planckRecord.body.setAngularVelocity(
@@ -372,7 +391,7 @@ export function planckPlugin(
         const scenePosition = readScenePosition(sceneObject);
         const sceneAngleRadians = readSceneAngleRadians(sceneObject);
         planckRecord.body.setTransform(
-          sceneVec(scenePosition.x, scenePosition.y),
+          new Vec2(scenePosition.x * invPpm, scenePosition.y * invPpm),
           sceneAngleRadians,
         );
       }
@@ -385,13 +404,13 @@ export function planckPlugin(
         const scenePosition = readScenePosition(sceneObject);
         const sceneAngleRadians = readSceneAngleRadians(sceneObject);
         planckRecord.body.setTransform(
-          sceneVec(scenePosition.x, scenePosition.y),
+          new Vec2(scenePosition.x * invPpm, scenePosition.y * invPpm),
           sceneAngleRadians,
         );
 
         const authoredVelocity = readCollisionBodyVelocity(sceneObject);
         planckRecord.body.setLinearVelocity(
-          new Vec2(authoredVelocity.x, authoredVelocity.y),
+          new Vec2(authoredVelocity.x * invPpm, authoredVelocity.y * invPpm),
         );
         planckRecord.body.setAngularVelocity(authoredVelocity.angular);
       }
@@ -416,8 +435,8 @@ export function planckPlugin(
       onCollision: (self, handler) => addHandler(collisionHandlers, self, handler),
       onTrigger: (self, handler) => addHandler(triggerHandlers, self, handler),
       getRigidbody: (self) => {
-        const b = objectToRecord.get(self)?.body;
-        return b ? wrapRigidbody2D(b) : null;
+        const planckBody = objectToRecord.get(self)?.body;
+        return planckBody ? wrapRigidbody2D(planckBody, pixelsPerMeter) : null;
       },
       getBody: (self) => objectToRecord.get(self)?.body ?? null,
       getBodyType: (self) => getSceneBodyType(self),
@@ -447,9 +466,9 @@ export function planckPlugin(
       world.off("remove-body", onRemoveBody);
       let bodyList = world.getBodyList();
       while (bodyList) {
-        const next = bodyList.getNext();
+        const nextBody = bodyList.getNext();
         world.destroyBody(bodyList);
-        bodyList = next;
+        bodyList = nextBody;
       }
       collisionHandlers.clear();
       triggerHandlers.clear();
@@ -475,7 +494,7 @@ export function planckPlugin(
 
         syncDynamicBodiesFromSceneBeforePhysicsStep();
 
-        world.step(clampedDeltaSeconds, 8, 3);
+        world.step(clampedDeltaSeconds, 12, 4);
 
         syncDynamicBodiesToSceneAfterPhysicsStep();
 
