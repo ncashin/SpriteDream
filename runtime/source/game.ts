@@ -32,8 +32,7 @@ gameStart(() => {
   let floorSupportOverlaps = 0;
   peerPlayer.onCollision((other, collisionInfo) => {
     if (!planck.isStatic(other)) return;
-    if (collisionInfo.normal === undefined || collisionInfo.normal.y < 0.5)
-      return;
+    if (!collisionInfo.normal || collisionInfo.normal.y < 0.5) return;
     if (collisionInfo.phase === "enter") floorSupportOverlaps++;
     else floorSupportOverlaps = Math.max(0, floorSupportOverlaps - 1);
     peerPlayer.grounded = floorSupportOverlaps > 0;
@@ -46,8 +45,7 @@ gameUpdate((deltaTime) => {
   const { input, networking } = gameContext;
   const scene = getScene();
   const horizontalAxis = input.axes.Horizontal;
-  const clampedDeltaTime = Math.min(deltaTime, 0.1);
-  const sharedGravity = playerTrait.playerGravityY * clampedDeltaTime;
+  const sharedGravity = playerTrait.playerGravityY * deltaTime;
 
   const player = scene.getObject(
     networking.peerId,
@@ -60,7 +58,7 @@ gameUpdate((deltaTime) => {
   );
 
   if (player) {
-    const gravityStep = player.playerGravityY * clampedDeltaTime;
+    const gravityStep = player.playerGravityY * deltaTime;
     if (input.buttons.Jump.pressed && player.grounded) {
       player.collisionBody.velocity.y = player.jumpSpeed;
     }
