@@ -1,5 +1,4 @@
 import {
-  type PlanckCollisionHandler,
   defineTrait,
   gameStart,
   getScene,
@@ -11,7 +10,6 @@ import {
   circleColliderTrait,
   gameUpdate,
 } from "gameide";
-import { type Contact, WorldManifold } from "planck";
 import playerScene from "./scenes/player.scene";
 import "./style.css";
 import bouncyBallScene from "./scenes/bouncyBall.scene";
@@ -31,29 +29,15 @@ gameStart(() => {
   const ownedPlayer = networking.withOwnership(playerScene);
   const peerPlayer = scene.createObject(networking.peerId, ownedPlayer);
 
-  const floorSupportContacts = new Set<Contact>();
-  const floorContactWorldManifold = new WorldManifold();
-  void peerPlayer.onCollision(
-    ((other, event) => {
-      if (!planck.isStatic(other)) return;
-      const worldManifold = event.contact.getWorldManifold(
-        floorContactWorldManifold,
-      );
-      if (!worldManifold) return;
-      const normalY = worldManifold.normal.y;
-      const selfIsFixtureA = event.selfFixture === event.contact.getFixtureA();
-      if ((selfIsFixtureA ? -normalY : normalY) < 0.5) return;
-      if (event.phase === "enter") {
-        const velocityY =
-          planck.getRigidbody(peerPlayer)?.getLinearVelocity().y ?? 0;
-        if (velocityY > 0) return;
-        floorSupportContacts.add(event.contact);
-      } else {
-        floorSupportContacts.delete(event.contact);
-      }
-      peerPlayer.grounded = floorSupportContacts.size > 0;
-    }) 
-  );
+  let floorSupportOverlaps = 0;
+  peerPlayer.onCollision((other, collisionInfo) => {
+    if (!planck.isStatic(other)) return;
+    if (collisionInfo.normal === undefined || collisionInfo.normal.y < 0.5)
+      return;
+    if (collisionInfo.phase === "enter") floorSupportOverlaps++;
+    else floorSupportOverlaps = Math.max(0, floorSupportOverlaps - 1);
+    peerPlayer.grounded = floorSupportOverlaps > 0;
+  });
 
   scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));
 });

@@ -6,6 +6,7 @@ import {
   Settings,
   World,
   Vec2,
+  WorldManifold,
 } from "planck";
 import { update, start, gameUpdate } from "../../lifecycle/gameloop.js";
 import { getGameContext } from "../../lifecycle/game.js";
@@ -68,18 +69,20 @@ type PlanckPluginNetworkingContext = {
 };
 
 export type PlanckContactPhase = "enter" | "exit";
-export type PlanckCallbackEvent = {
+
+/** Data for a collision/trigger callback; no Planck / fixture types exposed. */
+export type PlanckCollisionInfo = {
   phase: PlanckContactPhase;
   self: BaseSceneObject;
-  other: BaseSceneObject;
-  contact: Contact;
-  selfFixture: Fixture;
-  otherFixture: Fixture;
+  /**
+   * World-space separation normal for tests against `other` (e.g. floor/slope). Undefined when unavailable.
+   */
+  normal?: { x: number; y: number };
 };
 
 export type PlanckCollisionHandler = (
   other: BaseSceneObject,
-  e: PlanckCallbackEvent,
+  collisionInfo: PlanckCollisionInfo,
 ) => void;
 
 /**
@@ -133,6 +136,7 @@ export function planckPlugin(
     >();
     const collisionHandlers = new Map<BaseSceneObject, Set<PlanckCollisionHandler>>();
     const triggerHandlers = new Map<BaseSceneObject, Set<PlanckCollisionHandler>>();
+    const collisionWorldManifold = new WorldManifold();
 
     type ScenePosition = { x: number; y: number };
     type SceneRotation = { x?: number; y?: number; z: number };
@@ -212,21 +216,26 @@ export function planckPlugin(
       phase: PlanckContactPhase,
       contact: Contact,
       selfFixture: Fixture,
-      otherFixture: Fixture,
+      _otherFixture: Fixture,
     ) => {
       const set = map.get(self);
       if (!set) return;
-      const e: PlanckCallbackEvent = {
+      const worldManifold = contact.getWorldManifold(collisionWorldManifold);
+      const manifoldNormal = worldManifold?.normal;
+      const selfIsA = selfFixture === contact.getFixtureA();
+      const collisionInfo: PlanckCollisionInfo = {
         phase,
         self,
-        other,
-        contact,
-        selfFixture,
-        otherFixture,
+        normal: manifoldNormal
+          ? {
+              x: selfIsA ? -manifoldNormal.x : manifoldNormal.x,
+              y: selfIsA ? -manifoldNormal.y : manifoldNormal.y,
+            }
+          : undefined,
       };
       for (const fn of set) {
         try {
-          fn(other, e);
+          fn(other, collisionInfo);
         } catch (err) {
           console.error("planckPlugin handler error", err);
         }

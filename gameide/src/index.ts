@@ -127,8 +127,8 @@ export {
   sceneBodyIsDynamic,
   type PlanckPluginAPI,
   type PlanckPluginOptions,
-  type PlanckCallbackEvent,
   type PlanckCollisionHandler,
+  type PlanckCollisionInfo,
   type PlanckContactPhase,
   type PlanckSceneCollisionBindings,
 } from "./plugins/planckPlugin/planckPlugin.js";
