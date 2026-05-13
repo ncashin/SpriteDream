@@ -1,9 +1,9 @@
-import type { BaseSceneObject } from "./scene.js";
 import { invalidateUseSceneSnapshot } from "../hooks/useSceneSnapshot.js";
+import { GameObject } from "./scene.js";
 
-export let selectedObject: BaseSceneObject | null = null;
+export let selectedObject: GameObject | null = null;
 
-export function selectObject(object: BaseSceneObject): void {
+export function selectObject(object: GameObject): void {
   selectedObject = object;
   invalidateUseSceneSnapshot();
 }

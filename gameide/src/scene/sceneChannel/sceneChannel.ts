@@ -1,12 +1,7 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
 import { invalidateUseSceneSnapshot } from "../../hooks/useSceneSnapshot.js";
-import {
-  type BaseSceneObject,
-  type SceneReflectUpdate,
-  mergeSceneReflectUpdateIntoPatch,
-} from "../scene.js";
+import { SceneListener, SceneObject } from "../scene.js";
 
-export type { SceneReflectUpdate };
 
 export const SCENE_CHANNEL = {
   requestInitialScene: "gameide.editor.requestInitialScene",
@@ -17,19 +12,19 @@ export const SCENE_CHANNEL = {
 
 export type SceneChannelMessage =
   | { type: typeof SCENE_CHANNEL.initialScene; content: string }
-  | { type: typeof SCENE_CHANNEL.scenePatch; patch: BaseSceneObject }
+  | { type: typeof SCENE_CHANNEL.scenePatch; patch: SceneObject }
   | { type: typeof SCENE_CHANNEL.requestInitialScene }
   | { type: typeof SCENE_CHANNEL.sceneChange; content: string };
 
 export interface CreateSceneChannelOptions {
   transport: SceneChannelTransport;
-  getScene(): BaseSceneObject;
-  getRawScene?: () => BaseSceneObject;
-  setScene(data: BaseSceneObject): void;
+  getScene(): SceneObject;
+  getRawScene?: () => SceneObject;
+  setScene(data: SceneObject): void;
   subscribeToScene?: (
-    callback: (update: SceneReflectUpdate) => void,
+    callback: (update: SceneListener) => void,
   ) => () => void;
-  applyPatch: (scene: BaseSceneObject, patch: BaseSceneObject) => void;
+  applyPatch: (scene: SceneObject, patch: SceneObject) => void;
   shouldEmitSceneUpdate?: (update: SceneReflectUpdate) => boolean;
   getInitialSceneContent?: () => string;
 
@@ -45,7 +40,7 @@ export interface SceneChannel {
   requestInitialScene(): void;
   sendInitialScene(content: string): void;
 
-  sendPatch(patch: BaseSceneObject): void;
+  sendPatch(patch: SceneObject): void;
 
   sendSceneChange(content: string): void;
 }

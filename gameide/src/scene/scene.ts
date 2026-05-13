@@ -1,134 +1,143 @@
-import { invalidateUseSceneSnapshot } from "../hooks/useSceneSnapshot.js";
-import { deselectObject } from "./objectSelection.js";
-import {
-  getSceneAddition,
-  sceneAdditions,
-} from "./sceneAdditions/sceneAdditions.js";
+export type GameObject = Record<PropertyKey, unknown>;
+export type SceneObject = Record<PropertyKey, GameObject>;
+export type ScenePath = PropertyKey[];
+export type SceneListener = (
+  object: Record<PropertyKey, unknown>,
+  property: ScenePath,
+  receiver: any,
+) => void;
 
-export { saveSceneSnapshot, restoreSceneSnapshot } from "./snapshot.js";
-export {
-  applyPatch,
-  findSceneReceiverPath,
-  mergeSceneReflectUpdateIntoPatch,
-} from "./patch.js";
+const isNestedRecord = (value: unknown): value is GameObject =>
+  !!value && typeof value === "object" && !Array.isArray(value);
 
-export interface SceneNodeVirtualProperties {}
+export function createSceneProxy<T extends object = GameObject>(
+  target: T,
+  scenePath?: ScenePath,
+  onChange?: (object: T, property: ScenePath, receiver: any) => void,
+): T {
+  return new Proxy(target, {
+    get(object, property, receiver) {
+      const value = Reflect.get(object, property, receiver);
 
-export type BaseSceneObject = Record<PropertyKey, unknown>;
-export type SceneGraphObject = BaseSceneObject & SceneNodeVirtualProperties;
-export type SceneObject = SceneGraphObject & {
-  [K in keyof typeof sceneAdditions]: ReturnType<(typeof sceneAdditions)[K]>;
-};
-
-export type SceneReflectUpdate = {
-  path: PropertyKey[];
-  property: PropertyKey;
-  previousValue: unknown;
-  value: unknown;
-};
-
-export const sceneTarget: BaseSceneObject = {};
-
-type SceneSubscriber = (update: SceneReflectUpdate) => void;
-
-const subscribers = new Set<SceneSubscriber>();
-
-const nestedProxyCache = new WeakMap<object, Map<string, BaseSceneObject>>();
-
-function cacheKeyForNestedPath(segments: PropertyKey[]): string {
-  let key = "";
-  for (let i = 0; i < segments.length; i++) {
-    if (i > 0) key += "\u0000";
-    key += String(segments[i]);
-  }
-  return key;
-}
-
-function isNestedSceneRecord(value: unknown): value is BaseSceneObject {
-  return value !== null && typeof value === "object";
-}
-
-function createSceneProxyHandler(path: PropertyKey[]): ProxyHandler<BaseSceneObject> {
-  return {
-    get(target, property, receiver) {
-      const sceneAddition = getSceneAddition(property);
-      if (sceneAddition) {
-        return sceneAddition(receiver);
+      if (onChange) {
+        onChange(object, [...(scenePath ?? []), property], receiver);
       }
 
-      const value = Reflect.get(target, property, receiver);
-      if (isNestedSceneRecord(value)) {
-        const childPath = [...path, property];
-        const segmentKey = cacheKeyForNestedPath(childPath);
-        let byPath = nestedProxyCache.get(value);
-        if (!byPath) {
-          byPath = new Map();
-          nestedProxyCache.set(value, byPath);
-        }
-        let cached = byPath.get(segmentKey);
-        if (!cached) {
-          cached = new Proxy(value, createSceneProxyHandler(childPath));
-          byPath.set(segmentKey, cached);
-        }
-        return cached;
+      // Recursively create proxies for nested objects
+      if (value && typeof value === "object" && !(value instanceof Proxy)) {
+        return createSceneProxy(value, [...(scenePath ?? []), property]);
       }
+
       return value;
     },
-    set(target, property, value, receiver) {
-      if (value === undefined || value === null) {
-        return Reflect.deleteProperty(receiver, property);
-      }
-      const previousValue = target[property];
-      const result = Reflect.set(target, property, value, receiver);
-      subscribers.forEach((callback) => {
-        callback({ path, property, previousValue, value });
-      });
-      invalidateUseSceneSnapshot();
-      return result;
+    set(object, property, value, receiver) {
+      return Reflect.set(object, property, value, receiver);
     },
-    deleteProperty(target, property) {
-      const previousValue = target[property];
-      const result = Reflect.deleteProperty(target, property);
-      if (result) {
-        subscribers.forEach((callback) => {
-          callback({ path, property, previousValue, value: undefined });
-        });
-        invalidateUseSceneSnapshot();
-      }
-      return result;
+    deleteProperty(object, property) {
+      return Reflect.deleteProperty(object, property);
     },
+    has(object, property) {
+      return Reflect.has(object, property);
+    },
+    ownKeys(object) {
+      return Reflect.ownKeys(object);
+    },
+    getOwnPropertyDescriptor(object, property) {
+      return Object.getOwnPropertyDescriptor(object, property);
+    },
+  });
+}
+
+export const curryScene = (rawScene: Record<PropertyKey, GameObject>) => {
+  const listeners: SceneListener[] = [];
+  const scene = createSceneProxy(rawScene, [], (object, property, receiver) => {
+    listeners.forEach((listener) => listener(object, property, receiver));
+  });
+
+  const onChange = (callback: SceneListener) => {
+    listeners.push(callback);
   };
-}
 
-const scene = new Proxy(sceneTarget, createSceneProxyHandler([]));
-
-function assertRootSceneProxy(root: BaseSceneObject): asserts root is SceneObject {
-  if (root !== scene) {
-    throw new Error("expected root scene proxy");
-  }
-}
-
-export function subscribeToScene(callback: SceneSubscriber): () => void {
-  subscribers.add(callback);
-  return () => {
-    subscribers.delete(callback);
+  const createObject = (key: PropertyKey, gameObject: GameObject) => {
+    scene[key] = gameObject;
+    return scene[key];
   };
-}
+  const destroyObject = (key: PropertyKey) => {
+    delete scene[key];
+  };
 
-export const getScene = (): SceneObject => {
-  assertRootSceneProxy(scene);
-  return scene;
+  const getObject = (key: PropertyKey) => {
+    return scene[key];
+  };
+
+  const query = (queryFunction: (gameObject: GameObject) => boolean) => {
+    return Object.values(scene).filter(queryFunction);
+  };
+  const onQueryChange = (callback: (gameObject: GameObject) => boolean) => {
+    return Object.values(scene).filter(callback);
+  };
+
+  const applyNested = (target: GameObject, data: GameObject) => {
+    for (const [key, value] of Object.entries(data)) {
+      if (value === undefined) {
+        Reflect.deleteProperty(target, key);
+        continue;
+      }
+      if (!isNestedRecord(value)) {
+        Reflect.set(target, key, value);
+        continue;
+      }
+      Reflect.set(target, key, {});
+      const child = Reflect.get(target, key);
+      if (!isNestedRecord(child)) continue;
+      applyNested(child, value);
+    }
+  };
+
+  const applyPatch = (patch: Partial<SceneObject>) => {
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === undefined) {
+        Reflect.deleteProperty(scene, key);
+        continue;
+      }
+      if (!isNestedRecord(value)) {
+        Reflect.set(scene, key, value);
+        continue;
+      }
+      Reflect.set(scene, key, {});
+      const child = Reflect.get(scene, key);
+      if (!isNestedRecord(child)) continue;
+      applyNested(child, value);
+    }
+  };
+
+  return {
+    onChange,
+
+    createObject,
+    destroyObject,
+
+    getObject,
+
+    query,
+    onQueryChange,
+
+    applyPatch,
+  };
 };
+
+let rawScene = {};
 
 export const getRawScene = () => {
-  return sceneTarget;
+  return rawScene;
 };
 
-export const setScene = (data: BaseSceneObject) => {
-  deselectObject();
-  for (const key of Object.keys(sceneTarget)) {
-    delete sceneTarget[key];
-  }
-  Object.assign(sceneTarget, data);
-  invalidateUseSceneSnapshot();
+let scene = curryScene(rawScene);
+
+export const getScene = () => {
+  return scene;
+};
+export const setScene = (newScene: SceneObject) => {
+  rawScene = newScene;
+  scene = curryScene(newScene);
 };
