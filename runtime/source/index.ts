@@ -45,7 +45,7 @@ const game = await gameide({
         LookCamera: ["Mouse0"],
       },
     }),
-    planckPlugin({ jitterThreshold: 3 }),
+    planckPlugin({ jitterThreshold: 6 }),
     pixiPlugin({
       initOptions: {
         backgroundAlpha: 0,

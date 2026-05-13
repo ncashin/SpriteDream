@@ -94,6 +94,9 @@ const inputClass = `w-full min-w-0 flex-1 py-0.5 border-0 bg-transparent text-in
 
 const SCENE_TREE_META_KEYS = new Set(["__icon"]);
 
+/** Per nesting level for `position: sticky` object headers (matches row padding + icon frame). */
+const SCENE_TREE_STICKY_STACK_REM = 1.75;
+
 /** Scene-tree row icon when a nested object omits `__icon` (e.g. hand-authored collider payloads). */
 const SCENE_OBJECT_PROPERTY_ICONS: Partial<Record<string, IconSlug>> = {
   boxCollider: "square",
@@ -288,6 +291,8 @@ type RowShellProps = {
   propertyRow?: boolean;
   /** When `dropInto`, Lucide icon name/slug from scene `__icon` (kebab-case or PascalCase). */
   objectLeadIconKey?: unknown;
+  /** When set, the header row sticks while scrolling the scene tree list. */
+  stickyStackDepth?: number;
 };
 
 function RowShell({
@@ -306,6 +311,7 @@ function RowShell({
   highlightable = true,
   propertyRow = false,
   objectLeadIconKey,
+  stickyStackDepth,
 }: RowShellProps) {
   let lead: ReactNode = null;
   if (dropInto) {
@@ -344,7 +350,17 @@ function RowShell({
           textSize,
           font,
           highlightable && rowHover,
+          stickyStackDepth !== undefined &&
+            "sticky bg-[var(--vscode-editor-background)]",
         )}
+        style={
+          stickyStackDepth !== undefined
+            ? {
+                top: `calc(${stickyStackDepth} * ${SCENE_TREE_STICKY_STACK_REM}rem)`,
+                zIndex: 20 + stickyStackDepth,
+              }
+            : undefined
+        }
         aria-expanded={ariaExpanded}
         onClick={rowOnClick}
       >
@@ -466,6 +482,7 @@ type ObjectNodeProps = {
   templates: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
   expandObjectsByDefault?: boolean;
+  depth: number;
 };
 
 function ObjectNode({
@@ -477,6 +494,7 @@ function ObjectNode({
   templates,
   mergeTraitInto,
   expandObjectsByDefault = false,
+  depth,
 }: ObjectNodeProps) {
   const [open, setOpen] = useState(expandObjectsByDefault);
   const keys = Object.keys(sceneObject).filter((k) => !SCENE_TREE_META_KEYS.has(k));
@@ -494,6 +512,7 @@ function ObjectNode({
             templates={templates}
             mergeTraitInto={mergeTraitInto}
             expandObjectsByDefault={expandObjectsByDefault}
+            depth={depth + 1}
             key={key}
           />
         ))}
@@ -528,6 +547,7 @@ function ObjectNode({
       }
       onHeaderClick={() => setOpen((o) => !o)}
       headerExpanded={open}
+      stickyStackDepth={depth}
       label={
         <span className={cn("truncate font-medium", foreground)}>{name}</span>
       }
@@ -544,6 +564,7 @@ type TreeNodeProps = {
   templates: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
   expandObjectsByDefault?: boolean;
+  depth?: number;
 };
 
 function TreeNode({
@@ -554,6 +575,7 @@ function TreeNode({
   templates,
   mergeTraitInto,
   expandObjectsByDefault = false,
+  depth = 0,
 }: TreeNodeProps) {
   const root = getScene() as Record<PropertyKey, unknown>;
   const onDelete = () => deleteValueAtPath(root, path);
@@ -582,6 +604,7 @@ function TreeNode({
       templates={templates}
       mergeTraitInto={mergeTraitInto}
       expandObjectsByDefault={expandObjectsByDefault}
+      depth={depth}
     />
   );
 }
@@ -637,7 +660,7 @@ function SceneViewHeader({
   return (
     <header
       className={cn(
-        "flex w-full min-w-0 items-center gap-2 pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
+        "sticky top-0 z-30 flex w-full min-w-0 shrink-0 items-center gap-2 bg-[var(--vscode-editor-background)] pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
         font,
         foreground,
       )}

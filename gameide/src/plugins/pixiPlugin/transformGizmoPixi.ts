@@ -9,9 +9,21 @@ const X_COLOR = 0xff3838;
 const Y_COLOR = 0x42e042;
 const XY_COLOR = 0xffee55;
 const ROTATE_COLOR = 0x6ab0ff;
-const UNIFORM_SCALE_COLOR = 0xcc66ee;
+/** Uniform scale corner square; also used for sprite selection outline. */
+export const UNIFORM_SCALE_COLOR = 0xcc66ee;
 const OUTLINE = 0x1a1a1a;
 const PIVOT_COLOR = 0xffffff;
+
+/**
+ * Planar XY / uniform-scale handle in +X,+Y: inner `inset` from pivot, then `size` square side.
+ * Values are abstract "gizmo pixels" (multiply by `u`).
+ */
+const CORNER_SQUARE_INSET_GIZMO_PX = 2;
+const CORNER_SQUARE_GIZMO_PX = 20;
+/** Axis hits win when this close to a shaft inside the corner square (narrow strip on each axis). */
+const CORNER_AXIS_TIGHT_GIZMO_PX = 4;
+/** Clicks past this inset from each axis count as definite planar drag. */
+const CORNER_PLANAR_INNER_GIZMO_PX = 12;
 
 /** World units ~per screen pixel (gizmo stays visually constant size while zooming). */
 export function gizmoWorldPerPixel(viewportScale: number): number {
@@ -67,6 +79,23 @@ function pointInRect(
   return px >= rx && px <= rx + rw && py >= ry && py <= ry + rh;
 }
 
+function cornerSquareLayout(u: number): {
+  inset: number;
+  size: number;
+  outer: number;
+} {
+  const inset = CORNER_SQUARE_INSET_GIZMO_PX * u;
+  const size = CORNER_SQUARE_GIZMO_PX * u;
+  return { inset, size, outer: inset + size };
+}
+
+function inCornerSquare(lx: number, ly: number, u: number): boolean {
+  const { inset, size } = cornerSquareLayout(u);
+  return (
+    lx >= inset && lx <= inset + size && ly >= inset && ly <= inset + size
+  );
+}
+
 /** Move: higher-contrast arrows + planar square. */
 export function hitTestMoveGizmo(
   worldX: number,
@@ -83,43 +112,50 @@ export function hitTestMoveGizmo(
   const headLen = 18 * u;
   const headHalfW = 9 * u;
   const strokeHit = 11 * u;
+  const { outer } = cornerSquareLayout(u);
+  const tight = CORNER_AXIS_TIGHT_GIZMO_PX * u;
+  const planarInner = CORNER_PLANAR_INNER_GIZMO_PX * u;
 
-  const sq0 = 12 * u;
-  const sqS = 16 * u;
-  if (lx >= sq0 && lx <= sq0 + sqS && ly >= sq0 && ly <= sq0 + sqS) {
+  if (inCornerSquare(lx, ly, u) && lx > planarInner && ly > planarInner) {
     return "xy";
   }
 
-  if (
-    pointInTriangle(
-      lx,
-      ly,
-      shaftLen,
-      0,
-      shaftLen - headLen,
-      -headHalfW,
-      shaftLen - headLen,
-      headHalfW,
-    ) ||
-    distPointSegment(lx, ly, 0, 0, shaftLen, 0) <= strokeHit
-  ) {
+  const xTip = pointInTriangle(
+    lx,
+    ly,
+    shaftLen,
+    0,
+    shaftLen - headLen,
+    -headHalfW,
+    shaftLen - headLen,
+    headHalfW,
+  );
+  const xShaftNearPivot = lx >= 0 && lx <= outer && Math.abs(ly) <= tight;
+  const xShaftOuter =
+    distPointSegment(lx, ly, outer, 0, shaftLen, 0) <= strokeHit;
+  if (xTip || xShaftNearPivot || xShaftOuter) {
     return "x";
   }
 
-  if (
-    pointInTriangle(
-      lx,
-      ly,
-      0,
-      shaftLen,
-      -headHalfW,
-      shaftLen - headLen,
-      headHalfW,
-      shaftLen - headLen,
-    ) ||
-    distPointSegment(lx, ly, 0, 0, 0, shaftLen) <= strokeHit
-  ) {
+  const yTip = pointInTriangle(
+    lx,
+    ly,
+    0,
+    shaftLen,
+    -headHalfW,
+    shaftLen - headLen,
+    headHalfW,
+    shaftLen - headLen,
+  );
+  const yShaftNearPivot = ly >= 0 && ly <= outer && Math.abs(lx) <= tight;
+  const yShaftOuter =
+    distPointSegment(lx, ly, 0, outer, 0, shaftLen) <= strokeHit;
+  if (yTip || yShaftNearPivot || yShaftOuter) {
     return "y";
+  }
+
+  if (inCornerSquare(lx, ly, u)) {
+    return "xy";
   }
 
   return "none";
@@ -195,8 +231,9 @@ export function drawMoveGizmo(
 ): void {
   g.clear();
   const u = gizmoWorldPerPixel(viewportScale);
-  const sq0 = 12 * u;
-  const sqS = 16 * u;
+  const { inset, size } = cornerSquareLayout(u);
+  const sq0 = inset;
+  const sqS = size;
 
   const dimX = hover !== "none" && hover !== "x";
   const dimY = hover !== "none" && hover !== "y";
@@ -205,19 +242,19 @@ export function drawMoveGizmo(
   drawArrowAxis(g, u, true, X_COLOR, dimX);
   drawArrowAxis(g, u, false, Y_COLOR, dimY);
 
-  g.roundRect(sq0, sq0, sqS, sqS, 2 * u);
+  g.rect(sq0, sq0, sqS, sqS);
   g.stroke({
     width: Math.max(2 * u, 1.05),
     color: OUTLINE,
     alpha: dimXy ? 0.35 : 0.88,
   });
-  g.roundRect(sq0, sq0, sqS, sqS, 2 * u);
+  g.rect(sq0, sq0, sqS, sqS);
   g.stroke({
     width: Math.max(1.5 * u, 0.95),
     color: XY_COLOR,
     alpha: dimXy ? 0.4 : 0.98,
   });
-  g.roundRect(sq0, sq0, sqS, sqS, 2 * u);
+  g.rect(sq0, sq0, sqS, sqS);
   g.fill({ color: XY_COLOR, alpha: dimXy ? 0.1 : 0.32 });
 
   const dotR = 3.75 * u;
@@ -310,10 +347,12 @@ export function hitTestScaleGizmo(
   const shaftLen = 68 * u;
   const ch = 8 * u;
   const strokeHit = 10 * u;
+  const { outer } = cornerSquareLayout(u);
+  const tight = CORNER_AXIS_TIGHT_GIZMO_PX * u;
+  const planarInner = CORNER_PLANAR_INNER_GIZMO_PX * u;
+  const xStemEnd = shaftLen - ch * 1.05;
 
-  const sq0 = 12 * u;
-  const sqS = 16 * u;
-  if (lx >= sq0 && lx <= sq0 + sqS && ly >= sq0 && ly <= sq0 + sqS) {
+  if (inCornerSquare(lx, ly, u) && lx > planarInner && ly > planarInner) {
     return "xy";
   }
 
@@ -328,11 +367,22 @@ export function hitTestScaleGizmo(
     return "y";
   }
 
-  if (distPointSegment(lx, ly, 0, 0, shaftLen - ch * 1.05, 0) <= strokeHit) {
+  const xShaftNearPivot = lx >= 0 && lx <= outer && Math.abs(ly) <= tight;
+  const xShaftOuter =
+    distPointSegment(lx, ly, outer, 0, xStemEnd, 0) <= strokeHit;
+  if (xShaftNearPivot || xShaftOuter) {
     return "x";
   }
-  if (distPointSegment(lx, ly, 0, 0, 0, shaftLen - ch * 1.05) <= strokeHit) {
+
+  const yShaftNearPivot = ly >= 0 && ly <= outer && Math.abs(lx) <= tight;
+  const yShaftOuter =
+    distPointSegment(lx, ly, 0, outer, 0, xStemEnd) <= strokeHit;
+  if (yShaftNearPivot || yShaftOuter) {
     return "y";
+  }
+
+  if (inCornerSquare(lx, ly, u)) {
+    return "xy";
   }
 
   return "none";
@@ -391,8 +441,9 @@ export function drawScaleGizmo(
 ): void {
   g.clear();
   const u = gizmoWorldPerPixel(viewportScale);
-  const sq0 = 12 * u;
-  const sqS = 16 * u;
+  const { inset, size } = cornerSquareLayout(u);
+  const sq0 = inset;
+  const sqS = size;
 
   const dimX = hover !== "none" && hover !== "x";
   const dimY = hover !== "none" && hover !== "y";
@@ -401,19 +452,19 @@ export function drawScaleGizmo(
   strokeScaleAxis(g, u, true, X_COLOR, dimX);
   strokeScaleAxis(g, u, false, Y_COLOR, dimY);
 
-  g.roundRect(sq0, sq0, sqS, sqS, 2 * u);
+  g.rect(sq0, sq0, sqS, sqS);
   g.stroke({
     width: Math.max(2 * u, 1.05),
     color: OUTLINE,
     alpha: dimXy ? 0.35 : 0.88,
   });
-  g.roundRect(sq0, sq0, sqS, sqS, 2 * u);
+  g.rect(sq0, sq0, sqS, sqS);
   g.stroke({
     width: Math.max(1.5 * u, 0.95),
     color: UNIFORM_SCALE_COLOR,
     alpha: dimXy ? 0.42 : 0.98,
   });
-  g.roundRect(sq0, sq0, sqS, sqS, 2 * u);
+  g.rect(sq0, sq0, sqS, sqS);
   g.fill({ color: UNIFORM_SCALE_COLOR, alpha: dimXy ? 0.12 : 0.28 });
 
   const dotR = 3.75 * u;

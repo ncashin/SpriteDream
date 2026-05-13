@@ -9,7 +9,7 @@ import {
   type Texture,
 } from "pixi.js";
 import { editorUpdate, gameUpdate, start, update } from "../../lifecycle/gameloop.js";
-import { GameIDEMode, getMode } from "../../lifecycle/mode.js";
+import { GameIDEMode, getMode, onModeChange } from "../../lifecycle/mode.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
 import {
   deselectObject,
@@ -29,6 +29,7 @@ import {
   hitTestMoveGizmo,
   hitTestRotateGizmo,
   hitTestScaleGizmo,
+  UNIFORM_SCALE_COLOR,
   type MoveGizmoHit,
   type RotateGizmoHit,
   type ScaleGizmoHit,
@@ -164,7 +165,7 @@ function syncSpriteSelectionOutline(
     graphics.lineTo(p.x, p.y);
   }
   graphics.closePath();
-  graphics.stroke({ width: 1.5, color: 0x33ccff, alpha: 0.95 });
+  graphics.stroke({ width: 1.5, color: UNIFORM_SCALE_COLOR, alpha: 0.95 });
 }
 
 type ColliderDebugState = {
@@ -258,6 +259,17 @@ export function pixiPlugin(
     const editorViewportGesture = createEditorViewportGestureState();
 
     let gizmoDrag: ActiveGizmoDrag | null = null;
+
+    const resetViewportForModeChange = (): void => {
+      viewport.setCenter(0, 0);
+      viewport.setScale(1);
+      editorViewportGesture.panning = false;
+      editorViewportGesture.anchorWorld = null;
+      editorViewportGesture.pressClient = null;
+      gizmoDrag = null;
+    };
+
+    const releaseModeViewportReset = onModeChange(resetViewportForModeChange);
 
     const syncTransformGizmoOverlay = (
       tool: TransformGizmoTool,
@@ -480,6 +492,7 @@ export function pixiPlugin(
 
     context.dispose(() => {
       disposed = true;
+      releaseModeViewportReset();
       releaseEditorPick();
       resizeObserver.disconnect();
       unsubscribeViewport();

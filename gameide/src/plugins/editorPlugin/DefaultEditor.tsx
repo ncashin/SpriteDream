@@ -61,7 +61,7 @@ export function DefaultEditor({
           </OverlayButton>
 
           <OverlayInput
-            className="min-w-[10rem] flex-1 basis-0"
+            className="flex-1 basis-0 min-w-0 max-w-sm"
             value={
               typeof sceneName === "string" && sceneName.length > 0
                 ? sceneName
