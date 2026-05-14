@@ -232,7 +232,7 @@ export function syncPixiSprites(
     spriteByEntity.set(item, { sprite, signature });
   };
 
-  const list = getScene().query(implementsTrait(spriteTrait));
+  const list = getScene().query(implementsTrait([spriteTrait]));
   const active = new Set<SpriteRenderable>();
   for (const item of list) {
     active.add(item);

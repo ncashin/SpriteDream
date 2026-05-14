@@ -4,9 +4,7 @@ import type { SceneObject } from "../scene/scene.js";
 import {
   getUseSceneSnapshot,
   subscribeUseSceneSnapshot,
-} from "./useSceneSnapshot.js";
-
-export { invalidateUseSceneSnapshot } from "./useSceneSnapshot.js";
+} from "../scene/sceneExternalStore.js";
 
 export function useScene(): [SceneObject, (data: SceneObject) => void] {
   const subscribe = useMemo(

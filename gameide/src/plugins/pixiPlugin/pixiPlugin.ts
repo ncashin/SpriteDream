@@ -278,11 +278,11 @@ export function pixiPlugin(
       scaleH: ScaleGizmoHit,
     ): void => {
       transformGizmoGfx.clear();
-      const sel = selectedObject;
+      const select = selectedObject;
       const inEditor = getMode() === GameIDEMode.Editor;
-      if (!inEditor || !sel || !implementsTrait(spriteTrait)(sel)) return;
-      if (!spriteByEntity.has(sel as SpriteRenderable)) return;
-      const pos = (sel as SpriteRenderable).position;
+      if (!inEditor || !select || !implementsTrait([spriteTrait])(select)) return;
+      if (!spriteByEntity.has(select as SpriteRenderable)) return;
+      const pos = (select as SpriteRenderable).position;
       transformGizmoGfx.position.set(pos.x, pos.y);
       transformGizmoGfx.zIndex = GIZMO_Z;
       drawActiveTransformGizmo(
@@ -311,7 +311,7 @@ export function pixiPlugin(
       const spriteSel =
         editorMode &&
         selectedObject &&
-        implementsTrait(spriteTrait)(selectedObject) &&
+        implementsTrait([spriteTrait])(selectedObject) &&
         spriteByEntity.has(selectedObject as SpriteRenderable)
           ? (selectedObject as SpriteRenderable)
           : null;
@@ -324,7 +324,7 @@ export function pixiPlugin(
         skipViewport = true;
         const sel =
           selectedObject &&
-          implementsTrait(spriteTrait)(selectedObject) &&
+          implementsTrait([spriteTrait])(selectedObject) &&
           spriteByEntity.has(selectedObject as SpriteRenderable)
             ? (selectedObject as SpriteRenderable)
             : null;

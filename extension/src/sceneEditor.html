@@ -36,7 +36,7 @@
           iframe?.contentWindow?.postMessage(payload, "*");
         }
 
-        function sendInitialSceneToIframe(content) {
+        function sendInitialSceneToIFrame(content) {
           postToIframe({
             type: "gameide.editor.initialScene",
             content: content,
@@ -58,32 +58,26 @@
           return null;
         }
 
-        iframe.addEventListener("load", function () {
-          if (pendingSceneContent !== null) {
-            sendInitialSceneToIframe(pendingSceneContent);
-          }
-        });
-
         window.addEventListener("message", function (event) {
           var message = typedWindowMessagePayload(event.data);
           if (!message || typeof message.type !== "string") return;
 
-          var fromRuntimeIframe = event.source === iframe?.contentWindow;
+          var fromRuntimeIFrame = event.source === iframe?.contentWindow;
 
           if (
-            !fromRuntimeIframe &&
+            !fromRuntimeIFrame &&
             message.type.indexOf("gameide.editor.") === 0
           ) {
             postToIframe(message);
             return;
           }
 
-          if (fromRuntimeIframe) {
+          if (fromRuntimeIFrame) {
             switch (message.type) {
               case "gameide.editor.requestInitialScene":
                 runtimeRequestedInitialScene = true;
                 if (pendingSceneContent !== null)
-                  sendInitialSceneToIframe(pendingSceneContent);
+                  sendInitialSceneToIFrame(pendingSceneContent);
                 else
                   postToVscode({
                     type: "gameide.editor.requestInitialScene",
@@ -110,7 +104,7 @@
           if (message.type === "scene" && message.content !== undefined) {
             pendingSceneContent = message.content;
             if (runtimeRequestedInitialScene)
-              sendInitialSceneToIframe(message.content);
+              sendInitialSceneToIFrame(message.content);
             if (message.stopAfter)
               postToIframe({ type: "gameide.editor.stop" });
           }

@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from "react";
-import type { z } from "zod";
 import type { IconSlug } from "../lucide/lucideIconSlug.js";
 import { getScene } from "../scene/scene.js";
 import { getValueAtPath } from "../scene/path.js";
@@ -35,6 +34,7 @@ export function useTraits() {
         label: definition.name ?? `Trait ${index + 1}`,
         schema: definition.schema,
         icon: definition.icon,
+        defaults: definition.defaults,
       })),
     [],
   );
@@ -48,7 +48,7 @@ export function useTraits() {
     );
     if (!node || typeof node !== "object" || Array.isArray(node)) return;
     const target = node as Record<string, unknown>;
-    mergeMissing(target, def.schema.parse({}) as Record<string, unknown>);
+    mergeMissing(target, def.defaults as Record<string, unknown>);
     if (
       typeof def.icon === "string" &&
       def.icon.trim() !== "" &&

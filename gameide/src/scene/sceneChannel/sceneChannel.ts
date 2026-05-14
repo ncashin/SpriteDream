@@ -1,5 +1,4 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
-import { invalidateUseSceneSnapshot } from "../../hooks/useSceneSnapshot.js";
 import { setValueAtPath } from "../path.js";
 import { Scene, SceneObject } from "../scene.js";
 
@@ -27,11 +26,10 @@ function parsePatchContent(content: SceneObject | string): SceneObject {
   return content;
 }
 
-/** rAF exists in browsers; VS Code / Node extension host has none. */
 function scheduleNextAnimationFrame(callback: () => void): void {
-  const raf = globalThis.requestAnimationFrame;
-  if (typeof raf === "function") {
-    raf.call(globalThis, callback);
+  const requestAnimationFrameFunction = globalThis.requestAnimationFrame;
+  if (typeof requestAnimationFrameFunction === "function") {
+    requestAnimationFrameFunction.call(globalThis, callback);
   } else {
     setTimeout(callback, 0);
   }
@@ -88,13 +86,20 @@ export async function createSceneChannel(
   function handleMessage(message: SceneChannelMessage): void {
     switch (message.type) {
       case SCENE_CHANNEL.requestInitialScene:
-        sendInitialScene(JSON.stringify(scene.getRaw()));
+        try {
+          sendInitialScene(JSON.stringify(scene.getRaw()));
+        } catch {
+          sendInitialScene("{}");
+        }
         return;
       case SCENE_CHANNEL.initialScene: {
         if (sceneInitialized) return;
         sceneInitialized = true;
-        scene.applyPatch(parsePatchContent(message.content));
-        markReady();
+        try {
+          scene.applyPatch(parsePatchContent(message.content));
+        } finally {
+          markReady();
+        }
         return;
       }
       case SCENE_CHANNEL.scenePatch: {
@@ -112,7 +117,7 @@ export async function createSceneChannel(
 
   const unsubscribeTransport = transport.onMessage(handleMessage as any);
   if (!sceneInitialized) {
-    requestInitialScene();
+    queueMicrotask(() => requestInitialScene());
   }
 
   let pendingPatch: SceneObject = {};

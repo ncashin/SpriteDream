@@ -4,7 +4,7 @@ import { selectedObject } from "../scene/objectSelection.js";
 import {
   getUseSceneSnapshot,
   subscribeUseSceneSnapshot,
-} from "./useSceneSnapshot.js";
+} from "../scene/sceneExternalStore.js";
 
 function findSceneObjectPath(
   root: SceneObject,

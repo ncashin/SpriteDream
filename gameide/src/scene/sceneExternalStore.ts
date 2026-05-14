@@ -1,8 +1,3 @@
-/**
- * External-store snapshot for useScene (no React here — safe for scene/sceneChannel imports).
- * `getScene().get()` is stable until `setScene` replaces the scene; this bumps when scene content changes.
- */
-
 let snapshotVersion = 0;
 const listeners = new Set<() => void>();
 
@@ -10,7 +5,9 @@ export function getUseSceneSnapshot(): number {
   return snapshotVersion;
 }
 
-export function subscribeUseSceneSnapshot(onStoreChange: () => void): () => void {
+export function subscribeUseSceneSnapshot(
+  onStoreChange: () => void,
+): () => void {
   listeners.add(onStoreChange);
   return () => {
     listeners.delete(onStoreChange);
@@ -19,9 +16,9 @@ export function subscribeUseSceneSnapshot(onStoreChange: () => void): () => void
 
 export function invalidateUseSceneSnapshot(): void {
   snapshotVersion++;
-  listeners.forEach((cb) => {
+  listeners.forEach((callback) => {
     try {
-      cb();
+      callback();
     } catch (err) {
       console.error("[useScene] snapshot listener error:", err);
     }

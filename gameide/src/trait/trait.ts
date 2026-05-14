@@ -8,7 +8,12 @@ export type TraitMetadata = {
 };
 
 export type TraitDefinitionEntry<S extends ZodTypeAny = ZodTypeAny> =
-  TraitMetadata & { schema: S };
+  TraitMetadata &
+    z.infer<S> & {
+      schema: S;
+      /** Same fields as spread on this object; kept for merging / introspection. */
+      defaults: z.infer<S>;
+    };
 
 const traitDefinitions: TraitDefinitionEntry[] = [];
 
@@ -20,7 +25,15 @@ export const defineTrait = <S extends ZodTypeAny>(
   schema: S,
   metadata: TraitMetadata = {},
 ): TraitDefinitionEntry<S> => {
-  const entry: TraitDefinitionEntry<S> = { ...metadata, schema };
+  const parsed = schema.safeParse({});
+  const defaults = (
+    parsed.success ? parsed.data : {}
+  ) as z.infer<S>;
+  const entry = {
+    ...defaults,
+    ...metadata,
+    schema,
+  } as TraitDefinitionEntry<S>;
   traitDefinitions.push(entry);
   return entry;
 };

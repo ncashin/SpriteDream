@@ -1,4 +1,4 @@
-import { invalidateUseSceneSnapshot } from "../hooks/useSceneSnapshot.js";
+import { invalidateUseSceneSnapshot } from "./sceneExternalStore.js";
 import { GameObject } from "./scene.js";
 
 export let selectedObject: GameObject | null = null;

@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   defineTrait,
   gameStart,
-  getScene,
   ownerTrait,
   spriteTrait,
   collisionBodyTrait,
@@ -25,11 +24,9 @@ const playerTrait = defineTrait(
 );
 
 export default function main(gameContext: RuntimeGameContext): void {
-  const { input, networking, planck } = gameContext;
+  const { input, networking, planck, scene } = gameContext;
 
   gameStart(() => {
-    const scene = getScene();
-
     const peerPlayer = scene.createObject(
       networking.peerId,
       networking.withOwnership(playerScene),
@@ -48,9 +45,7 @@ export default function main(gameContext: RuntimeGameContext): void {
   });
 
   gameUpdate((deltaTime) => {
-    const scene = getScene();
-
-    const sharedGravity = 10 * deltaTime;
+    const sharedGravity = playerTrait.playerGravityY * deltaTime;
 
     const player = scene.getObject(
       networking.peerId,
