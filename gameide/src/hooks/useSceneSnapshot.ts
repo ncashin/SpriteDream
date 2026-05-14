@@ -1,6 +1,6 @@
 /**
  * External-store snapshot for useScene (no React here — safe for scene/sceneChannel imports).
- * getScene() is referentially stable; this version bumps when scene content changes.
+ * `getScene().get()` is stable until `setScene` replaces the scene; this bumps when scene content changes.
  */
 
 let snapshotVersion = 0;

@@ -1,7 +1,7 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
 import { invalidateUseSceneSnapshot } from "../../hooks/useSceneSnapshot.js";
-import { SceneListener, SceneObject } from "../scene.js";
-
+import { setValueAtPath } from "../path.js";
+import { Scene, SceneObject } from "../scene.js";
 
 export const SCENE_CHANNEL = {
   requestInitialScene: "gameide.editor.requestInitialScene",
@@ -11,23 +11,35 @@ export const SCENE_CHANNEL = {
 } as const;
 
 export type SceneChannelMessage =
-  | { type: typeof SCENE_CHANNEL.initialScene; content: string }
-  | { type: typeof SCENE_CHANNEL.scenePatch; patch: SceneObject }
+  | { type: typeof SCENE_CHANNEL.initialScene; content: SceneObject | string }
+  | { type: typeof SCENE_CHANNEL.scenePatch; content: SceneObject }
   | { type: typeof SCENE_CHANNEL.requestInitialScene }
-  | { type: typeof SCENE_CHANNEL.sceneChange; content: string };
+  | { type: typeof SCENE_CHANNEL.sceneChange; content: SceneObject | string };
+
+function parsePatchContent(content: SceneObject | string): SceneObject {
+  if (typeof content === "string") {
+    try {
+      return JSON.parse(content) as SceneObject;
+    } catch {
+      return {};
+    }
+  }
+  return content;
+}
+
+/** rAF exists in browsers; VS Code / Node extension host has none. */
+function scheduleNextAnimationFrame(callback: () => void): void {
+  const raf = globalThis.requestAnimationFrame;
+  if (typeof raf === "function") {
+    raf.call(globalThis, callback);
+  } else {
+    setTimeout(callback, 0);
+  }
+}
 
 export interface CreateSceneChannelOptions {
   transport: SceneChannelTransport;
-  getScene(): SceneObject;
-  getRawScene?: () => SceneObject;
-  setScene(data: SceneObject): void;
-  subscribeToScene?: (
-    callback: (update: SceneListener) => void,
-  ) => () => void;
-  applyPatch: (scene: SceneObject, patch: SceneObject) => void;
-  shouldEmitSceneUpdate?: (update: SceneReflectUpdate) => boolean;
-  getInitialSceneContent?: () => string;
-
+  scene: Scene;
   initializeScene?: boolean;
 }
 
@@ -48,18 +60,7 @@ export interface SceneChannel {
 export async function createSceneChannel(
   options: CreateSceneChannelOptions,
 ): Promise<SceneChannel> {
-  const {
-    transport,
-    getScene,
-    getRawScene,
-    setScene,
-    applyPatch: applyPatch,
-    subscribeToScene,
-    shouldEmitSceneUpdate,
-    getInitialSceneContent,
-
-    initializeScene = true,
-  } = options;
+  const { transport, scene, initializeScene = true } = options;
   let sceneInitialized = !initializeScene;
   let paused = false;
 
@@ -76,8 +77,8 @@ export async function createSceneChannel(
     transport.send({ type: SCENE_CHANNEL.initialScene, content });
   }
 
-  function sendPatch(patch: BaseSceneObject): void {
-    transport.send({ type: SCENE_CHANNEL.scenePatch, patch });
+  function sendPatch(content: SceneObject): void {
+    transport.send({ type: SCENE_CHANNEL.scenePatch, content });
   }
 
   function sendSceneChange(content: string): void {
@@ -87,29 +88,23 @@ export async function createSceneChannel(
   function handleMessage(message: SceneChannelMessage): void {
     switch (message.type) {
       case SCENE_CHANNEL.requestInitialScene:
-        if (getInitialSceneContent) {
-          sendInitialScene(getInitialSceneContent());
-        }
+        sendInitialScene(JSON.stringify(scene.getRaw()));
         return;
       case SCENE_CHANNEL.initialScene: {
         if (sceneInitialized) return;
         sceneInitialized = true;
-        const data = JSON.parse(message.content);
-        setScene(data);
+        scene.applyPatch(parsePatchContent(message.content));
         markReady();
         return;
       }
       case SCENE_CHANNEL.scenePatch: {
         if (!sceneInitialized || paused) return;
-        const sceneForPatch = getRawScene?.() ?? getScene();
-        applyPatch(sceneForPatch, message.patch);
-        invalidateUseSceneSnapshot();
+        scene.applyPatch(message.content);
         return;
       }
       case SCENE_CHANNEL.sceneChange: {
         if (!sceneInitialized || paused) return;
-        const data = JSON.parse(message.content);
-        setScene(data);
+        scene.applyPatch(parsePatchContent(message.content));
         return;
       }
     }
@@ -120,33 +115,31 @@ export async function createSceneChannel(
     requestInitialScene();
   }
 
-  let unsubscribeOutgoing: (() => void) | undefined;
-  let pendingPatch: BaseSceneObject = {};
-
+  let pendingPatch: SceneObject = {};
+  let patchLoopDisposed = false;
   function patchFlushLoop(): void {
-    requestAnimationFrame(patchFlushLoop);
+    if (patchLoopDisposed) return;
+    scheduleNextAnimationFrame(patchFlushLoop);
     if (!sceneInitialized || paused) return;
     if (Object.keys(pendingPatch).length === 0) return;
-    const patch = structuredClone(pendingPatch) as BaseSceneObject;
+    const patch = structuredClone(pendingPatch);
     pendingPatch = {};
     sendPatch(patch);
   }
+  scheduleNextAnimationFrame(patchFlushLoop);
 
-  if (subscribeToScene) {
-    unsubscribeOutgoing = subscribeToScene((update: SceneReflectUpdate) => {
-      if (!sceneInitialized || paused) return;
-      if (shouldEmitSceneUpdate && !shouldEmitSceneUpdate(update)) return;
-      mergeSceneReflectUpdateIntoPatch(pendingPatch, update);
-    });
-    requestAnimationFrame(patchFlushLoop);
-  }
+  const unsubscribeOnChange = scene.onChange((_object, property, newValue) => {
+    if (!sceneInitialized || paused) return;
+    setValueAtPath(pendingPatch, property, newValue);
+  });
 
   await readyPromise;
 
   return {
     dispose() {
+      patchLoopDisposed = true;
       unsubscribeTransport();
-      unsubscribeOutgoing?.();
+      unsubscribeOnChange?.();
     },
     pause() {
       paused = true;

@@ -1,6 +1,5 @@
 import { Graphics, Matrix, type Container } from "pixi.js";
 import { getScene } from "../../scene/scene.js";
-import { query } from "../../scene/query/query.js";
 import type { BaseSceneObject } from "../../scene/scene.js";
 
 export type ColliderDebugOptions = {
@@ -89,7 +88,7 @@ export function syncColliderDebugDraw(
   graphics.zIndex = z;
   graphics.clear();
 
-  const colliders = query(getScene(), isColliderNode);
+  const colliders = getScene().query(isColliderNode);
   for (const obj of colliders) {
     const pos = (obj as { position?: { x: number; y: number } }).position;
     if (!pos) continue;

@@ -1,9 +1,8 @@
 export type {
-  BaseSceneObject,
-  SceneGraphObject,
+  GameObject,
   SceneObject,
-  SceneNodeVirtualProperties,
-  SceneReflectUpdate,
+  ScenePath,
+  SceneListener,
 } from "./scene.js";
 export {
   selectedObject,
@@ -11,19 +10,14 @@ export {
   deselectObject,
 } from "./objectSelection.js";
 export {
-  sceneTarget,
-  getScene,
+  createSceneProxy,
+  curryScene,
   getRawScene,
+  getScene,
   setScene,
-  subscribeToScene,
-  saveSceneSnapshot,
-  restoreSceneSnapshot,
-  applyPatch,
-  findSceneReceiverPath,
-  mergeSceneReflectUpdateIntoPatch,
 } from "./scene.js";
 
-export { getValueAtPath, setValueAtPath, findSceneObjectPath } from "./path.js";
+export { getValueAtPath, setValueAtPath } from "./path.js";
 
 export { merge } from "./merge.js";
 export {

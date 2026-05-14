@@ -1,20 +1,19 @@
 import * as vscode from "vscode";
 import {
-  applyScenePatch,
-  buildScenePatchFromDiff,
+  curryScene,
   createSceneChannel,
   SCENE_CHANNEL,
+  type Scene,
   type SceneChannelMessage,
   type SceneChannelTransport,
-  type SceneData,
-  type ScenePatch,
+  type SceneObject,
 } from "gameide";
 import type { ViteDevServer } from "./viteDevServer";
 import sceneEditorHTML from "./sceneEditor.html?raw";
 
 function isInboundWebviewMessage(
   raw: unknown,
-): raw is { type: string; content?: string; patch?: ScenePatch } {
+): raw is { type: string; content?: string } {
   if (raw === null || typeof raw !== "object") return false;
   const message = raw as Record<string, unknown>;
   return typeof message.type === "string";
@@ -22,57 +21,52 @@ function isInboundWebviewMessage(
 
 const UNDOABLE_MESSAGE_TYPES = new Set<string>([SCENE_CHANNEL.scenePatch]);
 
-export type { SceneData, ScenePatch };
+export type { SceneObject };
 
 export class SceneDocument implements vscode.CustomDocument {
-  private scene: SceneData;
-  private savedData: SceneData;
+  private rawScene: SceneObject;
+  private savedData: SceneObject;
+  private readonly sceneAPI: Scene;
   private broadcastHandler: ((content: string) => void) | undefined;
   private readonly onDispose: ((doc: SceneDocument) => void) | undefined;
 
   constructor(
     public readonly uri: vscode.Uri,
-    initialData: SceneData,
+    initialData: SceneObject,
     onDispose?: (doc: SceneDocument) => void,
   ) {
-    this.scene = JSON.parse(JSON.stringify(initialData));
-    this.savedData = JSON.parse(JSON.stringify(initialData));
+    this.rawScene = structuredClone(initialData ?? {});
+    this.savedData = structuredClone(initialData ?? {});
+    this.sceneAPI = curryScene(this.rawScene);
     this.onDispose = onDispose;
   }
 
-  getData(): SceneData {
-    return { ...this.scene };
+  getSceneAPI(): Scene {
+    return this.sceneAPI;
   }
 
-  getDocumentData(): SceneData {
-    return { ...this.scene };
+  getData(): SceneObject {
+    return structuredClone(this.rawScene);
   }
 
-  getSavedData(): SceneData {
-    return { ...this.savedData };
+  getDocumentData(): SceneObject {
+    return structuredClone(this.rawScene);
   }
 
-  getSceneRoot(): SceneData {
-    return this.scene;
+  getSavedData(): SceneObject {
+    return structuredClone(this.savedData);
   }
 
-  getPatchFromSavedToCurrent(): ScenePatch {
-    return buildScenePatchFromDiff(
-      this.savedData as Record<string, unknown>,
-      this.scene as Record<string, unknown>,
-    );
+  getSceneRoot(): SceneObject {
+    return this.rawScene;
   }
 
   markSaved(): void {
-    this.savedData = JSON.parse(JSON.stringify(this.scene));
+    this.savedData = structuredClone(this.rawScene);
   }
 
-  setData(data: SceneData): void {
-    const patch = buildScenePatchFromDiff(
-      this.scene as Record<string, unknown>,
-      data as Record<string, unknown>,
-    );
-    applyScenePatch(this.scene, patch);
+  setData(data: SceneObject): void {
+    this.replaceSceneWithSnapshot(data);
     this.broadcastScene();
   }
 
@@ -81,26 +75,30 @@ export class SceneDocument implements vscode.CustomDocument {
   }
 
   broadcastScene(): void {
-    this.broadcastHandler?.(JSON.stringify(this.scene, null, 2));
+    this.broadcastHandler?.(JSON.stringify(this.rawScene, null, 2));
   }
 
-  applyPatch(patch: ScenePatch): void {
-    applyScenePatch(this.scene, patch);
+  applyPatch(patch: SceneObject): void {
+    this.sceneAPI.applyPatch(patch);
   }
 
-  mergeSceneFromRuntime(data: SceneData): void {
-    const patch = buildScenePatchFromDiff(
-      this.scene as Record<string, unknown>,
-      data as Record<string, unknown>,
-    );
-    applyScenePatch(this.scene, patch);
+  mergeSceneFromRuntime(data: SceneObject): void {
+    this.replaceSceneWithSnapshot(data);
   }
 
-  revertData(data: SceneData): void {
-    const snapshot = JSON.parse(JSON.stringify(data)) as SceneData;
-    this.scene = snapshot;
-    this.savedData = JSON.parse(JSON.stringify(snapshot));
+  revertData(data: SceneObject): void {
+    this.replaceSceneWithSnapshot(data);
+    this.savedData = structuredClone(data);
     this.broadcastScene();
+  }
+
+  /** Clears and repopulates `rawScene` in place so `curryScene` stays bound. */
+  private replaceSceneWithSnapshot(data: SceneObject): void {
+    const snapshot = structuredClone(data ?? {});
+    for (const key of Object.keys(this.rawScene)) {
+      delete this.rawScene[key];
+    }
+    Object.assign(this.rawScene, snapshot);
   }
 
   dispose(): void {
@@ -135,12 +133,12 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     openContext: vscode.CustomDocumentOpenContext,
     token: vscode.CancellationToken,
   ): Promise<SceneDocument> {
-    let data: SceneData = {};
+    let data: SceneObject = {};
     if (openContext.backupId) {
       try {
         const backupUri = vscode.Uri.parse(openContext.backupId);
         const bytes = await vscode.workspace.fs.readFile(backupUri);
-        data = JSON.parse(Buffer.from(bytes).toString("utf8")) as SceneData;
+        data = JSON.parse(Buffer.from(bytes).toString("utf8")) as SceneObject;
       } catch {
         data = {};
       }
@@ -148,14 +146,14 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       try {
         data = JSON.parse(
           Buffer.from(openContext.untitledDocumentData).toString("utf8"),
-        ) as SceneData;
+        ) as SceneObject;
       } catch {
         data = {};
       }
     } else {
       try {
         const bytes = await vscode.workspace.fs.readFile(uri);
-        data = JSON.parse(Buffer.from(bytes).toString("utf8")) as SceneData;
+        data = JSON.parse(Buffer.from(bytes).toString("utf8")) as SceneObject;
       } catch {
         data = {};
       }
@@ -175,10 +173,6 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
   ): Promise<void> {
     document.setBroadcastScene((content) => {
       webviewPanel.webview.postMessage({ type: "scene", content });
-    });
-    webviewPanel.onDidDispose(() => {
-      document.setBroadcastScene(undefined);
-      this.webviewToDocument.delete(webviewPanel.webview);
     });
     this.webviewToDocument.set(webviewPanel.webview, document);
     webviewPanel.onDidChangeViewState(() => {});
@@ -201,13 +195,13 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
           if (!isInboundWebviewMessage(raw)) return;
           const message = raw;
           const isUndoable = UNDOABLE_MESSAGE_TYPES.has(message.type);
-          let previous: SceneData | null = null;
+          let previous: SceneObject | null = null;
           if (isUndoable) {
-            previous = JSON.parse(JSON.stringify(document.getData()));
+            previous = document.getData();
           }
           handler(message as SceneChannelMessage);
           if (isUndoable && previous) {
-            const next = JSON.parse(JSON.stringify(document.getData()));
+            const next = document.getData();
             const actuallyChanged =
               JSON.stringify(previous) !== JSON.stringify(next);
             if (actuallyChanged) {
@@ -226,18 +220,18 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       },
     };
 
-
-    await createSceneChannel({
+    const channel = await createSceneChannel({
       transport,
+      scene: document.getSceneAPI(),
       initializeScene: false,
-      getScene: () => document.getSceneRoot(),
-      setScene: (data: SceneData) => document.mergeSceneFromRuntime(data),
-      applyPatch: (_scene: SceneData, patch: ScenePatch) =>
-        document.applyPatch(patch),
-      getInitialSceneContent: () =>
-        JSON.stringify(document.getDocumentData(), null, 2),
     });
     document.broadcastScene();
+
+    webviewPanel.onDidDispose(() => {
+      channel.dispose();
+      document.setBroadcastScene(undefined);
+      this.webviewToDocument.delete(webviewPanel.webview);
+    });
   }
 
   async saveCustomDocument(
@@ -295,7 +289,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
 
   private async writeDocument(
     uri: vscode.Uri,
-    data: SceneData,
+    data: SceneObject,
     cancellation: vscode.CancellationToken,
   ): Promise<void> {
     if (cancellation.isCancellationRequested) return;

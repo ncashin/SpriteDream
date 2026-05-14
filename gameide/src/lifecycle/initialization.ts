@@ -15,7 +15,8 @@ import {
   setScene,
   getScene,
   getRawScene,
-  type BaseSceneObject,
+  type Scene,
+  type SceneObject,
 } from "../scene/scene.js";
 import { reducePlugins, type ApplyPlugins } from "./plugin.js";
 
@@ -23,7 +24,8 @@ export type DisposeCallback = (callback: () => void) => void;
 
 export type GameContext<Initial extends object> = Initial & {
   rootElement: HTMLElement;
-  initialScene?: BaseSceneObject;
+  initialScene?: SceneObject;
+  scene: Scene;
   dispose: DisposeCallback;
 };
 
@@ -35,7 +37,7 @@ type WithPlugins<Initial extends object, Plugins extends readonly unknown[]> = A
 export type GameConfig<Initial extends object, Plugins extends readonly unknown[]> = {
   rootElement: HTMLElement;
   initialContext: Initial;
-  initialScene?: BaseSceneObject;
+  initialScene?: SceneObject;
   plugins?: Plugins;
 };
 
@@ -102,7 +104,13 @@ async function runGame<Initial extends object, const Plugins extends readonly un
     setScene(initialScene);
   }
 
-  const seed: GameContext<Initial> = { ...initialContext, rootElement, dispose, initialScene };
+  const seed: GameContext<Initial> = {
+    ...initialContext,
+    rootElement,
+    dispose,
+    initialScene,
+    scene: getScene(),
+  };
   const hotScopeSnapshot = __suspendHotScopes();
   try {
     installedContext = await reducePlugins(seed, pluginList);

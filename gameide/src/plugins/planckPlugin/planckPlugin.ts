@@ -19,7 +19,6 @@ import {
   hasSceneAddition,
   registerSceneAddition,
 } from "../../scene/sceneAdditions/sceneAdditions.js";
-import { query } from "../../scene/query/query.js";
 import {
   colliderSignature,
   createBodyForObject,
@@ -290,7 +289,7 @@ export function planckPlugin(
 
     const syncColliderBodiesWithSceneGraph = () => {
       const scene = getScene();
-      const collidersInScene = query(scene, isColliderNode);
+      const collidersInScene = scene.query(isColliderNode);
       const collidersStillPresent = new Set<BaseSceneObject>();
 
       for (const sceneObject of collidersInScene) {

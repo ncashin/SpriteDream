@@ -1,14 +1,7 @@
 import { connectWebSocketRoomTransport } from "./websocketRoomTransport.js";
 import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
-import {
-  getScene,
-  getRawScene,
-  setScene,
-  subscribeToScene,
-  applyPatch as applyScenePatch,
-} from "../../scene/scene.js";
-import type { BaseSceneObject } from "../../scene/scene.js";
+import type {  GameObject, Scene, SceneObject } from "../../scene/scene.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
 import { dispose } from "../../lifecycle/gameloop.js";
 import {
@@ -31,9 +24,20 @@ export type NetworkingPluginOptions = {
   url?: string;
 };
 
+function replaceRootScene(scene: Scene, content: SceneObject): void {
+  const raw = scene.getRaw();
+  const clear: Partial<SceneObject> = {};
+  for (const key of Object.keys(raw)) {
+    clear[key] = undefined;
+  }
+  scene.applyPatch(clear);
+  scene.applyPatch(content);
+}
+
 export type NetworkingPluginRequiredContext = {
   rootElement: HTMLElement;
-  initialScene?: BaseSceneObject;
+  scene: Scene;
+  initialScene?: SceneObject;
 };
 
 export type NetworkingAPI = {
@@ -41,7 +45,7 @@ export type NetworkingAPI = {
   getPeers: () => string[];
   onPeersChange: (handler: (peers: string[]) => void) => () => void;
   channel: SceneChannel;
-  isOwned: (object: BaseSceneObject) => boolean;
+  isOwned: (object: GameObject) => boolean;
   withOwnership: <T extends Record<string, unknown>>(
     object: T
   ) => T & Record<typeof OWNER_ID, string>;
@@ -58,18 +62,13 @@ export const networkingPlugin = (
 
     const shouldBootstrapScene = transport.getPeers().length === 1;
     if (shouldBootstrapScene && input.initialScene !== undefined) {
-      setScene(input.initialScene);
+      replaceRootScene(input.scene, input.initialScene);
     }
 
     const peerId = crypto.randomUUID();
     const channel = await createSceneChannel({
       transport,
-      getScene,
-      getRawScene,
-      setScene,
-      applyPatch: applyScenePatch,
-      subscribeToScene,
-      getInitialSceneContent: () => JSON.stringify(getScene()),
+      scene: input.scene,
       initializeScene: !shouldBootstrapScene,
     });
 
@@ -79,7 +78,7 @@ export const networkingPlugin = (
       onPeersChange: (handler: (peers: string[]) => void) =>
         transport.onPeersChange(handler),
       channel,
-      isOwned: (obj: BaseSceneObject) => isOwnedSceneObject(obj, peerId),
+      isOwned: (obj: GameObject) => isOwnedSceneObject(obj, peerId),
       withOwnership: <T extends Record<string, unknown>>(obj: T) =>
         withOwnership(obj, peerId),
     };

@@ -1,10 +1,12 @@
 export type GameObject = Record<PropertyKey, unknown>;
 export type SceneObject = Record<PropertyKey, GameObject>;
+
 export type ScenePath = PropertyKey[];
+
 export type SceneListener = (
   object: Record<PropertyKey, unknown>,
   property: ScenePath,
-  receiver: any,
+  value: unknown,
 ) => void;
 
 const isNestedRecord = (value: unknown): value is GameObject =>
@@ -13,28 +15,39 @@ const isNestedRecord = (value: unknown): value is GameObject =>
 export function createSceneProxy<T extends object = GameObject>(
   target: T,
   scenePath?: ScenePath,
-  onChange?: (object: T, property: ScenePath, receiver: any) => void,
+  onChange?: SceneListener,
+  proxyCache: WeakMap<object, unknown> = new WeakMap(),
 ): T {
-  return new Proxy(target, {
+  const cached = proxyCache.get(target as object);
+  if (cached !== undefined) {
+    return cached as T;
+  }
+
+  const trail = scenePath ?? [];
+  const proxy = new Proxy(target, {
     get(object, property, receiver) {
       const value = Reflect.get(object, property, receiver);
 
-      if (onChange) {
-        onChange(object, [...(scenePath ?? []), property], receiver);
-      }
-
-      // Recursively create proxies for nested objects
-      if (value && typeof value === "object" && !(value instanceof Proxy)) {
-        return createSceneProxy(value, [...(scenePath ?? []), property]);
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        const child = value;
+        return createSceneProxy(child, [...trail, property], onChange, proxyCache);
       }
 
       return value;
     },
     set(object, property, value, receiver) {
-      return Reflect.set(object, property, value, receiver);
+      const ok = Reflect.set(object, property, value, receiver);
+      if (ok && onChange) {
+        onChange(object as GameObject, [...trail, property], value);
+      }
+      return ok;
     },
     deleteProperty(object, property) {
-      return Reflect.deleteProperty(object, property);
+      const ok = Reflect.deleteProperty(object, property);
+      if (ok && onChange) {
+        onChange(object as GameObject, [...trail, property], undefined);
+      }
+      return ok;
     },
     has(object, property) {
       return Reflect.has(object, property);
@@ -46,16 +59,31 @@ export function createSceneProxy<T extends object = GameObject>(
       return Object.getOwnPropertyDescriptor(object, property);
     },
   });
+  proxyCache.set(target as object, proxy);
+  return proxy as T;
 }
 
 export const curryScene = (rawScene: Record<PropertyKey, GameObject>) => {
   const listeners: SceneListener[] = [];
-  const scene = createSceneProxy(rawScene, [], (object, property, receiver) => {
-    listeners.forEach((listener) => listener(object, property, receiver));
+  const scene = createSceneProxy(rawScene, [], (object, property, value) => {
+    listeners.forEach((listener) => listener(object, property, value));
   });
+
+  const getRaw = () => {
+    return rawScene;
+  }
+  const get = () => {
+    return scene;
+  }
 
   const onChange = (callback: SceneListener) => {
     listeners.push(callback);
+    return () => {
+      const index = listeners.indexOf(callback);
+      if (index !== -1) {
+        listeners.splice(index, 1);
+      }
+    };
   };
 
   const createObject = (key: PropertyKey, gameObject: GameObject) => {
@@ -112,6 +140,9 @@ export const curryScene = (rawScene: Record<PropertyKey, GameObject>) => {
   };
 
   return {
+    getRaw,
+    get,
+
     onChange,
 
     createObject,
@@ -126,14 +157,14 @@ export const curryScene = (rawScene: Record<PropertyKey, GameObject>) => {
   };
 };
 
-let rawScene = {};
+export type Scene = ReturnType<typeof curryScene>;
 
+let rawScene = {};
 export const getRawScene = () => {
   return rawScene;
 };
 
 let scene = curryScene(rawScene);
-
 export const getScene = () => {
   return scene;
 };

@@ -90,10 +90,10 @@
                   });
                 break;
               case "gameide.editor.scenePatch":
-                if (message.patch)
+                if (message.content !== undefined)
                   postToVscode({
                     type: "gameide.editor.scenePatch",
-                    patch: message.patch,
+                    content: message.content,
                   });
                 break;
               case "gameide.editor.sceneChange":

@@ -1,43 +1,30 @@
 import { createSceneTransportPostMessage } from "../../scene/sceneChannel/sceneChannelTransport.js";
 import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
-import {
-  getScene,
-  getRawScene,
-  setScene,
-  subscribeToScene,
-  applyPatch,
-  restoreSceneSnapshot,
-  saveSceneSnapshot,
-} from "../../scene/scene.js";
 import { GameIDEMode, getMode, onModeChange } from "../../lifecycle/mode.js";
+import type { GameContext } from "../../lifecycle/initialization.js";
 import { createEditorUI } from "./createEditorUI.js";
 import { DefaultEditor } from "./DefaultEditor.js";
 import type { EditorWithGameViewReference } from "./createEditorUI.js";
+import { restoreSceneSnapshot, saveSceneSnapshot } from "../../scene/snapshot.js";
 
 export const editorPlugin =
   (Editor?: EditorWithGameViewReference) =>
-  async (input: { rootElement: HTMLElement; dispose: (fn: () => void) => void }) => {
+  async (input: GameContext<object>) => {
     if (process.env.NODE_ENV !== "development") {
       return input;
     }
 
-    const embeddedInParentFrame =
-      typeof window !== "undefined" && window.parent !== window;
+    const embeddedInParentIFrame =
+       window && window.parent !== window;
 
     const channel = await createSceneChannel({
       transport: createSceneTransportPostMessage({
         target: window.parent,
         source: window,
       }),
-      getScene,
-      getRawScene,
-      setScene,
-      subscribeToScene,
-
-      applyPatch,
-
-      initializeScene: embeddedInParentFrame,
+      scene: input.scene,
+      initializeScene: embeddedInParentIFrame,
     });
 
 
@@ -48,7 +35,6 @@ export const editorPlugin =
           channel.pause();
           break;
         case GameIDEMode.Editor:
-          console.log("Restoring scene snapshot...");
           channel.unpause();
           restoreSceneSnapshot();
           break;

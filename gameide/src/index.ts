@@ -29,29 +29,23 @@ export {
 } from "./lifecycle/gameloop.js";
 export { query } from "./scene/query/query.js";
 export {
+  curryScene,
   getScene,
   getRawScene,
   setScene,
-  saveSceneSnapshot,
-  restoreSceneSnapshot,
 } from "./scene/scene.js";
 export {
   selectedObject,
   selectObject,
   deselectObject,
 } from "./scene/objectSelection.js";
-export { getValueAtPath, setValueAtPath, findSceneObjectPath } from "./scene/path.js";
-export {
-  applyPatch as applyScenePatch,
-  buildScenePatchFromDiff,
-} from "./scene/patch.js";
+export { getValueAtPath, setValueAtPath } from "./scene/path.js";
+
 export type {
-  BaseSceneObject,
-  SceneGraphObject,
+  Scene,
   SceneObject,
   SceneNodeVirtualProperties,
-  BaseSceneObject as SceneData,
-  BaseSceneObject as ScenePatch,
+
 } from "./scene/scene.js";
 export {
   defineTrait,

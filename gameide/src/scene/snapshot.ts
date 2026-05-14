@@ -1,5 +1,4 @@
-import { invalidateUseSceneSnapshot } from "../hooks/useSceneSnapshot.js";
-import { getRawScene, SceneObject, setScene } from "./scene.js";
+import { getRawScene, type SceneObject, setScene } from "./scene.js";
 
 let sceneSnapshot: SceneObject | undefined = undefined;
 

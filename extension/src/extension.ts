@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { SceneData } from "gameide";
+import type { SceneObject } from "gameide";
 import { ViteDevServer, resolveRuntimeDir } from "./viteDevServer";
 import { SceneEditorProvider } from "./sceneEditorProvider";
 import { registerUploadGameCommand } from "./uploadGame";
@@ -47,7 +47,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!doc) return;
     try {
       const bytes = await vscode.workspace.fs.readFile(uri);
-      const newData = JSON.parse(Buffer.from(bytes).toString("utf8")) as SceneData;
+      const newData = JSON.parse(Buffer.from(bytes).toString("utf8")) as SceneObject;
       doc.revertData(newData);
     } catch {
     }
