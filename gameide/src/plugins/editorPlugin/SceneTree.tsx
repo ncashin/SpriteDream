@@ -15,7 +15,7 @@ import {
   type ReactNode,
 } from "react";
 import type { IconSlug } from "../../lucide/lucideIconSlug.js";
-import type { BaseSceneObject } from "../../scene/scene.js";
+import type { GameObject } from "../../scene/scene.js";
 import { deselectObject } from "../../scene/objectSelection.js";
 import { getScene } from "../../scene/scene.js";
 import {
@@ -598,7 +598,7 @@ function TreeNode({
     <ObjectNode
       name={name}
       path={path}
-      sceneObject={value as BaseSceneObject}
+      sceneObject={value as GameObject}
       setAtPath={setAtPath}
       onDelete={onDelete}
       templates={templates}
@@ -695,19 +695,19 @@ export function SceneTree() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selectedPath]);
 
-  let rootObject: BaseSceneObject | undefined;
+  let rootObject: GameObject | undefined;
   if (isExpandable(root)) {
-    rootObject = root as BaseSceneObject;
+    rootObject = root as GameObject;
   }
 
   const sceneRoot = getScene() as Record<PropertyKey, unknown>;
-  let displayRoot: BaseSceneObject | undefined = rootObject;
+  let displayRoot: GameObject | undefined = rootObject;
   let nodePathPrefix: PropertyKey[] = [];
 
   if (rootObject && selectedPath?.length) {
     const sub = getRecordAtPath(sceneRoot, selectedPath);
     if (sub) {
-      displayRoot = sub as BaseSceneObject;
+      displayRoot = sub as GameObject;
       nodePathPrefix = selectedPath;
     }
   }

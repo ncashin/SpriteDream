@@ -27,7 +27,6 @@ export {
   __disposeHotModule,
   __runHotModuleReplay,
 } from "./lifecycle/gameloop.js";
-export { query } from "./scene/query/query.js";
 export {
   curryScene,
   getScene,
@@ -41,12 +40,7 @@ export {
 } from "./scene/objectSelection.js";
 export { getValueAtPath, setValueAtPath } from "./scene/path.js";
 
-export type {
-  Scene,
-  SceneObject,
-  SceneNodeVirtualProperties,
-
-} from "./scene/scene.js";
+export type { Scene, SceneObject, GameObject } from "./scene/scene.js";
 export {
   defineTrait,
   implementsTrait,
@@ -149,7 +143,6 @@ export {
   type PlanckCollisionHandler,
   type PlanckCollisionInfo,
   type PlanckContactPhase,
-  type PlanckSceneCollisionBindings,
 } from "./plugins/planckPlugin/planckPlugin.js";
 export type { Rigidbody2D } from "./plugins/planckPlugin/rigidbody2d.js";
 export {

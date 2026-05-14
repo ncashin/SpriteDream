@@ -1,9 +1,11 @@
-import type { BaseSceneObject, SceneReflectUpdate } from "../../scene/scene.js";
+import type { GameObject, ScenePath } from "../../scene/scene.js";
+
+type SceneReflectUpdate = { property: PropertyKey; path: ScenePath };
 
 export const OWNER_ID = "__ownerId" as const;
 
 export function isOwnedSceneObject(
-  object: BaseSceneObject,
+  object: GameObject,
   peerId: string,
 ): boolean {
   return object[OWNER_ID] === peerId;
@@ -26,7 +28,7 @@ export function withOwnership<T extends Record<string, unknown>>(
 }
 
 export function peerIntegratesPhysicsForObject(
-  object: BaseSceneObject,
+  object: GameObject,
   localPeerId: string,
 ): boolean {
   const owner = object[OWNER_ID];

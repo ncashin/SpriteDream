@@ -1,14 +1,14 @@
 import { type Body, type BodyType, type World, Vec2, Box, Circle } from "planck";
-import type { BaseSceneObject } from "../../scene/scene.js";
+import type { GameObject } from "../../scene/scene.js";
 
-export type PhysicsUserData = { object: BaseSceneObject };
+export type PhysicsUserData = { object: GameObject };
 
 export type PlanckRecord = {
   body: Body;
   signature: string;
 };
 
-export function isColliderNode(v: unknown): v is BaseSceneObject {
+export function isColliderNode(v: unknown): v is GameObject {
   if (!v || typeof v !== "object") return false;
   return "boxCollider" in v || "circleCollider" in v;
 }
@@ -17,25 +17,25 @@ export function sceneVec(x: number, y: number): Vec2 {
   return new Vec2(x, y);
 }
 
-function collisionFixedRotation(obj: BaseSceneObject): boolean {
+function collisionFixedRotation(obj: GameObject): boolean {
   return Boolean(
     (obj as { collisionBody?: { fixedRotation?: boolean } }).collisionBody?.fixedRotation,
   );
 }
 
-function collisionContinuous(obj: BaseSceneObject): boolean {
+function collisionContinuous(obj: GameObject): boolean {
   return Boolean(
     (obj as { collisionBody?: { continuous?: boolean } }).collisionBody?.continuous,
   );
 }
 
 /** When true, no Planck {@link Body} is created until disabled is cleared — no collisions or contact callbacks. */
-export function collisionBodyDisabled(obj: BaseSceneObject): boolean {
+export function collisionBodyDisabled(obj: GameObject): boolean {
   const cb = (obj as { collisionBody?: { disabled?: unknown } }).collisionBody;
   return cb?.disabled === true;
 }
 
-function collisionMaterial(obj: BaseSceneObject): {
+function collisionMaterial(obj: GameObject): {
   isTrigger: boolean;
   restitution: number;
   friction: number;
@@ -57,7 +57,7 @@ function collisionMaterial(obj: BaseSceneObject): {
 
 /** Static bodies always use fixed rotation in Planck (pose comes from the scene each frame). */
 function effectiveFixedRotation(
-  obj: BaseSceneObject,
+  obj: GameObject,
   effectiveBodyType: BodyType,
 ): boolean {
   if (effectiveBodyType === "static") return true;
@@ -65,7 +65,7 @@ function effectiveFixedRotation(
 }
 
 export function colliderSignature(
-  obj: BaseSceneObject,
+  obj: GameObject,
   effectiveBodyType: BodyType,
 ): string {
   const bodyT = effectiveBodyType;
@@ -111,7 +111,7 @@ export function colliderSignature(
 
 export function createBodyForObject(
   world: World,
-  obj: BaseSceneObject,
+  obj: GameObject,
   effectiveBodyType: BodyType,
   pixelsPerMeter: number,
 ): PlanckRecord | null {
@@ -187,7 +187,7 @@ export function createBodyForObject(
   return { body, signature };
 }
 
-export function getBodyData(body: Body): BaseSceneObject | null {
+export function getBodyData(body: Body): GameObject | null {
   const d = body.getUserData() as PhysicsUserData | null | undefined;
   return d?.object ?? null;
 }

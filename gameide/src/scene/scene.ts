@@ -1,5 +1,5 @@
 export type GameObject = Record<PropertyKey, unknown>;
-export type SceneObject = Record<PropertyKey, GameObject>;
+export type SceneObject = Record<PropertyKey, unknown>;
 
 export type ScenePath = PropertyKey[];
 
@@ -63,7 +63,7 @@ export function createSceneProxy<T extends object = GameObject>(
   return proxy as T;
 }
 
-export const curryScene = (rawScene: Record<PropertyKey, GameObject>) => {
+export const curryScene = (rawScene: SceneObject) => {
   const listeners: SceneListener[] = [];
   const scene = createSceneProxy(rawScene, [], (object, property, value) => {
     listeners.forEach((listener) => listener(object, property, value));

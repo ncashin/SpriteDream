@@ -16,7 +16,7 @@ import {
   selectObject,
   selectedObject,
 } from "../../scene/objectSelection.js";
-import type { BaseSceneObject } from "../../scene/scene.js";
+import type { GameObject } from "../../scene/scene.js";
 import {
   createColliderDebugGraphics,
   destroyColliderDebugGraphics,
@@ -141,7 +141,7 @@ function pickSpriteAtWorld(
 
 function syncSpriteSelectionOutline(
   graphics: Graphics,
-  selected: BaseSceneObject | null,
+  selected: GameObject | null,
   spriteByEntity: Map<SpriteRenderable, { sprite: Sprite }>,
 ): void {
   graphics.clear();

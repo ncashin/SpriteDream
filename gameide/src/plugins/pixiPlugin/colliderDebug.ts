@@ -1,6 +1,6 @@
 import { Graphics, Matrix, type Container } from "pixi.js";
 import { getScene } from "../../scene/scene.js";
-import type { BaseSceneObject } from "../../scene/scene.js";
+import type { GameObject } from "../../scene/scene.js";
 
 export type ColliderDebugOptions = {
   /** Stroke for non-trigger box/circle. Default `0x33ff66`. */
@@ -18,7 +18,7 @@ export type ColliderDebugOptions = {
 const DEFAULT_SOLID = 0x33ff66;
 const DEFAULT_TRIGGER = 0xffaa33;
 
-function isColliderNode(v: unknown): v is BaseSceneObject {
+function isColliderNode(v: unknown): v is GameObject {
   if (!v || typeof v !== "object") return false;
   return "boxCollider" in v || "circleCollider" in v;
 }

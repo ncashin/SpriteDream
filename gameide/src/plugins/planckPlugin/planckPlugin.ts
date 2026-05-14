@@ -10,15 +10,10 @@ import {
 } from "planck";
 import { update, start, gameUpdate } from "../../lifecycle/gameloop.js";
 import { GameIDEMode, getMode } from "../../lifecycle/mode.js";
-import { getGameContext } from "../../lifecycle/initialization.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
 import { peerIntegratesPhysicsForObject } from "../networkingPlugin/distributedSimulation.js";
-import type { BaseSceneObject } from "../../scene/scene.js";
+import type { GameObject } from "../../scene/scene.js";
 import { getScene } from "../../scene/scene.js";
-import {
-  hasSceneAddition,
-  registerSceneAddition,
-} from "../../scene/sceneAdditions/sceneAdditions.js";
 import {
   colliderSignature,
   createBodyForObject,
@@ -28,7 +23,7 @@ import {
 } from "./planckBodies.js";
 import { wrapRigidbody2D, type Rigidbody2D } from "./rigidbody2d.js";
 
-export function getSceneBodyType(obj: BaseSceneObject): BodyType {
+export function getSceneBodyType(obj: GameObject): BodyType {
   const raw = (obj as { collisionBody?: { type?: BodyType } }).collisionBody;
   const declaredType = raw?.type;
   if (
@@ -41,21 +36,21 @@ export function getSceneBodyType(obj: BaseSceneObject): BodyType {
   return "static";
 }
 
-export function sceneBodyIsStatic(obj: BaseSceneObject): boolean {
+export function sceneBodyIsStatic(obj: GameObject): boolean {
   return getSceneBodyType(obj) === "static";
 }
 
-export function sceneBodyIsKinematic(obj: BaseSceneObject): boolean {
+export function sceneBodyIsKinematic(obj: GameObject): boolean {
   return getSceneBodyType(obj) === "kinematic";
 }
 
-export function sceneBodyIsDynamic(obj: BaseSceneObject): boolean {
+export function sceneBodyIsDynamic(obj: GameObject): boolean {
   return getSceneBodyType(obj) === "dynamic";
 }
 
 export function getEffectivePlanckBodyType(
-  obj: BaseSceneObject,
-  simulatesDynamics: (obj: BaseSceneObject) => boolean,
+  obj: GameObject,
+  simulatesDynamics: (obj: GameObject) => boolean,
 ): BodyType {
   const sceneBodyType = getSceneBodyType(obj);
   if (sceneBodyType === "dynamic" && !simulatesDynamics(obj)) return "kinematic";
@@ -67,7 +62,7 @@ export type PlanckPluginOptions = {
   lengthUnitsPerMeter?: number;
   gravity?: { x: number; y: number };
   jitterThreshold?: number;
-  simulatesDynamics?: (obj: BaseSceneObject) => boolean;
+  simulatesDynamics?: (obj: GameObject) => boolean;
 };
 
 type PlanckPluginNetworkingContext = {
@@ -79,33 +74,25 @@ export type PlanckContactPhase = "enter" | "exit";
 
 export type PlanckCollisionInfo = {
   phase: PlanckContactPhase;
-  self: BaseSceneObject;
+  self: GameObject;
   normal?: { x: number; y: number };
 };
 
 export type PlanckCollisionHandler = (
-  other: BaseSceneObject,
+  other: GameObject,
   collisionInfo: PlanckCollisionInfo,
 ) => void;
 
-export type PlanckSceneCollisionBindings = {
-  onCollision: (handler: PlanckCollisionHandler) => () => void;
-};
-
-declare module "../../scene/scene.js" {
-  interface SceneNodeVirtualProperties extends PlanckSceneCollisionBindings {}
-}
-
 export type PlanckPluginAPI = {
   world: World;
-  onCollision: (self: BaseSceneObject, handler: PlanckCollisionHandler) => () => void;
-  onTrigger: (self: BaseSceneObject, handler: PlanckCollisionHandler) => () => void;
-  getRigidbody: (self: BaseSceneObject) => Rigidbody2D | null;
-  getBody: (self: BaseSceneObject) => Body | null;
-  getBodyType: (self: BaseSceneObject) => BodyType;
-  isStatic: (self: BaseSceneObject) => boolean;
-  isKinematic: (self: BaseSceneObject) => boolean;
-  isDynamic: (self: BaseSceneObject) => boolean;
+  onCollision: (self: GameObject, handler: PlanckCollisionHandler) => () => void;
+  onTrigger: (self: GameObject, handler: PlanckCollisionHandler) => () => void;
+  getRigidbody: (self: GameObject) => Rigidbody2D | null;
+  getBody: (self: GameObject) => Body | null;
+  getBodyType: (self: GameObject) => BodyType;
+  isStatic: (self: GameObject) => boolean;
+  isKinematic: (self: GameObject) => boolean;
+  isDynamic: (self: GameObject) => boolean;
 };
 
 export function planckPlugin(
@@ -116,11 +103,11 @@ export function planckPlugin(
     const simulatesDynamics =
       options.simulatesDynamics ??
       (networking
-        ? (obj: BaseSceneObject) =>
+        ? (obj: GameObject) =>
             peerIntegratesPhysicsForObject(obj, networking.peerId)
         : () => true);
 
-    const effectiveType = (obj: BaseSceneObject) =>
+    const effectiveType = (obj: GameObject) =>
       getEffectivePlanckBodyType(obj, simulatesDynamics);
     const pixelsPerMeter =
       typeof options.pixelsPerMeter === "number" &&
@@ -141,30 +128,30 @@ export function planckPlugin(
       gravity: new Vec2(gravity.x, gravity.y),
     });
 
-    const objectToRecord = new Map<BaseSceneObject, PlanckRecord>();
+    const objectToRecord = new Map<GameObject, PlanckRecord>();
     const kinematicScenePosePrev = new WeakMap<
-      BaseSceneObject,
+      GameObject,
       { x: number; y: number; angle: number }
     >();
-    const collisionHandlers = new Map<BaseSceneObject, Set<PlanckCollisionHandler>>();
-    const triggerHandlers = new Map<BaseSceneObject, Set<PlanckCollisionHandler>>();
+    const collisionHandlers = new Map<GameObject, PlanckCollisionHandler>();
+    const triggerHandlers = new Map<GameObject, Set<PlanckCollisionHandler>>();
     const collisionWorldManifold = new WorldManifold();
 
     type ScenePosition = { x: number; y: number };
     type SceneRotation = { x?: number; y?: number; z: number };
     type CollisionBodyVelocity = { x: number; y: number; angular: number };
 
-    const readScenePosition = (sceneObject: BaseSceneObject): ScenePosition =>
+    const readScenePosition = (sceneObject: GameObject): ScenePosition =>
       (sceneObject as { position: ScenePosition }).position;
 
-    const readSceneRotation = (sceneObject: BaseSceneObject): SceneRotation =>
+    const readSceneRotation = (sceneObject: GameObject): SceneRotation =>
       (sceneObject as { rotation: SceneRotation }).rotation;
 
-    const readSceneAngleRadians = (sceneObject: BaseSceneObject): number =>
+    const readSceneAngleRadians = (sceneObject: GameObject): number =>
       readSceneRotation(sceneObject).z;
 
     const readCollisionBodyVelocity = (
-      sceneObject: BaseSceneObject,
+      sceneObject: GameObject,
     ): CollisionBodyVelocity => {
       const velocity =
         (sceneObject as { collisionBody?: { velocity?: Partial<CollisionBodyVelocity> } })
@@ -177,7 +164,7 @@ export function planckPlugin(
     };
 
     const writeDynamicPhysicsResultsToScene = (
-      sceneObject: BaseSceneObject,
+      sceneObject: GameObject,
       physicsPosition: Vec2,
       physicsAngleRadians: number,
       linearVelocity: Vec2,
@@ -202,39 +189,46 @@ export function planckPlugin(
       collisionBody.velocity.angular = angularVelocity;
     };
 
-    const addHandler = (
-      map: Map<BaseSceneObject, Set<PlanckCollisionHandler>>,
-      self: BaseSceneObject,
+    const addTriggerHandler = (
+      self: GameObject,
       handler: PlanckCollisionHandler,
     ) => {
-      let handlerSet = map.get(self);
+      let handlerSet = triggerHandlers.get(self);
       if (!handlerSet) {
         handlerSet = new Set();
-        map.set(self, handlerSet);
+        triggerHandlers.set(self, handlerSet);
       }
       handlerSet.add(handler);
       return () => {
         handlerSet?.delete(handler);
         if (handlerSet && handlerSet.size === 0) {
-          map.delete(self);
+          triggerHandlers.delete(self);
         }
       };
     };
 
-    const notifyContactHandlers = (
-      map: Map<BaseSceneObject, Set<PlanckCollisionHandler>>,
-      self: BaseSceneObject,
-      other: BaseSceneObject,
+    const addCollisionHandler = (
+      self: GameObject,
+      handler: PlanckCollisionHandler,
+    ) => {
+      collisionHandlers.set(self, handler);
+      return () => {
+        if (collisionHandlers.get(self) === handler) {
+          collisionHandlers.delete(self);
+        }
+      };
+    };
+
+    const buildCollisionInfo = (
+      self: GameObject,
       phase: PlanckContactPhase,
       contact: Contact,
       selfFixture: Fixture,
-    ) => {
-      const handlerSet = map.get(self);
-      if (!handlerSet) return;
+    ): PlanckCollisionInfo => {
       const worldManifold = contact.getWorldManifold(collisionWorldManifold);
       const manifoldNormal = worldManifold?.normal;
       const selfIsFixtureA = selfFixture === contact.getFixtureA();
-      const collisionInfo: PlanckCollisionInfo = {
+      return {
         phase,
         self,
         normal: manifoldNormal
@@ -244,6 +238,35 @@ export function planckPlugin(
             }
           : undefined,
       };
+    };
+
+    const notifyCollisionHandler = (
+      self: GameObject,
+      other: GameObject,
+      phase: PlanckContactPhase,
+      contact: Contact,
+      selfFixture: Fixture,
+    ) => {
+      const handlerFn = collisionHandlers.get(self);
+      if (!handlerFn) return;
+      const collisionInfo = buildCollisionInfo(self, phase, contact, selfFixture);
+      try {
+        handlerFn(other, collisionInfo);
+      } catch (err) {
+        console.error("planckPlugin handler error", err);
+      }
+    };
+
+    const notifyTriggerHandlers = (
+      self: GameObject,
+      other: GameObject,
+      phase: PlanckContactPhase,
+      contact: Contact,
+      selfFixture: Fixture,
+    ) => {
+      const handlerSet = triggerHandlers.get(self);
+      if (!handlerSet) return;
+      const collisionInfo = buildCollisionInfo(self, phase, contact, selfFixture);
       for (const handlerFn of handlerSet) {
         try {
           handlerFn(other, collisionInfo);
@@ -263,11 +286,11 @@ export function planckPlugin(
       const fixtureB = contact.getFixtureB();
       const isTrigger = fixtureA.isSensor() || fixtureB.isSensor();
       if (isTrigger) {
-        notifyContactHandlers(triggerHandlers, bodyDataA, bodyDataB, phase, contact, fixtureA);
-        notifyContactHandlers(triggerHandlers, bodyDataB, bodyDataA, phase, contact, fixtureB);
+        notifyTriggerHandlers(bodyDataA, bodyDataB, phase, contact, fixtureA);
+        notifyTriggerHandlers(bodyDataB, bodyDataA, phase, contact, fixtureB);
       } else {
-        notifyContactHandlers(collisionHandlers, bodyDataA, bodyDataB, phase, contact, fixtureA);
-        notifyContactHandlers(collisionHandlers, bodyDataB, bodyDataA, phase, contact, fixtureB);
+        notifyCollisionHandler(bodyDataA, bodyDataB, phase, contact, fixtureA);
+        notifyCollisionHandler(bodyDataB, bodyDataA, phase, contact, fixtureB);
       }
     };
 
@@ -290,7 +313,7 @@ export function planckPlugin(
     const syncColliderBodiesWithSceneGraph = () => {
       const scene = getScene();
       const collidersInScene = scene.query(isColliderNode);
-      const collidersStillPresent = new Set<BaseSceneObject>();
+      const collidersStillPresent = new Set<GameObject>();
 
       for (const sceneObject of collidersInScene) {
         collidersStillPresent.add(sceneObject);
@@ -315,7 +338,7 @@ export function planckPlugin(
         }
       }
 
-      const sceneObjectsToRemove: BaseSceneObject[] = [];
+      const sceneObjectsToRemove: GameObject[] = [];
       for (const trackedSceneObject of objectToRecord.keys()) {
         if (!collidersStillPresent.has(trackedSceneObject)) {
           sceneObjectsToRemove.push(trackedSceneObject);
@@ -443,8 +466,8 @@ export function planckPlugin(
 
     const api: PlanckPluginAPI = {
       world,
-      onCollision: (self, handler) => addHandler(collisionHandlers, self, handler),
-      onTrigger: (self, handler) => addHandler(triggerHandlers, self, handler),
+      onCollision: (self, handler) => addCollisionHandler(self, handler),
+      onTrigger: (self, handler) => addTriggerHandler(self, handler),
       getRigidbody: (self) => {
         const planckBody = objectToRecord.get(self)?.body;
         return planckBody ? wrapRigidbody2D(planckBody, pixelsPerMeter) : null;
@@ -455,21 +478,6 @@ export function planckPlugin(
       isKinematic: (self) => sceneBodyIsKinematic(self),
       isDynamic: (self) => sceneBodyIsDynamic(self),
     };
-
-    if (!hasSceneAddition("onCollision")) {
-      registerSceneAddition(
-        "onCollision",
-        (sceneNode: BaseSceneObject) => (handler: PlanckCollisionHandler) => {
-          const { planck } = getGameContext() as { planck?: PlanckPluginAPI };
-          if (!planck) {
-            throw new Error(
-              'Scene addition "onCollision" requires planckPlugin to be installed.',
-            );
-          }
-          return planck.onCollision(sceneNode, handler);
-        },
-      );
-    }
 
     context.dispose(() => {
       world.off("begin-contact", onBegin);

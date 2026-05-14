@@ -7,6 +7,7 @@ import {
   spriteTrait,
   collisionBodyTrait,
   gameUpdate,
+  type PlanckCollisionHandler,
 } from "gameide";
 import playerScene from "./scenes/player.scene";
 import "./style.css";
@@ -21,7 +22,7 @@ const playerTrait = defineTrait({
 });
 
 export default function main(gameContext: RuntimeGameContext): void {
-  const { input, networking } = gameContext;
+  const { input, networking, planck } = gameContext;
 
   gameStart(() => {
     const scene = getScene();
@@ -32,12 +33,13 @@ export default function main(gameContext: RuntimeGameContext): void {
     );
 
     let floorSupportOverlaps = 0;
-    peerPlayer.onCollision((_other, collisionInfo) => {
+    const onPeerCollision: PlanckCollisionHandler = (_other, collisionInfo) => {
       if (!collisionInfo.normal || collisionInfo.normal.y < 0.5) return;
       if (collisionInfo.phase === "enter") floorSupportOverlaps++;
       else floorSupportOverlaps = Math.max(0, floorSupportOverlaps - 1);
       peerPlayer.grounded = floorSupportOverlaps > 0;
-    });
+    };
+    planck.onCollision(peerPlayer, onPeerCollision);
 
     scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));
   });

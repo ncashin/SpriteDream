@@ -5,7 +5,6 @@ export type {
   SceneListener,
 } from "./scene.js";
 export {
-  selectedObject,
   selectObject,
   deselectObject,
 } from "./objectSelection.js";
@@ -18,12 +17,6 @@ export {
 } from "./scene.js";
 
 export { getValueAtPath, setValueAtPath } from "./path.js";
-
-export { merge } from "./merge.js";
-export {
-  sceneAdditions,
-  registerSceneAddition,
-} from "./sceneAdditions/sceneAdditions.js";
 
 export type { SceneChannelMessage } from "./sceneChannel/sceneChannel.js";
 export {
