@@ -1,35 +1,29 @@
 import { Assets, Container, Sprite, Texture } from "pixi.js";
+import { z } from "zod";
 import type { IconSlug } from "../../lucide/lucideIconSlug.js";
 import { getScene } from "../../scene/scene.js";
-import {
-  type DefinedTrait,
-  defineTrait,
-  implementsTrait,
-} from "../../trait/trait.js";
-import { transformTrait } from "../../trait/transform.js";
+import { transformSchema } from "../../trait/transform.js";
+import { defineTrait, implementsTrait } from "../../trait/trait.js";
 
-export const spriteTrait = defineTrait(
-  [
-    transformTrait,
-    {
-      sprite: {
-        __icon: "image" satisfies IconSlug,
-        asset: "",
-        width: 1,
-        height: 1,
-        tint: "#ffffff",
-      },
-    },
-  ],
-  {
-    name: "Sprite",
-    description: "2D textured sprite from the project assets folder.",
-    icon: "image" satisfies IconSlug,
-  },
-);
+const spriteFieldsSchema = z.object({
+  sprite: z.object({
+    __icon: z.literal("image" satisfies IconSlug),
+    asset: z.string().default(""),
+    width: z.number().default(1),
+    height: z.number().default(1),
+    tint: z.string().default("#ffffff"),
+  }),
+});
 
-export type SpriteRenderable =
-  typeof spriteTrait extends DefinedTrait<infer T> ? T : never;
+export const spriteRenderableSchema = transformSchema.merge(spriteFieldsSchema);
+
+export type SpriteRenderable = z.infer<typeof spriteRenderableSchema>;
+
+export const spriteTrait = defineTrait(spriteRenderableSchema, {
+  name: "Sprite",
+  description: "2D textured sprite from the project assets folder.",
+  icon: "image" satisfies IconSlug,
+});
 
 function isTexturableRef(ref: string): boolean {
   const trimmed = ref.trim();
@@ -51,7 +45,12 @@ function hashString(s: string): string {
   return (h >>> 0).toString(36);
 }
 
-function svgLoaderSrc(url: string, width: number, height: number, resolution: number): string {
+function svgLoaderSrc(
+  url: string,
+  width: number,
+  height: number,
+  resolution: number,
+): string {
   const sep = url.includes("?") ? "&" : "?";
   return `${url}${sep}__gameideSvg=${width}x${height}x${resolution}`;
 }
@@ -74,7 +73,9 @@ function resolveAssetUrl(
     return trimmedKey;
   }
   if (assetsBaseUrl && trimmedKey) {
-    const base = assetsBaseUrl.endsWith("/") ? assetsBaseUrl : `${assetsBaseUrl}/`;
+    const base = assetsBaseUrl.endsWith("/")
+      ? assetsBaseUrl
+      : `${assetsBaseUrl}/`;
     const pathPart = trimmedKey.replace(/^assets\//, "");
     try {
       return new URL(pathPart, base).href;
@@ -95,7 +96,10 @@ function parseHexTint(tint: string): number {
   return parsed & 0xffffff;
 }
 
-function buildSignature(item: SpriteRenderable, url: string | undefined): string {
+function buildSignature(
+  item: SpriteRenderable,
+  url: string | undefined,
+): string {
   const spec = item.sprite;
   const assetKey = spec.asset?.trim() ?? "";
   return `${assetKey}|${url ?? ""}|${spec.width}|${spec.height}|${spec.tint}`;
@@ -169,9 +173,15 @@ function resolveTexture(
         .finally(() => {
           inflight.delete(svgKey);
         });
-      inflight.set(svgKey, load.then(() => {}));
+      inflight.set(
+        svgKey,
+        load.then(() => {}),
+      );
     }
-    return { texture: textureByKey.get(svgKey) ?? Texture.WHITE, signature: sig };
+    return {
+      texture: textureByKey.get(svgKey) ?? Texture.WHITE,
+      signature: sig,
+    };
   }
 
   const cached = textureByKey.get(assetKey);
@@ -191,17 +201,24 @@ export function syncPixiSprites(
   spriteByEntity: Map<SpriteRenderable, { sprite: Sprite; signature: string }>,
   syncOptions?: SyncPixiSpritesOptions,
 ): void {
-
   const syncOne = (item: SpriteRenderable): void => {
     const spec = item.sprite;
     const assetKey = spec.asset?.trim() ?? "";
     const url = resolveAssetUrl(assets, assetsBaseUrl, assetKey);
 
-    const { texture, signature } = resolveTexture(item, url, textureByKey, syncOptions);
+    const { texture, signature } = resolveTexture(
+      item,
+      url,
+      textureByKey,
+      syncOptions,
+    );
     const existing = spriteByEntity.get(item);
 
     if (existing) {
-      if (existing.signature !== signature || existing.sprite.texture !== texture) {
+      if (
+        existing.signature !== signature ||
+        existing.sprite.texture !== texture
+      ) {
         existing.sprite.texture = texture;
         existing.signature = signature;
       }
@@ -246,4 +263,3 @@ export function disposePixiSprites(
   textureByKey.clear();
   svgInflight?.clear();
 }
-

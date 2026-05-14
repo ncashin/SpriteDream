@@ -1,17 +1,5 @@
-import type { IconSlug } from "../lucide/lucideIconSlug.js";
-
-export const $number = Symbol("number");
-export const $string = Symbol("string");
-export const $boolean = Symbol("boolean");
-
-type TypeToken = typeof $number | typeof $string | typeof $boolean;
-type SchemaPrimitive = TypeToken | number | string | boolean;
-
-export type SchemaObject = {
-  readonly [key: string]: SchemaValue;
-};
-
-export type SchemaValue = SchemaPrimitive | SchemaObject;
+import { z, type ZodTypeAny } from "zod";
+import { IconSlug } from "../lucide/lucideIconSlug";
 
 export type TraitMetadata = {
   name?: string;
@@ -19,206 +7,51 @@ export type TraitMetadata = {
   icon?: IconSlug;
 };
 
-export type TraitInputItem = SchemaObject | TraitHandle<object>;
-type TraitInput = TraitInputItem | readonly [TraitInputItem, ...TraitInputItem[]];
+export type TraitDefinitionEntry<S extends ZodTypeAny = ZodTypeAny> =
+  TraitMetadata & { schema: S };
 
-type InferSchemaValue<T extends SchemaValue> =
-  T extends typeof $number
-    ? number
-    : T extends typeof $string
-      ? string
-      : T extends typeof $boolean
-        ? boolean
-      : T extends number
-          ? number
-          : T extends string
-              ? string
-              : T extends boolean
-                  ? boolean
-          : T extends SchemaObject
-            ? InferSchemaObject<T>
-            : never;
+const traitDefinitions: TraitDefinitionEntry[] = [];
 
-type InferSchemaObject<T extends SchemaObject> = {
-  [K in keyof T]: InferSchemaValue<T[K]>;
+export function getTraitDefinitions(): readonly TraitDefinitionEntry[] {
+  return [...traitDefinitions];
+}
+
+export const defineTrait = <S extends ZodTypeAny>(
+  schema: S,
+  metadata: TraitMetadata = {},
+): TraitDefinitionEntry<S> => {
+  const entry: TraitDefinitionEntry<S> = { ...metadata, schema };
+  traitDefinitions.push(entry);
+  return entry;
 };
 
-type InferTraitInputItem<T extends TraitInputItem> = T extends TraitHandle<infer Handle>
-  ? Handle
-  : T extends SchemaObject
-    ? InferSchemaObject<T>
-    : never;
+/** Inferred output for an object that satisfies every schema in the tuple. */
+export type TraitIntersection<T extends readonly TraitDefinitionEntry[]> =
+  T extends readonly [
+    TraitDefinitionEntry<infer S extends ZodTypeAny>,
+    ...infer Rest extends readonly TraitDefinitionEntry[],
+  ]
+    ? Rest extends readonly []
+      ? z.infer<S>
+      : z.infer<S> & TraitIntersection<Rest>
+    : unknown;
 
-/** Folds a non-empty trait tuple into an intersection (fixes 3+ items: `Rest[number]` was a union). */
-export type TraitTupleToIntersection<T extends readonly TraitInputItem[]> = T extends readonly [
-  infer Head extends TraitInputItem,
-  ...infer Tail extends TraitInputItem[],
-]
-  ? InferTraitInputItem<Head> & TraitTupleToIntersection<Tail>
-  : unknown;
-
-type TraitInputToObject<T extends TraitInput> = T extends readonly [
-  TraitInputItem,
-  ...TraitInputItem[],
-]
-  ? TraitTupleToIntersection<T>
-  : T extends TraitInputItem
-    ? InferTraitInputItem<T>
-    : never;
-
-export type TraitHandle<T extends object> = {
-  readonly __gameideTraitType?: T;
-};
-
-/** Trait returned by {@link defineTrait}: schema defaults are readable on the object at compile time. */
-export type DefinedTrait<T extends object> = TraitHandle<T> & T;
-
-function isSchemaObject(value: unknown): value is SchemaObject {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function intersectTraitSchemas(
+  traits: readonly TraitDefinitionEntry[],
+): ZodTypeAny {
+  const schemas = traits.map((t) => t.schema);
+  if (schemas.length === 0) return z.unknown();
+  return schemas
+    .slice(1)
+    .reduce((acc, s) => z.intersection(acc, s), schemas[0]!);
 }
 
-const traitGuards = new WeakMap<object, (value: unknown) => boolean>();
-
-/** Whether `value` is a handle from {@link defineTrait}. Trait handles merge as atomic values at each key—never flattened into adjacent plain objects. */
-export function isTraitHandle(value: unknown): value is TraitHandle<object> {
-  return isSchemaObject(value) && traitGuards.has(value);
-}
-
-function compilePropertyCheck(constraint: SchemaValue): (actual: unknown) => boolean {
-  if (constraint === $number) {
-    return (actual) => typeof actual === "number" && Number.isFinite(actual);
-  }
-  if (constraint === $string) {
-    return (actual) => typeof actual === "string";
-  }
-  if (constraint === $boolean) {
-    return (actual) => typeof actual === "boolean";
-  }
-  if (isSchemaObject(constraint)) {
-    const nestedGuard = createTraitGuard(constraint);
-    return (actual) => nestedGuard(actual);
-  }
-  if (typeof constraint === "number") {
-    // Primitive literals in trait schemas are treated as typed defaults.
-    return (actual) => typeof actual === "number" && Number.isFinite(actual);
-  }
-  if (typeof constraint === "string") {
-    return (actual) => typeof actual === "string";
-  }
-  if (typeof constraint === "boolean") {
-    return (actual) => typeof actual === "boolean";
-  }
-  return () => false;
-}
-
-export function createTraitGuard(schema: SchemaObject) {
-  const checks = Object.entries(schema)
-    .filter(([key]) => !String(key).startsWith("__"))
-    .map(([key, constraint]) => ({
-      key,
-      check: compilePropertyCheck(constraint),
-    }));
-
-  return function guard(value: unknown): boolean {
-    if (!isSchemaObject(value)) return false;
-    const o = value as Record<string, unknown>;
-    for (const { key, check } of checks) {
-      if (!check(o[key])) return false;
-    }
-    return true;
-  };
-}
-
-const EDITOR_DEFINITIONS: Array<{
-  name?: string;
-  description?: string;
-  icon?: IconSlug;
-  schema: SchemaObject;
-}> = [];
-
-export function getDefinedTraitsForEditor(): Array<{
-  name?: string;
-  description?: string;
-  icon?: IconSlug;
-  schema: SchemaObject;
-}> {
-  return [...EDITOR_DEFINITIONS];
-}
-
-function mergeSchemas(schemas: readonly [SchemaObject, ...SchemaObject[]]): SchemaObject {
-  const out: Record<string, SchemaValue> = {};
-  for (const schema of schemas) {
-    for (const [key, value] of Object.entries(schema)) {
-      out[key] = value;
-    }
-  }
-  return out;
-}
-
-function resolveSchemaObject(input: TraitInputItem): SchemaObject {
-  if (isSchemaObject(input)) return input;
-  throw new Error("GameIDE: trait schema input must be an object or trait handle");
-}
-
-function isTraitInputArray(
-  input: TraitInput,
-): input is readonly [TraitInputItem, ...TraitInputItem[]] {
-  return Array.isArray(input);
-}
-
-function resolveSchemaInput(input: TraitInput): SchemaObject {
-  if (isTraitInputArray(input)) {
-    const schemas = input.map(resolveSchemaObject) as [SchemaObject, ...SchemaObject[]];
-    return mergeSchemas(schemas);
-  }
-  return resolveSchemaObject(input);
-}
-
-export function defineTrait<TInput extends TraitInput>(
-  schema: TInput,
-  metadata?: TraitMetadata,
-): DefinedTrait<TraitInputToObject<TInput>> {
-  const resolvedSchema = resolveSchemaInput(schema);
-  const handle = resolvedSchema as DefinedTrait<TraitInputToObject<TInput>>;
-  traitGuards.set(handle, createTraitGuard(resolvedSchema));
-  const definition = {
-    ...(metadata ?? {}),
-    schema: resolvedSchema,
-  };
-  EDITOR_DEFINITIONS.push(definition);
-  return handle;
-}
-
-type TraitPredicate<T> = (value: unknown) => value is T;
-
-function traitInputItemToGuard(item: TraitInputItem): (value: unknown) => boolean {
-  if (isTraitHandle(item)) {
-    const guard = traitGuards.get(item);
-    if (!guard) {
-      throw new Error("GameIDE: trait guard not registered");
-    }
-    return guard;
-  }
-  return createTraitGuard(resolveSchemaObject(item));
-}
-
-export function implementsTrait<TInput extends TraitInput>(
-  t: TInput,
-): TraitPredicate<TraitInputToObject<TInput>> {
-  if (isTraitInputArray(t)) {
-    const guards = t.map(traitInputItemToGuard);
-    return (candidate: unknown): candidate is TraitInputToObject<TInput> =>
-      guards.every((g) => g(candidate));
-  }
-
-  if (isTraitHandle(t)) {
-    const guard = traitGuards.get(t);
-    if (!guard) {
-      throw new Error("GameIDE: trait guard not registered");
-    }
-    return (candidate: unknown): candidate is TraitInputToObject<TInput> => guard(candidate);
-  }
-
-  const guard = createTraitGuard(resolveSchemaObject(t));
-  return (candidate: unknown): candidate is TraitInputToObject<TInput> => guard(candidate);
+export function implementsTrait<
+  const T extends readonly TraitDefinitionEntry[],
+>(traits: T): (value: unknown) => value is TraitIntersection<T> & object {
+  const schema = intersectTraitSchemas(traits);
+  return (value): value is TraitIntersection<T> & object =>
+    typeof value === "object" &&
+    value !== null &&
+    schema.safeParse(value).success;
 }

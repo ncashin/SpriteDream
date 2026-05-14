@@ -44,16 +44,10 @@ export type { Scene, SceneObject, GameObject } from "./scene/scene.js";
 export {
   defineTrait,
   implementsTrait,
-  createTraitGuard,
-  getDefinedTraitsForEditor,
-  $number,
-  $string,
-  $boolean,
+  getTraitDefinitions,
+  type TraitIntersection,
 } from "./trait/trait.js";
-export type { TraitMetadata, DefinedTrait, TraitInputItem, TraitTupleToIntersection } from "./trait/trait.js";
-export { transformTrait } from "./trait/transform.js";
-export { gameObject } from "./trait/gameObject.js";
-export type { GameObjectParts } from "./trait/gameObject.js";
+export { transformSchema, transformTrait } from "./trait/transform.js";
 export {
   gameide,
   getGameContext,
@@ -99,7 +93,6 @@ export { OverlayInput } from "./plugins/editorPlugin/OverlayInput.js";
 export { useScene } from "./hooks/useScene.js";
 export { useSelectedObject } from "./hooks/useSelectedObject.js";
 export { useTraits } from "./hooks/useTraits.js";
-export type { TraitTemplate } from "./hooks/useTraits.js";
 export { useGameIDEMode } from "./hooks/useGameIDEMode.js";
 export { GameIDEMode, getMode, setMode, onModeChange } from "./lifecycle/mode.js";
 export { inputPlugin } from "./plugins/inputPlugin/inputPlugin.js";

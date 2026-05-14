@@ -1,25 +1,28 @@
+import { z } from "zod";
 import {
   defineTrait,
   gameStart,
   getScene,
-  implementsTrait,
   ownerTrait,
   spriteTrait,
   collisionBodyTrait,
   gameUpdate,
   type PlanckCollisionHandler,
+  implementsTrait,
 } from "gameide";
 import playerScene from "./scenes/player.scene";
 import "./style.css";
 import bouncyBallScene from "./scenes/bouncyBall.scene";
 import type { RuntimeGameContext } from "./index";
 
-const playerTrait = defineTrait({
-  moveSpeed: 260,
-  jumpSpeed: 650,
-  playerGravityY: -1500,
-  grounded: false,
-});
+const playerTrait = defineTrait(
+  z.object({
+    moveSpeed: z.number().default(260),
+    jumpSpeed: z.number().default(650),
+    playerGravityY: z.number().default(-1500),
+    grounded: z.boolean().default(false),
+  }),
+);
 
 export default function main(gameContext: RuntimeGameContext): void {
   const { input, networking, planck } = gameContext;
@@ -47,7 +50,7 @@ export default function main(gameContext: RuntimeGameContext): void {
   gameUpdate((deltaTime) => {
     const scene = getScene();
 
-    const sharedGravity = playerTrait.playerGravityY * deltaTime;
+    const sharedGravity = 10 * deltaTime;
 
     const player = scene.getObject(
       networking.peerId,

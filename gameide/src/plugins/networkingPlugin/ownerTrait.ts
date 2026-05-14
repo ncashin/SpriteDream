@@ -1,10 +1,11 @@
-import { defineTrait, $string } from "../../trait/trait.js";
+import { z } from "zod";
 import { OWNER_ID } from "./distributedSimulation.js";
+import { defineTrait } from "../../trait/trait.js";
 
 export const ownerTrait = defineTrait(
-  {
-    [OWNER_ID]: $string,
-  },
+  z.object({
+    [OWNER_ID]: z.string(),
+  }),
   {
     name: "Owner",
     description:

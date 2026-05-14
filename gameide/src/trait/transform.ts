@@ -1,27 +1,33 @@
+import { z } from "zod";
 import type { IconSlug } from "../lucide/lucideIconSlug.js";
-import { defineTrait } from "./trait.js";
+import { defineTrait } from "../index.js";
 
-export const transformTrait = defineTrait(
-  {
-    position: {
-      x: 0,
-      y: 0,
-      z: 0,
-    },
-    rotation: {
-      x: 0,
-      y: 0,
-      z: 0,
-    },
-    scale: {
-      x: 1,
-      y: 1,
-      z: 1,
-    },
-  },
-  {
-    name: "Transform",
-    description: "3D transform properties for scene objects.",
-    icon: "axis-3d" satisfies IconSlug,
-  },
-);
+export const transformSchema = z.object({
+  position: z
+    .object({
+      x: z.number().default(0),
+      y: z.number().default(0),
+      z: z.number().default(0),
+    })
+    .default({}),
+  rotation: z
+    .object({
+      x: z.number().default(0),
+      y: z.number().default(0),
+      z: z.number().default(0),
+    })
+    .default({}),
+  scale: z
+    .object({
+      x: z.number().default(1),
+      y: z.number().default(1),
+      z: z.number().default(1),
+    })
+    .default({}),
+});
+
+export const transformTrait = defineTrait(transformSchema, {
+  name: "Transform",
+  description: "3D transform properties for scene objects.",
+  icon: "axis-3d" satisfies IconSlug,
+});

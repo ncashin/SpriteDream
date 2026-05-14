@@ -10,7 +10,7 @@ export type ApplyPlugins<Context, Plugins extends readonly unknown[]> =
         ? ApplyPlugins<Context & Adds, Rest>
         : ApplyPlugins<Context, Rest>
       : Head extends (context: Context) => infer R
-        ? ApplyPlugins<Awaited<R>, Rest>
+        ? ApplyPlugins<Context & Awaited<R>, Rest>
         : ApplyPlugins<Context, Rest>
     : Context;
 

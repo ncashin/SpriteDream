@@ -1,33 +1,12 @@
 import { useCallback, useMemo } from "react";
+import type { z } from "zod";
 import type { IconSlug } from "../lucide/lucideIconSlug.js";
-import {
-  $boolean,
-  $number,
-  $string,
-  getDefinedTraitsForEditor,
-  type SchemaObject,
-  type SchemaValue,
-} from "../trait/trait.js";
 import { getScene } from "../scene/scene.js";
 import { getValueAtPath } from "../scene/path.js";
 import "../plugins/pixiPlugin/sprite.js";
 import "../plugins/planckPlugin/collisionBody.js";
 import "../plugins/planckPlugin/colliderComponents.js";
-
-function defaultFromSchemaValue(v: SchemaValue): unknown {
-  if (v === $number) return 0;
-  if (v === $string) return "";
-  if (v === $boolean) return false;
-  if (typeof v === "number" || typeof v === "string" || typeof v === "boolean") return v;
-  if (v && typeof v === "object" && !Array.isArray(v)) {
-    const o: Record<string, unknown> = {};
-    for (const [k, child] of Object.entries(v as SchemaObject)) {
-      o[k] = defaultFromSchemaValue(child);
-    }
-    return o;
-  }
-  return undefined;
-}
+import { getTraitDefinitions, TraitDefinitionEntry } from "../trait/trait.js";
 
 function mergeMissing(target: Record<string, unknown>, incoming: Record<string, unknown>) {
   for (const [k, v] of Object.entries(incoming)) {
@@ -47,21 +26,15 @@ function mergeMissing(target: Record<string, unknown>, incoming: Record<string, 
   }
 }
 
-export type TraitTemplate = {
-  id: number;
-  label: string;
-  schema: SchemaObject;
-  icon?: IconSlug;
-};
 
 export function useTraits() {
-  const templates: TraitTemplate[] = useMemo(
+  const templates = useMemo(
     () =>
-      getDefinedTraitsForEditor().map((def, i) => ({
-        id: i,
-        label: def.name ?? `Trait ${i + 1}`,
-        schema: def.schema,
-        icon: def.icon,
+      getTraitDefinitions().map((definition: TraitDefinitionEntry, index: number) => ({
+        id: index,
+        label: definition.name ?? `Trait ${index + 1}`,
+        schema: definition.schema,
+        icon: definition.icon,
       })),
     [],
   );
@@ -75,7 +48,7 @@ export function useTraits() {
     );
     if (!node || typeof node !== "object" || Array.isArray(node)) return;
     const target = node as Record<string, unknown>;
-    mergeMissing(target, defaultFromSchemaValue(def.schema) as Record<string, unknown>);
+    mergeMissing(target, def.schema.parse({}) as Record<string, unknown>);
     if (
       typeof def.icon === "string" &&
       def.icon.trim() !== "" &&

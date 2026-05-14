@@ -1,40 +1,42 @@
+import { z } from "zod";
 import type { IconSlug } from "../../lucide/lucideIconSlug.js";
-import { defineTrait, type DefinedTrait } from "../../trait/trait.js";
 import { transformTrait } from "../../trait/transform.js";
+import { defineTrait } from "../../index.js";
 
 export const boxColliderTrait = defineTrait(
-  [
-    transformTrait,
-    {
-      boxCollider: {
-        __icon: "square" satisfies IconSlug,
-        width: 32,
-        height: 32,
-        offset: { x: 0, y: 0 },
-      },
-    },
-  ],
+  z.object({
+    boxCollider: z.object({
+      __icon: z.literal("square" satisfies IconSlug),
+      width: z.number().default(32),
+      height: z.number().default(32),
+      offset: z.object({
+        x: z.number().default(0),
+        y: z.number().default(0),
+      }),
+    }),
+  }),
+
   {
     name: "BoxCollider2D",
     description: "Axis-aligned rectangle used for contact tests.",
-    icon: "square" satisfies IconSlug,
+    icon: "square",
   },
 );
 
 export const circleColliderTrait = defineTrait(
-  [
-    transformTrait,
-    {
-      circleCollider: {
-        __icon: "circle" satisfies IconSlug,
-        radius: 16,
-        offset: { x: 0, y: 0 },
-      },
-    },
-  ],
+  z.object({
+    circleCollider: z.object({
+      __icon: z.literal("circle" satisfies IconSlug),
+      radius: z.number().default(16),
+      offset: z.object({
+        x: z.number().default(0),
+        y: z.number().default(0),
+      }),
+    }),
+  }),
   {
     name: "CircleCollider2D",
     description: "Circle used for contact tests.",
-    icon: "circle" satisfies IconSlug,
+    icon: "circle",
   },
 );

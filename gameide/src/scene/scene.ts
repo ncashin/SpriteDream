@@ -18,7 +18,7 @@ export function createSceneProxy<T extends object = GameObject>(
   onChange?: SceneListener,
   proxyCache: WeakMap<object, unknown> = new WeakMap(),
 ): T {
-  const cached = proxyCache.get(target as object);
+  const cached = proxyCache.get(target);
   if (cached !== undefined) {
     return cached as T;
   }
@@ -30,7 +30,12 @@ export function createSceneProxy<T extends object = GameObject>(
 
       if (value && typeof value === "object" && !Array.isArray(value)) {
         const child = value;
-        return createSceneProxy(child, [...trail, property], onChange, proxyCache);
+        return createSceneProxy(
+          child,
+          [...trail, property],
+          onChange,
+          proxyCache,
+        );
       }
 
       return value;
@@ -71,10 +76,10 @@ export const curryScene = (rawScene: SceneObject) => {
 
   const getRaw = () => {
     return rawScene;
-  }
+  };
   const get = () => {
     return scene;
-  }
+  };
 
   const onChange = (callback: SceneListener) => {
     listeners.push(callback);
@@ -86,22 +91,36 @@ export const curryScene = (rawScene: SceneObject) => {
     };
   };
 
-  const createObject = (key: PropertyKey, gameObject: GameObject) => {
+  const createObject = <T extends GameObject = GameObject>(
+    key: PropertyKey,
+    gameObject: T,
+  ): T => {
     scene[key] = gameObject;
-    return scene[key];
+    return scene[key] as T;
   };
   const destroyObject = (key: PropertyKey) => {
     delete scene[key];
   };
 
-  const getObject = (key: PropertyKey) => {
-    return scene[key];
+  const getObject = <T extends GameObject = GameObject>(
+    key: PropertyKey,
+    typeGuard?: (obj: unknown) => obj is T,
+  ): T | undefined => {
+    if (!typeGuard) {
+      return scene[key] as T | undefined;
+    }
+    const object = scene[key];
+    if (!object) return undefined;
+    if (typeGuard(object)) return object;
+    return undefined;
   };
 
-  const query = (queryFunction: (gameObject: GameObject) => boolean) => {
-    return Object.values(scene).filter(queryFunction);
+  const query = <T>(
+    queryFunction: (gameObject: unknown) => gameObject is T,
+  ): T[] => {
+    return Object.values(scene).filter(queryFunction) as T[];
   };
-  const onQueryChange = (callback: (gameObject: GameObject) => boolean) => {
+  const onQueryChange = (callback: (gameObject: unknown) => boolean) => {
     return Object.values(scene).filter(callback);
   };
 
