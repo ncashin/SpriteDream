@@ -96,7 +96,7 @@ export async function createSceneChannel(
         if (sceneInitialized) return;
         sceneInitialized = true;
         try {
-          scene.applyPatch(parsePatchContent(message.content));
+          scene.replace(parsePatchContent(message.content));
         } finally {
           markReady();
         }
@@ -109,7 +109,7 @@ export async function createSceneChannel(
       }
       case SCENE_CHANNEL.sceneChange: {
         if (!sceneInitialized || paused) return;
-        scene.applyPatch(parsePatchContent(message.content));
+        scene.replace(parsePatchContent(message.content));
         return;
       }
     }

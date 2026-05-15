@@ -16,16 +16,18 @@ export type {
 export {
   start,
   update,
-  gameStart,
-  gameUpdate,
-  editorStart,
-  editorUpdate,
+  onGameStart,
+  onGameUpdate,
+  onEditorStart,
+  onEditorUpdate,
   startGameloop,
   dispose,
   __beginHotModule,
   __endHotModule,
   __disposeHotModule,
   __runHotModuleReplay,
+  __hotModuleDefaultExport,
+  __hotModuleLastArgsForScope,
 } from "./lifecycle/gameloop.js";
 export {
   curryScene,

@@ -30,6 +30,34 @@ const alwaysUpdates: UpdateRegistration[] = [];
 const scheduledDisposes: (() => void)[] = [];
 const disposedHotScopes = new Set<string>();
 
+/** Persists across HMR dispose/re-eval so replay uses the same args as the last entry call. */
+type HotModuleReplayArgsState = {
+  kind: "unset" | "called";
+  args: unknown[];
+};
+
+const hotModuleReplayArgsByScope = new Map<string, HotModuleReplayArgsState>();
+
+export function __hotModuleLastArgsForScope(scopeId: string): HotModuleReplayArgsState {
+  const key = normalizeHotScopeId(scopeId);
+  let state = hotModuleReplayArgsByScope.get(key);
+  if (!state) {
+    state = { kind: "unset", args: [] };
+    hotModuleReplayArgsByScope.set(key, state);
+  }
+  return state;
+}
+
+export function __hotModuleDefaultExport<T>(state: HotModuleReplayArgsState, exported: T): T {
+  if (typeof exported !== "function") return exported;
+  const fn = exported as (...args: unknown[]) => unknown;
+  return function hotModuleDefaultWrapper(this: unknown, ...args: unknown[]) {
+    state.kind = "called";
+    state.args = args;
+    return fn.apply(this, args);
+  } as T;
+}
+
 let frameId: number | undefined;
 const activeHotScopes: HotModuleScope[] = [];
 
@@ -177,7 +205,7 @@ export function __endHotModule(scopeId: string): void {
     if (scope?.id !== normalizedScopeId) continue;
     // Keep the scope on the stack so hooks registered later (e.g. `main()` after
     // `await gameide()`) still get the right `scopeId` for HMR cleanup. Leave
-    // `isReplacement` set so `gameStart` / `editorStart` do not re-run on hot swap.
+    // `isReplacement` set so `onGameStart` / `onEditorStart` do not re-run on hot swap.
     return;
   }
 }
@@ -224,19 +252,19 @@ export function update(callback: UpdateCallback): DisposeRegistration {
   return registerUpdate(alwaysUpdates, callback);
 }
 
-export function gameStart(callback: StartCallback): DisposeRegistration {
+export function onGameStart(callback: StartCallback): DisposeRegistration {
   return registerModeStart(gameStarts, GameIDEMode.Game, callback);
 }
 
-export function gameUpdate(callback: UpdateCallback): DisposeRegistration {
+export function onGameUpdate(callback: UpdateCallback): DisposeRegistration {
   return registerUpdate(gameUpdates, callback);
 }
 
-export function editorStart(callback: StartCallback): DisposeRegistration {
+export function onEditorStart(callback: StartCallback): DisposeRegistration {
   return registerModeStart(editorStarts, GameIDEMode.Editor, callback);
 }
 
-export function editorUpdate(callback: UpdateCallback): DisposeRegistration {
+export function onEditorUpdate(callback: UpdateCallback): DisposeRegistration {
   return registerUpdate(editorUpdates, callback);
 }
 

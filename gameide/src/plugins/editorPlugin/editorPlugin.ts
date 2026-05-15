@@ -35,8 +35,9 @@ export const editorPlugin =
           channel.pause();
           break;
         case GameIDEMode.Editor:
-          channel.unpause();
           restoreSceneSnapshot();
+          channel.unpause();
+
           break;
       }
     };

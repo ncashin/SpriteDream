@@ -3,10 +3,10 @@ import {
   startGameloop,
   start,
   update,
-  gameStart,
-  gameUpdate,
-  editorStart,
-  editorUpdate,
+  onGameStart,
+  onGameUpdate,
+  onEditorStart,
+  onEditorUpdate,
   dispose,
   __suspendHotScopes,
   __restoreHotScopes,
@@ -54,10 +54,10 @@ export type GameAPI<Context extends object = object> = {
   readonly gameContext: Context;
   readonly start: typeof start;
   readonly update: typeof update;
-  readonly gameStart: typeof gameStart;
-  readonly gameUpdate: typeof gameUpdate;
-  readonly editorStart: typeof editorStart;
-  readonly editorUpdate: typeof editorUpdate;
+  readonly onGameStart: typeof onGameStart;
+  readonly onGameUpdate: typeof onGameUpdate;
+  readonly onEditorStart: typeof onEditorStart;
+  readonly onEditorUpdate: typeof onEditorUpdate;
   readonly dispose: typeof dispose;
   readonly getScene: typeof getScene;
   readonly getRawScene: typeof getRawScene;
@@ -69,10 +69,10 @@ type GameLifecycleAPI = Omit<GameAPI, "gameContext">;
 const gameLifecycleAPI: GameLifecycleAPI = {
   start,
   update,
-  gameStart,
-  gameUpdate,
-  editorStart,
-  editorUpdate,
+  onGameStart,
+  onGameUpdate,
+  onEditorStart,
+  onEditorUpdate,
   dispose,
   getScene,
   getRawScene,

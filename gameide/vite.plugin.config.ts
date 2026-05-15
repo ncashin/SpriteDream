@@ -16,6 +16,7 @@ export default defineConfig({
     rollupOptions: {
       external: [
         "vite",
+        "typescript",
         "node:fs",
         "node:path",
         "node:http",

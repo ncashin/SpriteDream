@@ -65,7 +65,7 @@ export function createSceneProxy<T extends object = GameObject>(
     },
   });
   proxyCache.set(target as object, proxy);
-  return proxy as T;
+  return proxy;
 }
 
 export const curryScene = (rawScene: SceneObject) => {
@@ -95,7 +95,7 @@ export const curryScene = (rawScene: SceneObject) => {
     key: PropertyKey,
     gameObject: T,
   ): T => {
-    scene[key] = gameObject;
+    scene[key] = structuredClone(gameObject);
     return scene[key] as T;
   };
   const destroyObject = (key: PropertyKey) => {
@@ -120,8 +120,19 @@ export const curryScene = (rawScene: SceneObject) => {
   ): T[] => {
     return Object.values(scene).filter(queryFunction) as T[];
   };
-  const onQueryChange = (callback: (gameObject: unknown) => boolean) => {
-    return Object.values(scene).filter(callback);
+  const onQueryChange = <T>(
+    queryFunction: (gameObject: unknown) => gameObject is T,
+    {
+      onMatch,
+      onUnmatch,
+      onChange,
+    }: {
+      onMatch: (path: ScenePath, gameObject: T) => void;
+      onUnmatch: (gameObject: T) => void;
+      onChange: (path: ScenePath, value: unknown) => void;
+    },
+  ) => {
+    return Object.values(scene).filter(queryFunction);
   };
 
   const applyNested = (target: GameObject, data: GameObject) => {
@@ -158,6 +169,14 @@ export const curryScene = (rawScene: SceneObject) => {
     }
   };
 
+  const replace = (data: SceneObject) => {
+    const keys = Reflect.ownKeys(rawScene);
+    for (const key of keys) {
+      delete scene[key];
+    }
+    applyPatch(structuredClone(data));
+  };
+
   return {
     getRaw,
     get,
@@ -173,6 +192,7 @@ export const curryScene = (rawScene: SceneObject) => {
     onQueryChange,
 
     applyPatch,
+    replace,
   };
 };
 
@@ -188,6 +208,5 @@ export const getScene = () => {
   return scene;
 };
 export const setScene = (newScene: SceneObject) => {
-  rawScene = newScene;
-  scene = curryScene(newScene);
+  scene.replace(newScene);
 };

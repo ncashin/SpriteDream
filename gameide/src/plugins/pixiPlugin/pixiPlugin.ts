@@ -8,7 +8,7 @@ import {
   Sprite,
   type Texture,
 } from "pixi.js";
-import { editorUpdate, gameUpdate, start, update } from "../../lifecycle/gameloop.js";
+import { onEditorUpdate, onGameUpdate, start, update } from "../../lifecycle/gameloop.js";
 import { GameIDEMode, getMode, onModeChange } from "../../lifecycle/mode.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
 import {
@@ -295,7 +295,7 @@ export function pixiPlugin(
       );
     };
 
-    const releaseEditorPick = editorUpdate((_dt) => {
+    const releaseEditorPick = onEditorUpdate((_dt) => {
       if (disposed) return;
       syncSpriteSelectionOutline(selectionOutline, selectedObject, spriteByEntity);
 
@@ -478,7 +478,7 @@ export function pixiPlugin(
     start(() => {
       if (pixiGameUpdateRegistered) return;
       pixiGameUpdateRegistered = true;
-      gameUpdate(() => {
+      onGameUpdate(() => {
         if (disposed || getMode() !== GameIDEMode.Game) return;
         syncFrame();
       });

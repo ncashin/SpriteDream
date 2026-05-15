@@ -11,7 +11,6 @@ export type TraitDefinitionEntry<S extends ZodTypeAny = ZodTypeAny> =
   TraitMetadata &
     z.infer<S> & {
       schema: S;
-      /** Same fields as spread on this object; kept for merging / introspection. */
       defaults: z.infer<S>;
     };
 
@@ -38,7 +37,6 @@ export const defineTrait = <S extends ZodTypeAny>(
   return entry;
 };
 
-/** Inferred output for an object that satisfies every schema in the tuple. */
 export type TraitIntersection<T extends readonly TraitDefinitionEntry[]> =
   T extends readonly [
     TraitDefinitionEntry<infer S extends ZodTypeAny>,

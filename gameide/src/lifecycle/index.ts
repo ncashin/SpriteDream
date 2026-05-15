@@ -12,4 +12,6 @@ export {
   __endHotModule,
   __disposeHotModule,
   __runHotModuleReplay,
+  __hotModuleDefaultExport,
+  __hotModuleLastArgsForScope,
 } from "./gameloop.js";

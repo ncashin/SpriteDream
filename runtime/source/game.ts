@@ -1,12 +1,11 @@
 import { z } from "zod";
 import {
   defineTrait,
-  gameStart,
+  onGameStart,
   ownerTrait,
   spriteTrait,
   collisionBodyTrait,
-  gameUpdate,
-  type PlanckCollisionHandler,
+  onGameUpdate,
   implementsTrait,
 } from "gameide";
 import playerScene from "./scenes/player.scene";
@@ -26,25 +25,24 @@ const playerTrait = defineTrait(
 export default function main(gameContext: RuntimeGameContext): void {
   const { input, networking, planck, scene } = gameContext;
 
-  gameStart(() => {
+  onGameStart(() => {
     const peerPlayer = scene.createObject(
       networking.peerId,
       networking.withOwnership(playerScene),
     );
 
     let floorSupportOverlaps = 0;
-    const onPeerCollision: PlanckCollisionHandler = (_other, collisionInfo) => {
+    planck.onCollision(peerPlayer, (_other, collisionInfo) => {
       if (!collisionInfo.normal || collisionInfo.normal.y < 0.5) return;
       if (collisionInfo.phase === "enter") floorSupportOverlaps++;
       else floorSupportOverlaps = Math.max(0, floorSupportOverlaps - 1);
       peerPlayer.grounded = floorSupportOverlaps > 0;
-    };
-    planck.onCollision(peerPlayer, onPeerCollision);
+    });
 
     scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));
   });
 
-  gameUpdate((deltaTime) => {
+  onGameUpdate((deltaTime) => {
     const sharedGravity = playerTrait.playerGravityY * deltaTime;
 
     const player = scene.getObject(
@@ -55,7 +53,7 @@ export default function main(gameContext: RuntimeGameContext): void {
     if (player) {
       const gravityStep = player.playerGravityY * deltaTime;
       if (input.buttons.Jump.pressed && player.grounded) {
-        player.collisionBody.velocity.y = player.jumpSpeed;
+        player.collisionBody.velocity.y = player.jumpSpeed * 10;
       }
       player.collisionBody.velocity.x =
         input.axes.Horizontal * player.moveSpeed;

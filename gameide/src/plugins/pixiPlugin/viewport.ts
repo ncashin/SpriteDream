@@ -173,7 +173,7 @@ function zoomViewportAtClient(
 
 /**
  * Editor-only viewport: wheel zoom (toward cursor) and click-drag pan using {@link inputPlugin} mouse state.
- * Invoke from the `editorUpdate` callback each frame.
+ * Invoke from the `onEditorUpdate` callback each frame.
  */
 export function editorViewportEditorFrame(
   gesture: EditorViewportGestureState,

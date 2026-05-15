@@ -8,7 +8,7 @@ import {
   Vec2,
   WorldManifold,
 } from "planck";
-import { update, start, gameUpdate } from "../../lifecycle/gameloop.js";
+import { update, start, onGameUpdate } from "../../lifecycle/gameloop.js";
 import { GameIDEMode, getMode } from "../../lifecycle/mode.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
 import { peerIntegratesPhysicsForObject } from "../networkingPlugin/distributedSimulation.js";
@@ -504,7 +504,7 @@ export function planckPlugin(
     start(() => {
       if (physicsGameUpdateRegistered) return;
       physicsGameUpdateRegistered = true;
-      gameUpdate((deltaTime) => {
+      onGameUpdate((deltaTime) => {
         if (disposed) return;
         if (getMode() !== GameIDEMode.Game) return;
         const clampedDeltaSeconds = Math.min(deltaTime, 0.1);
