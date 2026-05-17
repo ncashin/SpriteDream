@@ -120,20 +120,6 @@ export const curryScene = (rawScene: SceneObject) => {
   ): T[] => {
     return Object.values(scene).filter(queryFunction) as T[];
   };
-  const onQueryChange = <T>(
-    queryFunction: (gameObject: unknown) => gameObject is T,
-    {
-      onMatch,
-      onUnmatch,
-      onChange,
-    }: {
-      onMatch: (path: ScenePath, gameObject: T) => void;
-      onUnmatch: (gameObject: T) => void;
-      onChange: (path: ScenePath, value: unknown) => void;
-    },
-  ) => {
-    return Object.values(scene).filter(queryFunction);
-  };
 
   const applyNested = (target: GameObject, data: GameObject) => {
     for (const [key, value] of Object.entries(data)) {
@@ -189,7 +175,6 @@ export const curryScene = (rawScene: SceneObject) => {
     getObject,
 
     query,
-    onQueryChange,
 
     applyPatch,
     replace,

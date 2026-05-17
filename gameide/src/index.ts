@@ -113,19 +113,21 @@ export {
   type PixiPluginOptions,
   type Viewport,
 } from "./plugins/pixiPlugin/pixiPlugin.js";
-export type { ColliderDebugOptions } from "./plugins/pixiPlugin/colliderDebug.js";
 export {
   type ViewportState,
   type ViewportController,
+  type PixiViewportInput,
+  type PixiViewportOptions,
   type EditorViewportGestureState,
   type EditorViewportFrameOptions,
   type EditorViewportFrameResult,
+  pixiViewport,
   createEditorViewportGestureState,
   editorViewportEditorFrame,
   applyViewportToWorldContainer,
   createViewport,
 } from "./plugins/pixiPlugin/viewport.js";
-export { spriteTrait } from "./plugins/pixiPlugin/sprite.js";
+export { spriteTrait } from "./trait/spriteTrait.js";
 export {
   planckPlugin,
   getSceneBodyType,

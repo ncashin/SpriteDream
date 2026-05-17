@@ -50,7 +50,6 @@ const game = await gameide({
       initOptions: {
         backgroundAlpha: 0,
       },
-      debugDrawColliders: true,
     }),
   ],
 });

@@ -1,5 +1,7 @@
-import type { Container } from "pixi.js";
+import type { Application, Container } from "pixi.js";
 import { createCallbackRegistry } from "../../lifecycle/callbackRegistry.js";
+import { onEditorUpdate } from "../../lifecycle/gameloop.js";
+import { onModeChange } from "../../lifecycle/mode.js";
 
 export type ViewportState = {
   centerX: number;
@@ -11,17 +13,24 @@ export type ViewportState = {
 
 type ViewportListener = (viewport: Readonly<ViewportState>) => void;
 
-function shallowChanged(
-  a: ViewportState,
-  b: Pick<ViewportState, "centerX" | "centerY" | "width" | "height" | "scale">,
-): boolean {
-  return (
-    a.centerX !== b.centerX ||
-    a.centerY !== b.centerY ||
-    a.width !== b.width ||
-    a.height !== b.height ||
-    a.scale !== b.scale
-  );
+function clientToScreen(rootElement: HTMLElement, clientX: number, clientY: number) {
+  const r = rootElement.getBoundingClientRect();
+  return { screenX: clientX - r.left, screenY: clientY - r.top };
+}
+
+/** Keep world point `(anchorWorld)` under `(screenX, screenY)` after changing scale/center. */
+function viewportCenterForAnchorAtScreen(
+  width: number,
+  height: number,
+  anchorWorld: { x: number; y: number },
+  screenX: number,
+  screenY: number,
+  scale: number,
+): { centerX: number; centerY: number } {
+  return {
+    centerX: anchorWorld.x - (screenX - width / 2) / scale,
+    centerY: anchorWorld.y - (height / 2 - screenY) / scale,
+  };
 }
 
 export function createViewport(
@@ -42,7 +51,7 @@ export function createViewport(
   onChange(callback: ViewportListener): () => void;
   screenToWorld(clientX: number, clientY: number): { x: number; y: number };
 } {
-  const internal: ViewportState = {
+  const state: ViewportState = {
     centerX: options.centerX ?? 0,
     centerY: options.centerY ?? 0,
     width: Math.max(0, width),
@@ -51,40 +60,40 @@ export function createViewport(
   };
 
   const rootElement = options.rootElement;
+  const listeners = createCallbackRegistry<ViewportListener>();
 
-  const registry = createCallbackRegistry<ViewportListener>();
-
-  const notify = () => {
-    registry.run({ ...internal });
+  const emitChange = () => {
+    listeners.run({ ...state });
   };
 
   return {
     get state() {
-      return { ...internal };
+      return { ...state };
     },
     setCenter(centerX: number, centerY: number) {
-      if (internal.centerX === centerX && internal.centerY === centerY) return;
-      internal.centerX = centerX;
-      internal.centerY = centerY;
-      notify();
+      if (state.centerX === centerX && state.centerY === centerY) return;
+      state.centerX = centerX;
+      state.centerY = centerY;
+      emitChange();
     },
-    setScale(scale: number) {
-      const next = Number.isFinite(scale) && scale > 0 ? scale : internal.scale;
-      if (internal.scale === next) return;
-      internal.scale = next;
-      notify();
+    setScale(nextScale: number) {
+      const resolvedScale =
+        Number.isFinite(nextScale) && nextScale > 0 ? nextScale : state.scale;
+      if (state.scale === resolvedScale) return;
+      state.scale = resolvedScale;
+      emitChange();
     },
-    setScreenSize(w: number, h: number) {
-      const width = Math.max(0, w);
-      const height = Math.max(0, h);
-      if (!shallowChanged(internal, { ...internal, width, height })) return;
-      internal.width = width;
-      internal.height = height;
-      notify();
+    setScreenSize(nextWidth: number, nextHeight: number) {
+      const width = Math.max(0, nextWidth);
+      const height = Math.max(0, nextHeight);
+      if (state.width === width && state.height === height) return;
+      state.width = width;
+      state.height = height;
+      emitChange();
     },
     onChange(callback) {
-      callback({ ...internal });
-      return registry.register(callback);
+      callback({ ...state });
+      return listeners.register(callback);
     },
     screenToWorld(clientX: number, clientY: number): { x: number; y: number } {
       if (!rootElement) {
@@ -92,15 +101,19 @@ export function createViewport(
           "GameIDE: viewport.screenToWorld requires rootElement when creating the viewport.",
         );
       }
-      const rootRect = rootElement.getBoundingClientRect();
-      const sx = clientX - rootRect.left;
-      const sy = clientY - rootRect.top;
-      const { width: vw, height: vh, centerX, centerY, scale } = internal;
-      const px = vw / 2 - centerX * scale;
-      const py = vh / 2 + centerY * scale;
+      const { screenX, screenY } = clientToScreen(rootElement, clientX, clientY);
+      const {
+        width: viewportWidth,
+        height: viewportHeight,
+        centerX,
+        centerY,
+        scale,
+      } = state;
+      const worldOriginScreenX = viewportWidth / 2 - centerX * scale;
+      const worldOriginScreenY = viewportHeight / 2 + centerY * scale;
       return {
-        x: (sx - px) / scale,
-        y: (py - sy) / scale,
+        x: (screenX - worldOriginScreenX) / scale,
+        y: (worldOriginScreenY - screenY) / scale,
       };
     },
   };
@@ -117,6 +130,86 @@ export function applyViewportToWorldContainer(
 }
 
 export type ViewportController = ReturnType<typeof createViewport>;
+
+export type PixiViewportInput = {
+  buttons: {
+    Click: { held: boolean; pressed: boolean; released: boolean };
+  };
+  mouse: {
+    position: { x: number; y: number } | null;
+    wheel: { x: number; y: number };
+  };
+};
+
+export type PixiViewportOptions = {
+  world: Container;
+  app: Application;
+  rootElement: HTMLElement;
+  input: PixiViewportInput;
+};
+
+/** Wires camera → world container, resize, editor pan/zoom, and mode reset (lifecycle like `pixiSprites`). */
+export function pixiViewport(options: PixiViewportOptions): {
+  viewport: ViewportController;
+  unsubscribe: () => void;
+} {
+  const { world, app, rootElement, input } = options;
+
+  let disposed = false;
+
+  const viewport = createViewport(app.screen.width, app.screen.height, {
+    rootElement,
+  });
+
+  const unsubscribeViewport = viewport.onChange((next) => {
+    if (disposed) return;
+    applyViewportToWorldContainer(world, next);
+  });
+
+  const resizeObserver = new ResizeObserver(() => {
+    const { width, height } = rootElement.getBoundingClientRect();
+    if (width > 0 && height > 0) {
+      app.resize();
+      viewport.setScreenSize(width, height);
+    }
+  });
+  resizeObserver.observe(rootElement);
+
+  const editorViewportGesture = createEditorViewportGestureState();
+
+  const resetViewportForModeChange = (): void => {
+    viewport.setCenter(0, 0);
+    viewport.setScale(1);
+    editorViewportGesture.panning = false;
+    editorViewportGesture.anchorWorld = null;
+    editorViewportGesture.pressClient = null;
+  };
+
+  const releaseModeViewportReset = onModeChange(resetViewportForModeChange);
+
+  const releaseEditorViewport = onEditorUpdate(() => {
+    if (disposed) return;
+
+    editorViewportEditorFrame(editorViewportGesture, {
+      rootElement,
+      viewport,
+      panButton: input.buttons.Click,
+      clientPosition: input.mouse.position,
+      wheel: input.mouse.wheel,
+    });
+  });
+
+  return {
+    viewport,
+    unsubscribe: () => {
+      disposed = true;
+      releaseModeViewportReset();
+      releaseEditorViewport();
+      resizeObserver.disconnect();
+      unsubscribeViewport();
+    },
+  };
+}
 
 /** Mutable state for editor pan (click–drag) vs click-to-select. */
 export type EditorViewportGestureState = {
@@ -154,21 +247,25 @@ function zoomViewportAtClient(
   rootElement: HTMLElement,
   clientX: number,
   clientY: number,
-  factor: number,
+  zoomFactor: number,
   minScale: number,
   maxScale: number,
 ): void {
-  const W = viewport.screenToWorld(clientX, clientY);
-  const rect = rootElement.getBoundingClientRect();
-  const sx = clientX - rect.left;
-  const sy = clientY - rect.top;
-  const { width: vw, height: vh, scale: s } = viewport.state;
-  const nextScale = Math.min(maxScale, Math.max(minScale, s * factor));
-  if (nextScale === s) return;
-  const newCx = W.x - (sx - vw / 2) / nextScale;
-  const newCy = W.y - (vh / 2 - sy) / nextScale;
+  const anchorWorld = viewport.screenToWorld(clientX, clientY);
+  const { screenX, screenY } = clientToScreen(rootElement, clientX, clientY);
+  const { width, height, scale: currentScale } = viewport.state;
+  const nextScale = Math.min(maxScale, Math.max(minScale, currentScale * zoomFactor));
+  if (nextScale === currentScale) return;
+  const { centerX, centerY } = viewportCenterForAnchorAtScreen(
+    width,
+    height,
+    anchorWorld,
+    screenX,
+    screenY,
+    nextScale,
+  );
   viewport.setScale(nextScale);
-  viewport.setCenter(newCx, newCy);
+  viewport.setCenter(centerX, centerY);
 }
 
 /**
@@ -190,18 +287,18 @@ export function editorViewportEditorFrame(
   const maxScale = options.maxScale ?? 64;
   const zoomSensitivity = options.zoomSensitivity ?? 0.002;
   const panSlopPx = options.panSlopPx ?? 5;
-  const slop2 = panSlopPx * panSlopPx;
+  const panSlopPixelsSquared = panSlopPx * panSlopPx;
 
   let shouldPickAtClick = false;
 
   if (wheel.y !== 0 && clientPosition) {
-    const factor = Math.exp(-wheel.y * zoomSensitivity);
+    const zoomFactor = Math.exp(-wheel.y * zoomSensitivity);
     zoomViewportAtClient(
       viewport,
       rootElement,
       clientPosition.x,
       clientPosition.y,
-      factor,
+      zoomFactor,
       minScale,
       maxScale,
     );
@@ -214,19 +311,30 @@ export function editorViewportEditorFrame(
   }
 
   if (panButton.held && clientPosition && gesture.pressClient) {
-    const dx = clientPosition.x - gesture.pressClient.x;
-    const dy = clientPosition.y - gesture.pressClient.y;
-    if (!gesture.panning && dx * dx + dy * dy >= slop2) {
+    const deltaClientX = clientPosition.x - gesture.pressClient.x;
+    const deltaClientY = clientPosition.y - gesture.pressClient.y;
+    if (
+      !gesture.panning &&
+      deltaClientX * deltaClientX + deltaClientY * deltaClientY >= panSlopPixelsSquared
+    ) {
       gesture.panning = true;
     }
     if (gesture.panning && gesture.anchorWorld) {
-      const rect = rootElement.getBoundingClientRect();
-      const sx = clientPosition.x - rect.left;
-      const sy = clientPosition.y - rect.top;
-      const { width: vw, height: vh, scale: s } = viewport.state;
-      const cx = gesture.anchorWorld.x - (sx - vw / 2) / s;
-      const cy = gesture.anchorWorld.y - (vh / 2 - sy) / s;
-      viewport.setCenter(cx, cy);
+      const { screenX, screenY } = clientToScreen(
+        rootElement,
+        clientPosition.x,
+        clientPosition.y,
+      );
+      const { width, height, scale } = viewport.state;
+      const { centerX, centerY } = viewportCenterForAnchorAtScreen(
+        width,
+        height,
+        gesture.anchorWorld,
+        screenX,
+        screenY,
+        scale,
+      );
+      viewport.setCenter(centerX, centerY);
     }
   }
 

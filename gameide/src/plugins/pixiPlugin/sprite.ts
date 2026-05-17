@@ -1,265 +1,198 @@
-import { Assets, Container, Sprite, Texture } from "pixi.js";
-import { z } from "zod";
-import type { IconSlug } from "../../lucide/lucideIconSlug.js";
-import { getScene } from "../../scene/scene.js";
-import { transformSchema } from "../../trait/transform.js";
-import { defineTrait, implementsTrait } from "../../trait/trait.js";
+import { Container, Sprite, Texture } from "pixi.js";
+import { getScene, type ScenePath } from "../../scene/scene.js";
+import {
+  spriteTrait,
+  type SpriteRenderable,
+} from "../../trait/spriteTrait.js";
+import { implementsTrait } from "../../trait/trait.js";
+import { loadGraphicTexture } from "./asset.js";
 
-const spriteFieldsSchema = z.object({
-  sprite: z.object({
-    __icon: z.literal("image" satisfies IconSlug),
-    asset: z.string().default(""),
-    width: z.number().default(1),
-    height: z.number().default(1),
-    tint: z.string().default("#ffffff"),
-  }),
-});
-
-export const spriteRenderableSchema = transformSchema.merge(spriteFieldsSchema);
-
-export type SpriteRenderable = z.infer<typeof spriteRenderableSchema>;
-
-export const spriteTrait = defineTrait(spriteRenderableSchema, {
-  name: "Sprite",
-  description: "2D textured sprite from the project assets folder.",
-  icon: "image" satisfies IconSlug,
-});
-
-function isTexturableRef(ref: string): boolean {
-  const trimmed = ref.trim();
-  if (trimmed.startsWith("data:")) {
-    return /^data:image\//i.test(trimmed);
-  }
-  const path = trimmed.split(/[?#]/)[0] ?? trimmed;
-  return /\.(png|jpe?g|webp|gif|bmp|ktx2|svg|avif)$/i.test(path);
-}
-
-export function isSvgAssetRef(ref: string): boolean {
-  const path = ref.trim().split(/[?#]/)[0] ?? ref.trim();
-  return path.toLowerCase().endsWith(".svg");
-}
-
-function hashString(s: string): string {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h, 33) ^ s.charCodeAt(i);
-  return (h >>> 0).toString(36);
-}
-
-function svgLoaderSrc(
-  url: string,
-  width: number,
-  height: number,
-  resolution: number,
-): string {
-  const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}__gameideSvg=${width}x${height}x${resolution}`;
-}
-
-function resolveAssetUrl(
-  assets: Readonly<Record<string, string>> | undefined,
-  assetsBaseUrl: string | undefined,
-  assetKey: string,
-): string | undefined {
-  if (!assetKey) return undefined;
-  const fromMap = assets?.[assetKey];
-  if (fromMap) return fromMap;
-  const trimmedKey = assetKey.trim();
-  if (
-    /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(trimmedKey) ||
-    trimmedKey.startsWith("data:") ||
-    trimmedKey.startsWith("blob:") ||
-    trimmedKey.startsWith("/")
-  ) {
-    return trimmedKey;
-  }
-  if (assetsBaseUrl && trimmedKey) {
-    const base = assetsBaseUrl.endsWith("/")
-      ? assetsBaseUrl
-      : `${assetsBaseUrl}/`;
-    const pathPart = trimmedKey.replace(/^assets\//, "");
-    try {
-      return new URL(pathPart, base).href;
-    } catch {
-      return undefined;
-    }
-  }
-  return undefined;
-}
-
-function parseHexTint(tint: string): number {
-  const hex = tint.trim();
-  if (!hex.startsWith("#") || hex.length < 2) {
-    return 0xffffff;
-  }
-  const parsed = parseInt(hex.slice(1), 16);
-  if (!Number.isFinite(parsed)) return 0xffffff;
-  return parsed & 0xffffff;
-}
-
-function buildSignature(
-  item: SpriteRenderable,
-  url: string | undefined,
-): string {
-  const spec = item.sprite;
-  const assetKey = spec.asset?.trim() ?? "";
-  return `${assetKey}|${url ?? ""}|${spec.width}|${spec.height}|${spec.tint}`;
-}
-
-function setSpriteFromItem(sprite: Sprite, item: SpriteRenderable): void {
-  const position = item.position;
-  const itemScale = item.scale;
-  // Match planckPlugin: transform `position` is the body/collider center, not a corner.
-  sprite.anchor.set(0.5, 0.5);
-  sprite.position.set(position.x, position.y);
-  sprite.rotation = item.rotation.z;
-  sprite.scale.set(itemScale.x, itemScale.y);
-  const spec = item.sprite;
-  sprite.width = spec.width;
-  sprite.height = spec.height;
-  // World container uses scale.y < 0 (scene +Y up); flip local Y so textures aren’t mirrored.
-  sprite.scale.y *= -1;
-  sprite.tint = parseHexTint(spec.tint);
-  sprite.zIndex = position.z;
-}
-
-export type SyncPixiSpritesOptions = {
-  textureResolution?: number;
-  svgInflight?: Map<string, Promise<void>>;
+type SpritePixiBinding = {
+  root: Container;
+  innerSprite: Sprite;
+  loadGeneration: number;
 };
 
-function resolveTexture(
-  item: SpriteRenderable,
-  url: string | undefined,
-  textureByKey: Map<string, Texture>,
-  syncOptions: SyncPixiSpritesOptions | undefined,
-): { texture: Texture; signature: string } {
-  const spec = item.sprite;
-  const assetKey = spec.asset?.trim() ?? "";
-  const sig = buildSignature(item, url);
-
-  if (!(assetKey && url && isTexturableRef(assetKey))) {
-    return { texture: Texture.WHITE, signature: sig };
-  }
-
-  const res = syncOptions?.textureResolution ?? 1;
-  const rw = Math.max(1, Math.round(spec.width));
-  const rh = Math.max(1, Math.round(spec.height));
-
-  if (isSvgAssetRef(assetKey)) {
-    const svgKey = `${assetKey}|${rw}|${rh}|${res}`;
-    const cached = textureByKey.get(svgKey);
-    if (cached) {
-      return { texture: cached, signature: sig };
-    }
-    const inflight = syncOptions?.svgInflight;
-    if (inflight && !inflight.has(svgKey)) {
-      const alias = `__gameideSvg_${hashString(svgKey)}`;
-      const uniqueSrc = svgLoaderSrc(url, rw, rh, res);
-      const load = Assets.load({
-        alias,
-        src: uniqueSrc,
-        data: {
-          width: rw,
-          height: rh,
-          resolution: res,
-        },
-      })
-        .then((texture) => {
-          textureByKey.set(svgKey, texture as Texture);
-        })
-        .catch((err) => {
-          console.error("[gameide] failed to rasterize SVG", assetKey, err);
-        })
-        .finally(() => {
-          inflight.delete(svgKey);
-        });
-      inflight.set(
-        svgKey,
-        load.then(() => {}),
-      );
-    }
-    return {
-      texture: textureByKey.get(svgKey) ?? Texture.WHITE,
-      signature: sig,
-    };
-  }
-
-  const cached = textureByKey.get(assetKey);
-  if (cached) {
-    return { texture: cached, signature: sig };
-  }
-  const next = Texture.from(url);
-  textureByKey.set(assetKey, next);
-  return { texture: next, signature: sig };
+function parseTintRGB(tintString: string): number {
+  const normalized = tintString.trim();
+  const tintHexMatch = /^#?([0-9a-f]{6})$/i.exec(normalized);
+  return tintHexMatch ? Number.parseInt(tintHexMatch[1]!, 16) : 0xffffff;
 }
 
-export function syncPixiSprites(
-  stage: Container,
-  assets: Readonly<Record<string, string>> | undefined,
-  assetsBaseUrl: string | undefined,
-  textureByKey: Map<string, Texture>,
-  spriteByEntity: Map<SpriteRenderable, { sprite: Sprite; signature: string }>,
-  syncOptions?: SyncPixiSpritesOptions,
+function syncWorldFromSceneObject(
+  binding: SpritePixiBinding,
+  entity: SpriteRenderable,
+) {
+  binding.root.position.set(entity.position.x, entity.position.y);
+  binding.root.rotation = entity.rotation.z;
+  binding.root.scale.set(entity.scale.x, entity.scale.y);
+  binding.innerSprite.width = entity.sprite.width;
+  binding.innerSprite.height = entity.sprite.height;
+  binding.innerSprite.tint = parseTintRGB(
+    String(entity.sprite.tint ?? "#ffffff"),
+  );
+}
+
+function scheduleTextureLoad(
+  binding: SpritePixiBinding,
+  entity: SpriteRenderable,
 ): void {
-  const syncOne = (item: SpriteRenderable): void => {
-    const spec = item.sprite;
-    const assetKey = spec.asset?.trim() ?? "";
-    const url = resolveAssetUrl(assets, assetsBaseUrl, assetKey);
+  binding.loadGeneration += 1;
+  const generationAtStart = binding.loadGeneration;
+  syncWorldFromSceneObject(binding, entity);
+  binding.innerSprite.texture = Texture.WHITE;
+  binding.innerSprite.alpha = 0.45;
 
-    const { texture, signature } = resolveTexture(
-      item,
-      url,
-      textureByKey,
-      syncOptions,
-    );
-    const existing = spriteByEntity.get(item);
+  const trimmedAssetField = String(entity.sprite.asset ?? "").trim();
 
-    if (existing) {
-      if (
-        existing.signature !== signature ||
-        existing.sprite.texture !== texture
-      ) {
-        existing.sprite.texture = texture;
-        existing.signature = signature;
+  void (async () => {
+    try {
+      if (!trimmedAssetField) {
+        if (binding.loadGeneration !== generationAtStart) return;
+        binding.innerSprite.texture = Texture.WHITE;
+        binding.innerSprite.alpha = 0.45;
+        syncWorldFromSceneObject(binding, entity);
+        return;
       }
-      setSpriteFromItem(existing.sprite, item);
+
+      const texture = await loadGraphicTexture(trimmedAssetField);
+      if (binding.loadGeneration !== generationAtStart) return;
+
+      binding.innerSprite.texture = texture;
+      binding.innerSprite.alpha = 1;
+      syncWorldFromSceneObject(binding, entity);
+    } catch {
+      if (binding.loadGeneration !== generationAtStart) return;
+      binding.innerSprite.texture = Texture.WHITE;
+      binding.innerSprite.alpha = 0.45;
+      syncWorldFromSceneObject(binding, entity);
+    }
+  })();
+}
+
+function spriteChangeNeedsTextureReload(scenePath: ScenePath): boolean {
+  const secondSegment = scenePath[1];
+  const thirdSegment = scenePath[2];
+  const isTopSegmentOnly = scenePath.length === 1;
+  const replacesSpriteBlock =
+    secondSegment === "sprite" &&
+    thirdSegment !== "width" &&
+    thirdSegment !== "height" &&
+    thirdSegment !== "tint";
+
+  const assetFieldChanged =
+    secondSegment === "sprite" &&
+    scenePath.length === 3 &&
+    thirdSegment === "asset";
+
+  return isTopSegmentOnly || replacesSpriteBlock || assetFieldChanged;
+}
+
+export function pixiSprites(stage: Container): {
+  unsubscribe: () => void;
+  spriteBindingsBySceneKey: Map<PropertyKey, SpritePixiBinding>;
+} {
+  const scene = getScene();
+  const spriteBindingsBySceneKey = new Map<PropertyKey, SpritePixiBinding>();
+  const qualifiesAsSpriteRenderable = implementsTrait([spriteTrait]);
+
+  function removeSpriteBindingIfPresent(sceneRootKey: PropertyKey): void {
+    const existingBinding = spriteBindingsBySceneKey.get(sceneRootKey);
+    if (!existingBinding) return;
+    existingBinding.root.destroy({ children: true });
+    spriteBindingsBySceneKey.delete(sceneRootKey);
+  }
+
+  function createSpriteGraphicForMatchedEntity(
+    sceneRootKey: PropertyKey,
+    entity: SpriteRenderable,
+  ): void {
+    const rootContainer = new Container();
+    rootContainer.label = `gameide:sprite:${String(sceneRootKey)}`;
+    rootContainer.eventMode = "none";
+    const innerSprite = new Sprite(Texture.WHITE);
+    innerSprite.anchor.set(0.5, 0.5);
+    innerSprite.eventMode = "none";
+    rootContainer.addChild(innerSprite);
+    stage.addChild(rootContainer);
+
+    const binding: SpritePixiBinding = {
+      root: rootContainer,
+      innerSprite,
+      loadGeneration: 0,
+    };
+    spriteBindingsBySceneKey.set(sceneRootKey, binding);
+    scheduleTextureLoad(binding, entity);
+  }
+
+  function reconcileSpriteRenderableForSceneRootKey(
+    sceneRootKey: PropertyKey,
+  ): void {
+    const maybeSceneRecord = Reflect.get(scene.getRaw(), sceneRootKey);
+    const nodeQualifiesSpriteRenderableTraits =
+      maybeSceneRecord !== undefined &&
+      qualifiesAsSpriteRenderable(maybeSceneRecord);
+
+    if (!nodeQualifiesSpriteRenderableTraits) {
+      removeSpriteBindingIfPresent(sceneRootKey);
       return;
     }
 
-    const sprite = new Sprite(texture);
-    setSpriteFromItem(sprite, item);
-    stage.addChild(sprite);
-    spriteByEntity.set(item, { sprite, signature });
+    const typedSpriteRenderableSurface = maybeSceneRecord as SpriteRenderable;
+
+    if (!spriteBindingsBySceneKey.has(sceneRootKey)) {
+      createSpriteGraphicForMatchedEntity(sceneRootKey, typedSpriteRenderableSurface);
+    }
+  }
+
+  for (const initialSceneOwnedKeyCandidate of Reflect.ownKeys(scene.getRaw())) {
+    reconcileSpriteRenderableForSceneRootKey(initialSceneOwnedKeyCandidate);
+  }
+
+  const releaseSceneListenerSubscription = scene.onChange(
+    (_ignoredLayerRecord, mutationPathTrail, _ignoredIncomingValue) => {
+      const anchoredSceneIdentifier = mutationPathTrail[0];
+      if (anchoredSceneIdentifier === undefined) return;
+
+      const matchedSpriteRenderableBeforeThisMutation =
+        spriteBindingsBySceneKey.has(anchoredSceneIdentifier);
+
+      reconcileSpriteRenderableForSceneRootKey(anchoredSceneIdentifier);
+
+      if (!spriteBindingsBySceneKey.has(anchoredSceneIdentifier)) return;
+
+      const becameMatchingSpriteRenderableThisMutation =
+        !matchedSpriteRenderableBeforeThisMutation;
+
+      const spriteBindingPayload =
+        spriteBindingsBySceneKey.get(anchoredSceneIdentifier);
+
+      const shouldDeliverSpriteRenderablePropertyMutation =
+        mutationPathTrail.length >= 2 ||
+        !becameMatchingSpriteRenderableThisMutation;
+
+      if (!spriteBindingPayload || !shouldDeliverSpriteRenderablePropertyMutation) {
+        return;
+      }
+
+      const hydratedLiveRenderableSurface = Reflect.get(
+        scene.get(),
+        anchoredSceneIdentifier,
+      ) as SpriteRenderable;
+
+      if (spriteChangeNeedsTextureReload(mutationPathTrail)) {
+        scheduleTextureLoad(spriteBindingPayload, hydratedLiveRenderableSurface);
+      } else {
+        syncWorldFromSceneObject(
+          spriteBindingPayload,
+          hydratedLiveRenderableSurface,
+        );
+      }
+    },
+  );
+
+  return {
+    unsubscribe: releaseSceneListenerSubscription,
+    spriteBindingsBySceneKey,
   };
-
-  const list = getScene().query(implementsTrait([spriteTrait]));
-  const active = new Set<SpriteRenderable>();
-  for (const item of list) {
-    active.add(item);
-    syncOne(item);
-  }
-  for (const [entity, { sprite }] of spriteByEntity.entries()) {
-    if (active.has(entity)) continue;
-    stage.removeChild(sprite);
-    sprite.destroy();
-    spriteByEntity.delete(entity);
-  }
-}
-
-export function disposePixiSprites(
-  stage: Container,
-  textureByKey: Map<string, Texture>,
-  spriteByEntity: Map<SpriteRenderable, { sprite: Sprite; signature: string }>,
-  svgInflight?: Map<string, Promise<void>>,
-): void {
-  for (const { sprite } of spriteByEntity.values()) {
-    stage.removeChild(sprite);
-    sprite.destroy();
-  }
-  spriteByEntity.clear();
-  for (const texture of textureByKey.values()) {
-    texture.destroy(true);
-  }
-  textureByKey.clear();
-  svgInflight?.clear();
 }
