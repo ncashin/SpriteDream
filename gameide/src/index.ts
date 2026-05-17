@@ -114,6 +114,11 @@ export {
   type Viewport,
 } from "./plugins/pixiPlugin/pixiPlugin.js";
 export {
+  pickSceneObjectAtWorldPoint,
+  type SpriteBindingForPick,
+} from "./plugins/pixiPlugin/editorPick.js";
+export { colliderDebug, type ColliderDebugOptions } from "./plugins/pixiPlugin/colliderDebug.js";
+export {
   type ViewportState,
   type ViewportController,
   type PixiViewportInput,

@@ -18,7 +18,6 @@ function clientToScreen(rootElement: HTMLElement, clientX: number, clientY: numb
   return { screenX: clientX - r.left, screenY: clientY - r.top };
 }
 
-/** Keep world point `(anchorWorld)` under `(screenX, screenY)` after changing scale/center. */
 function viewportCenterForAnchorAtScreen(
   width: number,
   height: number,
@@ -40,7 +39,6 @@ export function createViewport(
     centerX?: number;
     centerY?: number;
     scale?: number;
-    /** Required for {@link Viewport#screenToWorld}. */
     rootElement?: HTMLElement;
   } = {},
 ): {
@@ -145,13 +143,14 @@ export type PixiViewportOptions = {
   app: Application;
   rootElement: HTMLElement;
   input: PixiViewportInput;
+  onEditorClickWorld?: (worldPoint: { x: number; y: number }) => void;
 };
 
 export function pixiViewport(options: PixiViewportOptions): {
   viewport: ViewportController;
   unsubscribe: () => void;
 } {
-  const { world, app, rootElement, input } = options;
+  const { world, app, rootElement, input, onEditorClickWorld } = options;
 
   let disposed = false;
 
@@ -188,13 +187,23 @@ export function pixiViewport(options: PixiViewportOptions): {
   const releaseEditorViewport = onEditorUpdate(() => {
     if (disposed) return;
 
-    editorViewportEditorFrame(editorViewportGesture, {
+    const { shouldPickAtClick } = editorViewportEditorFrame(editorViewportGesture, {
       rootElement,
       viewport,
       panButton: input.buttons.Click,
       clientPosition: input.mouse.position,
       wheel: input.mouse.wheel,
     });
+
+    if (
+      shouldPickAtClick &&
+      onEditorClickWorld &&
+      input.mouse.position
+    ) {
+      onEditorClickWorld(
+        viewport.screenToWorld(input.mouse.position.x, input.mouse.position.y),
+      );
+    }
   });
 
   return {
@@ -209,7 +218,6 @@ export function pixiViewport(options: PixiViewportOptions): {
   };
 }
 
-/** Mutable state for editor pan (click–drag) vs click-to-select. */
 export type EditorViewportGestureState = {
   panning: boolean;
   anchorWorld: { x: number; y: number } | null;
@@ -223,20 +231,16 @@ export function createEditorViewportGestureState(): EditorViewportGestureState {
 export type EditorViewportFrameOptions = {
   rootElement: HTMLElement;
   viewport: ViewportController;
-  /** Primary button: drag pans after slop; release without pan may be a click. */
   panButton: { held: boolean; pressed: boolean; released: boolean };
   clientPosition: { x: number; y: number } | null;
   wheel: { x: number; y: number };
   minScale?: number;
   maxScale?: number;
-  /** Zoom factor uses `exp(-wheel.y * zoomSensitivity)`. */
   zoomSensitivity?: number;
-  /** Movement past this distance (pixels) turns the gesture into a pan. @default 5 */
   panSlopPx?: number;
 };
 
 export type EditorViewportFrameResult = {
-  /** True on the frame the pan button is released and the gesture was a click (no pan). */
   shouldPickAtClick: boolean;
 };
 
@@ -266,10 +270,6 @@ function zoomViewportAtClient(
   viewport.setCenter(centerX, centerY);
 }
 
-/**
- * Editor-only viewport: wheel zoom (toward cursor) and click-drag pan using {@link inputPlugin} mouse state.
- * Invoke from the `onEditorUpdate` callback each frame.
- */
 export function editorViewportEditorFrame(
   gesture: EditorViewportGestureState,
   options: EditorViewportFrameOptions,

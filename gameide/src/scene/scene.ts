@@ -122,7 +122,8 @@ export const curryScene = (rawScene: SceneObject) => {
   };
 
   const applyNested = (target: GameObject, data: GameObject) => {
-    for (const [key, value] of Object.entries(data)) {
+    for (const key of Reflect.ownKeys(data)) {
+      const value = Reflect.get(data, key);
       if (value === undefined) {
         Reflect.deleteProperty(target, key);
         continue;
@@ -139,7 +140,8 @@ export const curryScene = (rawScene: SceneObject) => {
   };
 
   const applyPatch = (patch: Partial<SceneObject>) => {
-    for (const [key, value] of Object.entries(patch)) {
+    for (const key of Reflect.ownKeys(patch)) {
+      const value = Reflect.get(patch, key);
       if (value === undefined) {
         Reflect.deleteProperty(scene, key);
         continue;
@@ -156,11 +158,11 @@ export const curryScene = (rawScene: SceneObject) => {
   };
 
   const replace = (data: SceneObject) => {
-    const keys = Reflect.ownKeys(rawScene);
-    for (const key of keys) {
-      delete scene[key];
+    const snapshot = structuredClone(data ?? {});
+    for (const key of Reflect.ownKeys(rawScene)) {
+      Reflect.deleteProperty(scene, key);
     }
-    applyPatch(structuredClone(data));
+    applyPatch(snapshot);
   };
 
   return {

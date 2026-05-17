@@ -4,14 +4,22 @@ import {
   type ApplicationOptions,
 } from "pixi.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
+import type { PlanckPluginAPI } from "../planckPlugin/planckPlugin.js";
+import { selectObject } from "../../scene/objectSelection.js";
+import { pickSceneObjectAtWorldPoint } from "./editorPick.js";
 import { pixiSprites } from "./sprite.js";
 import {
   type ViewportController,
   pixiViewport,
 } from "./viewport.js";
+import { colliderDebug } from "./colliderDebug.js";
+import { selectionOverlay } from "./selectionOverlay.js";
 
 export type PixiPluginOptions = {
   initOptions?: Omit<Partial<ApplicationOptions>, "resizeTo">;
+  enableEditorObjectPick?: boolean;
+  /** When true (default), draws collider outlines in scene pixel units. */
+  enableColliderDebug?: boolean;
 };
 
 export type Viewport = ViewportController;
@@ -37,6 +45,7 @@ export type PixiPluginInputContext = PixiPluginContext & {
       wheel: { x: number; y: number };
     };
   };
+  planck?: PlanckPluginAPI;
 };
 
 export function pixiPlugin(
@@ -66,17 +75,45 @@ export function pixiPlugin(
     app.stage.addChild(world);
 
     const input = context.input;
+    const planck = context.planck;
+
+    const { unsubscribe: unsubscribePixiSprites, spriteBindingsBySceneKey } =
+      pixiSprites(world);
+
+    const colliderDebugEnabled = options.enableColliderDebug !== false;
+    const unsubscribeColliderDebug = colliderDebugEnabled
+      ? colliderDebug(world).unsubscribe
+      : null;
+
+    const unsubscribeSelectionOverlay = selectionOverlay(
+      world,
+      spriteBindingsBySceneKey,
+    ).unsubscribe;
+
+    const pickEnabled = options.enableEditorObjectPick !== false;
 
     const { viewport, unsubscribe: unsubscribePixiViewport } = pixiViewport({
       world,
       app,
       rootElement,
       input,
+      onEditorClickWorld: pickEnabled
+        ? (worldPoint) => {
+            const picked = pickSceneObjectAtWorldPoint({
+              sceneContainer: world,
+              worldPoint,
+              spriteBindingsBySceneKey,
+              planckWorld: planck?.world,
+              pixelsPerMeter: planck?.pixelsPerMeter ?? 30,
+            });
+            if (picked) selectObject(picked);
+          }
+        : undefined,
     });
 
-    const { unsubscribe: unsubscribePixiSprites } = pixiSprites(world);
-
     context.dispose(() => {
+      unsubscribeColliderDebug?.();
+      unsubscribeSelectionOverlay();
       unsubscribePixiViewport();
       unsubscribePixiSprites();
       app.destroy(true, true);

@@ -53,6 +53,8 @@ type PlanckPluginNetworkingContext = {
 
 export type PlanckPluginAPI = {
   world: World;
+  /** Scene pixels per Planck meter; matches {@link PlanckPluginOptions.pixelsPerMeter} (default 30). */
+  pixelsPerMeter: number;
   onCollision: (self: GameObject, handler: PlanckCollisionHandler) => () => void;
   onTrigger: (self: GameObject, handler: PlanckCollisionHandler) => () => void;
   getRigidbody: (self: GameObject) => Rigidbody2D | null;
@@ -160,6 +162,7 @@ export function planckPlugin(
 
     const api: PlanckPluginAPI = {
       world,
+      pixelsPerMeter,
       onCollision,
       onTrigger,
       getRigidbody: (self) => {
