@@ -1,7 +1,10 @@
 import { type Body, type BodyType, type World, Vec2, Box, Circle } from "planck";
 import type { GameObject } from "../../scene/scene.js";
 
-export type PhysicsUserData = { object: GameObject };
+export type PhysicsUserData = {
+  object: GameObject;
+  sceneKey: PropertyKey;
+};
 
 export type PlanckRecord = {
   body: Body;
@@ -17,30 +20,30 @@ export function sceneVec(x: number, y: number): Vec2 {
   return new Vec2(x, y);
 }
 
-function collisionFixedRotation(obj: GameObject): boolean {
+function collisionFixedRotation(object: GameObject): boolean {
   return Boolean(
-    (obj as { collisionBody?: { fixedRotation?: boolean } }).collisionBody?.fixedRotation,
+    (object as { collisionBody?: { fixedRotation?: boolean } }).collisionBody?.fixedRotation,
   );
 }
 
-function collisionContinuous(obj: GameObject): boolean {
+function collisionContinuous(object: GameObject): boolean {
   return Boolean(
-    (obj as { collisionBody?: { continuous?: boolean } }).collisionBody?.continuous,
+    (object as { collisionBody?: { continuous?: boolean } }).collisionBody?.continuous,
   );
 }
 
 /** When true, no Planck {@link Body} is created until disabled is cleared — no collisions or contact callbacks. */
-export function collisionBodyDisabled(obj: GameObject): boolean {
-  const cb = (obj as { collisionBody?: { disabled?: unknown } }).collisionBody;
+export function collisionBodyDisabled(object: GameObject): boolean {
+  const cb = (object as { collisionBody?: { disabled?: unknown } }).collisionBody;
   return cb?.disabled === true;
 }
 
-function collisionMaterial(obj: GameObject): {
+function collisionMaterial(object: GameObject): {
   isTrigger: boolean;
   restitution: number;
   friction: number;
 } {
-  const cb = (obj as {
+  const cb = (object as {
     collisionBody?: { isTrigger?: boolean; restitution?: unknown; friction?: unknown };
   }).collisionBody;
   const restitution = Number(cb?.restitution);
@@ -57,23 +60,23 @@ function collisionMaterial(obj: GameObject): {
 
 /** Static bodies always use fixed rotation in Planck (pose comes from the scene each frame). */
 function effectiveFixedRotation(
-  obj: GameObject,
+  object: GameObject,
   effectiveBodyType: BodyType,
 ): boolean {
   if (effectiveBodyType === "static") return true;
-  return collisionFixedRotation(obj);
+  return collisionFixedRotation(object);
 }
 
 export function colliderSignature(
-  obj: GameObject,
+  object: GameObject,
   effectiveBodyType: BodyType,
 ): string {
   const bodyT = effectiveBodyType;
-  const fixedRotation = effectiveFixedRotation(obj, effectiveBodyType);
-  const continuous = collisionContinuous(obj);
-  const { isTrigger: t, restitution: rest, friction: fr } = collisionMaterial(obj);
-  const dis = collisionBodyDisabled(obj) ? 1 : 0;
-  const b = (obj as { boxCollider?: Record<string, unknown> }).boxCollider;
+  const fixedRotation = effectiveFixedRotation(object, effectiveBodyType);
+  const continuous = collisionContinuous(object);
+  const { isTrigger: t, restitution: rest, friction: fr } = collisionMaterial(object);
+  const dis = collisionBodyDisabled(object) ? 1 : 0;
+  const b = (object as { boxCollider?: Record<string, unknown> }).boxCollider;
   if (b && typeof b === "object") {
     return JSON.stringify({
       k: "box",
@@ -90,7 +93,7 @@ export function colliderSignature(
       oy: (b.offset as { y?: number })?.y,
     });
   }
-  const c = (obj as { circleCollider?: Record<string, unknown> }).circleCollider;
+  const c = (object as { circleCollider?: Record<string, unknown> }).circleCollider;
   if (c && typeof c === "object") {
     return JSON.stringify({
       k: "circle",
@@ -111,42 +114,43 @@ export function colliderSignature(
 
 export function createBodyForObject(
   world: World,
-  obj: GameObject,
+  object: GameObject,
   effectiveBodyType: BodyType,
   pixelsPerMeter: number,
+  sceneKey: PropertyKey,
 ): PlanckRecord | null {
   const inv = 1 / pixelsPerMeter;
-  if (collisionBodyDisabled(obj)) {
+  if (collisionBodyDisabled(object)) {
     return null;
   }
-  const signature = colliderSignature(obj, effectiveBodyType);
+  const signature = colliderSignature(object, effectiveBodyType);
   if (!signature) return null;
   if (
     !(
-      (obj as { position?: { x: number; y: number } }).position &&
-      (obj as { rotation?: { z: number } }).rotation
+      (object as { position?: { x: number; y: number } }).position &&
+      (object as { rotation?: { z: number } }).rotation
     )
   ) {
     return null;
   }
 
-  const pos = (obj as { position: { x: number; y: number } }).position;
-  const rotZ = (obj as { rotation: { z: number } }).rotation.z;
+  const pos = (object as { position: { x: number; y: number } }).position;
+  const rotZ = (object as { rotation: { z: number } }).rotation.z;
   const bodyT = effectiveBodyType;
-  const fixedRotation = effectiveFixedRotation(obj, effectiveBodyType);
+  const fixedRotation = effectiveFixedRotation(object, effectiveBodyType);
 
   const body = world.createBody({
     type: bodyT,
     position: sceneVec(pos.x * inv, pos.y * inv),
     angle: rotZ,
-    userData: { object: obj } satisfies PhysicsUserData,
+    userData: { object, sceneKey } satisfies PhysicsUserData,
     fixedRotation,
-    bullet: collisionContinuous(obj),
+    bullet: collisionContinuous(object),
   });
 
-  const { isTrigger, restitution, friction } = collisionMaterial(obj);
+  const { isTrigger, restitution, friction } = collisionMaterial(object);
 
-  const b = (obj as { boxCollider?: Record<string, unknown> }).boxCollider;
+  const b = (object as { boxCollider?: Record<string, unknown> }).boxCollider;
   if (b && typeof b === "object") {
     const w = (Math.max(1e-6, Number(b.width) || 0) / 2) * inv;
     const h = (Math.max(1e-6, Number(b.height) || 0) / 2) * inv;
@@ -159,7 +163,7 @@ export function createBodyForObject(
     };
     body.createFixture(new Box(w, h, new Vec2(off.x * inv, off.y * inv)), opt);
   } else {
-    const c = (obj as { circleCollider?: Record<string, unknown> }).circleCollider;
+    const c = (object as { circleCollider?: Record<string, unknown> }).circleCollider;
     if (c && typeof c === "object") {
       const r = Math.max(1e-6, Number(c.radius) || 0) * inv;
       const off = (c.offset as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
@@ -178,8 +182,11 @@ export function createBodyForObject(
 
   if (bodyT === "dynamic") {
     const vel =
-      (obj as { collisionBody?: { velocity?: { x: number; y: number; angular?: number } } })
-        .collisionBody?.velocity ?? { x: 0, y: 0, angular: 0 };
+      (
+        object as {
+          collisionBody?: { velocity?: { x: number; y: number; angular?: number } };
+        }
+      ).collisionBody?.velocity ?? { x: 0, y: 0, angular: 0 };
     body.setLinearVelocity(sceneVec(vel.x * inv, vel.y * inv));
     body.setAngularVelocity(vel.angular ?? 0);
   }
@@ -190,4 +197,9 @@ export function createBodyForObject(
 export function getBodyData(body: Body): GameObject | null {
   const d = body.getUserData() as PhysicsUserData | null | undefined;
   return d?.object ?? null;
+}
+
+export function getBodySceneKey(body: Body): PropertyKey | undefined {
+  const d = body.getUserData() as PhysicsUserData | null | undefined;
+  return d?.sceneKey;
 }

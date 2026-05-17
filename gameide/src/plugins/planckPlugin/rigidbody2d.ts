@@ -1,20 +1,14 @@
 import type { Body, BodyType } from "planck";
 
-/**
- * Unity Rigidbody2D–style view of a Planck body. Prefer `planck.getRigidbody(obj)` over importing Planck in game code.
- */
 export type Rigidbody2D = {
-  /** Underlying Planck body (joints, fixtures, advanced APIs). */
   readonly raw: Body;
   readonly bodyType: BodyType;
   readonly isStatic: boolean;
   readonly isKinematic: boolean;
   readonly isDynamic: boolean;
-  /** Pixel units per second (matches scene `collisionBody.velocity`). */
   getLinearVelocity(): { x: number; y: number };
   getAngularVelocity(): number;
   setAngularVelocity(radiansPerSecond: number): void;
-  /** Scene/world pixel position. */
   getPosition(): { x: number; y: number };
   getAngle(): number;
 };

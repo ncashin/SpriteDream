@@ -124,7 +124,6 @@ export function applyViewportToWorldContainer(
   viewport: Readonly<ViewportState>,
 ): void {
   const { width, height, centerX, centerY, scale } = viewport;
-  // Negative scale.y: scene +Y is up (Pixi stage is +Y down).
   world.scale.set(scale, -scale);
   world.position.set(width / 2 - centerX * scale, height / 2 + centerY * scale);
 }
@@ -148,7 +147,6 @@ export type PixiViewportOptions = {
   input: PixiViewportInput;
 };
 
-/** Wires camera → world container, resize, editor pan/zoom, and mode reset (lifecycle like `pixiSprites`). */
 export function pixiViewport(options: PixiViewportOptions): {
   viewport: ViewportController;
   unsubscribe: () => void;

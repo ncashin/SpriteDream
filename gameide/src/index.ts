@@ -141,7 +141,7 @@ export {
   type PlanckCollisionInfo,
   type PlanckContactPhase,
 } from "./plugins/planckPlugin/planckPlugin.js";
-export type { Rigidbody2D } from "./plugins/planckPlugin/rigidbody2d.js";
+export type { Rigidbody2D } from "./plugins/planckPlugin/rigidbody2D.js";
 export {
   boxColliderTrait,
   circleColliderTrait,

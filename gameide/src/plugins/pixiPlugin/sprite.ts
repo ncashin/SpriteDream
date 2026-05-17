@@ -25,7 +25,8 @@ function syncWorldFromSceneObject(
 ) {
   binding.root.position.set(entity.position.x, entity.position.y);
   binding.root.rotation = entity.rotation.z;
-  binding.root.scale.set(entity.scale.x, entity.scale.y);
+  // Negative scale.y: upright textures with Y-up scene + world container flip (see viewport).
+  binding.root.scale.set(entity.scale.x, -entity.scale.y);
   binding.innerSprite.width = entity.sprite.width;
   binding.innerSprite.height = entity.sprite.height;
   binding.innerSprite.tint = parseTintRGB(
