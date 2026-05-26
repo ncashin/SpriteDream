@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { IconSlug } from "../lucide/lucideIconSlug.js";
-import { defineTrait } from "../index.js";
+import { defineTrait } from "../trait/trait.js";
 
 export const transformSchema = z.object({
   position: z

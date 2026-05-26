@@ -48,13 +48,53 @@ export function __hotModuleLastArgsForScope(scopeId: string): HotModuleReplayArg
   return state;
 }
 
-export function __hotModuleDefaultExport<T>(state: HotModuleReplayArgsState, exported: T): T {
+function runWithHotScope<T>(
+  scopeId: string,
+  isReplacement: boolean,
+  callback: () => T,
+): T {
+  const normalizedScopeId = normalizeHotScopeId(scopeId);
+  const topBefore = activeHotScopes.length - 1;
+  const alreadyActive =
+    topBefore >= 0 && activeHotScopes[topBefore]?.id === normalizedScopeId;
+  if (!alreadyActive) {
+    activeHotScopes.push({ id: normalizedScopeId, isReplacement });
+  }
+
+  const releaseScope = () => {
+    if (alreadyActive) return;
+    const top = activeHotScopes.length - 1;
+    const scope = top >= 0 ? activeHotScopes[top] : undefined;
+    if (scope?.id === normalizedScopeId) {
+      activeHotScopes.splice(top, 1);
+    }
+  };
+
+  try {
+    const result = callback();
+    const maybePromise = result as unknown as PromiseLike<unknown> | undefined;
+    if (maybePromise && typeof maybePromise.then === "function") {
+      return Promise.resolve(result).finally(releaseScope) as T;
+    }
+    releaseScope();
+    return result;
+  } catch (error) {
+    releaseScope();
+    throw error;
+  }
+}
+
+export function __hotModuleDefaultExport<T>(
+  scopeId: string,
+  state: HotModuleReplayArgsState,
+  exported: T,
+): T {
   if (typeof exported !== "function") return exported;
   const fn = exported as (...args: unknown[]) => unknown;
   return function hotModuleDefaultWrapper(this: unknown, ...args: unknown[]) {
     state.kind = "called";
     state.args = args;
-    return fn.apply(this, args);
+    return runWithHotScope(scopeId, false, () => fn.apply(this, args));
   } as T;
 }
 
@@ -203,9 +243,7 @@ export function __endHotModule(scopeId: string): void {
   for (let index = activeHotScopes.length - 1; index >= 0; index -= 1) {
     const scope = activeHotScopes[index];
     if (scope?.id !== normalizedScopeId) continue;
-    // Keep the scope on the stack so hooks registered later (e.g. `main()` after
-    // `await gameide()`) still get the right `scopeId` for HMR cleanup. Leave
-    // `isReplacement` set so `onGameStart` / `onEditorStart` do not re-run on hot swap.
+    activeHotScopes.splice(index, 1);
     return;
   }
 }
@@ -223,24 +261,7 @@ export function __disposeHotModule(scopeId: string): void {
 
 /** Ensures replay runs while this hot scope is active so hooks get correct `scopeId`. */
 export function __runHotModuleReplay(scopeId: string, replay: () => void): void {
-  const normalizedScopeId = normalizeHotScopeId(scopeId);
-  const topBefore = activeHotScopes.length - 1;
-  const alreadyActive =
-    topBefore >= 0 && activeHotScopes[topBefore]?.id === normalizedScopeId;
-  if (!alreadyActive) {
-    activeHotScopes.push({ id: normalizedScopeId, isReplacement: true });
-  }
-  try {
-    replay();
-  } finally {
-    if (!alreadyActive) {
-      const top = activeHotScopes.length - 1;
-      const scope = top >= 0 ? activeHotScopes[top] : undefined;
-      if (scope?.id === normalizedScopeId) {
-        activeHotScopes.splice(top, 1);
-      }
-    }
-  }
+  runWithHotScope(scopeId, true, replay);
 }
 
 export function start(callback: StartCallback): DisposeRegistration {

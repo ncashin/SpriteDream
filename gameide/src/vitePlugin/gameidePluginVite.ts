@@ -138,6 +138,7 @@ function wrapGameideHotDefaultExport(code: string, id: string): string | null {
           ts.factory.createIdentifier("__hotModuleDefaultExport"),
           undefined,
           [
+            ts.factory.createIdentifier("__gameideHotScope"),
             ts.factory.createIdentifier("__gameideHotLastArgs"),
             name,
           ],
@@ -157,6 +158,7 @@ function wrapGameideHotDefaultExport(code: string, id: string): string | null {
             ts.factory.createIdentifier("__hotModuleDefaultExport"),
             undefined,
             [
+              ts.factory.createIdentifier("__gameideHotScope"),
               ts.factory.createIdentifier("__gameideHotLastArgs"),
               stmt.expression,
             ],

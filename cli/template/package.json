@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build && tsc",
     "preview": "vite preview",
-    "upload": "gameide-cli upload"
+    "upload": "gameide upload"
   },
   "dependencies": {
     "gameide": "^0.1.0",

@@ -27,10 +27,6 @@ export type InputPluginOptions = {
     dragging: string;
     idle?: string;
   };
-  /**
-   * `editor`: capture wheel on the game view while in editor mode (pan/zoom) and
-   * call `preventDefault` so the page does not scroll. In game mode, wheel is ignored.
-   */
   mouseHandling?: InputMouseHandling;
 };
 
@@ -51,7 +47,6 @@ type InputShape<Options extends InputPluginOptions> = {
   mouse: {
     delta: { x: number; y: number };
     position: { x: number; y: number } | null;
-    /** Cleared after each frame. Only populated when {@link InputPluginOptions.mouseHandling} is `"editor"`. */
     wheel: { x: number; y: number };
   };
 };
@@ -91,12 +86,12 @@ export function inputPlugin<Options extends InputPluginOptions>(
     const buttonKeys = Object.keys(buttonsConfig) as ButtonKeys<Options>[];
 
     const axes = Object.fromEntries(
-      axisKeys.map((k) => [k, 0]),
+      axisKeys.map((axisKey) => [axisKey, 0]),
     ) as InputShape<Options>["axes"];
 
     const buttons = Object.fromEntries(
-      buttonKeys.map((k) => [
-        k,
+      buttonKeys.map((buttonKey) => [
+        buttonKey,
         { held: false, pressed: false, released: false },
       ]),
     ) as InputShape<Options>["buttons"];
@@ -107,21 +102,25 @@ export function inputPlugin<Options extends InputPluginOptions>(
       wheel: { x: 0, y: 0 },
     };
 
-    let wheelAccX = 0;
-    let wheelAccY = 0;
+    let wheelAccumulatorX = 0;
+    let wheelAccumulatorY = 0;
     const mouseHandling = options.mouseHandling ?? "default";
-    const rootEl = inputContext.rootElement;
+    const rootElement = inputContext.rootElement;
 
     if (mouseHandling === "editor") {
       target.addEventListener(
         "wheel",
-        (e) => {
+        (event) => {
           if (getMode() !== GameIDEMode.Editor) return;
-          if (!(e.target instanceof Node) || !rootEl.contains(e.target)) return;
-          const ev = e as WheelEvent;
-          ev.preventDefault();
-          wheelAccX += ev.deltaX;
-          wheelAccY += ev.deltaY;
+          if (
+            !(event.target instanceof Node) ||
+            !rootElement.contains(event.target)
+          )
+            return;
+          const wheelEvent = event as WheelEvent;
+          wheelEvent.preventDefault();
+          wheelAccumulatorX += wheelEvent.deltaX;
+          wheelAccumulatorY += wheelEvent.deltaY;
         },
         { passive: false },
       );
@@ -140,8 +139,8 @@ export function inputPlugin<Options extends InputPluginOptions>(
     function isBindingDown(binding: string): boolean {
       if (binding.startsWith("Key")) return keyState[binding] ?? false;
       if (binding.startsWith("Mouse")) {
-        const n = binding.slice(5);
-        return mouseState[n] ?? false;
+        const mouseButton = binding.slice(5);
+        return mouseState[mouseButton] ?? false;
       }
       return false;
     }
@@ -150,8 +149,8 @@ export function inputPlugin<Options extends InputPluginOptions>(
       if (binding.startsWith("Key"))
         return previousKeyState[binding] ?? false;
       if (binding.startsWith("Mouse")) {
-        const n = binding.slice(5);
-        return previousMouseState[n] ?? false;
+        const mouseButton = binding.slice(5);
+        return previousMouseState[mouseButton] ?? false;
       }
       return false;
     }
@@ -160,117 +159,123 @@ export function inputPlugin<Options extends InputPluginOptions>(
       const config = axesConfig[axisName];
       if (!config) return 0;
       let value = 0;
-      for (const b of config.negative) if (isBindingDown(b)) value -= 1;
-      for (const b of config.positive) if (isBindingDown(b)) value += 1;
+      for (const binding of config.negative)
+        if (isBindingDown(binding)) value -= 1;
+      for (const binding of config.positive)
+        if (isBindingDown(binding)) value += 1;
       return Math.max(-1, Math.min(1, value));
     }
 
     function buttonHeld(buttonName: ButtonKeys<Options>): boolean {
       const bindings = buttonsConfig[buttonName];
       if (!bindings) return false;
-      return bindings.some((b) => isBindingDown(b));
+      return bindings.some((binding) => isBindingDown(binding));
     }
 
     function buttonPressed(buttonName: ButtonKeys<Options>): boolean {
       const bindings = buttonsConfig[buttonName];
       if (!bindings) return false;
-      return bindings.some((b) => isBindingDown(b) && !wasBindingDown(b));
+      return bindings.some(
+        (binding) => isBindingDown(binding) && !wasBindingDown(binding),
+      );
     }
 
     function buttonReleased(buttonName: ButtonKeys<Options>): boolean {
       const bindings = buttonsConfig[buttonName];
       if (!bindings) return false;
-      return bindings.some((b) => !isBindingDown(b) && wasBindingDown(b));
+      return bindings.some(
+        (binding) => !isBindingDown(binding) && wasBindingDown(binding),
+      );
     }
 
-    target.addEventListener("keydown", (e) => {
-      const ev = e as KeyboardEvent;
-      setKey(normalizeKey(ev.code), true);
-      ev.preventDefault();
+    target.addEventListener("keydown", (event) => {
+      const keyboardEvent = event as KeyboardEvent;
+      setKey(normalizeKey(keyboardEvent.code), true);
+      keyboardEvent.preventDefault();
     });
-    target.addEventListener("keyup", (e) => {
-      const ev = e as KeyboardEvent;
-      setKey(normalizeKey(ev.code), false);
-      ev.preventDefault();
+    target.addEventListener("keyup", (event) => {
+      const keyboardEvent = event as KeyboardEvent;
+      setKey(normalizeKey(keyboardEvent.code), false);
+      keyboardEvent.preventDefault();
     });
-    target.addEventListener("mousedown", (e) => {
-      const ev = e as MouseEvent;
+    target.addEventListener("mousedown", (event) => {
+      const mouseEvent = event as MouseEvent;
       if (target instanceof HTMLElement) target.focus();
 
       if (
         cursorTarget &&
         dragCursorConfig &&
-        dragCursorConfig.buttons.includes(ev.button)
+        dragCursorConfig.buttons.includes(mouseEvent.button)
       ) {
         dragCursorActive = true;
         cursorTarget.style.cursor = dragCursorConfig.down;
       }
 
-      mouseX = ev.clientX;
-      mouseY = ev.clientY;
+      mouseX = mouseEvent.clientX;
+      mouseY = mouseEvent.clientY;
       hasMousePosition = true;
-      setMouse(ev.button, true);
-      ev.preventDefault();
+      setMouse(mouseEvent.button, true);
+      mouseEvent.preventDefault();
     });
-    target.addEventListener("mouseup", (e) => {
-      const ev = e as MouseEvent;
+    target.addEventListener("mouseup", (event) => {
+      const mouseEvent = event as MouseEvent;
 
       if (
         cursorTarget &&
         dragCursorConfig &&
-        dragCursorConfig.buttons.includes(ev.button)
+        dragCursorConfig.buttons.includes(mouseEvent.button)
       ) {
         dragCursorActive = false;
         cursorTarget.style.cursor =
           dragCursorConfig.idle ?? originalInlineCursor;
       }
 
-      mouseX = ev.clientX;
-      mouseY = ev.clientY;
+      mouseX = mouseEvent.clientX;
+      mouseY = mouseEvent.clientY;
       hasMousePosition = true;
-      setMouse(ev.button, false);
-      ev.preventDefault();
+      setMouse(mouseEvent.button, false);
+      mouseEvent.preventDefault();
     });
-    target.addEventListener("mousemove", (e) => {
-      const ev = e as MouseEvent;
-      mouseDeltaX += ev.movementX;
-      mouseDeltaY += ev.movementY;
-      mouseX = ev.clientX;
-      mouseY = ev.clientY;
+    target.addEventListener("mousemove", (event) => {
+      const mouseEvent = event as MouseEvent;
+      mouseDeltaX += mouseEvent.movementX;
+      mouseDeltaY += mouseEvent.movementY;
+      mouseX = mouseEvent.clientX;
+      mouseY = mouseEvent.clientY;
       hasMousePosition = true;
 
       if (
         cursorTarget &&
         dragCursorConfig &&
         dragCursorActive &&
-        (ev.movementX !== 0 || ev.movementY !== 0)
+        (mouseEvent.movementX !== 0 || mouseEvent.movementY !== 0)
       ) {
         cursorTarget.style.cursor = dragCursorConfig.dragging;
       }
     });
 
     update(() => {
-      for (const k of axisKeys) {
-        axes[k] = axisValue(k);
+      for (const axisKey of axisKeys) {
+        axes[axisKey] = axisValue(axisKey);
       }
-      for (const k of buttonKeys) {
-        const b = buttons[k];
-        b.held = buttonHeld(k);
-        b.pressed = buttonPressed(k);
-        b.released = buttonReleased(k);
+      for (const buttonKey of buttonKeys) {
+        const button = buttons[buttonKey];
+        button.held = buttonHeld(buttonKey);
+        button.pressed = buttonPressed(buttonKey);
+        button.released = buttonReleased(buttonKey);
       }
       mouse.delta.x = mouseDeltaX;
       mouse.delta.y = mouseDeltaY;
       mouse.position = hasMousePosition ? { x: mouseX, y: mouseY } : null;
-      mouse.wheel.x = wheelAccX;
-      mouse.wheel.y = wheelAccY;
+      mouse.wheel.x = wheelAccumulatorX;
+      mouse.wheel.y = wheelAccumulatorY;
 
       Object.assign(previousKeyState, keyState);
       Object.assign(previousMouseState, mouseState);
       mouseDeltaX = 0;
       mouseDeltaY = 0;
-      wheelAccX = 0;
-      wheelAccY = 0;
+      wheelAccumulatorX = 0;
+      wheelAccumulatorY = 0;
     });
 
     return {

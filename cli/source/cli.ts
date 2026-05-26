@@ -52,15 +52,15 @@ function stringFlag(
 }
 
 function printHelp(): void {
-  console.log(`gameide-cli
+  console.log(`gameide
 
 Usage:
-  gameide-cli create [directory] [--name my-game]
-  gameide-cli upload [project-directory] [--base-url URL] [--name my-game] [--description "..."] [--version 0.1.0]
+  gameide create [directory] [--name my-game]
+  gameide upload [project-directory] [--base-url URL] [--name my-game] [--description "..."] [--version 0.1.0]
 
 Commands:
-  create   Scaffold a new GameIDE runtime project
-  upload   Build and upload a GameIDE runtime project
+  create   Scaffold a new GameIDE game
+  upload   Build and upload a GameIDE game
 `);
 }
 

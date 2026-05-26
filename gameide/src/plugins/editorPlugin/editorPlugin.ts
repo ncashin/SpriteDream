@@ -4,19 +4,17 @@ import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import { GameIDEMode, getMode, onModeChange } from "../../lifecycle/mode.js";
 import type { GameContext } from "../../lifecycle/initialization.js";
 import { createEditorUI } from "./createEditorUI.js";
-import { DefaultEditor } from "./DefaultEditor.js";
 import type { EditorWithGameViewReference } from "./createEditorUI.js";
 import { restoreSceneSnapshot, saveSceneSnapshot } from "../../scene/snapshot.js";
 
 export const editorPlugin =
-  (Editor?: EditorWithGameViewReference) =>
+  (Editor: EditorWithGameViewReference) =>
   async (input: GameContext<object>) => {
     if (process.env.NODE_ENV !== "development") {
       return input;
     }
 
-    const embeddedInParentIFrame =
-       window && window.parent !== window;
+    const embeddedInParentIFrame = window && window.parent !== window;
 
     const channel = await createSceneChannel({
       transport: createSceneTransportPostMessage({
@@ -26,7 +24,6 @@ export const editorPlugin =
       scene: input.scene,
       initializeScene: embeddedInParentIFrame,
     });
-
 
     const handleModeChange = (mode: GameIDEMode) => {
       switch (mode) {
@@ -45,11 +42,8 @@ export const editorPlugin =
     handleModeChange(getMode());
     const releaseModeWatcher = onModeChange(handleModeChange);
 
-    const mount = await createEditorUI(
-      input.rootElement,
-      Editor ?? DefaultEditor,
-    );
-    
+    const mount = await createEditorUI(input.rootElement, Editor);
+
     input.dispose(() => {
       releaseModeWatcher();
       channel.dispose();
