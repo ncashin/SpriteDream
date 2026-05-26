@@ -4,10 +4,10 @@ import {
   defineTrait,
   getScene,
   implementsTrait,
-  transformSchema,
   type GameObject,
 } from "gameide";
 import { loadGraphicTexture } from "./asset.js";
+import { transformSchema } from "../transform.js";
 
 const spriteFieldsSchema = z.object({
   sprite: z.object({
@@ -37,6 +37,10 @@ type SpritePixiBinding = {
   loadGeneration: number;
 };
 
+function finiteNumberOr(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
 function parseTintRGB(tintString: string): number {
   const normalized = tintString.trim();
   const tintHexMatch = /^#?([0-9a-f]{6})$/i.exec(normalized);
@@ -47,13 +51,19 @@ function syncWorldFromSceneObject(
   binding: SpritePixiBinding,
   entity: SpriteRenderable,
 ) {
-  binding.root.position.set(entity.position.x, entity.position.y);
-  binding.root.rotation = entity.rotation.z;
-  binding.root.scale.set(entity.scale.x, -entity.scale.y);
-  binding.innerSprite.width = entity.sprite.width;
-  binding.innerSprite.height = entity.sprite.height;
+  binding.root.position.set(
+    finiteNumberOr(entity.position?.x, 0),
+    finiteNumberOr(entity.position?.y, 0),
+  );
+  binding.root.rotation = finiteNumberOr(entity.rotation?.z, 0);
+  binding.root.scale.set(
+    finiteNumberOr(entity.scale?.x, 1),
+    -finiteNumberOr(entity.scale?.y, 1),
+  );
+  binding.innerSprite.width = finiteNumberOr(entity.sprite?.width, 1);
+  binding.innerSprite.height = finiteNumberOr(entity.sprite?.height, 1);
   binding.innerSprite.tint = parseTintRGB(
-    String(entity.sprite.tint ?? "#ffffff"),
+    String(entity.sprite?.tint ?? "#ffffff"),
   );
 }
 

@@ -112,16 +112,8 @@ export function planckPlugin(
       triggerHandlers,
     });
 
-    const forgetHandlersForObject = (object: GameObject) => {
-      collisionHandlers.delete(object);
-      triggerHandlers.delete(object);
-      kinematicScenePosePrev.delete(object);
-    };
-
     const onRemoveBody = (body: Body) => {
-      const owner = getBodyData(body);
       const sceneKey = getBodySceneKey(body);
-      if (owner) forgetHandlersForObject(owner);
       if (sceneKey !== undefined) sceneKeyToPlanckRecord.delete(sceneKey);
     };
     world.on("remove-body", onRemoveBody);

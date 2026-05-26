@@ -4,6 +4,7 @@ import {
   colliderSignature,
   createBodyForObject,
   isColliderNode,
+  syncBodyTransformFromObject,
   type PlanckRecord,
 } from "./planckBodies.js";
 
@@ -46,7 +47,14 @@ export function planckColliderBodies(args: {
     }
 
     const existingPlanckRecord = sceneKeyToPlanckRecord.get(sceneRootKey);
-    if (existingPlanckRecord?.signature === nextColliderSignatureValue) return;
+    if (existingPlanckRecord?.signature === nextColliderSignatureValue) {
+      syncBodyTransformFromObject(
+        existingPlanckRecord.body,
+        sceneObject,
+        args.pixelsPerMeter,
+      );
+      return;
+    }
 
     if (existingPlanckRecord) {
       args.world.destroyBody(existingPlanckRecord.body);

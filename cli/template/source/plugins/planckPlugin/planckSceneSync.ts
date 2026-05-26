@@ -1,7 +1,10 @@
 import type { BodyType, Vec2 as Vec2T } from "planck";
 import { Vec2 } from "planck";
 import type { GameObject, Scene } from "gameide";
-import type { PlanckRecord } from "./planckBodies.js";
+import {
+  syncBodyTransformFromObject,
+  type PlanckRecord,
+} from "./planckBodies.js";
 import { getSceneBodyType } from "./planckBodyTypes.js";
 
 type ScenePosition = { x: number; y: number };
@@ -19,12 +22,25 @@ export type PlanckSceneSyncContext = {
   kinematicScenePosePrev: WeakMap<GameObject, { x: number; y: number; angle: number }>;
 };
 
+function finiteNumberOr(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
 function readScenePosition(sceneObject: GameObject): ScenePosition {
-  return (sceneObject as { position: ScenePosition }).position;
+  const position = (sceneObject as { position?: Partial<ScenePosition> }).position;
+  return {
+    x: finiteNumberOr(position?.x, 0),
+    y: finiteNumberOr(position?.y, 0),
+  };
 }
 
 function readSceneRotation(sceneObject: GameObject): SceneRotation {
-  return (sceneObject as { rotation: SceneRotation }).rotation;
+  const rotation = (sceneObject as { rotation?: Partial<SceneRotation> }).rotation;
+  return {
+    x: finiteNumberOr(rotation?.x, 0),
+    y: finiteNumberOr(rotation?.y, 0),
+    z: finiteNumberOr(rotation?.z, 0),
+  };
 }
 
 function readSceneAngleRadians(sceneObject: GameObject): number {
@@ -53,9 +69,16 @@ function writeDynamicPhysicsResultsToScene(
   linearVelocity: Vec2T,
   angularVelocity: number,
 ): void {
-  const position = readScenePosition(sceneObject);
-  position.x = physicsPosition.x * ctx.pixelsPerMeter;
-  position.y = physicsPosition.y * ctx.pixelsPerMeter;
+  let position = (sceneObject as { position?: ScenePosition }).position;
+  if (!position) {
+    (sceneObject as { position: ScenePosition }).position = {
+      x: physicsPosition.x * ctx.pixelsPerMeter,
+      y: physicsPosition.y * ctx.pixelsPerMeter,
+    };
+  } else {
+    position.x = physicsPosition.x * ctx.pixelsPerMeter;
+    position.y = physicsPosition.y * ctx.pixelsPerMeter;
+  }
   const rotation = readSceneRotation(sceneObject);
   (sceneObject as { rotation: SceneRotation }).rotation = {
     ...rotation,
@@ -89,11 +112,10 @@ function applyScenePoseToBody(
   planckRecord: PlanckRecord,
   ctx: PlanckSceneSyncContext,
 ): void {
-  const scenePosition = readScenePosition(sceneObjectLive);
-  const sceneAngleRadians = readSceneAngleRadians(sceneObjectLive);
-  planckRecord.body.setTransform(
-    new Vec2(scenePosition.x * ctx.invPpm, scenePosition.y * ctx.invPpm),
-    sceneAngleRadians,
+  syncBodyTransformFromObject(
+    planckRecord.body,
+    sceneObjectLive,
+    ctx.pixelsPerMeter,
   );
 }
 

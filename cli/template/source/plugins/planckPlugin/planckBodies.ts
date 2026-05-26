@@ -11,6 +11,42 @@ export type PlanckRecord = {
   signature: string;
 };
 
+function finiteNumberOr(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function readTransform(object: GameObject): {
+  x: number;
+  y: number;
+  rotationZ: number;
+  scaleX: number;
+  scaleY: number;
+} {
+  const position = (object as { position?: { x?: unknown; y?: unknown } }).position;
+  const rotation = (object as { rotation?: { z?: unknown } }).rotation;
+  const scale = (object as { scale?: { x?: unknown; y?: unknown } }).scale;
+  return {
+    x: finiteNumberOr(position?.x, 0),
+    y: finiteNumberOr(position?.y, 0),
+    rotationZ: finiteNumberOr(rotation?.z, 0),
+    scaleX: finiteNumberOr(scale?.x, 1),
+    scaleY: finiteNumberOr(scale?.y, 1),
+  };
+}
+
+export function syncBodyTransformFromObject(
+  body: Body,
+  object: GameObject,
+  pixelsPerMeter: number,
+): void {
+  const transform = readTransform(object);
+  const inv = 1 / pixelsPerMeter;
+  body.setTransform(
+    sceneVec(transform.x * inv, transform.y * inv),
+    transform.rotationZ,
+  );
+}
+
 export function isColliderNode(v: unknown): v is GameObject {
   if (!v || typeof v !== "object") return false;
   return "boxCollider" in v || "circleCollider" in v;
@@ -72,6 +108,7 @@ export function colliderSignature(
   effectiveBodyType: BodyType,
 ): string {
   const bodyT = effectiveBodyType;
+  const transform = readTransform(object);
   const fixedRotation = effectiveFixedRotation(object, effectiveBodyType);
   const continuous = collisionContinuous(object);
   const { isTrigger: t, restitution: rest, friction: fr } = collisionMaterial(object);
@@ -91,6 +128,8 @@ export function colliderSignature(
       dis,
       ox: (b.offset as { x?: number })?.x,
       oy: (b.offset as { y?: number })?.y,
+      sx: transform.scaleX,
+      sy: transform.scaleY,
     });
   }
   const c = (object as { circleCollider?: Record<string, unknown> }).circleCollider;
@@ -107,6 +146,8 @@ export function colliderSignature(
       dis,
       ox: (c.offset as { x?: number })?.x,
       oy: (c.offset as { y?: number })?.y,
+      sx: transform.scaleX,
+      sy: transform.scaleY,
     });
   }
   return "";
@@ -125,24 +166,17 @@ export function createBodyForObject(
   }
   const signature = colliderSignature(object, effectiveBodyType);
   if (!signature) return null;
-  if (
-    !(
-      (object as { position?: { x: number; y: number } }).position &&
-      (object as { rotation?: { z: number } }).rotation
-    )
-  ) {
-    return null;
-  }
 
-  const pos = (object as { position: { x: number; y: number } }).position;
-  const rotZ = (object as { rotation: { z: number } }).rotation.z;
+  const transform = readTransform(object);
+  const scaleX = transform.scaleX;
+  const scaleY = transform.scaleY;
   const bodyT = effectiveBodyType;
   const fixedRotation = effectiveFixedRotation(object, effectiveBodyType);
 
   const body = world.createBody({
     type: bodyT,
-    position: sceneVec(pos.x * inv, pos.y * inv),
-    angle: rotZ,
+    position: sceneVec(transform.x * inv, transform.y * inv),
+    angle: transform.rotationZ,
     userData: { object, sceneKey } satisfies PhysicsUserData,
     fixedRotation,
     bullet: collisionContinuous(object),
@@ -152,8 +186,8 @@ export function createBodyForObject(
 
   const b = (object as { boxCollider?: Record<string, unknown> }).boxCollider;
   if (b && typeof b === "object") {
-    const w = (Math.max(1e-6, Number(b.width) || 0) / 2) * inv;
-    const h = (Math.max(1e-6, Number(b.height) || 0) / 2) * inv;
+    const w = (Math.max(1e-6, Number(b.width) || 0) * Math.abs(scaleX) / 2) * inv;
+    const h = (Math.max(1e-6, Number(b.height) || 0) * Math.abs(scaleY) / 2) * inv;
     const off = (b.offset as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
     const opt = {
       density: bodyT === "dynamic" ? 1 : 0,
@@ -161,11 +195,15 @@ export function createBodyForObject(
       restitution,
       isSensor: isTrigger,
     };
-    body.createFixture(new Box(w, h, new Vec2(off.x * inv, off.y * inv)), opt);
+    body.createFixture(
+      new Box(w, h, new Vec2(off.x * scaleX * inv, off.y * scaleY * inv)),
+      opt,
+    );
   } else {
     const c = (object as { circleCollider?: Record<string, unknown> }).circleCollider;
     if (c && typeof c === "object") {
-      const r = Math.max(1e-6, Number(c.radius) || 0) * inv;
+      const radiusScale = Math.max(Math.abs(scaleX), Math.abs(scaleY));
+      const r = Math.max(1e-6, Number(c.radius) || 0) * radiusScale * inv;
       const off = (c.offset as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
       const opt = {
         density: bodyT === "dynamic" ? 1 : 0,
@@ -173,7 +211,10 @@ export function createBodyForObject(
         restitution,
         isSensor: isTrigger,
       };
-      body.createFixture(new Circle(new Vec2(off.x * inv, off.y * inv), r), opt);
+      body.createFixture(
+        new Circle(new Vec2(off.x * scaleX * inv, off.y * scaleY * inv), r),
+        opt,
+      );
     } else {
       world.destroyBody(body);
       return null;

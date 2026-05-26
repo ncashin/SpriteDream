@@ -49,7 +49,6 @@ export {
   getTraitDefinitions,
   type TraitIntersection,
 } from "./trait/trait.js";
-export { transformSchema, transformTrait } from "./plugins/transform.js";
 export {
   gameide,
   getGameContext,

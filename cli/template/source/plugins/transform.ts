@@ -1,6 +1,5 @@
 import { z } from "zod";
-import type { IconSlug } from "../lucide/lucideIconSlug.js";
-import { defineTrait } from "../trait/trait.js";
+import { defineTrait } from "gameide";
 
 export const transformSchema = z.object({
   position: z
@@ -29,5 +28,5 @@ export const transformSchema = z.object({
 export const transformTrait = defineTrait(transformSchema, {
   name: "Transform",
   description: "3D transform properties for scene objects.",
-  icon: "axis-3d" satisfies IconSlug,
+  icon: "axis-3d",
 });

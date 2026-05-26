@@ -1,7 +1,7 @@
 import { Assets, type Texture } from "pixi.js";
 
-/** Matches runtime vite: project files served under `/assets/<path>`. */
-export const DEFAULT_ASSET_BASE_URL = "/assets";
+/** Matches runtime vite: project files served from the built `assets/` directory. */
+export const DEFAULT_ASSET_BASE_URL = "assets";
 
 function normalizeProjectPath(raw: string): string {
   const trimmed = raw.trim();
@@ -12,7 +12,7 @@ function normalizeProjectPath(raw: string): string {
   if (noLeadingSlash.includes("..")) {
     throw new Error(`Invalid asset path (path traversal): ${raw}`);
   }
-  // URLs are `/assets/<path>` where <path> is relative to the project's assets folder.
+  // URLs are `assets/<path>` where <path> is relative to the project's assets folder.
   // Strip a redundant `assets/` prefix when the scene stores repo-style paths (e.g. `assets/vite.svg`).
   return noLeadingSlash.replace(/^assets\/+/i, "");
 }
@@ -42,9 +42,6 @@ export function assetURL(
   const base = stripTrailingSlash(
     assetBaseURL.trim() || DEFAULT_ASSET_BASE_URL,
   );
-  if (!base.startsWith("/") && !/^https?:\/\//i.test(base)) {
-    return `${stripTrailingSlash("/" + base)}/${normalized}`;
-  }
   return `${base}/${normalized}`;
 }
 
