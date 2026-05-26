@@ -16,7 +16,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:gameide.createProject",
+    "onCommand:gameide.createGame",
     "onCommand:gameide.uploadGame",
     "workspaceContains:**/*.scene"
   ],
@@ -24,8 +24,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "gameide.createProject",
-        "title": "Create Project",
+        "command": "gameide.createGame",
+        "title": "Create Game",
         "category": "GameIDE"
       },
       {

@@ -2,21 +2,21 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { createGameIDEProject } from "gameide-cli";
 
-async function createProject(): Promise<void> {
-  const projectName = await vscode.window.showInputBox({
-    title: "Create GameIDE Project",
-    prompt: "Project folder name",
+async function createGame(): Promise<void> {
+  const gameName = await vscode.window.showInputBox({
+    title: "Create GameIDE Game",
+    prompt: "Game folder name",
     placeHolder: "my-gameide-game",
     ignoreFocusOut: true,
     validateInput: (value) => {
-      if (!value.trim()) return "Project name is required";
+      if (!value.trim()) return "Game name is required";
       if (value.includes("/") || value.includes("\\")) {
         return "Use a folder name, not a path";
       }
       return undefined;
     },
   });
-  if (projectName === undefined) return;
+  if (gameName === undefined) return;
 
   const parent = await vscode.window.showOpenDialog({
     canSelectMany: false,
@@ -31,23 +31,23 @@ async function createProject(): Promise<void> {
   const result = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: "Creating GameIDE project",
+      title: "Creating GameIDE game",
       cancellable: false,
     },
     () =>
       createGameIDEProject({
         cwd: parentDirectory,
-        directory: projectName.trim(),
-        name: projectName.trim(),
+        directory: gameName.trim(),
+        name: gameName.trim(),
       }),
   );
 
   const relativePath = path.relative(parentDirectory, result.directory);
   const open = await vscode.window.showInformationMessage(
     `Created ${result.name} in ${relativePath || result.directory}.`,
-    "Open Project",
+    "Open Game",
   );
-  if (open === "Open Project") {
+  if (open === "Open Game") {
     await vscode.commands.executeCommand(
       "vscode.openFolder",
       vscode.Uri.file(result.directory),
@@ -56,12 +56,12 @@ async function createProject(): Promise<void> {
   }
 }
 
-export function registerCreateProjectCommand(
+export function registerCreateGameCommand(
   context: vscode.ExtensionContext,
 ): void {
   const disposable = vscode.commands.registerCommand(
-    "gameide.createProject",
-    () => createProject(),
+    "gameide.createGame",
+    () => createGame(),
   );
   context.subscriptions.push(disposable);
 }

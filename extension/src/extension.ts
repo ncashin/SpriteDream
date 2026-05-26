@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import type { SceneObject } from "gameide";
 import { ViteDevServer, resolveRuntimeDir } from "./viteDevServer";
 import { SceneEditorProvider } from "./sceneEditorProvider";
-import { registerCreateProjectCommand } from "./createProject";
+import { registerCreateGameCommand } from "./createGame";
 import { registerUploadGameCommand } from "./uploadGame";
 
 const SCENE_FILE_DEBOUNCE_MS = 150;
@@ -80,7 +80,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     { dispose: () => pendingUri.forEach((t) => clearTimeout(t)) }
   );
 
-  registerCreateProjectCommand(context);
+  registerCreateGameCommand(context);
   registerUploadGameCommand(context);
 }
 
