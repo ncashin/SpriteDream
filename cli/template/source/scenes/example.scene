@@ -1,7 +1,4 @@
 {
-  "__metadata": {
-    "name": "example"
-  },
   "ground": {
     "position": {
       "__icon": "move-3d",

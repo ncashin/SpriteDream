@@ -1,7 +1,4 @@
 {
-  "__metadata": {
-    "name": "Player"
-  },
   "position": {
     "__icon": "move-3d",
     "x": 0,

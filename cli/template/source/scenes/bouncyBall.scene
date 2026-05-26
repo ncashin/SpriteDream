@@ -1,7 +1,4 @@
 {
-  "__metadata": {
-    "name": "bouncyBall"
-  },
   "position": {
     "__icon": "move-3d",
     "x": -140,
