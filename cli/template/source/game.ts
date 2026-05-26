@@ -3,8 +3,6 @@ import {
   defineTrait,
   onGameStart,
   ownerTrait,
-  spriteTrait,
-  collisionBodyTrait,
   onGameUpdate,
   implementsTrait,
 } from "gameide";
@@ -12,6 +10,8 @@ import playerScene from "./scenes/player.scene";
 import "./style.css";
 import bouncyBallScene from "./scenes/bouncyBall.scene";
 import type { RuntimeGameContext } from "./index";
+import { collisionBodyTrait } from "./plugins/planckPlugin/index";
+import { spriteTrait } from "./plugins/pixiPlugin/index";
 
 const playerTrait = defineTrait(
   z.object({

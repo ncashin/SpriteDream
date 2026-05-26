@@ -1,6 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { getScene } from "../../scene/scene.js";
-import type { GameObject } from "../../scene/scene.js";
+import { getScene, type GameObject } from "gameide";
 import {
   collisionBodyDisabled,
   isColliderNode,

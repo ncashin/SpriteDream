@@ -7,10 +7,6 @@ export type GameUIMount = {
   dispose: () => void;
 };
 
-/**
- * Mounts game UI as a layer inside `parentRoot` (typically the GameView host).
- * Returns the same `parentRoot` so the canvas can still attach there (prepend in main).
- */
 export function createGameUI(
   parentRoot: HTMLElement,
   GameUI: ComponentType,

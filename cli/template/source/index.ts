@@ -4,15 +4,15 @@ import {
   gameUIPlugin,
   inputPlugin,
   networkingPlugin,
-  pixiPlugin,
-  planckPlugin,
 } from "gameide";
 import invariant from "tiny-invariant";
 import exampleScene from "./scenes/example.scene";
 import "./style.css";
-import { Editor } from "./Editor";
+import { Editor } from "./editor/Editor";
 import { GameUI } from "./GameUI";
 import main from "./game";
+import { pixiPlugin } from "./plugins/pixiPlugin/index";
+import { planckPlugin } from "./plugins/planckPlugin/index";
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
@@ -45,12 +45,8 @@ const game = await gameide({
         LookCamera: ["Mouse0"],
       },
     }),
-    planckPlugin({ jitterThreshold: 6 }),
-    pixiPlugin({
-      initOptions: {
-        backgroundAlpha: 0,
-      },
-    }),
+    planckPlugin(),
+    pixiPlugin(),
   ],
 });
 

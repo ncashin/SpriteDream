@@ -14,23 +14,34 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import type { IconSlug } from "../../lucide/lucideIconSlug.js";
-import type { GameObject } from "../../scene/scene.js";
-import { deselectObject } from "../../scene/objectSelection.js";
-import { getScene } from "../../scene/scene.js";
 import {
-  deleteValueAtPath,
-  getRecordAtPath,
+  deselectObject,
+  getScene,
+  getValueAtPath,
   setValueAtPath,
-} from "../../scene/path.js";
-import { useScene } from "../../hooks/useScene.js";
-import { useSelectedObject } from "../../hooks/useSelectedObject.js";
-import { useTraits } from "../../hooks/useTraits.js";
+  useScene,
+  useSelectedObject,
+  useTraits,
+  type GameObject,
+} from "gameide";
 import {
   SceneTreeRowIconFrame,
   sceneTreeRowIconFrameSizeClass,
 } from "./SceneTreeRowIcon.js";
 import { cn } from "../../utils/cn.js";
+
+type IconSlug = string;
+
+function getRecordAtPath(
+  root: Record<PropertyKey, unknown>,
+  path: PropertyKey[],
+): Record<PropertyKey, unknown> | undefined {
+  const value = path.length === 0 ? root : getValueAtPath(root, path);
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<PropertyKey, unknown>;
+  }
+  return undefined;
+}
 
 function isExpandable(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -578,7 +589,7 @@ function TreeNode({
   depth = 0,
 }: TreeNodeProps) {
   const root = getScene().get() as Record<PropertyKey, unknown>;
-  const onDelete = () => deleteValueAtPath(root, path);
+  const onDelete = () => setValueAtPath(root, path, undefined);
 
   if (!isExpandable(value)) {
     return (

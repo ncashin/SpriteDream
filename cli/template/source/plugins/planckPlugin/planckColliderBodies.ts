@@ -1,6 +1,5 @@
 import type { BodyType, World } from "planck";
-import { getScene } from "../../scene/scene.js";
-import type { GameObject } from "../../scene/scene.js";
+import { getScene, type GameObject } from "gameide";
 import {
   colliderSignature,
   createBodyForObject,

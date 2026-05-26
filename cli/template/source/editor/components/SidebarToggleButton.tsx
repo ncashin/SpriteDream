@@ -1,4 +1,5 @@
-import { Cuboid, CuboidIcon, MoveLeft, PanelLeft, PanelLeftClose } from "lucide-react";
+import type { ButtonHTMLAttributes } from "react";
+import { Cuboid, MoveLeft } from "lucide-react";
 import { OverlayButton } from "./OverlayButton.js";
 
 export function SidebarToggleButton({
@@ -9,7 +10,7 @@ export function SidebarToggleButton({
 }: {
   open: boolean;
   onToggle: () => void;
-} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+} & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <OverlayButton
       onClick={onToggle}

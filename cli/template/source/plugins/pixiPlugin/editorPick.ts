@@ -2,8 +2,7 @@ import type { Container } from "pixi.js";
 import type { World } from "planck";
 import { Vec2 } from "planck";
 import { getBodyData } from "../planckPlugin/planckBodies.js";
-import type { GameObject } from "../../scene/scene.js";
-import { getScene } from "../../scene/scene.js";
+import { getScene, type GameObject } from "gameide";
 
 export type SpriteBindingForPick = {
   root: Container;

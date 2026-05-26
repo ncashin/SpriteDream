@@ -1,8 +1,10 @@
 import { Container, Graphics } from "pixi.js";
-import { getScene } from "../../scene/scene.js";
-import type { GameObject } from "../../scene/scene.js";
-import { selectedObject } from "../../scene/objectSelection.js";
-import { subscribeUseSceneSnapshot } from "../../scene/sceneExternalStore.js";
+import {
+  getScene,
+  onEditorUpdate,
+  selectedObject,
+  type GameObject,
+} from "gameide";
 
 export type SpriteBindingLike = {
   root: Container;
@@ -156,12 +158,12 @@ export function selectionOverlay(
     sync();
   });
 
-  const unsubSelection = subscribeUseSceneSnapshot(sync);
+  const unsubEditorFrame = onEditorUpdate(sync);
 
   return {
     unsubscribe: () => {
       unsubScene();
-      unsubSelection();
+      unsubEditorFrame();
       root.destroy({ children: true });
     },
   };

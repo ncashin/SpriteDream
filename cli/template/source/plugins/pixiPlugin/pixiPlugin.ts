@@ -3,9 +3,8 @@ import {
   Container,
   type ApplicationOptions,
 } from "pixi.js";
-import type { Plugin } from "../../lifecycle/plugin.js";
 import type { PlanckPluginAPI } from "../planckPlugin/planckPlugin.js";
-import { selectObject } from "../../scene/objectSelection.js";
+import { selectObject, type Plugin } from "gameide";
 import { pickSceneObjectAtWorldPoint } from "./editorPick.js";
 import { pixiSprites } from "./sprite.js";
 import {

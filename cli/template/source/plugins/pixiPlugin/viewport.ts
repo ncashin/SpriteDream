@@ -1,7 +1,5 @@
 import type { Application, Container } from "pixi.js";
-import { createCallbackRegistry } from "../../lifecycle/callbackRegistry.js";
-import { onEditorUpdate } from "../../lifecycle/gameloop.js";
-import { onModeChange } from "../../lifecycle/mode.js";
+import { onEditorUpdate, onModeChange } from "gameide";
 
 export type ViewportState = {
   centerX: number;
@@ -58,10 +56,10 @@ export function createViewport(
   };
 
   const rootElement = options.rootElement;
-  const listeners = createCallbackRegistry<ViewportListener>();
+  const listeners = new Set<ViewportListener>();
 
   const emitChange = () => {
-    listeners.run({ ...state });
+    for (const listener of listeners) listener({ ...state });
   };
 
   return {
@@ -91,7 +89,10 @@ export function createViewport(
     },
     onChange(callback) {
       callback({ ...state });
-      return listeners.register(callback);
+      listeners.add(callback);
+      return () => {
+        listeners.delete(callback);
+      };
     },
     screenToWorld(clientX: number, clientY: number): { x: number; y: number } {
       if (!rootElement) {

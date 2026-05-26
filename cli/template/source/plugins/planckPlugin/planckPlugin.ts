@@ -1,10 +1,14 @@
 import { Settings, Vec2, type Body, World, type BodyType } from "planck";
-import { start, onGameUpdate } from "../../lifecycle/gameloop.js";
-import { GameIDEMode, getMode } from "../../lifecycle/mode.js";
-import type { Plugin } from "../../lifecycle/plugin.js";
-import type { GameObject } from "../../scene/scene.js";
-import { getScene } from "../../scene/scene.js";
-import { peerIntegratesPhysicsForObject } from "../networkingPlugin/distributedSimulation.js";
+import {
+  GameIDEMode,
+  getMode,
+  getScene,
+  onGameUpdate,
+  peerIntegratesPhysicsForObject,
+  start,
+  type GameObject,
+  type Plugin,
+} from "gameide";
 import {
   sceneBodyIsDynamic,
   sceneBodyIsKinematic,

@@ -1,5 +1,5 @@
 import type { BodyType } from "planck";
-import type { GameObject } from "../../scene/scene.js";
+import type { GameObject } from "gameide";
 
 export function getSceneBodyType(object: GameObject): BodyType {
   const raw = (object as { collisionBody?: { type?: BodyType } }).collisionBody;

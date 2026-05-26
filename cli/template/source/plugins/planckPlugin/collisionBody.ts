@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineTrait } from "../../trait/trait";
+import { defineTrait } from "gameide";
 
 export const collisionBodyTrait = defineTrait(
   z.object({

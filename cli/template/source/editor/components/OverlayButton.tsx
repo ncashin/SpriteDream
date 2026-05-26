@@ -1,3 +1,4 @@
+import type { ButtonHTMLAttributes } from "react";
 import { cn } from "../../utils/cn.js";
 
 export function OverlayButton({
@@ -7,7 +8,7 @@ export function OverlayButton({
   ...props
 }: {
   variant?: "default" | "danger";
-} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+} & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       type="button"

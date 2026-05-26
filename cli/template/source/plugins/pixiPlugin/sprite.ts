@@ -1,11 +1,35 @@
 import { Container, Sprite, Texture } from "pixi.js";
-import { getScene, type ScenePath } from "../../scene/scene.js";
+import { z } from "zod";
 import {
-  spriteTrait,
-  type SpriteRenderable,
-} from "../../trait/spriteTrait.js";
-import { implementsTrait } from "../../trait/trait.js";
+  defineTrait,
+  getScene,
+  implementsTrait,
+  transformSchema,
+  type GameObject,
+} from "gameide";
 import { loadGraphicTexture } from "./asset.js";
+
+const spriteFieldsSchema = z.object({
+  sprite: z.object({
+    __icon: z.literal("image"),
+    asset: z.string().default(""),
+    width: z.number().default(1),
+    height: z.number().default(1),
+    tint: z.string().default("#ffffff"),
+  }),
+});
+
+export const spriteRenderableSchema = transformSchema.merge(spriteFieldsSchema);
+
+export type SpriteRenderable = GameObject & z.infer<typeof spriteRenderableSchema>;
+
+export const spriteTrait = defineTrait(spriteRenderableSchema, {
+  name: "Sprite",
+  description: "2D textured sprite from the project assets folder.",
+  icon: "image",
+});
+
+type ScenePath = PropertyKey[];
 
 type SpritePixiBinding = {
   root: Container;

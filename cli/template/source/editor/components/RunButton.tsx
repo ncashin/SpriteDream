@@ -1,6 +1,6 @@
 import { Play, Square } from "lucide-react";
-import { useState, useEffect } from "react";
-import { GameIDEMode, getMode, setMode, onModeChange } from "../../lifecycle/mode.js";
+import { useEffect, useState, type ButtonHTMLAttributes } from "react";
+import { GameIDEMode, getMode, onModeChange, setMode } from "gameide";
 import { OverlayButton } from "./OverlayButton.js";
 
 function useMode() {
@@ -14,7 +14,7 @@ function useMode() {
 export function RunButton({
   className,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
   const mode = useMode();
   const isRunning = mode === GameIDEMode.Game;
 

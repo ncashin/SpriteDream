@@ -1,13 +1,12 @@
 import type { ComponentType } from "react";
 import { createGameUI } from "./createGameUI.js";
-import { ExampleGameUI } from "./ExampleGameUI.js";
 
 export const gameUIPlugin =
-  (GameUI?: ComponentType) =>
-  async (input: { rootElement: HTMLElement; dispose: (fn: () => void) => void }) => {
+  (GameUI: ComponentType) =>
+  async (input: { rootElement: HTMLElement; dispose: (callback: () => void) => void }) => {
     const mount = await createGameUI(
       input.rootElement,
-      GameUI ?? ExampleGameUI,
+      GameUI,
     );
 
     input.dispose(() => {

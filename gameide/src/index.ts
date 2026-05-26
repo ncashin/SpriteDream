@@ -74,24 +74,9 @@ export {
 export { peerIntegratesPhysicsForObject } from "./plugins/networkingPlugin/distributedSimulation.js";
 export type { NetworkingAPI as NetworkingApi, NetworkingPluginOptions } from "./plugins/networkingPlugin/networkingPlugin.js";
 export { gameUIPlugin } from "./plugins/gameUIPlugin/gameUIPlugin.js";
-export { ExampleGameUI } from "./plugins/gameUIPlugin/ExampleGameUI.js";
 export { Game } from "./plugins/gameUIPlugin/Game.js";
-export { DefaultEditor } from "./plugins/editorPlugin/DefaultEditor.js";
-export { TransformGizmoBar } from "./plugins/editorPlugin/TransformGizmoBar.js";
-export {
-  getTransformGizmoTool,
-  setTransformGizmoTool,
-  subscribeTransformGizmoTool,
-  getTransformGizmoToolSnapshot,
-  type TransformGizmoTool,
-} from "./plugins/editorPlugin/transformGizmoTool.js";
-export { useTransformGizmoTool } from "./hooks/useTransformGizmoTool.js";
 export { EditorRoot } from "./plugins/editorPlugin/EditorRoot.js";
-export { SceneTree } from "./plugins/editorPlugin/SceneTree.js";
-export { Sidebar } from "./plugins/editorPlugin/Sidebar.js";
 export { GameView } from "./plugins/editorPlugin/GameView.js";
-export { OverlayButton } from "./plugins/editorPlugin/OverlayButton.js";
-export { OverlayInput } from "./plugins/editorPlugin/OverlayInput.js";
 export { useScene } from "./hooks/useScene.js";
 export { useSelectedObject } from "./hooks/useSelectedObject.js";
 export { useTraits } from "./hooks/useTraits.js";
@@ -106,50 +91,3 @@ export type {
   InputPluginRequiredContext,
   InputPluginOptions,
 } from "./plugins/inputPlugin/inputPlugin.js";
-export {
-  pixiPlugin,
-  type PixiPluginAPI,
-  type PixiPluginInputContext,
-  type PixiPluginOptions,
-  type Viewport,
-} from "./plugins/pixiPlugin/pixiPlugin.js";
-export {
-  pickSceneObjectAtWorldPoint,
-  type SpriteBindingForPick,
-} from "./plugins/pixiPlugin/editorPick.js";
-export { colliderDebug, type ColliderDebugOptions } from "./plugins/pixiPlugin/colliderDebug.js";
-export {
-  type ViewportState,
-  type ViewportController,
-  type PixiViewportInput,
-  type PixiViewportOptions,
-  type EditorViewportGestureState,
-  type EditorViewportFrameOptions,
-  type EditorViewportFrameResult,
-  pixiViewport,
-  createEditorViewportGestureState,
-  editorViewportEditorFrame,
-  applyViewportToWorldContainer,
-  createViewport,
-} from "./plugins/pixiPlugin/viewport.js";
-export { spriteTrait } from "./trait/spriteTrait.js";
-export {
-  planckPlugin,
-  getSceneBodyType,
-  getEffectivePlanckBodyType,
-  sceneBodyIsStatic,
-  sceneBodyIsKinematic,
-  sceneBodyIsDynamic,
-  type PlanckPluginAPI,
-  type PlanckPluginOptions,
-  type PlanckCollisionHandler,
-  type PlanckCollisionInfo,
-  type PlanckContactPhase,
-} from "./plugins/planckPlugin/planckPlugin.js";
-export type { Rigidbody2D } from "./plugins/planckPlugin/rigidbody2D.js";
-export {
-  boxColliderTrait,
-  circleColliderTrait,
-
-} from "./plugins/planckPlugin/colliderComponents.js";
-export { collisionBodyTrait } from "./plugins/planckPlugin/collisionBody.js";

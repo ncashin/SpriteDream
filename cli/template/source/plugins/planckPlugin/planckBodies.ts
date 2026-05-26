@@ -1,5 +1,5 @@
 import { type Body, type BodyType, type World, Vec2, Box, Circle } from "planck";
-import type { GameObject } from "../../scene/scene.js";
+import type { GameObject } from "gameide";
 
 export type PhysicsUserData = {
   object: GameObject;

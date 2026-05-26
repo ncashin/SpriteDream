@@ -1,5 +1,5 @@
 import { WorldManifold, type Contact, type Fixture, type World } from "planck";
-import type { GameObject } from "../../scene/scene.js";
+import type { GameObject } from "gameide";
 import { getBodyData } from "./planckBodies.js";
 
 export type PlanckContactPhase = "enter" | "exit";

@@ -1,12 +1,10 @@
 import { z } from "zod";
-import type { IconSlug } from "../../lucide/lucideIconSlug.js";
-import { transformTrait } from "../../trait/transform.js";
-import { defineTrait } from "../../index.js";
+import { defineTrait } from "gameide";
 
 export const boxColliderTrait = defineTrait(
   z.object({
     boxCollider: z.object({
-      __icon: z.literal("square" satisfies IconSlug),
+      __icon: z.literal("square"),
       width: z.number().default(32),
       height: z.number().default(32),
       offset: z.object({
@@ -26,7 +24,7 @@ export const boxColliderTrait = defineTrait(
 export const circleColliderTrait = defineTrait(
   z.object({
     circleCollider: z.object({
-      __icon: z.literal("circle" satisfies IconSlug),
+      __icon: z.literal("circle"),
       radius: z.number().default(16),
       offset: z.object({
         x: z.number().default(0),

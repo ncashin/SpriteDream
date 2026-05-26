@@ -1,7 +1,6 @@
 import type { BodyType, Vec2 as Vec2T } from "planck";
 import { Vec2 } from "planck";
-import type { Scene } from "../../scene/scene.js";
-import type { GameObject } from "../../scene/scene.js";
+import type { GameObject, Scene } from "gameide";
 import type { PlanckRecord } from "./planckBodies.js";
 import { getSceneBodyType } from "./planckBodyTypes.js";
 

@@ -1,10 +1,6 @@
 import { useCallback, useMemo } from "react";
-import type { IconSlug } from "../lucide/lucideIconSlug.js";
 import { getScene } from "../scene/scene.js";
 import { getValueAtPath } from "../scene/path.js";
-import "../trait/spriteTrait.js";
-import "../plugins/planckPlugin/collisionBody.js";
-import "../plugins/planckPlugin/colliderComponents.js";
 import { getTraitDefinitions, TraitDefinitionEntry } from "../trait/trait.js";
 
 function mergeMissing(target: Record<string, unknown>, incoming: Record<string, unknown>) {

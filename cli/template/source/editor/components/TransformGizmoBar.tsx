@@ -1,11 +1,20 @@
 import { Move, RotateCw, Scaling } from "lucide-react";
-import type { ReactNode } from "react";
-import { useTransformGizmoTool } from "../../hooks/useTransformGizmoTool.js";
+import { useSyncExternalStore, type ReactNode } from "react";
 import {
+  getTransformGizmoToolSnapshot,
   setTransformGizmoTool,
+  subscribeTransformGizmoTool,
   type TransformGizmoTool,
 } from "./transformGizmoTool.js";
 import { cn } from "../../utils/cn.js";
+
+function useTransformGizmoTool(): TransformGizmoTool {
+  return useSyncExternalStore(
+    subscribeTransformGizmoTool,
+    getTransformGizmoToolSnapshot,
+    getTransformGizmoToolSnapshot,
+  );
+}
 
 function ToolButton({
   active,
