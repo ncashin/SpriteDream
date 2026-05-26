@@ -1,7 +1,7 @@
 import { connectWebSocketRoomTransport } from "./websocketRoomTransport.js";
 import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
-import type {  GameObject, Scene, SceneObject } from "../../scene/scene.js";
+import type { GameObject, Scene, SceneObject } from "../../scene/scene.js";
 import type { Plugin } from "../../lifecycle/plugin.js";
 import { dispose } from "../../lifecycle/gameloop.js";
 import {
@@ -23,16 +23,6 @@ export type NetworkingPluginOptions = {
   room?: string;
   url?: string;
 };
-
-function replaceRootScene(scene: Scene, content: SceneObject): void {
-  const raw = scene.getRaw();
-  const clear: Partial<SceneObject> = {};
-  for (const key of Object.keys(raw)) {
-    clear[key] = undefined;
-  }
-  scene.applyPatch(clear);
-  scene.applyPatch(content);
-}
 
 export type NetworkingPluginRequiredContext = {
   rootElement: HTMLElement;
@@ -62,7 +52,7 @@ export const networkingPlugin = (
 
     const shouldBootstrapScene = transport.getPeers().length === 1;
     if (shouldBootstrapScene && input.initialScene !== undefined) {
-      replaceRootScene(input.scene, input.initialScene);
+      input.scene.replace(input.initialScene);
     }
 
     const peerId = crypto.randomUUID();
