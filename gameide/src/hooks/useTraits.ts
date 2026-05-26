@@ -8,19 +8,23 @@ import "../plugins/planckPlugin/colliderComponents.js";
 import { getTraitDefinitions, TraitDefinitionEntry } from "../trait/trait.js";
 
 function mergeMissing(target: Record<string, unknown>, incoming: Record<string, unknown>) {
-  for (const [k, v] of Object.entries(incoming)) {
-    if (v === undefined) continue;
-    if (!(k in target)) {
-      target[k] = v;
-    } else if (
-      v &&
-      typeof v === "object" &&
-      !Array.isArray(v) &&
-      target[k] &&
-      typeof target[k] === "object" &&
-      !Array.isArray(target[k])
+  for (const [key, value] of Object.entries(incoming)) {
+    if (value === undefined) continue;
+
+    if (!(key in target)) {
+      target[key] = value;
+      continue;
+    }
+
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      target[key] &&
+      typeof target[key] === "object" &&
+      !Array.isArray(target[key])
     ) {
-      mergeMissing(target[k] as Record<string, unknown>, v as Record<string, unknown>);
+      mergeMissing(target[key] as Record<string, unknown>, value as Record<string, unknown>);
     }
   }
 }
@@ -40,21 +44,23 @@ export function useTraits() {
   );
 
   const mergeTraitInto = useCallback((objectPath: PropertyKey[], traitId: number) => {
-    const def = templates.find((t) => t.id === traitId);
-    if (!def) return;
-    const node = getValueAtPath(
+    const traitDefinition = templates.find((template) => template.id === traitId);
+    if (!traitDefinition) return;
+
+    const sceneNode = getValueAtPath(
       getScene() as Record<PropertyKey, unknown>,
       objectPath,
     );
-    if (!node || typeof node !== "object" || Array.isArray(node)) return;
-    const target = node as Record<string, unknown>;
-    mergeMissing(target, def.defaults as Record<string, unknown>);
+    if (!sceneNode || typeof sceneNode !== "object" || Array.isArray(sceneNode)) return;
+
+    const target = sceneNode as Record<string, unknown>;
+    mergeMissing(target, traitDefinition.defaults as Record<string, unknown>);
     if (
-      typeof def.icon === "string" &&
-      def.icon.trim() !== "" &&
+      typeof traitDefinition.icon === "string" &&
+      traitDefinition.icon.trim() !== "" &&
       !("__icon" in target)
     ) {
-      target.__icon = def.icon;
+      target.__icon = traitDefinition.icon;
     }
   }, [templates]);
 
