@@ -26,7 +26,6 @@ function runtimeAssetsPlugin(assetsDir: string): Plugin {
           next();
           return;
         }
-
         const resolvedAssets = path.resolve(assetsDir);
         const resolvedFile = path.resolve(path.join(assetsDir, pathname));
         if (
@@ -36,7 +35,6 @@ function runtimeAssetsPlugin(assetsDir: string): Plugin {
           next();
           return;
         }
-
         void fs
           .readFile(resolvedFile)
           .then((buf) => {
@@ -51,7 +49,10 @@ function runtimeAssetsPlugin(assetsDir: string): Plugin {
               ".gif": "image/gif",
               ".json": "application/json",
             };
-            res.setHeader("Content-Type", mime[ext] ?? "application/octet-stream");
+            res.setHeader(
+              "Content-Type",
+              mime[ext] ?? "application/octet-stream",
+            );
             res.end(buf);
           })
           .catch(() => next());

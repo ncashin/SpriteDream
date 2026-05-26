@@ -3,10 +3,12 @@ import {
   gameide,
   gameUIPlugin,
   inputPlugin,
+  networkingPlugin,
   pixiPlugin,
+  planckPlugin,
 } from "gameide";
 import invariant from "tiny-invariant";
-import mainScene from "./scenes/main.scene";
+import exampleScene from "./scenes/example.scene";
 import "./style.css";
 import { Editor } from "./Editor";
 import { GameUI } from "./GameUI";
@@ -18,15 +20,32 @@ invariant(rootElement);
 const game = await gameide({
   rootElement,
   initialContext: {},
-  initialScene: mainScene,
+  initialScene: exampleScene,
   plugins: [
     editorPlugin(Editor),
     gameUIPlugin(GameUI),
-    inputPlugin({
-      axes: {},
-      buttons: {},
-      mouseHandling: "editor",
+    networkingPlugin({
+      room: "default",
     }),
+    inputPlugin({
+      axes: {
+        Horizontal: {
+          negative: ["KeyA", "KeyArrowLeft"],
+          positive: ["KeyD", "KeyArrowRight"],
+        },
+      },
+      mouseHandling: "editor",
+      buttons: {
+        Jump: ["KeyW", "KeySpace", "KeyArrowUp"],
+        Interact: ["KeyE"],
+        Throw: ["Mouse0"],
+        Click: ["Mouse0"],
+        EditorMoveUp: ["KeySpace"],
+        EditorMoveDown: ["KeyShiftLeft", "KeyShiftRight"],
+        LookCamera: ["Mouse0"],
+      },
+    }),
+    planckPlugin({ jitterThreshold: 6 }),
     pixiPlugin({
       initOptions: {
         backgroundAlpha: 0,

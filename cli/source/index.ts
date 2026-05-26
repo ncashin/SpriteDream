@@ -117,6 +117,7 @@ export async function createGameIDEProject(
 
   await ensureDirectoryIsWritableTarget(targetDirectory);
   await writeTemplateFiles(targetDirectory, {
+    "gameide-template-project": projectName,
     __GAMEIDE_PROJECT_NAME__: projectName,
     __GAMEIDE_DISPLAY_NAME__: projectName,
   });

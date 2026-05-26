@@ -1,0 +1,70 @@
+{
+  "__metadata": {
+    "name": "Player"
+  },
+  "position": {
+    "__icon": "move-3d",
+    "x": 0,
+    "y": -280,
+    "z": 0
+  },
+  "rotation": {
+    "__icon": "rotate-3d",
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "scale": {
+    "__icon": "scaling",
+    "x": 1,
+    "y": 1,
+    "z": 1
+  },
+  "moveSpeed": 260,
+  "jumpSpeed": 650,
+  "playerGravityY": -1500,
+  "grounded": false,
+  "sprite": {
+    "__icon": "image",
+    "asset": "assets/typescript.svg",
+    "width": 32,
+    "height": 32,
+    "tint": "#ffffff"
+  },
+  "collisionBody": {
+    "__icon": "atom",
+    "type": "dynamic",
+    "velocity": {
+      "x": 0,
+      "y": 0,
+      "angular": 0
+    },
+    "fixedRotation": true,
+    "continuous": false,
+    "isTrigger": false,
+    "restitution": 0,
+    "friction": 0,
+    "disabled": false
+  },
+  "boxCollider": {
+    "__icon": "square",
+    "width": 32,
+    "height": 32,
+    "offset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "platform_0": {
+    "position": {
+      "x": -272.6924848630547,
+      "y": -337.42013779839857
+    },
+    "rotation": {
+      "z": 0.6134250611798746
+    },
+    "scale": {
+      "y": 1.205128205128205
+    }
+  }
+}

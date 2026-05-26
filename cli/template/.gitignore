@@ -1,0 +1,7 @@
+node_modules
+dist
+dist-ssr
+.gameide
+*.local
+*.log
+.env

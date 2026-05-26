@@ -7,13 +7,13 @@
     "vscode": "^1.85.0"
   },
   "workspaces": [
-    "gameide-cli",
+    "cli",
     "gameide",
-    "runtime",
+    "cli/template",
     "extension"
   ],
   "scripts": {
-    "dev": "sh -c 'npm run build -w gameide && npm run dev --prefix webapp & npm run dev -w runtime'",
+    "dev": "sh -c 'npm run build -w gameide && npm run dev --prefix webapp & npm run dev --prefix cli/template'",
     "watch": "npm run watch -w extension"
   }
 }

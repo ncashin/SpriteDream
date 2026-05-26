@@ -1,14 +1,19 @@
 import { useState, type Ref } from "react";
 import {
-  EditorRoot,
-  GameIDEMode,
-  GameView,
-  OverlayButton,
   SceneTree,
+  GameView,
   Sidebar,
-  TransformGizmoBar,
+  OverlayButton,
+  OverlayInput,
+  GameIDEMode,
   setMode,
   useGameIDEMode,
+  useScene,
+  EditorRoot,
+  TransformGizmoBar,
+  getScene,
+  getValueAtPath,
+  setValueAtPath,
 } from "gameide";
 import { Cuboid, MoveLeft, Play, Square } from "lucide-react";
 
@@ -20,6 +25,13 @@ export function Editor({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const mode = useGameIDEMode();
   const isRunning = mode === GameIDEMode.Game;
+  const [scene] = useScene();
+  const sceneName = getValueAtPath(scene, [
+    "__metadata",
+    "name",
+  ]);
+  const setSceneName = (next: string) =>
+    setValueAtPath(getScene().get(), ["__metadata", "name"], next);
 
   return (
     <EditorRoot>
@@ -32,7 +44,7 @@ export function Editor({
 
         <div className="absolute top-3 left-0 right-0 flex h-[22px] min-h-[22px] items-center px-3 gap-3 box-border">
           <OverlayButton
-            onClick={() => setSidebarOpen((open) => !open)}
+            onClick={() => setSidebarOpen((o) => !o)}
             title={sidebarOpen ? "Close scene" : "Open scene"}
           >
             {sidebarOpen ? (
@@ -48,7 +60,16 @@ export function Editor({
             )}
           </OverlayButton>
 
-          <div className="flex-1" />
+          <OverlayInput
+            className="min-w-[10rem] flex-1 basis-0"
+            value={
+              typeof sceneName === "string" && sceneName.length > 0
+                ? sceneName
+                : ""
+            }
+            onChange={(next) => setSceneName(next)}
+            placeholder="Untitled Scene"
+          />
 
           <div className="flex items-center gap-1.5 shrink-0">
             <TransformGizmoBar />

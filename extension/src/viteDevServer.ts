@@ -120,25 +120,29 @@ export class ViteDevServer {
 }
 
 export function resolveRuntimeDir(extensionUri: vscode.Uri): string | undefined {
+  const hasPackageJson = (directory: string): boolean => {
+    try {
+      return fs.existsSync(path.join(directory, "package.json"));
+    } catch {
+      return false;
+    }
+  };
+
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (workspaceFolders?.length) {
     for (const folder of workspaceFolders) {
-      const runtimePath = path.join(folder.uri.fsPath, "runtime");
-      try {
-        const pkgPath = path.join(runtimePath, "package.json");
-        if (fs.existsSync(pkgPath)) {
-          return runtimePath;
-        }
-      } catch {
+      const templatePath = path.join(folder.uri.fsPath, "cli", "template");
+      if (hasPackageJson(templatePath)) {
+        return templatePath;
       }
     }
   }
-  const sibling = path.join(path.dirname(extensionUri.fsPath), "runtime");
-  try {
-    if (fs.existsSync(path.join(sibling, "package.json"))) {
-      return sibling;
-    }
-  } catch {
+
+  const repositoryRoot = path.dirname(extensionUri.fsPath);
+  const templateSibling = path.join(repositoryRoot, "cli", "template");
+  if (hasPackageJson(templateSibling)) {
+    return templateSibling;
   }
+
   return undefined;
 }
