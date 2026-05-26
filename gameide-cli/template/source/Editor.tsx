@@ -1,20 +1,18 @@
 import { useState, type Ref } from "react";
-import { SceneTree } from "./SceneTree.js";
-import { GameView } from "./GameView.js";
-import { Sidebar } from "./Sidebar.js";
-import { cn } from "../../utils/cn.js";
-import { OverlayButton } from "./OverlayButton.js";
-import { OverlayInput } from "./OverlayInput.js";
+import {
+  EditorRoot,
+  GameIDEMode,
+  GameView,
+  OverlayButton,
+  SceneTree,
+  Sidebar,
+  TransformGizmoBar,
+  setMode,
+  useGameIDEMode,
+} from "gameide";
 import { Cuboid, MoveLeft, Play, Square } from "lucide-react";
-import { GameIDEMode, setMode } from "../../lifecycle/mode.js";
-import { useGameIDEMode } from "../../hooks/useGameIDEMode.js";
-import { getScene } from "../../scene/scene.js";
-import { getValueAtPath, setValueAtPath } from "../../scene/path.js";
-import { useScene } from "../../hooks/useScene.js";
-import { EditorRoot } from "./EditorRoot.js";
-import { TransformGizmoBar } from "./TransformGizmoBar.js";
 
-export function DefaultEditor({
+export function Editor({
   gameViewRef,
 }: {
   gameViewRef?: Ref<HTMLDivElement>;
@@ -22,16 +20,6 @@ export function DefaultEditor({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const mode = useGameIDEMode();
   const isRunning = mode === GameIDEMode.Game;
-  const [scene] = useScene();
-  const sceneName = getValueAtPath(scene as Record<PropertyKey, unknown>, [
-    "__metadata",
-    "name",
-  ]);
-  const setSceneName = (next: string) =>
-    setValueAtPath(getScene().get() as Record<PropertyKey, unknown>, [
-      "__metadata",
-      "name",
-    ], next);
 
   return (
     <EditorRoot>
@@ -44,7 +32,7 @@ export function DefaultEditor({
 
         <div className="absolute top-3 left-0 right-0 flex h-[22px] min-h-[22px] items-center px-3 gap-3 box-border">
           <OverlayButton
-            onClick={() => setSidebarOpen((o) => !o)}
+            onClick={() => setSidebarOpen((open) => !open)}
             title={sidebarOpen ? "Close scene" : "Open scene"}
           >
             {sidebarOpen ? (
@@ -60,16 +48,7 @@ export function DefaultEditor({
             )}
           </OverlayButton>
 
-          <OverlayInput
-            className="flex-1 basis-0 min-w-0 max-w-sm"
-            value={
-              typeof sceneName === "string" && sceneName.length > 0
-                ? sceneName
-                : ""
-            }
-            onChange={(next) => setSceneName(next)}
-            placeholder="Untitled Scene"
-          />
+          <div className="flex-1" />
 
           <div className="flex items-center gap-1.5 shrink-0">
             <TransformGizmoBar />

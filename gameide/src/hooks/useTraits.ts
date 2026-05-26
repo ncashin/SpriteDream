@@ -48,7 +48,7 @@ export function useTraits() {
     if (!traitDefinition) return;
 
     const sceneNode = getValueAtPath(
-      getScene() as Record<PropertyKey, unknown>,
+      getScene().get() as Record<PropertyKey, unknown>,
       objectPath,
     );
     if (!sceneNode || typeof sceneNode !== "object" || Array.isArray(sceneNode)) return;

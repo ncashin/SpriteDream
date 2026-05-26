@@ -61,6 +61,7 @@ export async function createSceneChannel(
   const { transport, scene, initializeScene = true } = options;
   let sceneInitialized = !initializeScene;
   let paused = false;
+  let applyingRemoteChange = false;
 
   let markReady: () => void;
   const readyPromise = new Promise<void>((resolve) => {
@@ -95,21 +96,33 @@ export async function createSceneChannel(
       case SCENE_CHANNEL.initialScene: {
         if (sceneInitialized) return;
         sceneInitialized = true;
+        applyingRemoteChange = true;
         try {
           scene.replace(parsePatchContent(message.content));
         } finally {
+          applyingRemoteChange = false;
           markReady();
         }
         return;
       }
       case SCENE_CHANNEL.scenePatch: {
         if (!sceneInitialized || paused) return;
-        scene.applyPatch(message.content);
+        applyingRemoteChange = true;
+        try {
+          scene.applyPatch(message.content);
+        } finally {
+          applyingRemoteChange = false;
+        }
         return;
       }
       case SCENE_CHANNEL.sceneChange: {
         if (!sceneInitialized || paused) return;
-        scene.replace(parsePatchContent(message.content));
+        applyingRemoteChange = true;
+        try {
+          scene.replace(parsePatchContent(message.content));
+        } finally {
+          applyingRemoteChange = false;
+        }
         return;
       }
     }
@@ -134,7 +147,7 @@ export async function createSceneChannel(
   scheduleNextAnimationFrame(patchFlushLoop);
 
   const unsubscribeOnChange = scene.onChange((_object, property, newValue) => {
-    if (!sceneInitialized || paused) return;
+    if (!sceneInitialized || paused || applyingRemoteChange) return;
     setValueAtPath(pendingPatch, property, newValue);
   });
 

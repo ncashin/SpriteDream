@@ -16,11 +16,18 @@
     "Other"
   ],
   "activationEvents": [
+    "onCommand:gameide.createProject",
+    "onCommand:gameide.uploadGame",
     "workspaceContains:**/*.scene"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
+      {
+        "command": "gameide.createProject",
+        "title": "Create Project",
+        "category": "GameIDE"
+      },
       {
         "command": "gameide.uploadGame",
         "title": "Upload Game",
@@ -62,7 +69,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "vite build",
+    "compile": "npm run build -w gameide-cli && vite build",
     "watch": "vite build --watch",
     "package": "npm run compile && npx vsce package"
   },
@@ -74,6 +81,7 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
-    "gameide": "*"
+    "gameide": "*",
+    "gameide-cli": "*"
   }
 }

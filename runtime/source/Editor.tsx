@@ -31,7 +31,7 @@ export function Editor({
     "name",
   ]);
   const setSceneName = (next: string) =>
-    setValueAtPath(getScene(), ["__metadata", "name"], next);
+    setValueAtPath(getScene().get(), ["__metadata", "name"], next);
 
   return (
     <EditorRoot>

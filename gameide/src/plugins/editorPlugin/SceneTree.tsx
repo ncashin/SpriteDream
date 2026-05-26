@@ -577,7 +577,7 @@ function TreeNode({
   expandObjectsByDefault = false,
   depth = 0,
 }: TreeNodeProps) {
-  const root = getScene() as Record<PropertyKey, unknown>;
+  const root = getScene().get() as Record<PropertyKey, unknown>;
   const onDelete = () => deleteValueAtPath(root, path);
 
   if (!isExpandable(value)) {
@@ -700,7 +700,7 @@ export function SceneTree() {
     rootObject = root as GameObject;
   }
 
-  const sceneRoot = getScene() as Record<PropertyKey, unknown>;
+  const sceneRoot = getScene().get() as Record<PropertyKey, unknown>;
   let displayRoot: GameObject | undefined = rootObject;
   let nodePathPrefix: PropertyKey[] = [];
 
@@ -713,7 +713,7 @@ export function SceneTree() {
   }
 
   const setAtPath = useCallback((scenePath: PropertyKey[], next: unknown) => {
-    setValueAtPath(getScene() as Record<PropertyKey, unknown>, scenePath, next);
+    setValueAtPath(getScene().get() as Record<PropertyKey, unknown>, scenePath, next);
   }, []);
 
   const viewingSelectionSubtree = Boolean(selectedPath?.length);

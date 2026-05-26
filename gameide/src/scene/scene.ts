@@ -1,3 +1,5 @@
+import { invalidateUseSceneSnapshot } from "./sceneExternalStore.js";
+
 export type GameObject = Record<PropertyKey, unknown>;
 export type SceneObject = Record<PropertyKey, unknown>;
 
@@ -71,6 +73,7 @@ export function createSceneProxy<T extends object = GameObject>(
 export const curryScene = (rawScene: SceneObject) => {
   const listeners: SceneListener[] = [];
   const scene = createSceneProxy(rawScene, [], (object, property, value) => {
+    invalidateUseSceneSnapshot();
     listeners.forEach((listener) => listener(object, property, value));
   });
 

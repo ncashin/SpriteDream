@@ -7,6 +7,7 @@
     "vscode": "^1.85.0"
   },
   "workspaces": [
+    "gameide-cli",
     "gameide",
     "runtime",
     "extension"

@@ -58,6 +58,9 @@ export const editorPlugin =
 
     return {
       ...input,
+      initialScene: embeddedInParentIFrame
+        ? structuredClone(input.scene.getRaw())
+        : input.initialScene,
       rootElement: mount.gameViewRoot,
       editorSceneChannel: channel,
     };

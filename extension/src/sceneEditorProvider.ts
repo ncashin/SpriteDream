@@ -171,9 +171,6 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     webviewPanel: vscode.WebviewPanel,
     token: vscode.CancellationToken,
   ): Promise<void> {
-    document.setBroadcastScene((content) => {
-      webviewPanel.webview.postMessage({ type: "scene", content });
-    });
     this.webviewToDocument.set(webviewPanel.webview, document);
     webviewPanel.onDidChangeViewState(() => {});
     const webview = webviewPanel.webview;
@@ -181,8 +178,6 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       enableScripts: true,
       localResourceRoots: [this.extensionUri],
     };
-    const html = this.getHTMLForWebview(webview);
-    webview.html = html;
 
     const transport: SceneChannelTransport = {
       send: (message: unknown): void => {
@@ -225,7 +220,11 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       scene: document.getSceneAPI(),
       initializeScene: false,
     });
-    document.broadcastScene();
+    document.setBroadcastScene((content) => {
+      channel.sendSceneChange(content);
+    });
+
+    webview.html = this.getHTMLForWebview();
 
     webviewPanel.onDidDispose(() => {
       channel.dispose();
@@ -297,7 +296,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     await vscode.workspace.fs.writeFile(uri, bytes);
   }
 
-  private getHTMLForWebview(webview: vscode.Webview): string {
+  private getHTMLForWebview(): string {
     const port = this.devServer
       ? this.devServer.getPort()
       : parseInt(process.env.GAMEIDE_RUNTIME_PORT ?? "38472", 10) || 38472;

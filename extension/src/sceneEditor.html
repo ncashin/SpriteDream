@@ -26,21 +26,12 @@
         const iframe = document.getElementById("gameide-runtime");
         const vscode =
           typeof acquireVsCodeApi !== "undefined" ? acquireVsCodeApi() : null;
-        let pendingSceneContent = null;
-        let runtimeRequestedInitialScene = false;
 
         function postToVscode(payload) {
           vscode?.postMessage(payload);
         }
         function postToIframe(payload) {
           iframe?.contentWindow?.postMessage(payload, "*");
-        }
-
-        function sendInitialSceneToIFrame(content) {
-          postToIframe({
-            type: "gameide.editor.initialScene",
-            content: content,
-          });
         }
 
         /** `event.data` or one optional VS Code `{ data: payload }` hop. */
@@ -75,13 +66,9 @@
           if (fromRuntimeIFrame) {
             switch (message.type) {
               case "gameide.editor.requestInitialScene":
-                runtimeRequestedInitialScene = true;
-                if (pendingSceneContent !== null)
-                  sendInitialSceneToIFrame(pendingSceneContent);
-                else
-                  postToVscode({
-                    type: "gameide.editor.requestInitialScene",
-                  });
+                postToVscode({
+                  type: "gameide.editor.requestInitialScene",
+                });
                 break;
               case "gameide.editor.scenePatch":
                 if (message.content !== undefined)
@@ -99,14 +86,6 @@
                 break;
             }
             return;
-          }
-
-          if (message.type === "scene" && message.content !== undefined) {
-            pendingSceneContent = message.content;
-            if (runtimeRequestedInitialScene)
-              sendInitialSceneToIFrame(message.content);
-            if (message.stopAfter)
-              postToIframe({ type: "gameide.editor.stop" });
           }
         });
       };
