@@ -69,31 +69,28 @@ function writeDynamicPhysicsResultsToScene(
   linearVelocity: Vec2T,
   angularVelocity: number,
 ): void {
-  let position = (sceneObject as { position?: ScenePosition }).position;
-  if (!position) {
-    (sceneObject as { position: ScenePosition }).position = {
-      x: physicsPosition.x * ctx.pixelsPerMeter,
-      y: physicsPosition.y * ctx.pixelsPerMeter,
-    };
-  } else {
-    position.x = physicsPosition.x * ctx.pixelsPerMeter;
-    position.y = physicsPosition.y * ctx.pixelsPerMeter;
-  }
+  const nextPosition = {
+    ...((sceneObject as { position?: Record<string, unknown> }).position ?? {}),
+    x: physicsPosition.x * ctx.pixelsPerMeter,
+    y: physicsPosition.y * ctx.pixelsPerMeter,
+  };
+  (sceneObject as { position: ScenePosition }).position = nextPosition as ScenePosition;
+
   const rotation = readSceneRotation(sceneObject);
   (sceneObject as { rotation: SceneRotation }).rotation = {
     ...rotation,
     z: physicsAngleRadians,
   };
+
   const collisionBody = (
     sceneObject as { collisionBody?: { velocity?: CollisionBodyVelocity } }
   ).collisionBody;
   if (!collisionBody) return;
-  if (!collisionBody.velocity) {
-    collisionBody.velocity = { x: 0, y: 0, angular: 0 };
-  }
-  collisionBody.velocity.x = linearVelocity.x * ctx.pixelsPerMeter;
-  collisionBody.velocity.y = linearVelocity.y * ctx.pixelsPerMeter;
-  collisionBody.velocity.angular = angularVelocity;
+  collisionBody.velocity = {
+    x: linearVelocity.x * ctx.pixelsPerMeter,
+    y: linearVelocity.y * ctx.pixelsPerMeter,
+    angular: angularVelocity,
+  };
 }
 
 function forEachTracked(
@@ -192,7 +189,8 @@ export const syncDynamicBodies = {
   beforePhysics(ctx: PlanckSceneSyncContext): void {
     forEachTracked(ctx, (sceneObjectLive, planckRecord) => {
       if (ctx.effectiveType(sceneObjectLive) !== "dynamic") return;
-      applyScenePoseToBody(sceneObjectLive, planckRecord, ctx);
+      // Locally integrated dynamic bodies own pose during the step; only push
+      // authored velocity from the scene (game input + prior physics results).
 
       const authoredVelocity = readCollisionBodyVelocity(sceneObjectLive);
       planckRecord.body.setLinearVelocity(

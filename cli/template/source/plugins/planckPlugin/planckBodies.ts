@@ -1,5 +1,7 @@
 import { type Body, type BodyType, type World, Vec2, Box, Circle } from "planck";
-import type { GameObject } from "gameide";
+import { implementsTrait, type GameObject } from "gameide";
+import { boxColliderTrait, circleColliderTrait } from "./colliderComponents.js";
+import { collisionBodyTrait } from "./collisionBody.js";
 
 export type PhysicsUserData = {
   object: GameObject;
@@ -50,6 +52,20 @@ export function syncBodyTransformFromObject(
 export function isColliderNode(v: unknown): v is GameObject {
   if (!v || typeof v !== "object") return false;
   return "boxCollider" in v || "circleCollider" in v;
+}
+
+const qualifiesBoxPhysicsBody = implementsTrait([
+  collisionBodyTrait,
+  boxColliderTrait,
+]);
+const qualifiesCirclePhysicsBody = implementsTrait([
+  collisionBodyTrait,
+  circleColliderTrait,
+]);
+
+/** Scene object has a registered collider shape and collision body for Planck. */
+export function qualifiesForPlanckBody(v: unknown): v is GameObject {
+  return qualifiesBoxPhysicsBody(v) || qualifiesCirclePhysicsBody(v);
 }
 
 export function sceneVec(x: number, y: number): Vec2 {

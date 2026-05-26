@@ -3,7 +3,7 @@ import { getScene, type GameObject } from "gameide";
 import {
   colliderSignature,
   createBodyForObject,
-  isColliderNode,
+  qualifiesForPlanckBody,
   syncBodyTransformFromObject,
   type PlanckRecord,
 } from "./planckBodies.js";
@@ -20,7 +20,10 @@ export function planckColliderBodies(args: {
   const scene = getScene();
   const sceneKeyToPlanckRecord = new Map<PropertyKey, PlanckRecord>();
 
-  const reconcileSceneRootKey = (sceneRootKey: PropertyKey): void => {
+  const reconcileSceneRootKey = (
+    sceneRootKey: PropertyKey,
+    mutationPathTrail: PropertyKey[] = [],
+  ): void => {
     const maybeLiveNode = Reflect.get(scene.get(), sceneRootKey);
 
     const removeIfPresent = () => {
@@ -32,7 +35,7 @@ export function planckColliderBodies(args: {
     };
 
     const qualifiesCollider =
-      maybeLiveNode !== undefined && isColliderNode(maybeLiveNode as GameObject);
+      maybeLiveNode !== undefined && qualifiesForPlanckBody(maybeLiveNode);
     if (!qualifiesCollider) {
       removeIfPresent();
       return;
@@ -47,7 +50,18 @@ export function planckColliderBodies(args: {
     }
 
     const existingPlanckRecord = sceneKeyToPlanckRecord.get(sceneRootKey);
-    if (existingPlanckRecord?.signature === nextColliderSignatureValue) {
+    if (
+      existingPlanckRecord?.signature === nextColliderSignatureValue &&
+      existingPlanckRecord.body.getType() === effectiveBodyType
+    ) {
+      const isRootReplace = mutationPathTrail.length <= 1;
+      const touchesPose = mutationPathTrail.some(
+        (segment) => segment === "position" || segment === "rotation" || segment === "scale",
+      );
+      const shouldSyncPoseFromScene =
+        effectiveBodyType !== "dynamic" || isRootReplace || touchesPose;
+      if (!shouldSyncPoseFromScene) return;
+
       syncBodyTransformFromObject(
         existingPlanckRecord.body,
         sceneObject,
@@ -80,7 +94,7 @@ export function planckColliderBodies(args: {
   const unsubscribe = scene.onChange((_mutationTarget, mutationPathTrail) => {
     const anchoredSceneRootIdentifier = mutationPathTrail[0];
     if (anchoredSceneRootIdentifier === undefined) return;
-    reconcileSceneRootKey(anchoredSceneRootIdentifier);
+    reconcileSceneRootKey(anchoredSceneRootIdentifier, mutationPathTrail);
   });
 
   return { unsubscribe, sceneKeyToPlanckRecord };

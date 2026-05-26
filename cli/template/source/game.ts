@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   defineTrait,
   onGameStart,
-  ownerTrait,
   onGameUpdate,
   implementsTrait,
 } from "gameide";
@@ -42,31 +41,18 @@ export default function main(gameContext: RuntimeGameContext): void {
     scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));
   });
 
-  onGameUpdate((deltaTime) => {
-    const sharedGravity = playerTrait.playerGravityY * deltaTime;
-
+  onGameUpdate(() => {
     const player = scene.getObject(
       networking.peerId,
       implementsTrait([playerTrait, spriteTrait, collisionBodyTrait]),
     );
 
     if (player) {
-      const gravityStep = player.playerGravityY * deltaTime;
       if (input.buttons.Jump.pressed && player.grounded) {
         player.collisionBody.velocity.y = player.jumpSpeed;
       }
       player.collisionBody.velocity.x =
         input.axes.Horizontal * player.moveSpeed;
-      player.collisionBody.velocity.y += gravityStep;
-    }
-
-    const ball = scene.getObject(
-      "bouncyBall",
-      implementsTrait([spriteTrait, collisionBodyTrait, ownerTrait]),
-    );
-
-    if (ball && networking.isOwned(ball)) {
-      ball.collisionBody.velocity.y += sharedGravity;
     }
   });
 }
