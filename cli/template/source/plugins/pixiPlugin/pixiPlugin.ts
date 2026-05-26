@@ -13,6 +13,7 @@ import {
 } from "./viewport.js";
 import { colliderDebug } from "./colliderDebug.js";
 import { selectionOverlay } from "./selectionOverlay.js";
+import { transformGizmoOverlay } from "./transformGizmoOverlay.js";
 
 export type PixiPluginOptions = {
   initOptions?: Omit<Partial<ApplicationOptions>, "resizeTo">;
@@ -90,12 +91,14 @@ export function pixiPlugin(
     ).unsubscribe;
 
     const pickEnabled = options.enableEditorObjectPick !== false;
+    let shouldSuppressEditorViewport = () => false;
 
     const { viewport, unsubscribe: unsubscribePixiViewport } = pixiViewport({
       world,
       app,
       rootElement,
       input,
+      shouldSuppressEditorViewport: () => shouldSuppressEditorViewport(),
       onEditorClickWorld: pickEnabled
         ? (worldPoint) => {
             const picked = pickSceneObjectAtWorldPoint({
@@ -109,9 +112,16 @@ export function pixiPlugin(
           }
         : undefined,
     });
+    const transformGizmoOverlayController = transformGizmoOverlay(world, {
+      input,
+      viewport,
+    });
+    shouldSuppressEditorViewport =
+      transformGizmoOverlayController.shouldSuppressViewportGesture;
 
     context.dispose(() => {
       unsubscribeColliderDebug?.();
+      transformGizmoOverlayController.unsubscribe();
       unsubscribeSelectionOverlay();
       unsubscribePixiViewport();
       unsubscribePixiSprites();

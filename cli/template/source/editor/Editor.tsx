@@ -28,7 +28,7 @@ export function Editor({
             onToggle={() => setSidebarOpen((o) => !o)}
           />
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="ml-auto flex items-center gap-1.5 shrink-0">
             <TransformGizmoBar />
             <RunButton />
           </div>

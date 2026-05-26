@@ -145,13 +145,21 @@ export type PixiViewportOptions = {
   rootElement: HTMLElement;
   input: PixiViewportInput;
   onEditorClickWorld?: (worldPoint: { x: number; y: number }) => void;
+  shouldSuppressEditorViewport?: () => boolean;
 };
 
 export function pixiViewport(options: PixiViewportOptions): {
   viewport: ViewportController;
   unsubscribe: () => void;
 } {
-  const { world, app, rootElement, input, onEditorClickWorld } = options;
+  const {
+    world,
+    app,
+    rootElement,
+    input,
+    onEditorClickWorld,
+    shouldSuppressEditorViewport,
+  } = options;
 
   let disposed = false;
 
@@ -187,6 +195,13 @@ export function pixiViewport(options: PixiViewportOptions): {
 
   const releaseEditorViewport = onEditorUpdate(() => {
     if (disposed) return;
+
+    if (shouldSuppressEditorViewport?.()) {
+      editorViewportGesture.panning = false;
+      editorViewportGesture.anchorWorld = null;
+      editorViewportGesture.pressClient = null;
+      return;
+    }
 
     const { shouldPickAtClick } = editorViewportEditorFrame(editorViewportGesture, {
       rootElement,
