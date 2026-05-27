@@ -5,6 +5,11 @@ import ts from "typescript";
 import { attachRoomWebSocket } from "./roomWebSocket";
 import hotModuleTemplate from "./hotModuleTemplate.js?raw";
 import {
+  attachSceneEditorDevMiddleware,
+  VIRTUAL_SCENE_EDITOR_HOST,
+  sceneEditorHostEntryPath,
+} from "./sceneEditorDev";
+import {
   catalogFileAffectsAssets,
   catalogFileAffectsScenes,
   listProjectAssets,
@@ -198,14 +203,18 @@ function createHotModuleCode(code: string): string {
 export const VIRTUAL_ASSETS_MODULE = "gameide:assets";
 export const VIRTUAL_SCENES_MODULE = "gameide:scenes";
 
-const virtualModulePrefix = "\0gameide:";
+const virtualModulePrefix = "\0";
 
-function resolvedVirtualId(virtualId: string): string {
-  return virtualModulePrefix + virtualId;
-}
+/** Maps public `gameide:*` ids to colon-free ids so `/@id/` URLs work in the browser. */
+const virtualModuleInternalId: Record<string, string> = {
+  [VIRTUAL_ASSETS_MODULE]: "gameide-assets",
+  [VIRTUAL_SCENES_MODULE]: "gameide-scenes",
+  [VIRTUAL_SCENE_EDITOR_HOST]: "gameide-scene-editor-host",
+};
 
-function isResolvedVirtualId(id: string): boolean {
-  return id.startsWith(virtualModulePrefix);
+function resolvedVirtualId(publicId: string): string {
+  const internal = virtualModuleInternalId[publicId] ?? publicId;
+  return virtualModulePrefix + internal;
 }
 
 function createCatalogModuleCode(values: readonly string[]): string {
@@ -230,11 +239,18 @@ export function gameidePlugin(): Plugin {
       projectRoot = config.root;
     },
     resolveId(id) {
-      if (id === VIRTUAL_ASSETS_MODULE || id === VIRTUAL_SCENES_MODULE) {
+      if (
+        id === VIRTUAL_ASSETS_MODULE ||
+        id === VIRTUAL_SCENES_MODULE ||
+        id === VIRTUAL_SCENE_EDITOR_HOST
+      ) {
         return resolvedVirtualId(id);
       }
     },
     configureServer(server) {
+      if (isServe) {
+        attachSceneEditorDevMiddleware(server, projectRoot);
+      }
       return () => {
         if (server.httpServer) {
           attachRoomWebSocket(server.httpServer);
@@ -252,6 +268,9 @@ export function gameidePlugin(): Plugin {
       invalidateCatalogModules(ctx.server);
     },
     load(id: string) {
+      if (id === resolvedVirtualId(VIRTUAL_SCENE_EDITOR_HOST)) {
+        return fs.readFileSync(sceneEditorHostEntryPath(), "utf8");
+      }
       if (id === resolvedVirtualId(VIRTUAL_ASSETS_MODULE)) {
         return createCatalogModuleCode(listProjectAssets(projectRoot));
       }

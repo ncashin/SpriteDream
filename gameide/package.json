@@ -27,7 +27,7 @@
     "styles.css"
   ],
   "scripts": {
-    "build": "vite build && vite build --config vite.plugin.config.ts && cp src/vitePlugin/client.d.ts dist/viteClient.d.ts",
+    "build": "vite build && vite build --config vite.plugin.config.ts && cp src/vitePlugin/client.d.ts dist/viteClient.d.ts && cp src/vitePlugin/sceneEditorHost.ts src/vitePlugin/sceneEditorPage.html dist/",
     "prepare": "npm run build"
   },
   "peerDependencies": {

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scene Editor</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #1e1e1e;
+        color: #ccc;
+      }
+      #gameide-scene-toolbar {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid #333;
+      }
+      #gameide-scene-select {
+        min-width: 280px;
+        max-width: 100%;
+        padding: 4px 8px;
+        background: #2d2d2d;
+        color: inherit;
+        border: 1px solid #444;
+        border-radius: 4px;
+      }
+      #gameide-scene-save {
+        padding: 4px 12px;
+        background: #0e639c;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      #gameide-scene-save:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      #gameide-scene-status {
+        font-size: 12px;
+        color: #999;
+      }
+      #gameide-scene-status[data-dirty="true"] {
+        color: #e5c07b;
+      }
+      #gameide-runtime-frame {
+        flex: 1 1 auto;
+        width: 100%;
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="gameide-scene-toolbar">
+      <label for="gameide-scene-select">Scene</label>
+      <select id="gameide-scene-select" aria-label="Active scene file"></select>
+      <button type="button" id="gameide-scene-save" disabled>Save</button>
+      <span id="gameide-scene-status" data-dirty="false">Saved</span>
+    </div>
+    <iframe id="gameide-runtime-frame" title="GameIDE runtime"></iframe>
+    <script type="module" src="{{SCENE_EDITOR_SCRIPT}}"></script>
+  </body>
+</html>

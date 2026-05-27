@@ -7,7 +7,10 @@ import dts from "vite-plugin-dts";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  plugins: [tailwindcss(), dts({ include: ["src"] })],
+  plugins: [
+    tailwindcss(),
+    dts({ include: ["src"], exclude: ["src/vitePlugin/sceneEditorHost.ts"] }),
+  ],
   build: {
     lib: {
       entry: path.resolve(__dirname, "src/index.ts"),

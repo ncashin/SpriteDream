@@ -19,6 +19,7 @@ export default defineConfig({
         "typescript",
         "node:fs",
         "node:path",
+        "node:url",
         "node:http",
         "node:stream",
         "fs",

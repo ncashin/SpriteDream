@@ -124,40 +124,50 @@ export const curryScene = (rawScene: SceneObject) => {
     return Object.values(scene).filter(queryFunction) as T[];
   };
 
-  const applyNested = (target: GameObject, data: GameObject) => {
-    for (const key of Reflect.ownKeys(data)) {
-      const value = Reflect.get(data, key);
-      if (value === undefined) {
-        Reflect.deleteProperty(target, key);
-        continue;
-      }
-      if (!isNestedRecord(value)) {
-        Reflect.set(target, key, value);
-        continue;
-      }
-      Reflect.set(target, key, {});
-      const child = Reflect.get(target, key);
-      if (!isNestedRecord(child)) continue;
-      applyNested(child, value);
+  const deleteAtPath = (root: GameObject, path: PropertyKey[]) => {
+    if (path.length === 0) return;
+    let node: GameObject = root;
+    for (let i = 0; i < path.length - 1; i++) {
+      const next = Reflect.get(node, path[i]);
+      if (!isNestedRecord(next)) return;
+      node = next;
     }
+    Reflect.deleteProperty(node, path[path.length - 1]);
   };
 
-  const applyPatch = (patch: Partial<SceneObject>) => {
-    for (const key of Reflect.ownKeys(patch)) {
-      const value = Reflect.get(patch, key);
-      if (value === undefined) {
-        Reflect.deleteProperty(scene, key);
-        continue;
+  const setAtPath = (root: GameObject, path: PropertyKey[], value: unknown) => {
+    if (path.length === 0) return;
+    let node: GameObject = root;
+    for (let i = 0; i < path.length - 1; i++) {
+      const key = path[i];
+      let next = Reflect.get(node, key);
+      if (!isNestedRecord(next)) {
+        next = {};
+        Reflect.set(node, key, next);
       }
-      if (!isNestedRecord(value)) {
-        Reflect.set(scene, key, value);
-        continue;
-      }
-      Reflect.set(scene, key, {});
-      const child = Reflect.get(scene, key);
-      if (!isNestedRecord(child)) continue;
-      applyNested(child, value);
+      node = next as GameObject;
     }
+    Reflect.set(node, path[path.length - 1], value);
+  };
+
+  /** Apply a partial scene update without replacing intermediate objects. */
+  const applyPatch = (patch: Partial<SceneObject>) => {
+    const walk = (data: GameObject, path: PropertyKey[]) => {
+      for (const key of Reflect.ownKeys(data)) {
+        const value = Reflect.get(data, key);
+        const nextPath = [...path, key];
+        if (value === undefined) {
+          deleteAtPath(scene as GameObject, nextPath);
+          continue;
+        }
+        if (isNestedRecord(value)) {
+          walk(value, nextPath);
+          continue;
+        }
+        setAtPath(scene as GameObject, nextPath, value);
+      }
+    };
+    walk(patch as GameObject, []);
   };
 
   const replace = (data: SceneObject) => {

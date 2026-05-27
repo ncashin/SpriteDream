@@ -46,8 +46,8 @@
   "platform_0": {
     "position": {
       "__icon": "move-3d",
-      "x": -280,
-      "y": -320,
+      "x": -495,
+      "y": -234,
       "z": 0
     },
     "rotation": {
@@ -64,7 +64,7 @@
     },
     "boxCollider": {
       "__icon": "square",
-      "width": 180,
+      "width": 200,
       "height": 24,
       "offset": {
         "x": 0,
@@ -85,15 +85,7 @@
       "restitution": 0,
       "friction": 0.3,
       "disabled": false
-    },
-    "sprite": {
-      "__icon": "image",
-      "asset": "assets/vite.svg",
-      "width": 180,
-      "height": 32,
-      "tint": "#ffffff"
-    },
-    "__icon": "image"
+    }
   },
   "platform_1": {
     "position": {
@@ -186,8 +178,8 @@
   "platform_3": {
     "position": {
       "__icon": "move-3d",
-      "x": -520,
-      "y": -200,
+      "x": 235,
+      "y": 387,
       "z": 0
     },
     "rotation": {
@@ -204,7 +196,7 @@
     },
     "boxCollider": {
       "__icon": "square",
-      "width": 140,
+      "width": 200,
       "height": 24,
       "offset": {
         "x": 0,
