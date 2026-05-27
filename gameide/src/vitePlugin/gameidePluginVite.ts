@@ -1,7 +1,15 @@
-import type { Plugin } from "vite";
+import type { Plugin, ViteDevServer } from "vite";
 import fs from "node:fs";
+import path from "node:path";
 import ts from "typescript";
 import { attachRoomWebSocket } from "./roomWebSocket";
+import hotModuleTemplate from "./hotModuleTemplate.js?raw";
+import {
+  catalogFileAffectsAssets,
+  catalogFileAffectsScenes,
+  listProjectAssets,
+  listProjectScenes,
+} from "./projectCatalog";
 
 type JSONPrimitive = string | number | boolean | null;
 type JSONValue =
@@ -181,34 +189,50 @@ function wrapGameideHotDefaultExport(code: string, id: string): string | null {
   return printer.printFile(newSourceFile);
 }
 
+const hotModuleBodyPlaceholder = "__GAMEIDE_HOT_MODULE_BODY__";
+
 function createHotModuleCode(code: string): string {
-  return `import { __beginHotModule, __endHotModule, __disposeHotModule, __runHotModuleReplay, __hotModuleDefaultExport, __hotModuleLastArgsForScope, getGameContext } from "gameide";
-const __gameideHotScope = __beginHotModule(import.meta.url);
-const __gameideHotLastArgs = __hotModuleLastArgsForScope(__gameideHotScope);
-${code}
-__endHotModule(__gameideHotScope);
-if (import.meta.hot) {
-  import.meta.hot.accept((mod) => {
-    const replay = mod?.default;
-    if (typeof replay !== "function") return;
-    const args =
-      __gameideHotLastArgs.kind === "called"
-        ? __gameideHotLastArgs.args
-        : [getGameContext()];
-    __runHotModuleReplay(__gameideHotScope, () => replay.apply(undefined, args));
-  });
-  import.meta.hot.dispose(() => __disposeHotModule(__gameideHotScope));
+  return hotModuleTemplate.replace(hotModuleBodyPlaceholder, code);
 }
-`;
+
+export const VIRTUAL_ASSETS_MODULE = "gameide:assets";
+export const VIRTUAL_SCENES_MODULE = "gameide:scenes";
+
+const virtualModulePrefix = "\0gameide:";
+
+function resolvedVirtualId(virtualId: string): string {
+  return virtualModulePrefix + virtualId;
+}
+
+function isResolvedVirtualId(id: string): boolean {
+  return id.startsWith(virtualModulePrefix);
+}
+
+function createCatalogModuleCode(values: readonly string[]): string {
+  return `export default ${JSON.stringify(values)};\n`;
+}
+
+function invalidateCatalogModules(server: ViteDevServer): void {
+  for (const virtualId of [VIRTUAL_ASSETS_MODULE, VIRTUAL_SCENES_MODULE]) {
+    const mod = server.moduleGraph.getModuleById(resolvedVirtualId(virtualId));
+    if (mod) server.moduleGraph.invalidateModule(mod);
+  }
 }
 
 export function gameidePlugin(): Plugin {
   let isServe = false;
+  let projectRoot = process.cwd();
 
   return {
     name: "gameide-plugin",
     configResolved(config) {
       isServe = config.command === "serve";
+      projectRoot = config.root;
+    },
+    resolveId(id) {
+      if (id === VIRTUAL_ASSETS_MODULE || id === VIRTUAL_SCENES_MODULE) {
+        return resolvedVirtualId(id);
+      }
     },
     configureServer(server) {
       return () => {
@@ -217,7 +241,24 @@ export function gameidePlugin(): Plugin {
         }
       };
     },
+    handleHotUpdate(ctx) {
+      const file = path.normalize(ctx.file);
+      if (
+        !catalogFileAffectsAssets(projectRoot, file) &&
+        !catalogFileAffectsScenes(file)
+      ) {
+        return;
+      }
+      invalidateCatalogModules(ctx.server);
+    },
     load(id: string) {
+      if (id === resolvedVirtualId(VIRTUAL_ASSETS_MODULE)) {
+        return createCatalogModuleCode(listProjectAssets(projectRoot));
+      }
+      if (id === resolvedVirtualId(VIRTUAL_SCENES_MODULE)) {
+        return createCatalogModuleCode(listProjectScenes(projectRoot));
+      }
+
       const cleanId = getCleanId(id);
       if (!cleanId.endsWith(".scene")) return;
 
