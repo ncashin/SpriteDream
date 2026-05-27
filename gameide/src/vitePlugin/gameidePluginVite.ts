@@ -4,11 +4,7 @@ import path from "node:path";
 import ts from "typescript";
 import { attachRoomWebSocket } from "./roomWebSocket";
 import hotModuleTemplate from "./hotModuleTemplate.js?raw";
-import {
-  attachSceneEditorDevMiddleware,
-  VIRTUAL_SCENE_EDITOR_HOST,
-  sceneEditorHostEntryPath,
-} from "./sceneEditorDev";
+import { attachSceneEditorDevMiddleware } from "./sceneEditorDev";
 import {
   catalogFileAffectsAssets,
   catalogFileAffectsScenes,
@@ -209,7 +205,6 @@ const virtualModulePrefix = "\0";
 const virtualModuleInternalId: Record<string, string> = {
   [VIRTUAL_ASSETS_MODULE]: "gameide-assets",
   [VIRTUAL_SCENES_MODULE]: "gameide-scenes",
-  [VIRTUAL_SCENE_EDITOR_HOST]: "gameide-scene-editor-host",
 };
 
 function resolvedVirtualId(publicId: string): string {
@@ -239,11 +234,7 @@ export function gameidePlugin(): Plugin {
       projectRoot = config.root;
     },
     resolveId(id) {
-      if (
-        id === VIRTUAL_ASSETS_MODULE ||
-        id === VIRTUAL_SCENES_MODULE ||
-        id === VIRTUAL_SCENE_EDITOR_HOST
-      ) {
+      if (id === VIRTUAL_ASSETS_MODULE || id === VIRTUAL_SCENES_MODULE) {
         return resolvedVirtualId(id);
       }
     },
@@ -268,9 +259,6 @@ export function gameidePlugin(): Plugin {
       invalidateCatalogModules(ctx.server);
     },
     load(id: string) {
-      if (id === resolvedVirtualId(VIRTUAL_SCENE_EDITOR_HOST)) {
-        return fs.readFileSync(sceneEditorHostEntryPath(), "utf8");
-      }
       if (id === resolvedVirtualId(VIRTUAL_ASSETS_MODULE)) {
         return createCatalogModuleCode(listProjectAssets(projectRoot));
       }

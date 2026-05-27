@@ -1,28 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { ServerResponse } from "node:http";
 import type { IncomingMessage } from "node:http";
 import type { ViteDevServer } from "vite";
 import { listProjectScenes } from "./projectCatalog";
-export const GAMEIDE_RUNTIME_QUERY = "gameide-runtime";
-export const VIRTUAL_SCENE_EDITOR_HOST = "gameide:scene-editor-host";
+
 const SCENE_API_PATH = "/__gameide/scene";
 const SCENES_LIST_PATH = "/__gameide/scenes";
-const SCENE_EDITOR_SCRIPT_PLACEHOLDER = "{{SCENE_EDITOR_SCRIPT}}";
-
-const pluginDir = path.dirname(fileURLToPath(import.meta.url));
-
-export function sceneEditorHostEntryPath(): string {
-  return path.join(pluginDir, "sceneEditorHost.ts");
-}
-
-function readSceneEditorPageHtml(): string {
-  return fs.readFileSync(
-    path.join(pluginDir, "sceneEditorPage.html"),
-    "utf8",
-  );
-}
 
 function isSafeSceneRelativePath(
   projectRoot: string,
@@ -72,20 +56,10 @@ function invalidateSceneModule(
   if (mod) server.moduleGraph.invalidateModule(mod);
 }
 
-function sceneEditorScriptUrl(): string {
-  const hostEntry = sceneEditorHostEntryPath().replace(/\\/g, "/");
-  return `/@fs${hostEntry.startsWith("/") ? hostEntry : `/${hostEntry}`}`;
-}
-
 export function attachSceneEditorDevMiddleware(
   server: ViteDevServer,
   projectRoot: string,
 ): void {
-  const pageHtml = readSceneEditorPageHtml().replace(
-    SCENE_EDITOR_SCRIPT_PLACEHOLDER,
-    sceneEditorScriptUrl(),
-  );
-
   server.middlewares.use((req, res, next) => {
     const host = req.headers.host ?? "localhost";
     const url = new URL(req.url ?? "/", `http://${host}`);
@@ -144,21 +118,6 @@ export function attachSceneEditorDevMiddleware(
       }
 
       sendJson(res, 405, { error: "method not allowed" });
-      return;
-    }
-
-    const acceptsHtml =
-      req.method === "GET" &&
-      (req.headers.accept?.includes("text/html") ?? false);
-
-    if (
-      acceptsHtml &&
-      url.pathname === "/" &&
-      !url.searchParams.has(GAMEIDE_RUNTIME_QUERY)
-    ) {
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.end(pageHtml);
       return;
     }
 

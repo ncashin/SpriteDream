@@ -20,6 +20,7 @@ import {
   getValueAtPath,
   setValueAtPath,
   useScene,
+  useSceneFile,
   useSelectedObject,
   useTraits,
   type GameObject,
@@ -664,27 +665,99 @@ function SceneTreeExitFocusButton({
 function SceneViewHeader({
   title,
   trailing,
+  sceneFileControls,
 }: {
   title?: ReactNode;
   trailing?: ReactNode;
+  sceneFileControls?: ReactNode;
 }) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex w-full min-w-0 shrink-0 items-center gap-2 bg-[var(--vscode-editor-background)] pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
+        "sticky top-0 z-30 flex w-full min-w-0 shrink-0 flex-col gap-2 bg-[var(--vscode-editor-background)] pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
         font,
         foreground,
       )}
     >
-      <div className="min-w-0 flex-1 truncate leading-none">
-        {title ?? (
-          <span className="block min-w-0 truncate font-semibold">Scene</span>
-        )}
-      </div>
-      {trailing ? (
-        <div className="flex shrink-0 items-center gap-0.5">{trailing}</div>
+      {sceneFileControls ? (
+        <div className="flex w-full min-w-0 items-center gap-2">{sceneFileControls}</div>
       ) : null}
+      <div className="flex w-full min-w-0 items-center gap-2">
+        <div className="min-w-0 flex-1 truncate leading-none">
+          {title ?? (
+            <span className="block min-w-0 truncate font-semibold">Scene</span>
+          )}
+        </div>
+        {trailing ? (
+          <div className="flex shrink-0 items-center gap-0.5">{trailing}</div>
+        ) : null}
+      </div>
     </header>
+  );
+}
+
+function SceneFileControls() {
+  const {
+    scenes,
+    activeScenePath,
+    switchScene,
+    visible,
+    dirty,
+    saving,
+    save,
+    canSave,
+  } = useSceneFile();
+
+  if (!visible) return null;
+
+  const sceneOptions =
+    scenes.length > 0
+      ? scenes
+      : activeScenePath
+        ? [activeScenePath]
+        : [];
+  return (
+    <>
+      <label className="flex min-w-0 flex-1 items-center gap-1.5">
+        <span className={cn("shrink-0", muted)}>Scene</span>
+        <select
+          value={activeScenePath}
+          onChange={(event) => void switchScene(event.target.value)}
+          aria-label="Active scene file"
+          className={cn(
+            "h-[22px] min-h-[22px] min-w-0 max-w-full flex-1 truncate px-1.5",
+            "bg-[var(--vscode-editor-background)] text-[var(--vscode-editor-foreground)]",
+            "border border-[color-mix(in_srgb,var(--vscode-widget-border)_80%,transparent)] rounded",
+            "font-[var(--vscode-font-family)] cursor-pointer",
+          )}
+        >
+          {sceneOptions.map((file) => (
+            <option key={file} value={file}>
+              {file}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <button
+          type="button"
+          disabled={!canSave}
+          onClick={() => save()}
+          title="Save scene"
+          className={cn(
+            "h-[22px] min-h-[22px] px-1.5 rounded border border-solid text-xs cursor-pointer",
+            "bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)]",
+            "border-[var(--vscode-button-background)] font-[var(--vscode-font-family)]",
+            "disabled:opacity-45 disabled:cursor-default",
+          )}
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+        <span className={cn("shrink-0", muted)} data-dirty={dirty ? "true" : "false"}>
+          {dirty ? "Unsaved" : "Saved"}
+        </span>
+      </div>
+    </>
   );
 }
 
@@ -762,14 +835,18 @@ export function SceneTree() {
   if (!rootObject) {
     return (
       <div className="w-full h-full min-w-0 flex flex-col bg-[var(--vscode-editor-background)] p-2">
-        <SceneViewHeader />
+        <SceneViewHeader sceneFileControls={<SceneFileControls />} />
       </div>
     );
   }
 
   return (
     <div className="w-full h-full min-w-0 flex flex-col bg-[var(--vscode-editor-background)] p-2">
-      <SceneViewHeader title={headerTitle} trailing={headerTrailing} />
+      <SceneViewHeader
+        title={headerTitle}
+        trailing={headerTrailing}
+        sceneFileControls={<SceneFileControls />}
+      />
       <div className="flex-1 min-h-0 pt-2.5 overflow-auto">
         {displayRoot &&
           Object.keys(displayRoot).map((key) => (

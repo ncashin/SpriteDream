@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    dts({ include: ["src"], exclude: ["src/vitePlugin/sceneEditorHost.ts"] }),
+    dts({ include: ["src"] }),
   ],
   build: {
     lib: {

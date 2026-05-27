@@ -7,13 +7,25 @@ export const SCENE_CHANNEL = {
   initialScene: "gameide.editor.initialScene",
   scenePatch: "gameide.editor.scenePatch",
   sceneChange: "gameide.editor.sceneChange",
+  sceneEditorState: "gameide.editor.sceneEditorState",
+  requestSceneSwitch: "gameide.editor.requestSceneSwitch",
+  requestSceneSave: "gameide.editor.requestSceneSave",
 } as const;
+
+export type SceneEditorState = {
+  path: string;
+  dirty: boolean;
+  saving: boolean;
+};
 
 export type SceneChannelMessage =
   | { type: typeof SCENE_CHANNEL.initialScene; content: SceneObject | string }
   | { type: typeof SCENE_CHANNEL.scenePatch; content: SceneObject }
   | { type: typeof SCENE_CHANNEL.requestInitialScene }
-  | { type: typeof SCENE_CHANNEL.sceneChange; content: SceneObject | string };
+  | { type: typeof SCENE_CHANNEL.sceneChange; content: SceneObject | string }
+  | { type: typeof SCENE_CHANNEL.sceneEditorState; content: SceneEditorState }
+  | { type: typeof SCENE_CHANNEL.requestSceneSwitch; content: string }
+  | { type: typeof SCENE_CHANNEL.requestSceneSave };
 
 function parsePatchContent(content: SceneObject | string): SceneObject {
   if (typeof content === "string") {

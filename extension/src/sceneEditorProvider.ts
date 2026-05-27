@@ -20,6 +20,7 @@ function isInboundWebviewMessage(
 }
 
 const UNDOABLE_MESSAGE_TYPES = new Set<string>([SCENE_CHANNEL.scenePatch]);
+const SCENE_EDITOR_VIEW_TYPE = "gameide.sceneEditor";
 
 export type { SceneObject };
 
@@ -179,6 +180,23 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       localResourceRoots: [this.extensionUri],
     };
 
+    let saving = false;
+
+    const postSceneEditorState = (): void => {
+      const relativePath = vscode.workspace.asRelativePath(document.uri);
+      const dirty =
+        JSON.stringify(document.getData()) !==
+        JSON.stringify(document.getSavedData());
+      webview.postMessage({
+        type: SCENE_CHANNEL.sceneEditorState,
+        content: {
+          path: relativePath,
+          dirty,
+          saving,
+        },
+      });
+    };
+
     const transport: SceneChannelTransport = {
       send: (message: unknown): void => {
         webview.postMessage(message);
@@ -206,6 +224,7 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
                 undo: async () => document.setData(previous!),
                 redo: async () => document.setData(next),
               });
+              postSceneEditorState();
             }
           }
         });
@@ -224,9 +243,49 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
       channel.sendSceneChange(content);
     });
 
+    const disposable = webview.onDidReceiveMessage(async (raw: unknown) => {
+      if (!isInboundWebviewMessage(raw)) return;
+
+      if (raw.type === "gameide.runtimeReady") {
+        postSceneEditorState();
+        return;
+      }
+
+      if (raw.type === SCENE_CHANNEL.requestSceneSave) {
+        if (saving) return;
+        saving = true;
+        postSceneEditorState();
+        try {
+          await this.saveCustomDocument(document, token);
+          postSceneEditorState();
+        } finally {
+          saving = false;
+          postSceneEditorState();
+        }
+        return;
+      }
+
+      if (
+        raw.type === SCENE_CHANNEL.requestSceneSwitch &&
+        typeof raw.content === "string" &&
+        raw.content
+      ) {
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+        if (!workspaceFolder) return;
+        const targetUri = vscode.Uri.joinPath(workspaceFolder.uri, raw.content);
+        await vscode.commands.executeCommand(
+          "vscode.openWith",
+          targetUri,
+          SCENE_EDITOR_VIEW_TYPE,
+        );
+        return;
+      }
+    });
+
     webview.html = this.getHTMLForWebview();
 
     webviewPanel.onDidDispose(() => {
+      disposable.dispose();
       channel.dispose();
       document.setBroadcastScene(undefined);
       this.webviewToDocument.delete(webviewPanel.webview);
@@ -310,6 +369,9 @@ export class SceneEditorProvider implements vscode.CustomEditorProvider<SceneDoc
     ].join("; ");
     return sceneEditorHTML
       .replace("{{CSP}}", csp)
-      .replace("{{PORT}}", String(port));
+      .replace(
+        "{{RUNTIME_URL}}",
+        `http://localhost:${port}/`,
+      );
   }
 }

@@ -20,7 +20,7 @@
     </style>
   </head>
   <body>
-    <iframe id="gameide-runtime" src="http://localhost:{{PORT}}"></iframe>
+    <iframe id="gameide-runtime" src="{{RUNTIME_URL}}"></iframe>
     <script>
       const runScript = () => {
         const iframe = document.getElementById("gameide-runtime");
@@ -64,29 +64,15 @@
           }
 
           if (fromRuntimeIFrame) {
-            switch (message.type) {
-              case "gameide.editor.requestInitialScene":
-                postToVscode({
-                  type: "gameide.editor.requestInitialScene",
-                });
-                break;
-              case "gameide.editor.scenePatch":
-                if (message.content !== undefined)
-                  postToVscode({
-                    type: "gameide.editor.scenePatch",
-                    content: message.content,
-                  });
-                break;
-              case "gameide.editor.sceneChange":
-                if (message.content !== undefined)
-                  postToVscode({
-                    type: "gameide.editor.sceneChange",
-                    content: message.content,
-                  });
-                break;
+            if (message.type.indexOf("gameide.editor.") === 0) {
+              postToVscode(message);
             }
             return;
           }
+        });
+
+        iframe?.addEventListener("load", () => {
+          postToVscode({ type: "gameide.runtimeReady" });
         });
       };
       runScript();
