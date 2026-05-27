@@ -136,16 +136,11 @@ export function useSceneFile() {
   );
 
   const visible = hostControlled || (devServerMode && scenes.length > 0);
-  const canSave = visible && dirty && !saving && !!activeScenePath;
 
   return {
     scenes,
     activeScenePath,
-    dirty,
-    saving,
     switchScene,
-    save,
-    canSave,
     visible,
   };
 }

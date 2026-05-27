@@ -29,6 +29,7 @@ import {
   SceneTreeRowIconFrame,
   sceneTreeRowIconFrameSizeClass,
 } from "./SceneTreeRowIcon.js";
+import { SearchDropdown } from "./SearchDropdown.js";
 import { cn } from "../../utils/cn.js";
 
 type IconSlug = string;
@@ -179,62 +180,45 @@ function ObjectAddSelect({
   templates: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
 }) {
+  const options = [
+    { value: "obj", label: "object", group: "Property" },
+    { value: "prop", label: "property", group: "Property" },
+    ...templates.map((template) => ({
+      value: `trait:${template.id}`,
+      label: template.label,
+      group: "Traits",
+    })),
+  ];
+
   return (
-    <div
-      className={cn(
-        "relative flex items-center justify-center self-center rounded p-0.5",
-        sceneTreeRowIconFrameSizeClass,
-        rowHover,
-        "opacity-70 hover:opacity-100",
-      )}
+    <SearchDropdown
+      variant="icon"
       title="Add child or trait"
-    >
-      <Plus
-        size={iconSize}
-        className={cn("block pointer-events-none", iconClass)}
-        aria-hidden
-      />
-      <select
-        aria-label="Add child or trait"
-        className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
-        value=""
-        onChange={(e) => {
-          const v = e.target.value;
-          e.target.value = "";
-          if (v === "") return;
-          if (v.startsWith("trait:")) {
-            mergeTraitInto(objectPath, Number(v.slice("trait:".length)));
-            return;
-          }
-          if (v === "obj" || v === "prop") {
-            const key = window.prompt("Property name");
-            if (key == null || key === "") return;
-            let initial: unknown;
-            if (v === "obj") {
-              initial = {};
-            } else {
-              initial = null;
-            }
-            setAtPath(objectPath.concat(key), initial);
-          }
-        }}
-      >
-        <option value=""></option>
-        <optgroup label="Property">
-          <option value="obj">object</option>
-          <option value="prop">property</option>
-        </optgroup>
-        {templates.length > 0 && (
-          <optgroup label="Traits">
-            {templates.map((t) => (
-              <option key={t.id} value={`trait:${t.id}`}>
-                {t.label}
-              </option>
-            ))}
-          </optgroup>
-        )}
-      </select>
-    </div>
+      ariaLabel="Add child or trait"
+      searchPlaceholder="Search traits…"
+      emptyMessage="No traits found"
+      options={options}
+      icon={
+        <Plus
+          size={iconSize}
+          className={cn("block pointer-events-none", iconClass)}
+          aria-hidden
+        />
+      }
+      triggerClassName={cn(sceneTreeRowIconFrameSizeClass, rowHover)}
+      onSelect={(value) => {
+        if (value.startsWith("trait:")) {
+          mergeTraitInto(objectPath, Number(value.slice("trait:".length)));
+          return;
+        }
+        if (value === "obj" || value === "prop") {
+          const key = window.prompt("Property name");
+          if (key == null || key === "") return;
+          const initial = value === "obj" ? {} : null;
+          setAtPath(objectPath.concat(key), initial);
+        }
+      }}
+    />
   );
 }
 
@@ -663,50 +647,47 @@ function SceneTreeExitFocusButton({
 }
 
 function SceneViewHeader({
+  leading,
   title,
   trailing,
-  sceneFileControls,
 }: {
+  leading?: ReactNode;
   title?: ReactNode;
   trailing?: ReactNode;
-  sceneFileControls?: ReactNode;
 }) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex w-full min-w-0 shrink-0 flex-col gap-2 bg-[var(--vscode-editor-background)] pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
+        "sticky top-0 z-30 flex w-full min-w-0 shrink-0 items-center gap-1.5 bg-[var(--vscode-editor-background)] pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
         font,
         foreground,
       )}
     >
-      {sceneFileControls ? (
-        <div className="flex w-full min-w-0 items-center gap-2">{sceneFileControls}</div>
+      {leading}
+      {leading && title ? (
+        <span
+          aria-hidden
+          className="shrink-0 text-[color-mix(in_srgb,var(--vscode-widget-border)_70%,transparent)]"
+        >
+          /
+        </span>
       ) : null}
-      <div className="flex w-full min-w-0 items-center gap-2">
-        <div className="min-w-0 flex-1 truncate leading-none">
-          {title ?? (
+      <div className="min-w-0 flex-1 truncate leading-none">
+        {title ?? (
+          !leading ? (
             <span className="block min-w-0 truncate font-semibold">Scene</span>
-          )}
-        </div>
-        {trailing ? (
-          <div className="flex shrink-0 items-center gap-0.5">{trailing}</div>
-        ) : null}
+          ) : null
+        )}
       </div>
+      {trailing ? (
+        <div className="flex shrink-0 items-center gap-0.5">{trailing}</div>
+      ) : null}
     </header>
   );
 }
 
 function SceneFileControls() {
-  const {
-    scenes,
-    activeScenePath,
-    switchScene,
-    visible,
-    dirty,
-    saving,
-    save,
-    canSave,
-  } = useSceneFile();
+  const { scenes, activeScenePath, switchScene, visible } = useSceneFile();
 
   if (!visible) return null;
 
@@ -716,48 +697,18 @@ function SceneFileControls() {
       : activeScenePath
         ? [activeScenePath]
         : [];
+
   return (
-    <>
-      <label className="flex min-w-0 flex-1 items-center gap-1.5">
-        <span className={cn("shrink-0", muted)}>Scene</span>
-        <select
-          value={activeScenePath}
-          onChange={(event) => void switchScene(event.target.value)}
-          aria-label="Active scene file"
-          className={cn(
-            "h-[22px] min-h-[22px] min-w-0 max-w-full flex-1 truncate px-1.5",
-            "bg-[var(--vscode-editor-background)] text-[var(--vscode-editor-foreground)]",
-            "border border-[color-mix(in_srgb,var(--vscode-widget-border)_80%,transparent)] rounded",
-            "font-[var(--vscode-font-family)] cursor-pointer",
-          )}
-        >
-          {sceneOptions.map((file) => (
-            <option key={file} value={file}>
-              {file}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="flex shrink-0 items-center gap-1.5">
-        <button
-          type="button"
-          disabled={!canSave}
-          onClick={() => save()}
-          title="Save scene"
-          className={cn(
-            "h-[22px] min-h-[22px] px-1.5 rounded border border-solid text-xs cursor-pointer",
-            "bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)]",
-            "border-[var(--vscode-button-background)] font-[var(--vscode-font-family)]",
-            "disabled:opacity-45 disabled:cursor-default",
-          )}
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
-        <span className={cn("shrink-0", muted)} data-dirty={dirty ? "true" : "false"}>
-          {dirty ? "Unsaved" : "Saved"}
-        </span>
-      </div>
-    </>
+    <SearchDropdown
+      variant="header"
+      value={activeScenePath}
+      options={sceneOptions.map((file) => ({ value: file, label: file }))}
+      onSelect={(file) => void switchScene(file)}
+      searchPlaceholder="Search scenes…"
+      emptyMessage="No scenes found"
+      ariaLabel="Active scene file"
+      className="min-w-0 max-w-[min(100%,14rem)] shrink"
+    />
   );
 }
 
@@ -835,7 +786,7 @@ export function SceneTree() {
   if (!rootObject) {
     return (
       <div className="w-full h-full min-w-0 flex flex-col bg-[var(--vscode-editor-background)] p-2">
-        <SceneViewHeader sceneFileControls={<SceneFileControls />} />
+        <SceneViewHeader leading={<SceneFileControls />} />
       </div>
     );
   }
@@ -843,9 +794,9 @@ export function SceneTree() {
   return (
     <div className="w-full h-full min-w-0 flex flex-col bg-[var(--vscode-editor-background)] p-2">
       <SceneViewHeader
+        leading={<SceneFileControls />}
         title={headerTitle}
         trailing={headerTrailing}
-        sceneFileControls={<SceneFileControls />}
       />
       <div className="flex-1 min-h-0 pt-2.5 overflow-auto">
         {displayRoot &&
