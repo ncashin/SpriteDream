@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { GameIDEMode, getMode } from "../../lifecycle/mode.js";
 import { getRawScene, getScene } from "../../scene/scene.js";
+import { patchSceneSnapshot } from "../../scene/snapshot.js";
 import {
   fetchSceneList,
   initialScenePathFromUrl,
@@ -9,6 +11,7 @@ import {
   saveSceneToDevServer,
   sceneSnapshot,
   subscribeToSceneEditorState,
+  subscribeToSceneFileChanges,
   switchSceneInDevServer,
 } from "./sceneFileBridge.js";
 
@@ -31,6 +34,21 @@ export function useSceneFile() {
   useEffect(() => {
     void fetchSceneList().then(setScenes);
   }, []);
+
+  useEffect(() => {
+    if (!devServerMode || !activeScenePath) return;
+
+    return subscribeToSceneFileChanges((path, data) => {
+      if (path !== activeScenePath) return;
+
+      const next = structuredClone(data);
+      if (getMode() === GameIDEMode.Editor) {
+        getScene().replace(next);
+        return;
+      }
+      patchSceneSnapshot(next);
+    });
+  }, [activeScenePath, devServerMode]);
 
   useEffect(() => {
     if (!embedded) return;

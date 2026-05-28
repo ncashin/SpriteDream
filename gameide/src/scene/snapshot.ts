@@ -10,3 +10,7 @@ export function restoreSceneSnapshot() {
   if (!sceneSnapshot) return;
   setScene(sceneSnapshot);
 }
+
+export function patchSceneSnapshot(data: SceneObject) {
+  sceneSnapshot = structuredClone(data ?? {});
+}

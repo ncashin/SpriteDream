@@ -7,6 +7,11 @@ import { listProjectScenes } from "./projectCatalog";
 
 const SCENE_API_PATH = "/__gameide/scene";
 const SCENES_LIST_PATH = "/__gameide/scenes";
+const SCENE_EVENTS_PATH = "/__gameide/scene/events";
+
+function toPosixRelative(base: string, absolutePath: string): string {
+  return path.relative(base, absolutePath).split(path.sep).join("/");
+}
 
 function isSafeSceneRelativePath(
   projectRoot: string,
@@ -48,21 +53,59 @@ function sendJson(
   res.end(JSON.stringify(payload));
 }
 
-function invalidateSceneModule(
-  server: ViteDevServer,
-  absolutePath: string,
+function broadcastSceneChange(
+  clients: Set<ServerResponse>,
+  relativePath: string,
+  data: unknown,
 ): void {
-  const mod = server.moduleGraph.getModuleById(absolutePath);
-  if (mod) server.moduleGraph.invalidateModule(mod);
+  const message = `data: ${JSON.stringify({ path: relativePath, data })}\n\n`;
+  for (const client of clients) {
+    try {
+      client.write(message);
+    } catch {
+      clients.delete(client);
+    }
+  }
 }
 
 export function attachSceneEditorDevMiddleware(
   server: ViteDevServer,
   projectRoot: string,
 ): void {
+  const eventClients = new Set<ServerResponse>();
+
+  const publishSceneFile = (absolutePath: string): void => {
+    const normalized = path.normalize(absolutePath);
+    if (!normalized.endsWith(".scene")) return;
+    try {
+      const raw = fs.readFileSync(normalized, "utf8");
+      const data = JSON.parse(raw) as unknown;
+      broadcastSceneChange(
+        eventClients,
+        toPosixRelative(projectRoot, normalized),
+        data,
+      );
+    } catch {
+      // Ignore unreadable or deleted scene files.
+    }
+  };
+
+  server.watcher.on("change", publishSceneFile);
+
   server.middlewares.use((req, res, next) => {
     const host = req.headers.host ?? "localhost";
     const url = new URL(req.url ?? "/", `http://${host}`);
+
+    if (url.pathname === SCENE_EVENTS_PATH && req.method === "GET") {
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      });
+      eventClients.add(res);
+      req.on("close", () => eventClients.delete(res));
+      return;
+    }
 
     if (url.pathname === SCENES_LIST_PATH && req.method === "GET") {
       sendJson(res, 200, listProjectScenes(projectRoot));
@@ -107,7 +150,7 @@ export function attachSceneEditorDevMiddleware(
               `${JSON.stringify(parsed, null, 2)}\n`,
               "utf8",
             );
-            invalidateSceneModule(server, absolute);
+            publishSceneFile(absolute);
             res.statusCode = 204;
             res.end();
           })

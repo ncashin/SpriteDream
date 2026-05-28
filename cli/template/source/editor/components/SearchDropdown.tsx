@@ -3,12 +3,15 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn.js";
 
 export type SearchDropdownOption = {
@@ -61,10 +64,42 @@ export function SearchDropdown({
 }: SearchDropdownProps) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
+
+  const updateMenuPosition = useCallback(() => {
+    const trigger = rootRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const maxWidth = Math.min(window.innerWidth - 16, 320);
+    const minWidth = 220;
+
+    if (variant === "icon") {
+      setMenuStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+        minWidth,
+        maxWidth,
+        zIndex: 2147483647,
+      });
+      return;
+    }
+
+    setMenuStyle({
+      position: "fixed",
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      minWidth,
+      zIndex: 2147483647,
+    });
+  }, [variant]);
 
   const selected = options.find((option) => option.value === value);
 
@@ -103,7 +138,14 @@ export function SearchDropdown({
     if (!open) return;
 
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) close();
+      const target = event.target as Node;
+      if (
+        rootRef.current?.contains(target) ||
+        menuRef.current?.contains(target)
+      ) {
+        return;
+      }
+      close();
     };
 
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -117,6 +159,17 @@ export function SearchDropdown({
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [close, open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [open, updateMenuPosition]);
 
   useEffect(() => {
     if (!open) return;
@@ -148,6 +201,89 @@ export function SearchDropdown({
   }
 
   const triggerLabel = selected?.label ?? placeholder;
+
+  const menu = open ? (
+    <div
+      ref={menuRef}
+      style={menuStyle}
+      className={cn(
+        "flex flex-col overflow-hidden rounded",
+        "border border-[color-mix(in_srgb,var(--vscode-widget-border)_80%,transparent)]",
+        "bg-[var(--vscode-editor-background)] shadow-[0_4px_16px_rgba(0,0,0,0.28)]",
+      )}
+    >
+      <div className="flex items-center gap-1.5 border-b border-[color-mix(in_srgb,var(--vscode-widget-border)_60%,transparent)] px-2 py-1.5">
+        <Search
+          size={14}
+          aria-hidden
+          className="shrink-0 text-[var(--vscode-descriptionForeground)]"
+        />
+        <input
+          ref={searchRef}
+          type="search"
+          value={query}
+          placeholder={searchPlaceholder}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={onSearchKeyDown}
+          className={cn(
+            "min-w-0 flex-1 border-0 bg-transparent py-0.5 text-xs outline-none",
+            "text-[var(--vscode-editor-foreground)] placeholder:text-[var(--vscode-descriptionForeground)]",
+            "font-[var(--vscode-font-family)]",
+          )}
+        />
+      </div>
+
+      <div
+        id={listboxId}
+        role="listbox"
+        aria-label={ariaLabel}
+        className="max-h-56 overflow-auto py-1"
+      >
+        {flatFiltered.length === 0 ? (
+          <div className="px-2 py-1.5 text-xs text-[var(--vscode-descriptionForeground)]">
+            {emptyMessage}
+          </div>
+        ) : (
+          [...grouped.entries()].map(([group, items]) => (
+            <div key={group || "__default"}>
+              {group ? (
+                <div className="px-2 pb-0.5 pt-1 text-[10px] uppercase tracking-wide text-[var(--vscode-descriptionForeground)]">
+                  {group}
+                </div>
+              ) : null}
+              {items.map((option) => {
+                const index = flatFiltered.findIndex(
+                  (entry) => entry.value === option.value,
+                );
+                const active = index === activeIndex;
+                const selectedOption = option.value === value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="option"
+                    aria-selected={selectedOption}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onClick={() => choose(option.value)}
+                    className={cn(
+                      "flex w-full min-w-0 items-center px-2 py-1 text-left text-xs",
+                      "font-[var(--vscode-font-family)] cursor-pointer border-0 bg-transparent",
+                      active
+                        ? "bg-[var(--vscode-list-activeSelectionBackground)] text-[var(--vscode-list-activeSelectionForeground)]"
+                        : "text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground)]",
+                      selectedOption && !active && "font-medium",
+                    )}
+                  >
+                    <span className="truncate">{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div ref={rootRef} className={cn("relative min-w-0", className)}>
@@ -200,87 +336,7 @@ export function SearchDropdown({
         )}
       </button>
 
-      {open ? (
-        <div
-          className={cn(
-            "absolute left-0 z-50 mt-1 flex min-w-[220px] max-w-[min(100vw-1rem,320px)] flex-col overflow-hidden rounded",
-            "border border-[color-mix(in_srgb,var(--vscode-widget-border)_80%,transparent)]",
-            "bg-[var(--vscode-editor-background)] shadow-[0_4px_16px_rgba(0,0,0,0.28)]",
-            variant === "icon" ? "right-0 left-auto" : "w-full max-w-none",
-          )}
-        >
-          <div className="flex items-center gap-1.5 border-b border-[color-mix(in_srgb,var(--vscode-widget-border)_60%,transparent)] px-2 py-1.5">
-            <Search
-              size={14}
-              aria-hidden
-              className="shrink-0 text-[var(--vscode-descriptionForeground)]"
-            />
-            <input
-              ref={searchRef}
-              type="search"
-              value={query}
-              placeholder={searchPlaceholder}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={onSearchKeyDown}
-              className={cn(
-                "min-w-0 flex-1 border-0 bg-transparent py-0.5 text-xs outline-none",
-                "text-[var(--vscode-editor-foreground)] placeholder:text-[var(--vscode-descriptionForeground)]",
-                "font-[var(--vscode-font-family)]",
-              )}
-            />
-          </div>
-
-          <div
-            id={listboxId}
-            role="listbox"
-            aria-label={ariaLabel}
-            className="max-h-56 overflow-auto py-1"
-          >
-            {flatFiltered.length === 0 ? (
-              <div className="px-2 py-1.5 text-xs text-[var(--vscode-descriptionForeground)]">
-                {emptyMessage}
-              </div>
-            ) : (
-              [...grouped.entries()].map(([group, items]) => (
-                <div key={group || "__default"}>
-                  {group ? (
-                    <div className="px-2 pb-0.5 pt-1 text-[10px] uppercase tracking-wide text-[var(--vscode-descriptionForeground)]">
-                      {group}
-                    </div>
-                  ) : null}
-                  {items.map((option) => {
-                    const index = flatFiltered.findIndex(
-                      (entry) => entry.value === option.value,
-                    );
-                    const active = index === activeIndex;
-                    const selectedOption = option.value === value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        role="option"
-                        aria-selected={selectedOption}
-                        onMouseEnter={() => setActiveIndex(index)}
-                        onClick={() => choose(option.value)}
-                        className={cn(
-                          "flex w-full min-w-0 items-center px-2 py-1 text-left text-xs",
-                          "font-[var(--vscode-font-family)] cursor-pointer border-0 bg-transparent",
-                          active
-                            ? "bg-[var(--vscode-list-activeSelectionBackground)] text-[var(--vscode-list-activeSelectionForeground)]"
-                            : "text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground)]",
-                          selectedOption && !active && "font-medium",
-                        )}
-                      >
-                        <span className="truncate">{option.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      ) : null}
+      {menu ? createPortal(menu, document.body) : null}
     </div>
   );
 }

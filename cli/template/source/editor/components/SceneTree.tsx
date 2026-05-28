@@ -779,9 +779,7 @@ export function SceneTree() {
       >
         {formatScenePathSlash(selectedPath)}
       </span>
-    ) : (
-      <span className="block min-w-0 truncate font-semibold">Scene</span>
-    );
+    ) : undefined;
 
   if (!rootObject) {
     return (

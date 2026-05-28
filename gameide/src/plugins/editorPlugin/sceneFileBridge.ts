@@ -6,6 +6,7 @@ import { setScene, type SceneObject } from "../../scene/scene.js";
 
 export const SCENES_API = "/__gameide/scenes";
 export const SCENE_API = "/__gameide/scene";
+export const SCENE_EVENTS_API = "/__gameide/scene/events";
 
 function isSceneFileMessage(
   raw: unknown,
@@ -121,4 +122,25 @@ export function subscribeToSceneEditorState(
 
   window.addEventListener("message", onMessage);
   return () => window.removeEventListener("message", onMessage);
+}
+
+export function subscribeToSceneFileChanges(
+  handler: (relativePath: string, data: SceneObject) => void,
+): () => void {
+  const source = new EventSource(SCENE_EVENTS_API);
+
+  source.onmessage = (event) => {
+    try {
+      const payload = JSON.parse(event.data) as {
+        path?: string;
+        data?: SceneObject;
+      };
+      if (typeof payload.path !== "string") return;
+      handler(payload.path, payload.data ?? {});
+    } catch {
+      // Ignore malformed events.
+    }
+  };
+
+  return () => source.close();
 }

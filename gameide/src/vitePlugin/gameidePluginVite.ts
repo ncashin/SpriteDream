@@ -18,6 +18,14 @@ type JSONValue =
   | JSONValue[]
   | { [key: string]: JSONValue };
 
+function createSceneModuleCode(data: JSONValue): string {
+  return `const data = ${JSON.stringify(data)};\nexport default data;\n`;
+}
+
+function parseSceneJSON(raw: string): JSONValue {
+  return JSON.parse(raw) as JSONValue;
+}
+
 const lifecycleExports = new Set([
   "start",
   "update",
@@ -28,16 +36,6 @@ const lifecycleExports = new Set([
 ]);
 
 const transformableModulePattern = /\.[cm]?[jt]sx?$/;
-
-function parseSceneJSON(raw: string): JSONValue {
-  return JSON.parse(raw) as JSONValue;
-}
-
-function createSceneModuleCode(data: JSONValue): string {
-  return `const data = ${JSON.stringify(data)};
-export default data;
-`;
-}
 
 function getCleanId(id: string): string {
   return id.replace(/\?.*$/, "");
@@ -229,6 +227,7 @@ export function gameidePlugin(): Plugin {
 
   return {
     name: "gameide-plugin",
+    enforce: "post",
     configResolved(config) {
       isServe = config.command === "serve";
       projectRoot = config.root;
@@ -249,14 +248,13 @@ export function gameidePlugin(): Plugin {
       };
     },
     handleHotUpdate(ctx) {
-      const file = path.normalize(ctx.file);
-      if (
-        !catalogFileAffectsAssets(projectRoot, file) &&
-        !catalogFileAffectsScenes(file)
-      ) {
-        return;
+      if (catalogFileAffectsScenes(path.normalize(ctx.file))) {
+        return [];
       }
-      invalidateCatalogModules(ctx.server);
+
+      if (catalogFileAffectsAssets(projectRoot, path.normalize(ctx.file))) {
+        invalidateCatalogModules(ctx.server);
+      }
     },
     load(id: string) {
       if (id === resolvedVirtualId(VIRTUAL_ASSETS_MODULE)) {
