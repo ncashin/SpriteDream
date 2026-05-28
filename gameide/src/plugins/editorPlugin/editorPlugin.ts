@@ -1,4 +1,5 @@
 import { createSceneTransportPostMessage } from "../../scene/sceneChannel/sceneChannelTransport.js";
+import { getDevSceneChannelTransport } from "../../scene/sceneChannel/sceneChannelDevTransport.js";
 import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import { GameIDEMode, getMode, onModeChange } from "../../lifecycle/mode.js";
@@ -6,6 +7,11 @@ import type { GameContext } from "../../lifecycle/initialization.js";
 import { createEditorUI } from "./createEditorUI.js";
 import type { EditorWithGameViewReference } from "./createEditorUI.js";
 import { restoreSceneSnapshot, saveSceneSnapshot } from "../../scene/snapshot.js";
+
+function preferredScenePathFromUrl(): string | undefined {
+  const fromQuery = new URL(window.location.href).searchParams.get("scene") ?? "";
+  return fromQuery || undefined;
+}
 
 export const editorPlugin =
   (Editor: EditorWithGameViewReference) =>
@@ -15,14 +21,20 @@ export const editorPlugin =
     }
 
     const embeddedInParentIFrame = window && window.parent !== window;
+    const transport = embeddedInParentIFrame
+      ? createSceneTransportPostMessage({
+          target: window.parent,
+          source: window,
+        })
+      : getDevSceneChannelTransport();
 
     const channel = await createSceneChannel({
-      transport: createSceneTransportPostMessage({
-        target: window.parent,
-        source: window,
-      }),
+      transport,
       scene: input.scene,
-      initializeScene: embeddedInParentIFrame,
+      initializeScene: true,
+      initialScenePath: embeddedInParentIFrame
+        ? undefined
+        : preferredScenePathFromUrl(),
     });
 
     const handleModeChange = (mode: GameIDEMode) => {
@@ -52,9 +64,7 @@ export const editorPlugin =
 
     return {
       ...input,
-      initialScene: embeddedInParentIFrame
-        ? structuredClone(input.scene.getRaw())
-        : input.initialScene,
+      initialScene: structuredClone(input.scene.getRaw()),
       rootElement: mount.gameViewRoot,
       editorSceneChannel: channel,
     };

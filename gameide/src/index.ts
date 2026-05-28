@@ -1,4 +1,5 @@
 export { createSceneTransportPostMessage as createPostMessageTransport } from "./scene/sceneChannel/sceneChannelTransport.js";
+export { receiveDevSceneChannelMessage } from "./scene/sceneChannel/sceneChannelDevTransport.js";
 export type {
   SceneChannelTransport,
   PostMessageTransportOptions,

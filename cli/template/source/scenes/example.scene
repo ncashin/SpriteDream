@@ -46,8 +46,8 @@
   "platform_0": {
     "position": {
       "__icon": "move-3d",
-      "x": -495,
-      "y": -234,
+      "x": -390,
+      "y": 138,
       "z": 0
     },
     "rotation": {
@@ -90,8 +90,8 @@
   "platform_1": {
     "position": {
       "__icon": "move-3d",
-      "x": 120,
-      "y": -260,
+      "x": 192,
+      "y": 8,
       "z": 0
     },
     "rotation": {
@@ -178,8 +178,8 @@
   "platform_3": {
     "position": {
       "__icon": "move-3d",
-      "x": -125,
-      "y": -114,
+      "x": -236,
+      "y": -308,
       "z": 0
     },
     "rotation": {

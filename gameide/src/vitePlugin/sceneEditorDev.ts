@@ -4,36 +4,13 @@ import type { ServerResponse } from "node:http";
 import type { IncomingMessage } from "node:http";
 import type { ViteDevServer } from "vite";
 import { listProjectScenes } from "./projectCatalog";
+import {
+  attachDevSceneChannelHost,
+  type DevSceneChannelHost,
+} from "./sceneChannelHost";
 
-const SCENE_API_PATH = "/__gameide/scene";
 const SCENES_LIST_PATH = "/__gameide/scenes";
-const SCENE_EVENTS_PATH = "/__gameide/scene/events";
-
-function toPosixRelative(base: string, absolutePath: string): string {
-  return path.relative(base, absolutePath).split(path.sep).join("/");
-}
-
-function isSafeSceneRelativePath(
-  projectRoot: string,
-  relativePath: string,
-): boolean {
-  if (!relativePath.endsWith(".scene")) return false;
-  const normalized = path.normalize(relativePath);
-  if (path.isAbsolute(normalized) || normalized.startsWith(`..${path.sep}`)) {
-    return false;
-  }
-  const absolute = path.join(projectRoot, normalized);
-  const rel = path.relative(projectRoot, absolute);
-  return rel !== "" && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
-}
-
-function resolveSceneAbsolutePath(
-  projectRoot: string,
-  relativePath: string,
-): string | null {
-  if (!isSafeSceneRelativePath(projectRoot, relativePath)) return null;
-  return path.join(projectRoot, path.normalize(relativePath));
-}
+const SCENE_CHANNEL_PATH = "/__gameide/scene/channel";
 
 async function readBody(req: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];
@@ -53,117 +30,40 @@ function sendJson(
   res.end(JSON.stringify(payload));
 }
 
-function broadcastSceneChange(
-  clients: Set<ServerResponse>,
-  relativePath: string,
-  data: unknown,
-): void {
-  const message = `data: ${JSON.stringify({ path: relativePath, data })}\n\n`;
-  for (const client of clients) {
-    try {
-      client.write(message);
-    } catch {
-      clients.delete(client);
-    }
-  }
-}
-
 export function attachSceneEditorDevMiddleware(
   server: ViteDevServer,
   projectRoot: string,
-): void {
-  const eventClients = new Set<ServerResponse>();
-
-  const publishSceneFile = (absolutePath: string): void => {
-    const normalized = path.normalize(absolutePath);
-    if (!normalized.endsWith(".scene")) return;
-    try {
-      const raw = fs.readFileSync(normalized, "utf8");
-      const data = JSON.parse(raw) as unknown;
-      broadcastSceneChange(
-        eventClients,
-        toPosixRelative(projectRoot, normalized),
-        data,
-      );
-    } catch {
-      // Ignore unreadable or deleted scene files.
-    }
-  };
-
-  server.watcher.on("change", publishSceneFile);
+): DevSceneChannelHost {
+  const host = attachDevSceneChannelHost(server, projectRoot);
 
   server.middlewares.use((req, res, next) => {
-    const host = req.headers.host ?? "localhost";
-    const url = new URL(req.url ?? "/", `http://${host}`);
-
-    if (url.pathname === SCENE_EVENTS_PATH && req.method === "GET") {
-      res.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      });
-      eventClients.add(res);
-      req.on("close", () => eventClients.delete(res));
-      return;
-    }
+    const hostHeader = req.headers.host ?? "localhost";
+    const url = new URL(req.url ?? "/", `http://${hostHeader}`);
 
     if (url.pathname === SCENES_LIST_PATH && req.method === "GET") {
       sendJson(res, 200, listProjectScenes(projectRoot));
       return;
     }
 
-    if (url.pathname === SCENE_API_PATH) {
-      const file = url.searchParams.get("file")?.trim() ?? "";
-      const absolute = resolveSceneAbsolutePath(projectRoot, file);
-      if (!absolute) {
-        sendJson(res, 400, { error: "invalid scene path" });
-        return;
-      }
-
-      if (req.method === "GET") {
-        try {
-          const raw = fs.readFileSync(absolute, "utf8");
-          const data = JSON.parse(raw) as unknown;
-          sendJson(res, 200, data);
-        } catch {
-          sendJson(res, 404, { error: "scene not found" });
-        }
-        return;
-      }
-
-      if (req.method === "PUT") {
-        void readBody(req)
-          .then((body) => {
-            let parsed: unknown;
-            try {
-              parsed = JSON.parse(body);
-            } catch {
-              sendJson(res, 400, { error: "invalid JSON" });
-              return;
-            }
-            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-              sendJson(res, 400, { error: "scene must be a JSON object" });
-              return;
-            }
-            fs.writeFileSync(
-              absolute,
-              `${JSON.stringify(parsed, null, 2)}\n`,
-              "utf8",
-            );
-            publishSceneFile(absolute);
+    if (url.pathname === SCENE_CHANNEL_PATH && req.method === "POST") {
+      void readBody(req)
+        .then((body) => {
+          try {
+            host.handleMessage(JSON.parse(body) as unknown);
             res.statusCode = 204;
             res.end();
-          })
-          .catch(() => {
-            sendJson(res, 500, { error: "failed to save scene" });
-          });
-        return;
-      }
-
-      sendJson(res, 405, { error: "method not allowed" });
+          } catch {
+            sendJson(res, 400, { error: "invalid JSON" });
+          }
+        })
+        .catch(() => {
+          sendJson(res, 500, { error: "failed to handle scene channel message" });
+        });
       return;
     }
 
     next();
   });
+
+  return host;
 }

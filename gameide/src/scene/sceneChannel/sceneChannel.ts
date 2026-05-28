@@ -21,7 +21,7 @@ export type SceneEditorState = {
 export type SceneChannelMessage =
   | { type: typeof SCENE_CHANNEL.initialScene; content: SceneObject | string }
   | { type: typeof SCENE_CHANNEL.scenePatch; content: SceneObject }
-  | { type: typeof SCENE_CHANNEL.requestInitialScene }
+  | { type: typeof SCENE_CHANNEL.requestInitialScene; content?: string }
   | { type: typeof SCENE_CHANNEL.sceneChange; content: SceneObject | string }
   | { type: typeof SCENE_CHANNEL.sceneEditorState; content: SceneEditorState }
   | { type: typeof SCENE_CHANNEL.requestSceneSwitch; content: string }
@@ -51,6 +51,7 @@ export interface CreateSceneChannelOptions {
   transport: SceneChannelTransport;
   scene: Scene;
   initializeScene?: boolean;
+  initialScenePath?: string;
 }
 
 export interface SceneChannel {
@@ -70,7 +71,7 @@ export interface SceneChannel {
 export async function createSceneChannel(
   options: CreateSceneChannelOptions,
 ): Promise<SceneChannel> {
-  const { transport, scene, initializeScene = true } = options;
+  const { transport, scene, initializeScene = true, initialScenePath } = options;
   let sceneInitialized = !initializeScene;
   let paused = false;
   let applyingRemoteChange = false;
@@ -82,7 +83,10 @@ export async function createSceneChannel(
   });
 
   function requestInitialScene(): void {
-    transport.send({ type: SCENE_CHANNEL.requestInitialScene });
+    transport.send({
+      type: SCENE_CHANNEL.requestInitialScene,
+      ...(initialScenePath ? { content: initialScenePath } : {}),
+    });
   }
   function sendInitialScene(content: string): void {
     transport.send({ type: SCENE_CHANNEL.initialScene, content });

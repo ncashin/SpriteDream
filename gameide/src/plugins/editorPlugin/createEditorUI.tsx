@@ -11,10 +11,6 @@ export type EditorUIMount = {
   dispose: () => void;
 };
 
-/**
- * Mounts the editor into `parentRoot` and resolves with the GameView host element
- * (where the game surface should attach).
- */
 export function createEditorUI(
   parentRoot: HTMLElement,
   Editor: EditorWithGameViewReference,
