@@ -11,6 +11,10 @@ import {
   listProjectAssets,
   listProjectScenes,
 } from "./projectCatalog";
+import {
+  stripScenePatchSentinels,
+  type SceneObject,
+} from "../scene/scene.js";
 
 type JSONPrimitive = string | number | boolean | null;
 type JSONValue =
@@ -23,7 +27,11 @@ function createSceneModuleCode(data: JSONValue): string {
 }
 
 function parseSceneJSON(raw: string): JSONValue {
-  return JSON.parse(raw) as JSONValue;
+  const data = JSON.parse(raw) as JSONValue;
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return stripScenePatchSentinels(data as SceneObject) as JSONValue;
+  }
+  return data;
 }
 
 const lifecycleExports = new Set([
@@ -194,31 +202,15 @@ function createHotModuleCode(code: string): string {
   return hotModuleTemplate.replace(hotModuleBodyPlaceholder, code);
 }
 
-export const VIRTUAL_ASSETS_MODULE = "gameide:assets";
-export const VIRTUAL_SCENES_MODULE = "gameide:scenes";
-
-const virtualModulePrefix = "\0";
-
-/** Maps public `gameide:*` ids to colon-free ids so `/@id/` URLs work in the browser. */
-const virtualModuleInternalId: Record<string, string> = {
-  [VIRTUAL_ASSETS_MODULE]: "gameide-assets",
-  [VIRTUAL_SCENES_MODULE]: "gameide-scenes",
-};
-
-function resolvedVirtualId(publicId: string): string {
-  const internal = virtualModuleInternalId[publicId] ?? publicId;
-  return virtualModulePrefix + internal;
-}
+import {
+  invalidateCatalogModules,
+  resolvedVirtualModuleId,
+  VIRTUAL_ASSETS_MODULE,
+  VIRTUAL_SCENES_MODULE,
+} from "./virtualCatalog";
 
 function createCatalogModuleCode(values: readonly string[]): string {
   return `export default ${JSON.stringify(values)};\n`;
-}
-
-function invalidateCatalogModules(server: ViteDevServer): void {
-  for (const virtualId of [VIRTUAL_ASSETS_MODULE, VIRTUAL_SCENES_MODULE]) {
-    const mod = server.moduleGraph.getModuleById(resolvedVirtualId(virtualId));
-    if (mod) server.moduleGraph.invalidateModule(mod);
-  }
 }
 
 export function gameidePlugin(): Plugin {
@@ -234,7 +226,7 @@ export function gameidePlugin(): Plugin {
     },
     resolveId(id) {
       if (id === VIRTUAL_ASSETS_MODULE || id === VIRTUAL_SCENES_MODULE) {
-        return resolvedVirtualId(id);
+        return resolvedVirtualModuleId(id);
       }
     },
     configureServer(server) {
@@ -257,10 +249,10 @@ export function gameidePlugin(): Plugin {
       }
     },
     load(id: string) {
-      if (id === resolvedVirtualId(VIRTUAL_ASSETS_MODULE)) {
+      if (id === resolvedVirtualModuleId(VIRTUAL_ASSETS_MODULE)) {
         return createCatalogModuleCode(listProjectAssets(projectRoot));
       }
-      if (id === resolvedVirtualId(VIRTUAL_SCENES_MODULE)) {
+      if (id === resolvedVirtualModuleId(VIRTUAL_SCENES_MODULE)) {
         return createCatalogModuleCode(listProjectScenes(projectRoot));
       }
 

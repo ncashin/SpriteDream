@@ -1,5 +1,6 @@
 import { Container, Graphics } from "pixi.js";
 import { getScene, type GameObject } from "gameide";
+import { editorColor } from "../../editor/editorColors.js";
 import {
   collisionBodyDisabled,
   isColliderNode,
@@ -47,7 +48,7 @@ function redrawColliderOutline(outline: Graphics, entity: GameObject): void {
 
   const disabled = collisionBodyDisabled(entity);
 
-  const color = disabled ? 0x888888 : 0x44dd66;
+  const color = editorColor("green");
   const alpha = disabled ? 0.4 : 0.95;
 
   if (box && typeof box === "object") {

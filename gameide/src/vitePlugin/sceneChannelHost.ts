@@ -6,8 +6,14 @@ import {
   type SceneChannelMessage,
   type SceneEditorState,
 } from "../scene/sceneChannel/sceneChannel.js";
-import { curryScene, type Scene, type SceneObject } from "../scene/scene.js";
+import {
+  curryScene,
+  stripScenePatchSentinels,
+  type Scene,
+  type SceneObject,
+} from "../scene/scene.js";
 import { listProjectScenes } from "./projectCatalog";
+import { invalidateCatalogModules } from "./virtualCatalog";
 
 export const SCENE_CHANNEL_HOT_EVENT = "gameide:scene-channel";
 
@@ -41,7 +47,7 @@ function resolveSceneAbsolutePath(
 
 function readSceneFile(absolutePath: string): SceneObject {
   const raw = fs.readFileSync(absolutePath, "utf8");
-  return JSON.parse(raw) as SceneObject;
+  return stripScenePatchSentinels(JSON.parse(raw) as SceneObject);
 }
 
 function writeSceneFile(absolutePath: string, data: SceneObject): void {
@@ -64,7 +70,7 @@ class DevSceneDocument {
   }
 
   getData(): SceneObject {
-    return structuredClone(this.rawScene);
+    return structuredClone(stripScenePatchSentinels(this.rawScene));
   }
 
   replace(data: SceneObject): void {
@@ -114,10 +120,14 @@ export class DevSceneChannelHost {
       trackScene(path.join(this.projectRoot, relativePath));
     }
 
-    this.server.watcher.on("add", trackScene);
-    this.server.watcher.on("change", (file) => {
+    const onSceneFileEvent = (file: string): void => {
+      trackScene(file);
+      invalidateCatalogModules(this.server);
       this.scheduleReloadFromDisk(file);
-    });
+    };
+
+    this.server.watcher.on("add", onSceneFileEvent);
+    this.server.watcher.on("change", onSceneFileEvent);
   }
 
   handleMessage(raw: unknown): void {
@@ -238,7 +248,7 @@ export class DevSceneChannelHost {
   }
 
   private async reloadActiveSceneFromDisk(absolutePath: string): Promise<void> {
-    if (!this.activePath) return;
+    if (!this.activePath || this.saving) return;
 
     try {
       const data = readSceneFile(absolutePath);

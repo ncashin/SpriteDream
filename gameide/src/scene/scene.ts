@@ -1,9 +1,13 @@
 import { invalidateUseSceneSnapshot } from "./sceneExternalStore.js";
+import { deleteValueAtPath, setValueAtPath } from "./path.js";
 
 export type GameObject = Record<PropertyKey, unknown>;
 export type SceneObject = Record<PropertyKey, unknown>;
 
 export type ScenePath = PropertyKey[];
+
+/** JSON-safe patch sentinel; applyPatch deletes the key instead of storing this value. */
+export const SCENE_PATCH_DELETED = "__gameide_scene_patch_deleted__";
 
 export type SceneListener = (
   object: Record<PropertyKey, unknown>,
@@ -13,6 +17,23 @@ export type SceneListener = (
 
 const isNestedRecord = (value: unknown): value is GameObject =>
   !!value && typeof value === "object" && !Array.isArray(value);
+
+export function isScenePatchDeletion(value: unknown): boolean {
+  return value === SCENE_PATCH_DELETED;
+}
+
+/** Remove patch deletion sentinels so they are never persisted or imported as data. */
+export function stripScenePatchSentinels(data: SceneObject): SceneObject {
+  const out: SceneObject = {};
+  for (const key of Reflect.ownKeys(data)) {
+    const value = Reflect.get(data, key);
+    if (isScenePatchDeletion(value)) continue;
+    const next = isNestedRecord(value) ? stripScenePatchSentinels(value) : value;
+    if (isNestedRecord(next) && Reflect.ownKeys(next).length === 0) continue;
+    Reflect.set(out, key, next);
+  }
+  return out;
+}
 
 export function createSceneProxy<T extends object = GameObject>(
   target: T,
@@ -124,54 +145,28 @@ export const curryScene = (rawScene: SceneObject) => {
     return Object.values(scene).filter(queryFunction) as T[];
   };
 
-  const deleteAtPath = (root: GameObject, path: PropertyKey[]) => {
-    if (path.length === 0) return;
-    let node: GameObject = root;
-    for (let i = 0; i < path.length - 1; i++) {
-      const next = Reflect.get(node, path[i]);
-      if (!isNestedRecord(next)) return;
-      node = next;
-    }
-    Reflect.deleteProperty(node, path[path.length - 1]);
-  };
-
-  const setAtPath = (root: GameObject, path: PropertyKey[], value: unknown) => {
-    if (path.length === 0) return;
-    let node: GameObject = root;
-    for (let i = 0; i < path.length - 1; i++) {
-      const key = path[i];
-      let next = Reflect.get(node, key);
-      if (!isNestedRecord(next)) {
-        next = {};
-        Reflect.set(node, key, next);
-      }
-      node = next as GameObject;
-    }
-    Reflect.set(node, path[path.length - 1], value);
-  };
-
   /** Apply a partial scene update without replacing intermediate objects. */
   const applyPatch = (patch: Partial<SceneObject>) => {
     const walk = (data: GameObject, path: PropertyKey[]) => {
       for (const key of Reflect.ownKeys(data)) {
         const value = Reflect.get(data, key);
         const nextPath = [...path, key];
-        if (value === undefined) {
-          deleteAtPath(scene as GameObject, nextPath);
+        if (isScenePatchDeletion(value)) {
+          deleteValueAtPath(scene as GameObject, nextPath);
           continue;
         }
         if (isNestedRecord(value)) {
           walk(value, nextPath);
           continue;
         }
-        setAtPath(scene as GameObject, nextPath, value);
+        setValueAtPath(scene as GameObject, nextPath, value);
       }
     };
     walk(patch as GameObject, []);
   };
 
   const replace = (data: SceneObject) => {
-    const snapshot = structuredClone(data ?? {});
+    const snapshot = structuredClone(stripScenePatchSentinels(data ?? {}));
     for (const key of Reflect.ownKeys(rawScene)) {
       Reflect.deleteProperty(scene, key);
     }

@@ -208,15 +208,15 @@ export function SearchDropdown({
       style={menuStyle}
       className={cn(
         "flex flex-col overflow-hidden rounded",
-        "border border-[color-mix(in_srgb,var(--vscode-widget-border)_80%,transparent)]",
-        "bg-[var(--vscode-editor-background)] shadow-[0_4px_16px_rgba(0,0,0,0.28)]",
+        "border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)]",
+        "bg-[var(--color-bg)] shadow-[0_4px_16px_var(--color-shadow)]",
       )}
     >
-      <div className="flex items-center gap-1.5 border-b border-[color-mix(in_srgb,var(--vscode-widget-border)_60%,transparent)] px-2 py-1.5">
+      <div className="flex items-center gap-1.5 border-b border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] px-2 py-1.5">
         <Search
           size={14}
           aria-hidden
-          className="shrink-0 text-[var(--vscode-descriptionForeground)]"
+          className="shrink-0 text-[var(--color-muted)]"
         />
         <input
           ref={searchRef}
@@ -227,7 +227,7 @@ export function SearchDropdown({
           onKeyDown={onSearchKeyDown}
           className={cn(
             "min-w-0 flex-1 border-0 bg-transparent py-0.5 text-xs outline-none",
-            "text-[var(--vscode-editor-foreground)] placeholder:text-[var(--vscode-descriptionForeground)]",
+            "text-[var(--color-fg)] placeholder:text-[var(--color-muted)]",
             "font-[var(--vscode-font-family)]",
           )}
         />
@@ -240,14 +240,14 @@ export function SearchDropdown({
         className="max-h-56 overflow-auto py-1"
       >
         {flatFiltered.length === 0 ? (
-          <div className="px-2 py-1.5 text-xs text-[var(--vscode-descriptionForeground)]">
+          <div className="px-2 py-1.5 text-xs text-[var(--color-muted)]">
             {emptyMessage}
           </div>
         ) : (
           [...grouped.entries()].map(([group, items]) => (
             <div key={group || "__default"}>
               {group ? (
-                <div className="px-2 pb-0.5 pt-1 text-[10px] uppercase tracking-wide text-[var(--vscode-descriptionForeground)]">
+                <div className="px-2 pb-0.5 pt-1 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
                   {group}
                 </div>
               ) : null}
@@ -269,8 +269,8 @@ export function SearchDropdown({
                       "flex w-full min-w-0 items-center px-2 py-1 text-left text-xs",
                       "font-[var(--vscode-font-family)] cursor-pointer border-0 bg-transparent",
                       active
-                        ? "bg-[var(--vscode-list-activeSelectionBackground)] text-[var(--vscode-list-activeSelectionForeground)]"
-                        : "text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground)]",
+                        ? "bg-[var(--color-selection)] text-[var(--color-fg)]"
+                        : "text-[var(--color-fg)] hover:bg-[var(--color-hover)]",
                       selectedOption && !active && "font-medium",
                     )}
                   >
@@ -305,16 +305,16 @@ export function SearchDropdown({
           variant === "header" &&
             cn(
               "h-[22px] min-h-[22px] max-w-full rounded px-0.5 -mx-0.5",
-              "text-xs font-semibold text-[var(--vscode-editor-foreground)]",
-              "hover:bg-[var(--vscode-list-hoverBackground)]",
-              "focus-visible:ring-1 focus-visible:ring-[var(--vscode-focusBorder)]",
-              open && "bg-[var(--vscode-list-hoverBackground)]",
+              "text-xs font-semibold text-[var(--color-fg)]",
+              "hover:bg-[var(--color-hover)]",
+              "focus-visible:ring-1 focus-visible:ring-[var(--color-highlight)]",
+              open && "bg-[var(--color-hover)]",
             ),
           variant === "icon" &&
             cn(
               "relative flex items-center justify-center self-center rounded p-0.5",
-              "opacity-70 hover:opacity-100 hover:bg-[var(--vscode-list-hoverBackground)]",
-              open && "opacity-100 bg-[var(--vscode-list-hoverBackground)]",
+              "opacity-70 hover:opacity-100 hover:bg-[var(--color-hover)]",
+              open && "opacity-100 bg-[var(--color-hover)]",
             ),
           triggerClassName,
         )}
@@ -328,7 +328,7 @@ export function SearchDropdown({
               size={14}
               aria-hidden
               className={cn(
-                "shrink-0 text-[var(--vscode-descriptionForeground)] transition-transform",
+                "shrink-0 text-[var(--color-muted)] transition-transform",
                 open && "rotate-180",
               )}
             />

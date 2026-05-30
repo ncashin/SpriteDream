@@ -100,9 +100,9 @@ const textSize = "text-xs";
 const iconSize = 14;
 const iconClass = "text-white";
 const font = "font-[var(--vscode-font-family)]";
-const muted = "text-[var(--vscode-descriptionForeground)]";
-const foreground = "text-[var(--vscode-editor-foreground)]";
-const rowHover = "hover:bg-[var(--vscode-list-hoverBackground)]";
+const muted = "text-[var(--color-muted)]";
+const foreground = "text-[var(--color-fg)]";
+const rowHover = "hover:bg-[var(--color-hover)]";
 const inputClass = `w-full min-w-0 flex-1 py-0.5 border-0 bg-transparent text-inherit ${textSize} font-[inherit] outline-none`;
 
 const SCENE_TREE_META_KEYS = new Set(["__icon"]);
@@ -347,7 +347,7 @@ function RowShell({
           font,
           highlightable && rowHover,
           stickyStackDepth !== undefined &&
-            "sticky bg-[var(--vscode-editor-background)]",
+            "sticky bg-[var(--color-bg)]",
         )}
         style={
           stickyStackDepth !== undefined
@@ -634,7 +634,7 @@ function SceneTreeExitFocusButton({
       <button
         type="button"
         aria-label="Deselect"
-        className="absolute inset-0 cursor-pointer rounded border-0 bg-transparent p-0 outline-none focus-visible:ring-1 focus-visible:ring-[var(--vscode-focusBorder)]"
+        className="absolute inset-0 cursor-pointer rounded border-0 bg-transparent p-0 outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-highlight)]"
         onClick={onClick}
       />
       <X
@@ -658,7 +658,7 @@ function SceneViewHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex w-full min-w-0 shrink-0 items-center gap-1.5 bg-[var(--vscode-editor-background)] pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
+        "sticky top-0 z-30 flex w-full min-w-0 shrink-0 items-center gap-1.5 bg-[var(--color-bg)] pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
         font,
         foreground,
       )}
@@ -667,7 +667,7 @@ function SceneViewHeader({
       {leading && title ? (
         <span
           aria-hidden
-          className="shrink-0 text-[color-mix(in_srgb,var(--vscode-widget-border)_70%,transparent)]"
+          className="shrink-0 text-[color-mix(in_srgb,var(--color-border)_70%,transparent)]"
         >
           /
         </span>
@@ -783,14 +783,14 @@ export function SceneTree() {
 
   if (!rootObject) {
     return (
-      <div className="w-full h-full min-w-0 flex flex-col bg-[var(--vscode-editor-background)] p-2">
+      <div className="w-full h-full min-w-0 flex flex-col bg-[var(--color-bg)] p-2">
         <SceneViewHeader leading={<SceneFileControls />} />
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full min-w-0 flex flex-col bg-[var(--vscode-editor-background)] p-2">
+    <div className="w-full h-full min-w-0 flex flex-col bg-[var(--color-bg)] p-2">
       <SceneViewHeader
         leading={<SceneFileControls />}
         title={headerTitle}

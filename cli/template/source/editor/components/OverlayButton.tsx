@@ -15,9 +15,9 @@ export function OverlayButton({
       className={cn(
         "flex h-[22px] min-h-[22px] items-center justify-center gap-1 px-1.5 py-0 text-xs cursor-pointer border border-solid rounded font-[var(--vscode-font-family)] box-border",
         variant === "default" &&
-          "bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)] border-[var(--vscode-button-background)]",
+          "bg-[var(--color-highlight)] text-[var(--color-on-accent)] border-[var(--color-highlight)]",
         variant === "danger" &&
-          "bg-[var(--vscode-errorForeground)] text-[var(--vscode-button-foreground)] border-[var(--vscode-errorForeground)]",
+          "bg-[var(--color-red)] text-[var(--color-on-accent)] border-[var(--color-red)]",
         className
       )}
       {...props}

@@ -1,6 +1,6 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
 import { setValueAtPath } from "../path.js";
-import { Scene, SceneObject } from "../scene.js";
+import { SCENE_PATCH_DELETED, Scene, SceneObject } from "../scene.js";
 
 export const SCENE_CHANNEL = {
   requestInitialScene: "gameide.editor.requestInitialScene",
@@ -164,7 +164,11 @@ export async function createSceneChannel(
 
   const unsubscribeOnChange = scene.onChange((_object, property, newValue) => {
     if (!sceneInitialized || paused || applyingRemoteChange) return;
-    setValueAtPath(pendingPatch, property, newValue);
+    setValueAtPath(
+      pendingPatch,
+      property,
+      newValue === undefined ? SCENE_PATCH_DELETED : newValue,
+    );
   });
 
   await readyPromise;

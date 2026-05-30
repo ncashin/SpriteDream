@@ -36,8 +36,8 @@ function ToolButton({
         "flex h-full w-[22px] min-w-[22px] shrink-0 items-center justify-center p-0 rounded-[3px] cursor-pointer box-border border-0 outline-none",
         "font-[var(--vscode-font-family)]",
         active
-          ? "bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)]"
-          : "text-[var(--vscode-descriptionForeground)] bg-transparent hover:bg-[color-mix(in_srgb,var(--vscode-toolbar-hoverBackground)_60%,transparent)]",
+          ? "bg-[var(--color-highlight)] text-[var(--color-on-accent)]"
+          : "text-[var(--color-muted)] bg-transparent hover:bg-[color-mix(in_srgb,var(--color-hover)_60%,transparent)]",
       )}
     >
       {children}
@@ -55,7 +55,7 @@ export function TransformGizmoBar() {
     <div
       className={cn(
         "flex h-[22px] min-h-[22px] items-center gap-0.5 px-0.5 py-0 rounded font-[var(--vscode-font-family)] box-border",
-        "bg-[color-mix(in_srgb,var(--vscode-editor-background)_92%,transparent)]",
+        "bg-[color-mix(in_srgb,var(--color-bg)_92%,transparent)]",
       )}
       role="toolbar"
       aria-label="Transform gizmo tool"

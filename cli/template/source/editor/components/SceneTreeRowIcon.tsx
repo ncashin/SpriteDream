@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { cn } from "../../utils/cn.js";
 
-const rowHover = "hover:bg-[var(--vscode-list-hoverBackground)]";
+const rowHover = "hover:bg-[var(--color-hover)]";
 
 /** p-0.5 (2px) + 14px icon = 18px; use for all scene tree row action hit targets. */
 export const sceneTreeRowIconFrameSizeClass =

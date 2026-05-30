@@ -90,8 +90,8 @@
   "platform_1": {
     "position": {
       "__icon": "move-3d",
-      "x": 192,
-      "y": 8,
+      "x": 107,
+      "y": 120,
       "z": 0
     },
     "rotation": {

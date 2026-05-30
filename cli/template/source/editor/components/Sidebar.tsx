@@ -17,7 +17,7 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        "h-full max-w-[85vw] flex-none bg-[var(--vscode-editor-background)] border-r border-[var(--vscode-panel-border)] overflow-auto z-[2147483646]",
+        "h-full max-w-[85vw] flex-none bg-[var(--color-bg)] border-r border-[var(--color-border)] overflow-auto z-[2147483646]",
         width,
         !open && "hidden",
         className,

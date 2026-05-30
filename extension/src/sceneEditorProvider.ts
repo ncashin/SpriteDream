@@ -3,6 +3,7 @@ import {
   curryScene,
   createSceneChannel,
   SCENE_CHANNEL,
+  stripScenePatchSentinels,
   type Scene,
   type SceneChannelMessage,
   type SceneChannelTransport,
@@ -47,11 +48,11 @@ export class SceneDocument implements vscode.CustomDocument {
   }
 
   getData(): SceneObject {
-    return structuredClone(this.rawScene);
+    return structuredClone(stripScenePatchSentinels(this.rawScene));
   }
 
   getDocumentData(): SceneObject {
-    return structuredClone(this.rawScene);
+    return structuredClone(stripScenePatchSentinels(this.rawScene));
   }
 
   getSavedData(): SceneObject {
@@ -76,7 +77,7 @@ export class SceneDocument implements vscode.CustomDocument {
   }
 
   broadcastScene(): void {
-    this.broadcastHandler?.(JSON.stringify(this.rawScene, null, 2));
+    this.broadcastHandler?.(JSON.stringify(this.getData(), null, 2));
   }
 
   applyPatch(patch: SceneObject): void {
@@ -95,11 +96,7 @@ export class SceneDocument implements vscode.CustomDocument {
 
   /** Clears and repopulates `rawScene` in place so `curryScene` stays bound. */
   private replaceSceneWithSnapshot(data: SceneObject): void {
-    const snapshot = structuredClone(data ?? {});
-    for (const key of Object.keys(this.rawScene)) {
-      delete this.rawScene[key];
-    }
-    Object.assign(this.rawScene, snapshot);
+    this.sceneAPI.replace(data);
   }
 
   dispose(): void {

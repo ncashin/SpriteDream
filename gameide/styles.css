@@ -8,33 +8,24 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: var(--color-fg);
+  background-color: var(--color-bg);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* VS Code theme variable fallbacks when editor runs in iframe (no host injection) */
-  --vscode-editor-background: #1e1e1e;
-  --vscode-editor-foreground: #ccc;
   --vscode-font-family: inherit;
-  --vscode-panel-border: rgba(255, 255, 255, 0.1);
-  --vscode-button-background: #0e639c;
-  --vscode-button-foreground: #fff;
-  --vscode-errorForeground: #f14c4c;
-  --vscode-descriptionForeground: #6e7681;
-  --vscode-list-hoverBackground: rgba(255, 255, 255, 0.08);
 }
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: var(--color-blue);
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
+  color: var(--color-highlight);
 }
 
 html,
@@ -71,26 +62,4 @@ body {
   width: 100%;
   height: 100%;
   outline: none;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-
-    --vscode-editor-background: #fff;
-    --vscode-editor-foreground: #333;
-    --vscode-panel-border: rgba(0, 0, 0, 0.12);
-    --vscode-button-background: #0078d4;
-    --vscode-button-foreground: #fff;
-    --vscode-errorForeground: #b01011;
-    --vscode-descriptionForeground: #6e7681;
-    --vscode-list-hoverBackground: rgba(0, 0, 0, 0.06);
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
 }

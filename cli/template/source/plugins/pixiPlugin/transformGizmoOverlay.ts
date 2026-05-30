@@ -13,6 +13,7 @@ import type {
   PixiViewportInput,
   ViewportController,
 } from "./viewport.js";
+import { editorColor } from "../../editor/editorColors.js";
 
 type Vector2 = {
   x: number;
@@ -178,7 +179,7 @@ function drawSquareHandle(
   graphics
     .rect(centerX - size / 2, centerY - size / 2, size, size)
     .fill({ color, alpha: 0.92 })
-    .stroke({ width: strokeWidth, color: 0xffffff, alpha: 0.9, pixelLine: true });
+    .stroke({ width: strokeWidth, color, alpha: 0.9, pixelLine: true });
 }
 
 function drawCornerHandle(
@@ -190,50 +191,57 @@ function drawCornerHandle(
   graphics
     .rect(0, 0, size, size)
     .fill({ color, alpha: 0.78 })
-    .stroke({ width: strokeWidth, color: 0xffffff, alpha: 0.95, pixelLine: true });
+    .stroke({ width: strokeWidth, color, alpha: 0.95, pixelLine: true });
 }
 
 function drawTranslateGizmo(graphics: Graphics, unit: (pixels: number) => number): void {
+  const red = editorColor("red");
+  const green = editorColor("green");
+  const highlight = editorColor("highlight");
   const axisLength = unit(68);
   const arrowSize = unit(12);
   const cornerSize = unit(24);
   const lineWidth = unit(3);
 
-  drawAxisLine(graphics, "x", 0xff5252, axisLength, lineWidth);
-  drawAxisLine(graphics, "y", 0x39d353, axisLength, lineWidth);
-  drawArrowHead(graphics, "x", 0xff5252, axisLength, arrowSize);
-  drawArrowHead(graphics, "y", 0x39d353, axisLength, arrowSize);
-  drawCornerHandle(graphics, cornerSize, 0xf2cc60, unit(1.5));
-  graphics.circle(0, 0, unit(4)).fill({ color: 0xffffff, alpha: 0.95 });
+  drawAxisLine(graphics, "x", red, axisLength, lineWidth);
+  drawAxisLine(graphics, "y", green, axisLength, lineWidth);
+  drawArrowHead(graphics, "x", red, axisLength, arrowSize);
+  drawArrowHead(graphics, "y", green, axisLength, arrowSize);
+  drawCornerHandle(graphics, cornerSize, highlight, unit(1.5));
+  graphics.circle(0, 0, unit(4)).fill({ color: highlight, alpha: 0.95 });
 }
 
 function drawRotateGizmo(graphics: Graphics, unit: (pixels: number) => number): void {
+  const blue = editorColor("blue");
   const radius = unit(46);
   const handleRadius = unit(5);
   const strokeWidth = unit(3);
 
   graphics
     .circle(0, 0, radius)
-    .stroke({ width: strokeWidth, color: 0x4da3ff, alpha: 1, pixelLine: true });
-  graphics.circle(radius, 0, handleRadius).fill({ color: 0x4da3ff, alpha: 1 });
+    .stroke({ width: strokeWidth, color: blue, alpha: 1, pixelLine: true });
+  graphics.circle(radius, 0, handleRadius).fill({ color: blue, alpha: 1 });
   graphics
     .moveTo(0, 0)
     .lineTo(radius, 0)
-    .stroke({ width: unit(1), color: 0x4da3ff, alpha: 0.35, pixelLine: true });
+    .stroke({ width: unit(1), color: blue, alpha: 0.35, pixelLine: true });
 }
 
 function drawScaleGizmo(graphics: Graphics, unit: (pixels: number) => number): void {
+  const red = editorColor("red");
+  const green = editorColor("green");
+  const highlight = editorColor("highlight");
   const axisLength = unit(60);
   const handleSize = unit(12);
   const cornerSize = unit(24);
   const lineWidth = unit(3);
 
-  drawAxisLine(graphics, "x", 0xff5252, axisLength, lineWidth);
-  drawAxisLine(graphics, "y", 0x39d353, axisLength, lineWidth);
-  drawSquareHandle(graphics, axisLength, 0, handleSize, 0xff5252, unit(1.5));
-  drawSquareHandle(graphics, 0, axisLength, handleSize, 0x39d353, unit(1.5));
-  drawCornerHandle(graphics, cornerSize, 0xc084fc, unit(1.5));
-  graphics.circle(0, 0, unit(4)).fill({ color: 0xffffff, alpha: 0.95 });
+  drawAxisLine(graphics, "x", red, axisLength, lineWidth);
+  drawAxisLine(graphics, "y", green, axisLength, lineWidth);
+  drawSquareHandle(graphics, axisLength, 0, handleSize, red, unit(1.5));
+  drawSquareHandle(graphics, 0, axisLength, handleSize, green, unit(1.5));
+  drawCornerHandle(graphics, cornerSize, highlight, unit(1.5));
+  graphics.circle(0, 0, unit(4)).fill({ color: highlight, alpha: 0.95 });
 }
 
 function getPointerWorld(
