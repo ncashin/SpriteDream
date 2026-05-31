@@ -4,7 +4,7 @@ import {
   type ApplicationOptions,
 } from "pixi.js";
 import type { PlanckPluginAPI } from "../planckPlugin/planckPlugin.js";
-import { selectObject, type Plugin } from "gameide";
+import { deselectObject, selectObject, type Plugin } from "gameide";
 import { pickSceneObjectAtWorldPoint } from "./editorPick.js";
 import { pixiSprites } from "./sprite.js";
 import {
@@ -109,6 +109,7 @@ export function pixiPlugin(
               pixelsPerMeter: planck?.pixelsPerMeter ?? 30,
             });
             if (picked) selectObject(picked);
+            else deselectObject();
           }
         : undefined,
     });
