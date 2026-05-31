@@ -1,7 +1,3 @@
-import { createSceneTransportPostMessage } from "../../scene/sceneChannel/sceneChannelTransport.js";
-import { getDevSceneChannelTransport } from "../../scene/sceneChannel/sceneChannelDevTransport.js";
-import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
-import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import { GameIDEMode, getMode, onModeChange } from "../../lifecycle/mode.js";
 import type { GameContext } from "../../lifecycle/initialization.js";
 import { createEditorUI } from "./createEditorUI.js";
@@ -11,11 +7,11 @@ import {
   saveSceneSnapshot,
 } from "../../scene/snapshot.js";
 import {
+  bindSceneFileStore,
   hydrateSceneFileStore,
   subscribeSceneFileHostState,
   useSceneFileStore,
-} from "../../scene/sceneFileStore.js";
-import { connectWebSocketRoomTransport } from "../networkingPlugin/websocketRoomTransport.js";
+} from "./sceneFile/sceneFileStore.js";
 
 export const editorPlugin =
   (Editor: EditorWithGameViewReference) =>
@@ -27,16 +23,10 @@ export const editorPlugin =
     const persistedScenePath = await hydrateSceneFileStore();
     const releaseSceneFileHostState = subscribeSceneFileHostState();
 
-    const { transport } = await connectWebSocketRoomTransport({
-      room: "scene",
-      url: import.meta.env.BASE_URL,
-    });
-    const channel = await createSceneChannel({
-      transport,
-      scene: input.scene,
-      initializeScene: true,
-      initialScenePath: persistedScenePath || undefined,
-    });
+    const releaseSceneFileStore = bindSceneFileStore(
+      input.scene,
+      persistedScenePath || undefined,
+    );
 
     void useSceneFileStore.getState().loadScenes();
 
@@ -44,12 +34,9 @@ export const editorPlugin =
       switch (mode) {
         case GameIDEMode.Game:
           saveSceneSnapshot();
-          channel.pause();
           break;
         case GameIDEMode.Editor:
           restoreSceneSnapshot();
-          channel.unpause();
-
           break;
       }
     };
@@ -62,7 +49,7 @@ export const editorPlugin =
     input.dispose(() => {
       releaseModeWatcher();
       releaseSceneFileHostState();
-      channel.dispose();
+      releaseSceneFileStore();
       mount.dispose();
     });
 
@@ -70,6 +57,5 @@ export const editorPlugin =
       ...input,
       initialScene: structuredClone(input.scene.getRaw()),
       rootElement: mount.gameViewRoot,
-      editorSceneChannel: channel,
     };
   };

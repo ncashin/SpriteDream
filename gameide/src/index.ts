@@ -81,11 +81,11 @@ export { Game } from "./plugins/gameUIPlugin/Game.js";
 export { EditorRoot } from "./plugins/editorPlugin/EditorRoot.js";
 export { GameView } from "./plugins/editorPlugin/GameView.js";
 export { useScene } from "./hooks/useScene.js";
-export { useSceneFile } from "./plugins/editorPlugin/useSceneFile.js";
+export { useSceneFile } from "./plugins/editorPlugin/sceneFile/useSceneFile.js";
 export {
   useSceneFileStore,
   hydrateSceneFileStore,
-} from "./scene/sceneFileStore.js";
+} from "./plugins/editorPlugin/sceneFile/sceneFileStore.js";
 export { useSelectedObject } from "./hooks/useSelectedObject.js";
 export { useTraits } from "./hooks/useTraits.js";
 export { useGameIDEMode } from "./hooks/useGameIDEMode.js";

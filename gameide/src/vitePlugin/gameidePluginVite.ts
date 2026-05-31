@@ -177,6 +177,7 @@ import {
   VIRTUAL_ASSETS_MODULE,
   VIRTUAL_SCENES_MODULE,
 } from "./virtualCatalog";
+import { attachFileEditorMiddleware } from "./fileEditor";
 
 function createCatalogModuleCode(values: readonly string[]): string {
   return `export default ${JSON.stringify(values)};\n`;
@@ -200,18 +201,19 @@ export function gameidePlugin(): Plugin {
     },
     configureServer(server) {
       return () => {
+        attachFileEditorMiddleware(server, projectRoot);
         if (server.httpServer) {
           attachRoomWebSocket(server.httpServer);
         }
       };
     },
-    handleHotUpdate(ctx) {
-      const file = path.normalize(ctx.file);
+    handleHotUpdate(context) {
+      const file = path.normalize(context.file);
       if (
         catalogFileAffectsScenes(file) ||
         catalogFileAffectsAssets(projectRoot, file)
       ) {
-        invalidateCatalogModules(ctx.server);
+        invalidateCatalogModules(context.server);
       }
     },
     load(id: string) {
