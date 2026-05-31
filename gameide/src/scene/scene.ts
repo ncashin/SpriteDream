@@ -1,4 +1,4 @@
-import { invalidateUseSceneSnapshot } from "./sceneExternalStore.js";
+import { invalidateExternalSceneSnapshot } from "./sceneExternalStore.js";
 import { deleteValueAtPath, setValueAtPath } from "./path.js";
 
 export type GameObject = Record<PropertyKey, unknown>;
@@ -94,7 +94,7 @@ export function createSceneProxy<T extends object = GameObject>(
 export const curryScene = (rawScene: SceneObject) => {
   const listeners: SceneListener[] = [];
   const scene = createSceneProxy(rawScene, [], (object, property, value) => {
-    invalidateUseSceneSnapshot();
+    invalidateExternalSceneSnapshot();
     listeners.forEach((listener) => listener(object, property, value));
   });
 

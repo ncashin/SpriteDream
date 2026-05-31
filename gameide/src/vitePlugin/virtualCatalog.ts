@@ -86,18 +86,16 @@ export function listProjectScenes(projectRoot: string): string[] {
     .sort((a, b) => a.localeCompare(b));
 }
 
-export function catalogFileAffectsAssets(
-  projectRoot: string,
-  file: string,
-): boolean {
+/** True when a filesystem change should refresh virtual asset/scene catalogs. */
+export function catalogFileAffects(projectRoot: string, file: string): boolean {
+  const normalized = path.normalize(file);
+  if (normalized.endsWith(".scene")) return true;
+
   const assetsDir = resolveAssetsDir(projectRoot);
   if (!assetsDir) return false;
-  const normalized = path.normalize(file);
-  return (
-    normalized === assetsDir || normalized.startsWith(assetsDir + path.sep)
-  );
-}
 
-export function catalogFileAffectsScenes(file: string): boolean {
-  return file.endsWith(".scene");
+  const assetsPath = path.normalize(assetsDir);
+  return (
+    normalized === assetsPath || normalized.startsWith(assetsPath + path.sep)
+  );
 }

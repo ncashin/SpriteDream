@@ -2,17 +2,17 @@ import { useSyncExternalStore, useCallback, useMemo } from "react";
 import { getScene, setScene } from "../scene/scene.js";
 import type { SceneObject } from "../scene/scene.js";
 import {
-  getUseSceneSnapshot,
-  subscribeUseSceneSnapshot,
+  getExternalSceneSnapshot,
+  subscribeExternalSceneSnapshot,
 } from "../scene/sceneExternalStore.js";
 
 export function useScene(): [SceneObject, (data: SceneObject) => void] {
   const subscribe = useMemo(
-    () => (onStoreChange: () => void) => subscribeUseSceneSnapshot(onStoreChange),
+    () => (onStoreChange: () => void) => subscribeExternalSceneSnapshot(onStoreChange),
     [],
   );
 
-  const snapshot = useSyncExternalStore(subscribe, getUseSceneSnapshot, getUseSceneSnapshot);
+  const snapshot = useSyncExternalStore(subscribe, getExternalSceneSnapshot, getExternalSceneSnapshot);
   void snapshot;
 
   const value = getScene().get();

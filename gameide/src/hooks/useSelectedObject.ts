@@ -2,8 +2,8 @@ import { useMemo, useSyncExternalStore } from "react";
 import { GameObject, getScene, SceneObject } from "../scene/scene.js";
 import { selectedObject } from "../scene/objectSelection.js";
 import {
-  getUseSceneSnapshot,
-  subscribeUseSceneSnapshot,
+  getExternalSceneSnapshot,
+  subscribeExternalSceneSnapshot,
 } from "../scene/sceneExternalStore.js";
 
 function findSceneObjectPath(
@@ -33,9 +33,9 @@ export function useSelectedObject(): {
   selectedPath: PropertyKey[] | null;
 } {
   const snapshot = useSyncExternalStore(
-    subscribeUseSceneSnapshot,
-    getUseSceneSnapshot,
-    getUseSceneSnapshot,
+    subscribeExternalSceneSnapshot,
+    getExternalSceneSnapshot,
+    getExternalSceneSnapshot,
   );
 
   const sel = selectedObject;

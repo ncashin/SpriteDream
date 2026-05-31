@@ -1,6 +1,5 @@
 import type { Plugin, ViteDevServer } from "vite";
 import fs from "node:fs";
-import path from "node:path";
 import ts from "typescript";
 import { attachRoomWebSocket } from "./roomWebSocket";
 import hotModuleTemplate from "./hotModuleTemplate.js?raw";
@@ -168,8 +167,7 @@ function createHotModuleCode(code: string): string {
 }
 
 import {
-  catalogFileAffectsAssets,
-  catalogFileAffectsScenes,
+  catalogFileAffects,
   invalidateCatalogModules,
   listProjectAssets,
   listProjectScenes,
@@ -207,13 +205,9 @@ export function gameidePlugin(): Plugin {
         }
       };
     },
-    handleHotUpdate(context) {
-      const file = path.normalize(context.file);
-      if (
-        catalogFileAffectsScenes(file) ||
-        catalogFileAffectsAssets(projectRoot, file)
-      ) {
-        invalidateCatalogModules(context.server);
+    handleHotUpdate({ file, server }) {
+      if (catalogFileAffects(projectRoot, file)) {
+        invalidateCatalogModules(server);
       }
     },
     load(id: string) {

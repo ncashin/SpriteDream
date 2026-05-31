@@ -1,11 +1,11 @@
 let snapshotVersion = 0;
 const listeners = new Set<() => void>();
 
-export function getUseSceneSnapshot(): number {
+export function getExternalSceneSnapshot(): number {
   return snapshotVersion;
 }
 
-export function subscribeUseSceneSnapshot(
+export function subscribeExternalSceneSnapshot(
   onStoreChange: () => void,
 ): () => void {
   listeners.add(onStoreChange);
@@ -14,13 +14,13 @@ export function subscribeUseSceneSnapshot(
   };
 }
 
-export function invalidateUseSceneSnapshot(): void {
+export function invalidateExternalSceneSnapshot(): void {
   snapshotVersion++;
   listeners.forEach((callback) => {
     try {
       callback();
     } catch (err) {
-      console.error("[useScene] snapshot listener error:", err);
+      console.error("[externalSceneSnapshot] listener error:", err);
     }
   });
 }

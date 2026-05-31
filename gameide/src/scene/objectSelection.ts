@@ -1,14 +1,14 @@
-import { invalidateUseSceneSnapshot } from "./sceneExternalStore.js";
+import { invalidateExternalSceneSnapshot } from "./sceneExternalStore.js";
 import { GameObject } from "./scene.js";
 
 export let selectedObject: GameObject | null = null;
 
 export function selectObject(object: GameObject): void {
   selectedObject = object;
-  invalidateUseSceneSnapshot();
+  invalidateExternalSceneSnapshot();
 }
 
 export function deselectObject(): void {
   selectedObject = null;
-  invalidateUseSceneSnapshot();
+  invalidateExternalSceneSnapshot();
 }
