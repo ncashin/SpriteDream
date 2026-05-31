@@ -26,7 +26,7 @@ export function invalidateCatalogModules(server: ViteDevServer): void {
   }
 }
 
-function toPosixRelative(base: string, absolutePath: string): string {
+export function toPosixRelative(base: string, absolutePath: string): string {
   return path.relative(base, absolutePath).split(path.sep).join("/");
 }
 
@@ -87,9 +87,21 @@ export function listProjectScenes(projectRoot: string): string[] {
 }
 
 /** True when a filesystem change should refresh virtual asset/scene catalogs. */
-export function catalogFileAffects(projectRoot: string, file: string): boolean {
+export function catalogFileAffects(
+  projectRoot: string,
+  file: string,
+  knownScenes: readonly string[],
+): boolean {
   const normalized = path.normalize(file);
-  if (normalized.endsWith(".scene")) return true;
+  if (normalized.endsWith(".scene")) {
+    try {
+      fs.statSync(normalized);
+    } catch {
+      return true;
+    }
+    const relative = toPosixRelative(projectRoot, normalized);
+    return !knownScenes.includes(relative);
+  }
 
   const assetsDir = resolveAssetsDir(projectRoot);
   if (!assetsDir) return false;

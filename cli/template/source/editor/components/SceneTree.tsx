@@ -20,7 +20,6 @@ import {
   getScene,
   setValueAtPath,
   useScene,
-  useSceneFile,
   useSelectedObject,
   useTraits,
   type GameObject,
@@ -696,38 +695,6 @@ function elementIsTextInputLike(el: Element): boolean {
   return el.isContentEditable;
 }
 
-function SceneViewHeader({ title }: { title?: ReactNode }) {
-  return (
-    <header className="sticky top-0 z-30 w-full min-w-0 shrink-0 bg-[var(--color-bg)] pt-2.5 min-h-[36px]">
-      {title}
-    </header>
-  );
-}
-
-function SceneFileControls() {
-  const { scenes, activeScenePath, switchScene } = useSceneFile();
-
-  const sceneOptions =
-    scenes.length > 0
-      ? scenes
-      : activeScenePath
-        ? [activeScenePath]
-        : [];
-
-  return (
-    <SearchDropdown
-      variant="header"
-      value={activeScenePath}
-      options={sceneOptions.map((file) => ({ value: file, label: file }))}
-      onSelect={(file) => void switchScene(file)}
-      searchPlaceholder="Search scenes…"
-      emptyMessage="No scenes found"
-      ariaLabel="Active scene file"
-      className="w-full min-w-0"
-    />
-  );
-}
-
 export function SceneTree() {
   const [root] = useScene();
   const { templates, mergeTraitInto } = useTraits();
@@ -756,16 +723,11 @@ export function SceneTree() {
   }, []);
 
   if (!rootObject) {
-    return (
-      <div className="w-full h-full min-w-0 flex flex-col bg-[var(--color-bg)] p-2 px-2.5">
-        <SceneViewHeader title={<SceneFileControls />} />
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="w-full h-full min-w-0 flex flex-col bg-[var(--color-bg)] p-2 px-2.5">
-      <SceneViewHeader title={<SceneFileControls />} />
+    <>
       <CreateObjectRow setAtPath={setAtPath} />
       <div className="flex-1 min-h-0 overflow-auto">
         {Object.keys(rootObject).map((key) => (
@@ -781,6 +743,6 @@ export function SceneTree() {
           />
         ))}
       </div>
-    </div>
+    </>
   );
 }

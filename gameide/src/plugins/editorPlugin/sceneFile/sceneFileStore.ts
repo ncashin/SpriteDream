@@ -6,6 +6,7 @@ import { stripScenePatchSentinels } from "../../../scene/scene.js";
 
 const STORAGE_KEY = "gameide-scene-file";
 const SCENE_FILE_API = "/gameide/scene";
+const SCENE_HMR_EVENT = "gameide:scene-hmr";
 
 function sceneSnapshot(data: SceneObject): string {
   return JSON.stringify(stripScenePatchSentinels(data));
@@ -94,6 +95,33 @@ let savedSnapshot = "";
 let applyingExternalUpdate = false;
 let unsubscribeOnChange: (() => void) | undefined;
 let unsubscribeStore: (() => void) | undefined;
+let unsubscribeSceneHmr: (() => void) | undefined;
+
+function onSceneHmr(event: Event): void {
+  if (!boundScene) return;
+  const detail = (event as CustomEvent<{ path?: unknown; data?: unknown }>).detail;
+  if (!detail || typeof detail.path !== "string" || !detail.data || typeof detail.data !== "object") {
+    return;
+  }
+  const { activeScenePath } = useSceneFileStore.getState();
+  if (detail.path !== activeScenePath) return;
+
+  applyingExternalUpdate = true;
+  try {
+    const data = stripScenePatchSentinels(detail.data as SceneObject);
+    boundScene.replace(data);
+    savedSnapshot = sceneSnapshot(data);
+  } finally {
+    applyingExternalUpdate = false;
+  }
+  syncDirtyState();
+}
+
+function subscribeSceneHmr(): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(SCENE_HMR_EVENT, onSceneHmr);
+  return () => window.removeEventListener(SCENE_HMR_EVENT, onSceneHmr);
+}
 
 function syncDirtyState(): void {
   if (!boundScene) return;
@@ -155,6 +183,7 @@ export function bindSceneFileStore(
 ): () => void {
   boundScene = scene;
   savedSnapshot = sceneSnapshot(scene.getRaw());
+  unsubscribeSceneHmr = subscribeSceneHmr();
 
   unsubscribeOnChange = scene.onChange(() => {
     if (applyingExternalUpdate || useSceneFileStore.getState().saving) return;
@@ -177,6 +206,7 @@ export function bindSceneFileStore(
   return () => {
     unsubscribeOnChange?.();
     unsubscribeStore?.();
+    unsubscribeSceneHmr?.();
     boundScene = null;
   };
 }

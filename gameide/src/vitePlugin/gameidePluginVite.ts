@@ -4,12 +4,31 @@ import ts from "typescript";
 import { attachRoomWebSocket } from "./roomWebSocket";
 import hotModuleTemplate from "./hotModuleTemplate.js?raw";
 import {
-  stripScenePatchSentinels,
   type SceneObject,
 } from "../scene/scene.js";
 
-function createSceneModuleCode(data: SceneObject): string {
-  return `const data = ${JSON.stringify(data)};\nexport default data;\n`;
+import {
+  catalogFileAffects,
+  invalidateCatalogModules,
+  listProjectAssets,
+  listProjectScenes,
+  resolvedVirtualModuleId,
+  toPosixRelative,
+  VIRTUAL_ASSETS_MODULE,
+  VIRTUAL_SCENES_MODULE,
+} from "./virtualCatalog";
+import { attachFileEditorMiddleware } from "./fileEditor";
+
+export const SCENE_HMR_EVENT = "gameide:scene-hmr";
+
+function createSceneModuleCode(data: SceneObject, relativePath: string): string {
+  return (
+    `const data = ${JSON.stringify(data)};\n` +
+    `export default data;\n` +
+    `if (import.meta.hot) import.meta.hot.accept((mod) => {\n` +
+    `  window.dispatchEvent(new CustomEvent(${JSON.stringify(SCENE_HMR_EVENT)}, { detail: { path: ${JSON.stringify(relativePath)}, data: mod.default } }));\n` +
+    `});\n`
+  );
 }
 
 const lifecycleExports = new Set([
@@ -166,17 +185,6 @@ function createHotModuleCode(code: string): string {
   return hotModuleTemplate.replace(hotModuleBodyPlaceholder, code);
 }
 
-import {
-  catalogFileAffects,
-  invalidateCatalogModules,
-  listProjectAssets,
-  listProjectScenes,
-  resolvedVirtualModuleId,
-  VIRTUAL_ASSETS_MODULE,
-  VIRTUAL_SCENES_MODULE,
-} from "./virtualCatalog";
-import { attachFileEditorMiddleware } from "./fileEditor";
-
 function createCatalogModuleCode(values: readonly string[]): string {
   return `export default ${JSON.stringify(values)};\n`;
 }
@@ -184,6 +192,7 @@ function createCatalogModuleCode(values: readonly string[]): string {
 export function gameidePlugin(): Plugin {
   let isServe = false;
   let projectRoot = process.cwd();
+  let knownScenes: string[] = [];
 
   return {
     name: "gameide-plugin",
@@ -198,6 +207,7 @@ export function gameidePlugin(): Plugin {
       }
     },
     configureServer(server) {
+      knownScenes = listProjectScenes(projectRoot);
       return () => {
         attachFileEditorMiddleware(server, projectRoot);
         if (server.httpServer) {
@@ -206,9 +216,10 @@ export function gameidePlugin(): Plugin {
       };
     },
     handleHotUpdate({ file, server }) {
-      if (catalogFileAffects(projectRoot, file)) {
+      if (catalogFileAffects(projectRoot, file, knownScenes)) {
         invalidateCatalogModules(server);
       }
+      knownScenes = listProjectScenes(projectRoot);
     },
     load(id: string) {
       if (id === resolvedVirtualModuleId(VIRTUAL_ASSETS_MODULE)) {
@@ -222,8 +233,9 @@ export function gameidePlugin(): Plugin {
       if (!filePath.endsWith(".scene")) return;
 
       const raw = fs.readFileSync(filePath, "utf8");
-      const data = stripScenePatchSentinels(JSON.parse(raw) as SceneObject);
-      return createSceneModuleCode(data);
+      const data = JSON.parse(raw) as SceneObject;
+      const relativePath = toPosixRelative(projectRoot, filePath);
+      return createSceneModuleCode(data, relativePath);
     },
     transform(code, id) {
       if (!isServe) return;
