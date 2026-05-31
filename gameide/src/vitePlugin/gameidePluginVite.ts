@@ -4,13 +4,6 @@ import path from "node:path";
 import ts from "typescript";
 import { attachRoomWebSocket } from "./roomWebSocket";
 import hotModuleTemplate from "./hotModuleTemplate.js?raw";
-import { attachSceneEditorDevMiddleware } from "./sceneEditorDev";
-import {
-  catalogFileAffectsAssets,
-  catalogFileAffectsScenes,
-  listProjectAssets,
-  listProjectScenes,
-} from "./projectCatalog";
 import {
   stripScenePatchSentinels,
   type SceneObject,
@@ -31,61 +24,56 @@ const lifecycleExports = new Set([
 
 const transformableModulePattern = /\.[cm]?[jt]sx?$/;
 
-function getImportedLifecycleNames(code: string): string[] {
-  const names = new Set<string>();
-  const importPattern = /import\s*\{([\s\S]*?)\}\s*from\s*["']gameide["']/g;
-  let match: RegExpExecArray | null;
+function createModuleSourceFile(code: string, filePath: string): ts.SourceFile {
+  const scriptKind = /\.tsx$/i.test(filePath) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  return ts.createSourceFile(filePath, code, ts.ScriptTarget.Latest, true, scriptKind);
+}
 
-  while ((match = importPattern.exec(code))) {
-    const specifiers = match[1]?.split(",") ?? [];
-    for (const specifier of specifiers) {
-      const normalized = specifier.trim().replace(/^type\s+/, "");
-      const imported = /^([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/.exec(
-        normalized,
-      );
-      if (!imported) continue;
+/** True when the module imports a lifecycle hook from `gameide` and calls it. */
+function moduleUsesGameideLifecycle(code: string, filePath: string): boolean {
+  const sourceFile = createModuleSourceFile(code, filePath);
+  const lifecycleLocals = new Set<string>();
 
-      const importedName = imported[1];
-      const localName = imported[2] ?? importedName;
-      if (lifecycleExports.has(importedName)) {
-        names.add(localName);
+  for (const stmt of sourceFile.statements) {
+    if (!ts.isImportDeclaration(stmt) || !ts.isStringLiteral(stmt.moduleSpecifier)) {
+      continue;
+    }
+    if (stmt.moduleSpecifier.text !== "gameide") continue;
+    const bindings = stmt.importClause?.namedBindings;
+    if (!bindings || !ts.isNamedImports(bindings)) continue;
+
+    for (const spec of bindings.elements) {
+      if (spec.isTypeOnly) continue;
+      const imported = (spec.propertyName ?? spec.name).text;
+      if (lifecycleExports.has(imported)) {
+        lifecycleLocals.add(spec.name.text);
       }
     }
   }
 
-  return [...names];
-}
+  if (lifecycleLocals.size === 0) return false;
 
-function callsImportedLifecycle(code: string, importedNames: readonly string[]): boolean {
-  return importedNames.some((name) =>
-    new RegExp(`(^|[^\\w$.])${name}\\s*\\(`, "m").test(code),
+  return (
+    ts.forEachChild(sourceFile, function visit(node): boolean | undefined {
+      if (
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        lifecycleLocals.has(node.expression.text)
+      ) {
+        return true;
+      }
+      return ts.forEachChild(node, visit);
+    }) === true
   );
-}
-
-function shouldTransformHotModule(code: string, id: string): boolean {
-  const filePath = id.replace(/\?.*$/, "");
-  if (!transformableModulePattern.test(filePath)) return false;
-  if (filePath.includes("/node_modules/")) return false;
-  if (code.includes("__beginHotModule")) return false;
-
-  const importedNames = getImportedLifecycleNames(code);
-  return importedNames.length > 0 && callsImportedLifecycle(code, importedNames);
 }
 
 /**
  * Wraps `export default` so the last invocation's arguments are persisted for HMR replay
  * (same arity and values as the app entry called, not hard-coded `getGameContext()`).
  */
-function wrapGameideHotDefaultExport(code: string, id: string): string | null {
+function wrapHMRDefaultExport(code: string, id: string): string | null {
   const filePath = id.replace(/\?.*$/, "");
-  const scriptKind = /\.tsx$/i.test(filePath) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  const sourceFile = ts.createSourceFile(
-    filePath,
-    code,
-    ts.ScriptTarget.Latest,
-    true,
-    scriptKind,
-  );
+  const sourceFile = createModuleSourceFile(code, filePath);
 
   const newStatements: ts.Statement[] = [];
   let rewroteDefault = false;
@@ -180,7 +168,11 @@ function createHotModuleCode(code: string): string {
 }
 
 import {
+  catalogFileAffectsAssets,
+  catalogFileAffectsScenes,
   invalidateCatalogModules,
+  listProjectAssets,
+  listProjectScenes,
   resolvedVirtualModuleId,
   VIRTUAL_ASSETS_MODULE,
   VIRTUAL_SCENES_MODULE,
@@ -207,9 +199,6 @@ export function gameidePlugin(): Plugin {
       }
     },
     configureServer(server) {
-      if (isServe) {
-        attachSceneEditorDevMiddleware(server, projectRoot);
-      }
       return () => {
         if (server.httpServer) {
           attachRoomWebSocket(server.httpServer);
@@ -241,9 +230,14 @@ export function gameidePlugin(): Plugin {
       return createSceneModuleCode(data);
     },
     transform(code, id) {
-      if (!isServe || !shouldTransformHotModule(code, id)) return;
+      if (!isServe) return;
+      const filePath = id.replace(/\?.*$/, "");
+      if (!transformableModulePattern.test(filePath)) return;
+      if (filePath.includes("/node_modules/")) return;
+      if (code.includes("__beginHotModule")) return;
+      if (!moduleUsesGameideLifecycle(code, filePath)) return;
 
-      const wrappedDefault = wrapGameideHotDefaultExport(code, id);
+      const wrappedDefault = wrapHMRDefaultExport(code, id);
 
       return {
         code: createHotModuleCode(wrappedDefault ?? code),

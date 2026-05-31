@@ -1,17 +1,21 @@
 import { createSceneTransportPostMessage } from "../../scene/sceneChannel/sceneChannelTransport.js";
+import { getDevSceneChannelTransport } from "../../scene/sceneChannel/sceneChannelDevTransport.js";
 import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import { GameIDEMode, getMode, onModeChange } from "../../lifecycle/mode.js";
 import type { GameContext } from "../../lifecycle/initialization.js";
 import { createEditorUI } from "./createEditorUI.js";
 import type { EditorWithGameViewReference } from "./createEditorUI.js";
-import { restoreSceneSnapshot, saveSceneSnapshot } from "../../scene/snapshot.js";
 import {
-  bindSceneFileStore,
+  restoreSceneSnapshot,
+  saveSceneSnapshot,
+} from "../../scene/snapshot.js";
+import {
   hydrateSceneFileStore,
   subscribeSceneFileHostState,
   useSceneFileStore,
 } from "../../scene/sceneFileStore.js";
+import { connectWebSocketRoomTransport } from "../networkingPlugin/websocketRoomTransport.js";
 
 export const editorPlugin =
   (Editor: EditorWithGameViewReference) =>
@@ -23,41 +27,29 @@ export const editorPlugin =
     const persistedScenePath = await hydrateSceneFileStore();
     const releaseSceneFileHostState = subscribeSceneFileHostState();
 
-    await useSceneFileStore.getState().loadScenes();
+    const { transport } = await connectWebSocketRoomTransport({
+      room: "scene",
+      url: import.meta.env.BASE_URL,
+    });
+    const channel = await createSceneChannel({
+      transport,
+      scene: input.scene,
+      initializeScene: true,
+      initialScenePath: persistedScenePath || undefined,
+    });
 
-    const embeddedInParentIFrame = window && window.parent !== window;
-    let channel: SceneChannel | undefined;
-    let releaseDevRuntime: (() => void) | undefined;
-
-    if (embeddedInParentIFrame) {
-      const transport = createSceneTransportPostMessage({
-        target: window.parent,
-        source: window,
-      });
-      channel = await createSceneChannel({
-        transport,
-        scene: input.scene,
-        initializeScene: true,
-        initialScenePath: persistedScenePath || undefined,
-      });
-    } else {
-      const activeScenePath =
-        useSceneFileStore.getState().activeScenePath || persistedScenePath;
-      releaseDevRuntime = bindSceneFileStore(
-        input.scene,
-        activeScenePath || undefined,
-      );
-    }
+    void useSceneFileStore.getState().loadScenes();
 
     const handleModeChange = (mode: GameIDEMode) => {
       switch (mode) {
         case GameIDEMode.Game:
           saveSceneSnapshot();
-          channel?.pause();
+          channel.pause();
           break;
         case GameIDEMode.Editor:
           restoreSceneSnapshot();
-          channel?.unpause();
+          channel.unpause();
+
           break;
       }
     };
@@ -70,8 +62,7 @@ export const editorPlugin =
     input.dispose(() => {
       releaseModeWatcher();
       releaseSceneFileHostState();
-      releaseDevRuntime?.();
-      channel?.dispose();
+      channel.dispose();
       mount.dispose();
     });
 
@@ -79,6 +70,6 @@ export const editorPlugin =
       ...input,
       initialScene: structuredClone(input.scene.getRaw()),
       rootElement: mount.gameViewRoot,
-      ...(channel ? { editorSceneChannel: channel } : {}),
+      editorSceneChannel: channel,
     };
   };
