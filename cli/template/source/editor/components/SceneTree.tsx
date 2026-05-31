@@ -3,21 +3,21 @@ import {
   ChevronRight,
   Plus,
   Trash2,
-  X,
 } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type MouseEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import {
   deselectObject,
   getScene,
-  getValueAtPath,
   setValueAtPath,
   useScene,
   useSceneFile,
@@ -33,17 +33,6 @@ import { SearchDropdown } from "./SearchDropdown.js";
 import { cn } from "../../utils/cn.js";
 
 type IconSlug = string;
-
-function getRecordAtPath(
-  root: Record<PropertyKey, unknown>,
-  path: PropertyKey[],
-): Record<PropertyKey, unknown> | undefined {
-  const value = path.length === 0 ? root : getValueAtPath(root, path);
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<PropertyKey, unknown>;
-  }
-  return undefined;
-}
 
 function isExpandable(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -289,6 +278,8 @@ type RowShellProps = {
   objectLeadIconKey?: unknown;
   /** When set, the header row sticks while scrolling the scene tree list. */
   stickyStackDepth?: number;
+  selected?: boolean;
+  rowRef?: RefObject<HTMLDivElement | null>;
 };
 
 function RowShell({
@@ -308,6 +299,8 @@ function RowShell({
   propertyRow = false,
   objectLeadIconKey,
   stickyStackDepth,
+  selected = false,
+  rowRef,
 }: RowShellProps) {
   let lead: ReactNode = null;
   if (dropInto) {
@@ -338,16 +331,19 @@ function RowShell({
   }
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0" ref={rowRef}>
       <div
         className={cn(
           "group flex items-center gap-0.5 min-w-0 rounded",
           propertyRow ? "pl-2 pr-1.5" : "pl-1.5 pr-1.5",
           textSize,
           font,
-          highlightable && rowHover,
+          selected && "bg-[var(--color-selection)]",
+          highlightable && !selected && rowHover,
           stickyStackDepth !== undefined &&
             "sticky bg-[var(--color-bg)]",
+          selected && stickyStackDepth !== undefined &&
+            "bg-[var(--color-selection)]",
         )}
         style={
           stickyStackDepth !== undefined
@@ -401,6 +397,7 @@ type PropertyNodeProps = {
   onDelete: () => void;
   templates: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
+  selectedPath?: PropertyKey[] | null;
 };
 
 function PropertyNode({
@@ -411,7 +408,16 @@ function PropertyNode({
   onDelete,
   templates,
   mergeTraitInto,
+  selectedPath,
 }: PropertyNodeProps) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const selected = Boolean(selectedPath && pathsEqual(path, selectedPath));
+
+  useLayoutEffect(() => {
+    if (!selected) return;
+    rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selected, selectedPath]);
+
   const [draft, setDraft] = useState<string | null>(null);
   const skipCommitOnBlurRef = useRef(false);
   let displayText: string;
@@ -439,6 +445,8 @@ function PropertyNode({
       isObject={false}
       propertyRow
       highlightable={false}
+      selected={selected}
+      rowRef={rowRef}
       setAtPath={setAtPath}
       onDelete={onDelete}
       templates={templates}
@@ -479,6 +487,7 @@ type ObjectNodeProps = {
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
   expandObjectsByDefault?: boolean;
   depth: number;
+  selectedPath?: PropertyKey[] | null;
 };
 
 function ObjectNode({
@@ -491,8 +500,25 @@ function ObjectNode({
   mergeTraitInto,
   expandObjectsByDefault = false,
   depth,
+  selectedPath,
 }: ObjectNodeProps) {
-  const [open, setOpen] = useState(expandObjectsByDefault);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const selected = Boolean(selectedPath && pathsEqual(path, selectedPath));
+  const selectionKey = selectedPath?.map(String).join("\0") ?? "";
+  const autoOpen =
+    expandObjectsByDefault || isSelectionRelatedPath(path, selectedPath);
+  const [openOverride, setOpenOverride] = useState<{
+    selectionKey: string;
+    open: boolean;
+  } | null>(null);
+  const open =
+    openOverride?.selectionKey === selectionKey ? openOverride.open : autoOpen;
+
+  useLayoutEffect(() => {
+    if (!selected) return;
+    rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selected, selectedPath, open]);
+
   const keys = Object.keys(sceneObject).filter((k) => !SCENE_TREE_META_KEYS.has(k));
 
   let childBody: ReactNode = null;
@@ -507,8 +533,11 @@ function ObjectNode({
             setAtPath={setAtPath}
             templates={templates}
             mergeTraitInto={mergeTraitInto}
-            expandObjectsByDefault={expandObjectsByDefault}
+            expandObjectsByDefault={
+              expandObjectsByDefault || isSelectionRelatedPath(path, selectedPath)
+            }
             depth={depth + 1}
+            selectedPath={selectedPath}
             key={key}
           />
         ))}
@@ -528,6 +557,8 @@ function ObjectNode({
     <RowShell
       path={path}
       isObject
+      selected={selected}
+      rowRef={rowRef}
       setAtPath={setAtPath}
       onDelete={onDelete}
       templates={templates}
@@ -541,7 +572,9 @@ function ObjectNode({
           <ChevronRight size={iconSize} className={chevronClass} aria-hidden />
         </SceneTreeRowIconFrame>
       }
-      onHeaderClick={() => setOpen((o) => !o)}
+      onHeaderClick={() =>
+        setOpenOverride({ selectionKey, open: !open })
+      }
       headerExpanded={open}
       stickyStackDepth={depth}
       label={
@@ -549,6 +582,39 @@ function ObjectNode({
       }
       body={childBody}
     />
+  );
+}
+
+function CreateObjectRow({
+  setAtPath,
+}: {
+  setAtPath: (path: PropertyKey[], value: unknown) => void;
+}) {
+  return (
+    <div className="min-w-0 shrink-0 pt-2 pb-2.5">
+      <button
+        type="button"
+        aria-label="Create Object"
+        onClick={() => {
+          const key = window.prompt("Object name");
+          if (key == null || key === "") return;
+          setAtPath([key], {});
+        }}
+        className={cn(
+          "flex w-full min-w-0 items-center justify-start gap-0.5 rounded pl-1.5 pr-1.5",
+          textSize,
+          font,
+          rowHover,
+        )}
+      >
+        <span className="flex w-[18px] shrink-0 justify-center self-center">
+          <Plus size={iconSize} className={iconClass} aria-hidden />
+        </span>
+        <span className={cn("min-w-0 truncate py-1 font-bold", foreground)}>
+          Create Object
+        </span>
+      </button>
+    </div>
   );
 }
 
@@ -561,6 +627,7 @@ type TreeNodeProps = {
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
   expandObjectsByDefault?: boolean;
   depth?: number;
+  selectedPath?: PropertyKey[] | null;
 };
 
 function TreeNode({
@@ -572,6 +639,7 @@ function TreeNode({
   mergeTraitInto,
   expandObjectsByDefault = false,
   depth = 0,
+  selectedPath,
 }: TreeNodeProps) {
   const root = getScene().get() as Record<PropertyKey, unknown>;
   const onDelete = () => setValueAtPath(root, path, undefined);
@@ -586,6 +654,7 @@ function TreeNode({
         onDelete={onDelete}
         templates={templates}
         mergeTraitInto={mergeTraitInto}
+        selectedPath={selectedPath}
       />
     );
   }
@@ -601,12 +670,23 @@ function TreeNode({
       mergeTraitInto={mergeTraitInto}
       expandObjectsByDefault={expandObjectsByDefault}
       depth={depth}
+      selectedPath={selectedPath}
     />
   );
 }
 
-function formatScenePathSlash(pathKeys: PropertyKey[]): string {
-  return pathKeys.map(String).join("/");
+function pathsEqual(a: PropertyKey[], b: PropertyKey[]): boolean {
+  return a.length === b.length && a.every((key, index) => key === b[index]);
+}
+
+function isSelectionRelatedPath(
+  path: PropertyKey[],
+  selectedPath: PropertyKey[] | null | undefined,
+): boolean {
+  if (!selectedPath?.length) return false;
+  const shorter = path.length <= selectedPath.length ? path : selectedPath;
+  const longer = path.length <= selectedPath.length ? selectedPath : path;
+  return shorter.every((key, index) => key === longer[index]);
 }
 
 function elementIsTextInputLike(el: Element): boolean {
@@ -616,80 +696,16 @@ function elementIsTextInputLike(el: Element): boolean {
   return el.isContentEditable;
 }
 
-function SceneTreeExitFocusButton({
-  onClick,
-}: {
-  onClick: () => void;
-}) {
+function SceneViewHeader({ title }: { title?: ReactNode }) {
   return (
-    <div
-      className={cn(
-        "relative flex items-center justify-center self-center rounded p-0.5",
-        sceneTreeRowIconFrameSizeClass,
-        rowHover,
-        "opacity-70 hover:opacity-100",
-      )}
-      title="Deselect (Esc)"
-    >
-      <button
-        type="button"
-        aria-label="Deselect"
-        className="absolute inset-0 cursor-pointer rounded border-0 bg-transparent p-0 outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-highlight)]"
-        onClick={onClick}
-      />
-      <X
-        size={iconSize}
-        className={cn("block pointer-events-none", iconClass)}
-        aria-hidden
-      />
-    </div>
-  );
-}
-
-function SceneViewHeader({
-  leading,
-  title,
-  trailing,
-}: {
-  leading?: ReactNode;
-  title?: ReactNode;
-  trailing?: ReactNode;
-}) {
-  return (
-    <header
-      className={cn(
-        "sticky top-0 z-30 flex w-full min-w-0 shrink-0 items-center gap-1.5 bg-[var(--color-bg)] pl-2 pr-1 pb-2 pt-2.5 text-xs leading-none",
-        font,
-        foreground,
-      )}
-    >
-      {leading}
-      {leading && title ? (
-        <span
-          aria-hidden
-          className="shrink-0 text-[color-mix(in_srgb,var(--color-border)_70%,transparent)]"
-        >
-          /
-        </span>
-      ) : null}
-      <div className="min-w-0 flex-1 truncate leading-none">
-        {title ?? (
-          !leading ? (
-            <span className="block min-w-0 truncate font-semibold">Scene</span>
-          ) : null
-        )}
-      </div>
-      {trailing ? (
-        <div className="flex shrink-0 items-center gap-0.5">{trailing}</div>
-      ) : null}
+    <header className="sticky top-0 z-30 w-full min-w-0 shrink-0 bg-[var(--color-bg)] pt-2.5 min-h-[36px]">
+      {title}
     </header>
   );
 }
 
 function SceneFileControls() {
-  const { scenes, activeScenePath, switchScene, visible } = useSceneFile();
-
-  if (!visible) return null;
+  const { scenes, activeScenePath, switchScene } = useSceneFile();
 
   const sceneOptions =
     scenes.length > 0
@@ -707,7 +723,7 @@ function SceneFileControls() {
       searchPlaceholder="Search scenes…"
       emptyMessage="No scenes found"
       ariaLabel="Active scene file"
-      className="min-w-0 max-w-[min(100%,14rem)] shrink"
+      className="w-full min-w-0"
     />
   );
 }
@@ -735,81 +751,35 @@ export function SceneTree() {
     rootObject = root as GameObject;
   }
 
-  const sceneRoot = getScene().get() as Record<PropertyKey, unknown>;
-  let displayRoot: GameObject | undefined = rootObject;
-  let nodePathPrefix: PropertyKey[] = [];
-
-  if (rootObject && selectedPath?.length) {
-    const sub = getRecordAtPath(sceneRoot, selectedPath);
-    if (sub) {
-      displayRoot = sub as GameObject;
-      nodePathPrefix = selectedPath;
-    }
-  }
-
   const setAtPath = useCallback((scenePath: PropertyKey[], next: unknown) => {
     setValueAtPath(getScene().get() as Record<PropertyKey, unknown>, scenePath, next);
   }, []);
 
-  const viewingSelectionSubtree = Boolean(selectedPath?.length);
-
-  const headerTrailing = displayRoot ? (
-    <>
-      <div
-        className={cn(
-          !viewingSelectionSubtree && "invisible pointer-events-none",
-        )}
-      >
-        <SceneTreeExitFocusButton onClick={() => deselectObject()} />
-      </div>
-      <ObjectAddSelect
-        objectPath={nodePathPrefix}
-        setAtPath={setAtPath}
-        templates={templates}
-        mergeTraitInto={mergeTraitInto}
-      />
-    </>
-  ) : undefined;
-
-  const headerTitle =
-    viewingSelectionSubtree && selectedPath ? (
-      <span
-        className="block min-w-0 truncate font-semibold"
-        title={formatScenePathSlash(selectedPath)}
-      >
-        {formatScenePathSlash(selectedPath)}
-      </span>
-    ) : undefined;
-
   if (!rootObject) {
     return (
-      <div className="w-full h-full min-w-0 flex flex-col bg-[var(--color-bg)] p-2">
-        <SceneViewHeader leading={<SceneFileControls />} />
+      <div className="w-full h-full min-w-0 flex flex-col bg-[var(--color-bg)] p-2 px-2.5">
+        <SceneViewHeader title={<SceneFileControls />} />
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full min-w-0 flex flex-col bg-[var(--color-bg)] p-2">
-      <SceneViewHeader
-        leading={<SceneFileControls />}
-        title={headerTitle}
-        trailing={headerTrailing}
-      />
-      <div className="flex-1 min-h-0 pt-2.5 overflow-auto">
-        {displayRoot &&
-          Object.keys(displayRoot).map((key) => (
-            <TreeNode
-              name={key}
-              path={nodePathPrefix.concat(key)}
-              value={displayRoot[key]}
-              setAtPath={setAtPath}
-              templates={templates}
-              mergeTraitInto={mergeTraitInto}
-              expandObjectsByDefault={viewingSelectionSubtree}
-              key={key}
-            />
-          ))}
+    <div className="w-full h-full min-w-0 flex flex-col bg-[var(--color-bg)] p-2 px-2.5">
+      <SceneViewHeader title={<SceneFileControls />} />
+      <CreateObjectRow setAtPath={setAtPath} />
+      <div className="flex-1 min-h-0 overflow-auto">
+        {Object.keys(rootObject).map((key) => (
+          <TreeNode
+            name={key}
+            path={[key]}
+            value={rootObject[key]}
+            setAtPath={setAtPath}
+            templates={templates}
+            mergeTraitInto={mergeTraitInto}
+            selectedPath={selectedPath}
+            key={key}
+          />
+        ))}
       </div>
     </div>
   );

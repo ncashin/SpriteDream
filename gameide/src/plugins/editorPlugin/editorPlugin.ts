@@ -7,11 +7,11 @@ import type { GameContext } from "../../lifecycle/initialization.js";
 import { createEditorUI } from "./createEditorUI.js";
 import type { EditorWithGameViewReference } from "./createEditorUI.js";
 import { restoreSceneSnapshot, saveSceneSnapshot } from "../../scene/snapshot.js";
-
-function preferredScenePathFromUrl(): string | undefined {
-  const fromQuery = new URL(window.location.href).searchParams.get("scene") ?? "";
-  return fromQuery || undefined;
-}
+import {
+  hydrateSceneFileStore,
+  subscribeSceneFileHostState,
+  useSceneFileStore,
+} from "../../scene/sceneFileStore.js";
 
 export const editorPlugin =
   (Editor: EditorWithGameViewReference) =>
@@ -19,6 +19,9 @@ export const editorPlugin =
     if (process.env.NODE_ENV !== "development") {
       return input;
     }
+
+    const persistedScenePath = await hydrateSceneFileStore();
+    const releaseSceneFileHostState = subscribeSceneFileHostState();
 
     const embeddedInParentIFrame = window && window.parent !== window;
     const transport = embeddedInParentIFrame
@@ -32,10 +35,10 @@ export const editorPlugin =
       transport,
       scene: input.scene,
       initializeScene: true,
-      initialScenePath: embeddedInParentIFrame
-        ? undefined
-        : preferredScenePathFromUrl(),
+      initialScenePath: persistedScenePath || undefined,
     });
+
+    void useSceneFileStore.getState().loadScenes();
 
     const handleModeChange = (mode: GameIDEMode) => {
       switch (mode) {
@@ -58,6 +61,7 @@ export const editorPlugin =
 
     input.dispose(() => {
       releaseModeWatcher();
+      releaseSceneFileHostState();
       channel.dispose();
       mount.dispose();
     });

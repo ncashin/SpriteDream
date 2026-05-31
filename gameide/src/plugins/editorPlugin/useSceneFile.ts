@@ -1,13 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { GameIDEMode, getMode, setMode } from "../../lifecycle/mode.js";
-import {
-  fetchSceneList,
-  isEmbeddedInParentFrame,
-  requestHostSceneSave,
-  requestHostSceneSwitch,
-  subscribeToSceneEditorState,
-  syncSceneQueryParam,
-} from "./sceneFileBridge.js";
+import { useSceneFileStore } from "../../scene/sceneFileStore.js";
 
 function confirmDiscardUnsaved(activeScenePath: string): boolean {
   return window.confirm(`Discard unsaved changes to ${activeScenePath}?`);
@@ -24,28 +17,22 @@ function formatSceneDocumentTitle(
 }
 
 export function useSceneFile() {
-  const [scenes, setScenes] = useState<string[]>([]);
-  const [activeScenePath, setActiveScenePath] = useState("");
-  const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const activeScenePath = useSceneFileStore((state) => state.activeScenePath);
+  const scenes = useSceneFileStore((state) => state.scenes);
+  const dirty = useSceneFileStore((state) => state.dirty);
+  const saving = useSceneFileStore((state) => state.saving);
+  const setActiveScenePath = useSceneFileStore(
+    (state) => state.setActiveScenePath,
+  );
+  const loadScenes = useSceneFileStore((state) => state.loadScenes);
+  const requestSave = useSceneFileStore((state) => state.requestSave);
   const defaultDocumentTitleRef = useRef(
     typeof document !== "undefined" ? document.title : "",
   );
 
   useEffect(() => {
-    void fetchSceneList().then(setScenes);
-  }, []);
-
-  useEffect(() => {
-    return subscribeToSceneEditorState((state) => {
-      setActiveScenePath(state.path);
-      setDirty(state.dirty);
-      setSaving(state.saving);
-      if (!isEmbeddedInParentFrame()) {
-        syncSceneQueryParam(state.path);
-      }
-    });
-  }, []);
+    void loadScenes();
+  }, [loadScenes]);
 
   useEffect(() => {
     if (!activeScenePath) {
@@ -63,8 +50,8 @@ export function useSceneFile() {
   const save = useCallback(() => {
     if (getMode() !== GameIDEMode.Editor) return;
     if (!dirty || saving) return;
-    requestHostSceneSave();
-  }, [dirty, saving]);
+    requestSave();
+  }, [dirty, requestSave, saving]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -92,15 +79,14 @@ export function useSceneFile() {
         setMode(GameIDEMode.Editor);
       }
 
-      requestHostSceneSwitch(relativePath);
+      setActiveScenePath(relativePath);
     },
-    [activeScenePath, dirty],
+    [activeScenePath, dirty, setActiveScenePath],
   );
 
   return {
     scenes,
     activeScenePath,
     switchScene,
-    visible: scenes.length > 0,
   };
 }

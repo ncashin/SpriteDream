@@ -178,15 +178,15 @@
   "platform_3": {
     "position": {
       "__icon": "move-3d",
-      "x": -236,
-      "y": -308,
+      "x": -218,
+      "y": -65,
       "z": 0
     },
     "rotation": {
       "__icon": "rotate-3d",
       "x": 0,
       "y": 0,
-      "z": 0
+      "z": 2.2145424135352645
     },
     "scale": {
       "__icon": "scaling",

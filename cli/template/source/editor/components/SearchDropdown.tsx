@@ -1,4 +1,4 @@
-import { ChevronDown, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -174,8 +174,9 @@ export function SearchDropdown({
   useEffect(() => {
     if (!open) return;
     searchRef.current?.focus();
-    setActiveIndex(0);
-  }, [open]);
+    const selectedIndex = flatFiltered.findIndex((option) => option.value === value);
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+  }, [open, flatFiltered, value]);
 
   useEffect(() => {
     if (activeIndex >= flatFiltered.length) {
@@ -200,7 +201,8 @@ export function SearchDropdown({
     }
   }
 
-  const triggerLabel = selected?.label ?? placeholder;
+  const triggerLabel =
+    selected?.label ?? (value && value.length > 0 ? value : placeholder);
 
   const menu = open ? (
     <div
@@ -212,7 +214,12 @@ export function SearchDropdown({
         "bg-[var(--color-bg)] shadow-[0_4px_16px_var(--color-shadow)]",
       )}
     >
-      <div className="flex items-center gap-1.5 border-b border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] px-2 py-1.5">
+      <div
+        className={cn(
+          "flex items-center gap-1 border-b border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] py-1",
+          variant === "header" ? "px-2.5" : "px-1.5",
+        )}
+      >
         <Search
           size={14}
           aria-hidden
@@ -237,17 +244,30 @@ export function SearchDropdown({
         id={listboxId}
         role="listbox"
         aria-label={ariaLabel}
-        className="max-h-56 overflow-auto py-1"
+        className={cn(
+          "max-h-56 overflow-auto py-1",
+          variant === "header" ? "px-2.5" : "px-1.5",
+        )}
       >
         {flatFiltered.length === 0 ? (
-          <div className="px-2 py-1.5 text-xs text-[var(--color-muted)]">
+          <div
+            className={cn(
+              "py-1 text-xs text-[var(--color-muted)]",
+              variant === "header" ? "px-2.5" : "px-1.5",
+            )}
+          >
             {emptyMessage}
           </div>
         ) : (
           [...grouped.entries()].map(([group, items]) => (
             <div key={group || "__default"}>
               {group ? (
-                <div className="px-2 pb-0.5 pt-1 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
+                <div
+                  className={cn(
+                    "pb-0.5 pt-1 text-[10px] uppercase tracking-wide text-[var(--color-muted)]",
+                    variant === "header" ? "px-2.5" : "px-1.5",
+                  )}
+                >
                   {group}
                 </div>
               ) : null}
@@ -266,15 +286,17 @@ export function SearchDropdown({
                     onMouseEnter={() => setActiveIndex(index)}
                     onClick={() => choose(option.value)}
                     className={cn(
-                      "flex w-full min-w-0 items-center px-2 py-1 text-left text-xs",
-                      "font-[var(--vscode-font-family)] cursor-pointer border-0 bg-transparent",
-                      active
-                        ? "bg-[var(--color-selection)] text-[var(--color-fg)]"
-                        : "text-[var(--color-fg)] hover:bg-[var(--color-hover)]",
-                      selectedOption && !active && "font-medium",
+                      "flex w-full min-w-0 items-center rounded py-1 text-left text-xs",
+                      variant === "header" ? "pl-2.5 pr-2.5" : "pl-1.5 pr-1.5",
+                      "font-[var(--vscode-font-family)] cursor-pointer border-0",
+                      selectedOption
+                        ? "bg-[var(--color-selection)] font-medium text-[var(--color-fg)]"
+                        : active
+                          ? "bg-[var(--color-hover)] text-[var(--color-fg)]"
+                          : "bg-transparent text-[var(--color-fg)] hover:bg-[var(--color-hover)]",
                     )}
                   >
-                    <span className="truncate">{option.label}</span>
+                    <span className="min-w-0 truncate">{option.label}</span>
                   </button>
                 );
               })}
@@ -304,8 +326,8 @@ export function SearchDropdown({
           "font-[var(--vscode-font-family)] cursor-pointer disabled:cursor-default disabled:opacity-45",
           variant === "header" &&
             cn(
-              "h-[22px] min-h-[22px] max-w-full rounded px-0.5 -mx-0.5",
-              "text-xs font-semibold text-[var(--color-fg)]",
+              "h-[26px] min-h-[26px] w-full max-w-full items-center gap-0.5 rounded pl-2.5 pr-2.5",
+              "text-sm font-semibold leading-none text-[var(--color-fg)]",
               "hover:bg-[var(--color-hover)]",
               "focus-visible:ring-1 focus-visible:ring-[var(--color-highlight)]",
               open && "bg-[var(--color-hover)]",
@@ -322,17 +344,9 @@ export function SearchDropdown({
         {variant === "icon" ? (
           icon
         ) : (
-          <>
-            <span className="min-w-0 truncate">{triggerLabel}</span>
-            <ChevronDown
-              size={14}
-              aria-hidden
-              className={cn(
-                "shrink-0 text-[var(--color-muted)] transition-transform",
-                open && "rotate-180",
-              )}
-            />
-          </>
+          <span className="min-w-0 flex-1 truncate text-left">
+            {triggerLabel}
+          </span>
         )}
       </button>
 

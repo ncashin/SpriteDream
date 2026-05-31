@@ -7,12 +7,12 @@
   --color-red: #ff5252;
   --color-blue: #4da3ff;
   --color-green: #39d353;
-  --color-highlight: #ffaa33;
+  --color-highlight: #7ec8ff;
 
   /* Surfaces & text */
   --color-bg: #1e1e1e;
   --color-fg: #cccccc;
-  --color-muted: #6e7681;
+  --color-muted: #a3adb8;
   --color-border: rgba(255, 255, 255, 0.1);
   --color-hover: rgba(255, 255, 255, 0.08);
   --color-selection: color-mix(in srgb, var(--color-highlight) 28%, var(--color-bg));
@@ -24,7 +24,7 @@
   :root {
     --color-bg: #ffffff;
     --color-fg: #333333;
-    --color-muted: #6e7681;
+    --color-muted: #9098a2;
     --color-border: rgba(0, 0, 0, 0.12);
     --color-hover: rgba(0, 0, 0, 0.06);
     --color-selection: color-mix(in srgb, var(--color-highlight) 28%, var(--color-bg));

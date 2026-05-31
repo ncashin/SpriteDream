@@ -83,6 +83,10 @@ export { EditorRoot } from "./plugins/editorPlugin/EditorRoot.js";
 export { GameView } from "./plugins/editorPlugin/GameView.js";
 export { useScene } from "./hooks/useScene.js";
 export { useSceneFile } from "./plugins/editorPlugin/useSceneFile.js";
+export {
+  useSceneFileStore,
+  hydrateSceneFileStore,
+} from "./scene/sceneFileStore.js";
 export { useSelectedObject } from "./hooks/useSelectedObject.js";
 export { useTraits } from "./hooks/useTraits.js";
 export { useGameIDEMode } from "./hooks/useGameIDEMode.js";
