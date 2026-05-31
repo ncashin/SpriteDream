@@ -320,7 +320,7 @@ export function SearchDropdown({
           "font-[var(--vscode-font-family)] cursor-pointer disabled:cursor-default disabled:opacity-45",
           variant === "header" &&
             cn(
-              "h-[26px] min-h-[26px] w-full max-w-full items-center gap-0.5 rounded pl-1.5 pr-1.5",
+              "h-[26px] min-h-[26px] w-full max-w-full items-center gap-0.5 px-3",
               "text-sm font-semibold leading-none text-[var(--color-fg)]",
               "hover:bg-[var(--color-hover)]",
               "focus-visible:ring-1 focus-visible:ring-[var(--color-highlight)]",

@@ -49,11 +49,11 @@ export function Editor({
   return (
     <EditorRoot>
       <Sidebar open={sidebarOpen}>
-        <div className="flex flex-col w-full h-full bg-[var(--color-bg)] p-2 px-3 min-w-0">
-          <header className="sticky top-0 z-30 bg-[var(--color-bg)] pt-3 min-h-9 w-full shrink-0">
+        <div className="flex flex-col w-full h-full bg-[var(--color-bg)] min-w-0">
+          <header className="sticky top-0 z-30 w-full shrink-0 bg-[var(--color-bg)] pt-3 min-h-9">
             <SceneFileSelector />
           </header>
-          <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          <div className="flex flex-1 flex-col min-w-0 min-h-0 py-2 px-3">
             <SceneTree />
           </div>
         </div>

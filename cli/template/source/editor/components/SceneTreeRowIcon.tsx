@@ -18,7 +18,7 @@ export function SceneTreeRowIconFrame({
   return (
     <div
       className={cn(
-        "flex shrink-0 self-center items-center justify-center rounded p-0.5",
+        "scene-tree-icon-frame flex shrink-0 self-center items-center justify-center rounded p-0.5",
         sceneTreeRowIconFrameSizeClass,
         rowHover,
         "opacity-70 hover:opacity-100",

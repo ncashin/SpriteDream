@@ -95,8 +95,12 @@ const inputClass = `w-full min-w-0 flex-1 py-0.5 border-0 bg-transparent text-in
 
 const SCENE_TREE_META_KEYS = new Set(["__icon"]);
 
-/** Per nesting level for `position: sticky` object headers (matches row padding + icon frame). */
-const SCENE_TREE_STICKY_STACK_REM = 1.75;
+/** Sticky band height and per-depth `top` step (py-1 + text-xs line-height ≈ 1.5rem). */
+const SCENE_TREE_STICKY_STACK_REM = 1.5;
+/** Matches `pl-3` on nested object bodies — sticky headers bleed left by depth × this. */
+const SCENE_TREE_INDENT_REM = 0.75;
+/** Shallow object headers paint above deeper stickies when bands overlap while scrolling. */
+const SCENE_TREE_STICKY_Z_BASE = 50;
 
 /** Scene-tree row icon when a nested object omits `__icon` (e.g. hand-authored collider payloads). */
 const SCENE_OBJECT_PROPERTY_ICONS: Partial<Record<string, IconSlug>> = {
@@ -329,60 +333,80 @@ function RowShell({
     ariaExpanded = headerExpanded;
   }
 
-  return (
-    <div className="min-w-0" ref={rowRef}>
+  const isSticky = stickyStackDepth !== undefined;
+  const rowPadLRem = propertyRow ? 0.5 : 0.375;
+
+  const headerRow = (
+    <div
+      className={cn(
+        "group flex items-center gap-0.5 min-w-0",
+        !isSticky && "rounded",
+        !isSticky && (propertyRow ? "pl-2 pr-1.5" : "pl-1.5 pr-1.5"),
+        textSize,
+        font,
+        !isSticky && selected && "bg-[var(--color-selection)]",
+        !isSticky && highlightable && !selected && rowHover,
+      )}
+      aria-expanded={ariaExpanded}
+      onClick={rowOnClick}
+    >
+      {lead}
       <div
         className={cn(
-          "group flex items-center gap-0.5 min-w-0 rounded",
-          propertyRow ? "pl-2 pr-1.5" : "pl-1.5 pr-1.5",
-          textSize,
-          font,
-          selected && "bg-[var(--color-selection)]",
-          highlightable && !selected && rowHover,
-          stickyStackDepth !== undefined &&
-            "sticky bg-[var(--color-bg)]",
-          selected && stickyStackDepth !== undefined &&
-            "bg-[var(--color-selection)]",
+          "flex-1 min-w-0 flex items-center gap-1",
+          propertyRow ? "py-1" : "py-1",
         )}
-        style={
-          stickyStackDepth !== undefined
-            ? {
-                top: `calc(${stickyStackDepth} * ${SCENE_TREE_STICKY_STACK_REM}rem)`,
-                zIndex: 20 + stickyStackDepth,
-              }
-            : undefined
-        }
-        aria-expanded={ariaExpanded}
-        onClick={rowOnClick}
       >
-        {lead}
-        <div
-          className={cn(
-            "flex-1 min-w-0 flex items-center gap-1",
-            propertyRow ? "py-1" : "py-1",
-          )}
-        >
-          {label}
-        </div>
-        <div
-          className={cn(
-            "flex items-center gap-0 shrink-0 opacity-0 pointer-events-none",
-            "transition-opacity duration-150 ease-out",
-            "group-hover:opacity-100 group-hover:pointer-events-auto",
-            "group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
-          )}
-        >
-          <RowActions
-            path={path}
-            isObject={isObject}
-            setAtPath={setAtPath}
-            onDelete={onDelete}
-            templates={templates}
-            mergeTraitInto={mergeTraitInto}
-          />
-          {trailing}
-        </div>
+        {label}
       </div>
+      <div
+        className={cn(
+          "flex items-center gap-0 shrink-0 opacity-0 pointer-events-none",
+          "transition-opacity duration-150 ease-out",
+          "group-hover:opacity-100 group-hover:pointer-events-auto",
+          "group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
+        )}
+      >
+        <RowActions
+          path={path}
+          isObject={isObject}
+          setAtPath={setAtPath}
+          onDelete={onDelete}
+          templates={templates}
+          mergeTraitInto={mergeTraitInto}
+        />
+        {trailing}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-w-0" ref={rowRef}>
+      {isSticky ? (
+        <div
+          className={cn(
+            "sticky flex min-w-0 items-center",
+            "bg-[var(--color-bg)]",
+            selected && "bg-[var(--color-selection)]",
+            highlightable && !selected && rowHover,
+            "[&_.scene-tree-icon-frame]:bg-transparent",
+            "[&_.scene-tree-icon-frame]:hover:bg-transparent",
+          )}
+          style={{
+            top: `calc(${stickyStackDepth} * ${SCENE_TREE_STICKY_STACK_REM}rem)`,
+            height: `${SCENE_TREE_STICKY_STACK_REM}rem`,
+            zIndex: SCENE_TREE_STICKY_Z_BASE - stickyStackDepth,
+            marginLeft: `calc(-0.75rem - ${stickyStackDepth} * ${SCENE_TREE_INDENT_REM}rem)`,
+            marginRight: "-0.75rem",
+            paddingLeft: `calc(0.75rem + ${stickyStackDepth} * ${SCENE_TREE_INDENT_REM}rem + ${rowPadLRem}rem)`,
+            paddingRight: "calc(0.75rem + 0.375rem)",
+          }}
+        >
+          {headerRow}
+        </div>
+      ) : (
+        headerRow
+      )}
       {body}
     </div>
   );

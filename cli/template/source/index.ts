@@ -45,11 +45,8 @@ const game = await gameide({
         LookCamera: ["Mouse0"],
       },
     }),
-    planckPlugin({
-      // Matches playerTrait.playerGravityY (-1500 px/s²) at default 30 px/m.
-      gravity: { x: 0, y: -50 },
-    }),
-    pixiPlugin(),
+    planckPlugin({}),
+    pixiPlugin({}),
   ],
 });
 
