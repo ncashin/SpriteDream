@@ -62,6 +62,8 @@ export function SearchDropdown({
   title,
   emptyMessage = "No matches",
 }: SearchDropdownProps) {
+  const menuPaddingX = "px-1.5";
+  const optionPaddingX = "pl-1.5 pr-1.5";
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -217,7 +219,7 @@ export function SearchDropdown({
       <div
         className={cn(
           "flex items-center gap-1 border-b border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] py-1",
-          variant === "header" ? "px-2.5" : "px-1.5",
+          menuPaddingX,
         )}
       >
         <Search
@@ -244,18 +246,10 @@ export function SearchDropdown({
         id={listboxId}
         role="listbox"
         aria-label={ariaLabel}
-        className={cn(
-          "max-h-56 overflow-auto py-1",
-          variant === "header" ? "px-2.5" : "px-1.5",
-        )}
+        className={cn("max-h-56 overflow-auto py-1", menuPaddingX)}
       >
         {flatFiltered.length === 0 ? (
-          <div
-            className={cn(
-              "py-1 text-xs text-[var(--color-muted)]",
-              variant === "header" ? "px-2.5" : "px-1.5",
-            )}
-          >
+          <div className={cn("py-1 text-xs text-[var(--color-muted)]", menuPaddingX)}>
             {emptyMessage}
           </div>
         ) : (
@@ -265,7 +259,7 @@ export function SearchDropdown({
                 <div
                   className={cn(
                     "pb-0.5 pt-1 text-[10px] uppercase tracking-wide text-[var(--color-muted)]",
-                    variant === "header" ? "px-2.5" : "px-1.5",
+                    menuPaddingX,
                   )}
                 >
                   {group}
@@ -287,7 +281,7 @@ export function SearchDropdown({
                     onClick={() => choose(option.value)}
                     className={cn(
                       "flex w-full min-w-0 items-center rounded py-1 text-left text-xs",
-                      variant === "header" ? "pl-2.5 pr-2.5" : "pl-1.5 pr-1.5",
+                      optionPaddingX,
                       "font-[var(--vscode-font-family)] cursor-pointer border-0",
                       selectedOption
                         ? "bg-[var(--color-selection)] font-medium text-[var(--color-fg)]"
@@ -326,7 +320,7 @@ export function SearchDropdown({
           "font-[var(--vscode-font-family)] cursor-pointer disabled:cursor-default disabled:opacity-45",
           variant === "header" &&
             cn(
-              "h-[26px] min-h-[26px] w-full max-w-full items-center gap-0.5 rounded pl-2.5 pr-2.5",
+              "h-[26px] min-h-[26px] w-full max-w-full items-center gap-0.5 rounded pl-1.5 pr-1.5",
               "text-sm font-semibold leading-none text-[var(--color-fg)]",
               "hover:bg-[var(--color-hover)]",
               "focus-visible:ring-1 focus-visible:ring-[var(--color-highlight)]",

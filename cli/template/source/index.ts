@@ -7,7 +7,6 @@ import {
 } from "gameide";
 import invariant from "tiny-invariant";
 import exampleScene from "./scenes/example.scene";
-import "./sceneChannelDevClient.js";
 import "./style.css";
 import { Editor } from "./editor/Editor";
 import { GameUI } from "./GameUI";

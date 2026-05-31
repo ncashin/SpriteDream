@@ -46,8 +46,8 @@
   "platform_0": {
     "position": {
       "__icon": "move-3d",
-      "x": -390,
-      "y": 138,
+      "x": 920.5503988820218,
+      "y": 273.57417919469185,
       "z": 0
     },
     "rotation": {
@@ -90,15 +90,15 @@
   "platform_1": {
     "position": {
       "__icon": "move-3d",
-      "x": 107,
-      "y": 120,
+      "x": -75.06927925544011,
+      "y": -14.451160065555769,
       "z": 0
     },
     "rotation": {
       "__icon": "rotate-3d",
       "x": 0,
       "y": 0,
-      "z": 0
+      "z": 2.6272294085995758
     },
     "scale": {
       "__icon": "scaling",
@@ -178,15 +178,15 @@
   "platform_3": {
     "position": {
       "__icon": "move-3d",
-      "x": -218,
-      "y": -65,
+      "x": -703,
+      "y": 5,
       "z": 0
     },
     "rotation": {
       "__icon": "rotate-3d",
       "x": 0,
       "y": 0,
-      "z": 2.2145424135352645
+      "z": 2.2691166679874346
     },
     "scale": {
       "__icon": "scaling",
@@ -262,5 +262,168 @@
       "friction": 0.3,
       "disabled": false
     }
+  },
+  "d648042e-26cc-49d6-97b5-c97a5f0bd7ec": {
+    "position": {
+      "__icon": "move-3d",
+      "x": 84.92348406730326,
+      "y": 28.78167206469623,
+      "z": 0
+    },
+    "rotation": {
+      "__icon": "rotate-3d",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "scale": {
+      "__icon": "scaling",
+      "x": 4.90625,
+      "y": 4.90625,
+      "z": 1
+    },
+    "moveSpeed": 260,
+    "jumpSpeed": 650,
+    "playerGravityY": -1500,
+    "grounded": true,
+    "sprite": {
+      "__icon": "image",
+      "asset": "assets/typescript.svg",
+      "width": 32,
+      "height": 32,
+      "tint": "#ffffff"
+    },
+    "collisionBody": {
+      "__icon": "atom",
+      "type": "dynamic",
+      "velocity": {
+        "x": 0,
+        "y": 0,
+        "angular": 0
+      },
+      "fixedRotation": true,
+      "continuous": false,
+      "isTrigger": false,
+      "restitution": 0,
+      "friction": 0,
+      "disabled": false
+    },
+    "boxCollider": {
+      "__icon": "square",
+      "width": 32,
+      "height": 32,
+      "offset": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "__ownerId": "d648042e-26cc-49d6-97b5-c97a5f0bd7ec"
+  },
+  "bouncyBall": {
+    "position": {
+      "__icon": "move-3d",
+      "x": -1126.6395592454576,
+      "y": -380.83968806080816,
+      "z": 0
+    },
+    "rotation": {
+      "__icon": "rotate-3d",
+      "x": 0,
+      "y": 0,
+      "z": 2.6555377835240757
+    },
+    "scale": {
+      "__icon": "scaling",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
+    "sprite": {
+      "__icon": "image",
+      "asset": "assets/typescript.svg",
+      "width": 36,
+      "height": 36,
+      "tint": "#ff8c42"
+    },
+    "circleCollider": {
+      "__icon": "circle",
+      "radius": 18,
+      "offset": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "collisionBody": {
+      "__icon": "atom",
+      "type": "dynamic",
+      "velocity": {
+        "x": -102.46654321401694,
+        "y": -28.429839064898044,
+        "angular": 5.719395400049781
+      },
+      "fixedRotation": false,
+      "continuous": false,
+      "isTrigger": false,
+      "restitution": 0.88,
+      "friction": 0.3,
+      "disabled": false
+    },
+    "__ownerId": "007f69e2-f1ff-478e-9090-6e95c6a18cc2"
+  },
+  "007f69e2-f1ff-478e-9090-6e95c6a18cc2": {
+    "position": {
+      "__icon": "move-3d",
+      "x": -93.15941625127464,
+      "y": -383.5500000000001,
+      "z": 0
+    },
+    "rotation": {
+      "__icon": "rotate-3d",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "scale": {
+      "__icon": "scaling",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
+    "moveSpeed": 260,
+    "jumpSpeed": 650,
+    "playerGravityY": -1500,
+    "grounded": false,
+    "sprite": {
+      "__icon": "image",
+      "asset": "assets/typescript.svg",
+      "width": 32,
+      "height": 32,
+      "tint": "#ffffff"
+    },
+    "collisionBody": {
+      "__icon": "atom",
+      "type": "dynamic",
+      "velocity": {
+        "x": 0,
+        "y": -4.0332320816460765e-16,
+        "angular": 0
+      },
+      "fixedRotation": true,
+      "continuous": false,
+      "isTrigger": false,
+      "restitution": 0,
+      "friction": 0,
+      "disabled": false
+    },
+    "boxCollider": {
+      "__icon": "square",
+      "width": 32,
+      "height": 32,
+      "offset": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "__ownerId": "007f69e2-f1ff-478e-9090-6e95c6a18cc2"
   }
 }

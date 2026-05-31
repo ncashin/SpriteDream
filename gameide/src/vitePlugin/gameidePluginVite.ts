@@ -16,22 +16,8 @@ import {
   type SceneObject,
 } from "../scene/scene.js";
 
-type JSONPrimitive = string | number | boolean | null;
-type JSONValue =
-  | JSONPrimitive
-  | JSONValue[]
-  | { [key: string]: JSONValue };
-
-function createSceneModuleCode(data: JSONValue): string {
+function createSceneModuleCode(data: SceneObject): string {
   return `const data = ${JSON.stringify(data)};\nexport default data;\n`;
-}
-
-function parseSceneJSON(raw: string): JSONValue {
-  const data = JSON.parse(raw) as JSONValue;
-  if (data && typeof data === "object" && !Array.isArray(data)) {
-    return stripScenePatchSentinels(data as SceneObject) as JSONValue;
-  }
-  return data;
 }
 
 const lifecycleExports = new Set([
@@ -44,14 +30,6 @@ const lifecycleExports = new Set([
 ]);
 
 const transformableModulePattern = /\.[cm]?[jt]sx?$/;
-
-function getCleanId(id: string): string {
-  return id.replace(/\?.*$/, "");
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 function getImportedLifecycleNames(code: string): string[] {
   const names = new Set<string>();
@@ -79,16 +57,15 @@ function getImportedLifecycleNames(code: string): string[] {
 }
 
 function callsImportedLifecycle(code: string, importedNames: readonly string[]): boolean {
-  return importedNames.some((name) => {
-    const pattern = new RegExp(`(^|[^\\w$.])${escapeRegExp(name)}\\s*\\(`, "m");
-    return pattern.test(code);
-  });
+  return importedNames.some((name) =>
+    new RegExp(`(^|[^\\w$.])${name}\\s*\\(`, "m").test(code),
+  );
 }
 
 function shouldTransformHotModule(code: string, id: string): boolean {
-  const cleanId = getCleanId(id);
-  if (!transformableModulePattern.test(cleanId)) return false;
-  if (cleanId.includes("/node_modules/")) return false;
+  const filePath = id.replace(/\?.*$/, "");
+  if (!transformableModulePattern.test(filePath)) return false;
+  if (filePath.includes("/node_modules/")) return false;
   if (code.includes("__beginHotModule")) return false;
 
   const importedNames = getImportedLifecycleNames(code);
@@ -100,10 +77,10 @@ function shouldTransformHotModule(code: string, id: string): boolean {
  * (same arity and values as the app entry called, not hard-coded `getGameContext()`).
  */
 function wrapGameideHotDefaultExport(code: string, id: string): string | null {
-  const cleanId = getCleanId(id);
-  const scriptKind = /\.tsx$/i.test(cleanId) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  const filePath = id.replace(/\?.*$/, "");
+  const scriptKind = /\.tsx$/i.test(filePath) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
   const sourceFile = ts.createSourceFile(
-    cleanId,
+    filePath,
     code,
     ts.ScriptTarget.Latest,
     true,
@@ -240,11 +217,11 @@ export function gameidePlugin(): Plugin {
       };
     },
     handleHotUpdate(ctx) {
-      if (catalogFileAffectsScenes(path.normalize(ctx.file))) {
-        return [];
-      }
-
-      if (catalogFileAffectsAssets(projectRoot, path.normalize(ctx.file))) {
+      const file = path.normalize(ctx.file);
+      if (
+        catalogFileAffectsScenes(file) ||
+        catalogFileAffectsAssets(projectRoot, file)
+      ) {
         invalidateCatalogModules(ctx.server);
       }
     },
@@ -256,11 +233,11 @@ export function gameidePlugin(): Plugin {
         return createCatalogModuleCode(listProjectScenes(projectRoot));
       }
 
-      const cleanId = getCleanId(id);
-      if (!cleanId.endsWith(".scene")) return;
+      const filePath = id.replace(/\?.*$/, "");
+      if (!filePath.endsWith(".scene")) return;
 
-      const raw = fs.readFileSync(cleanId, "utf8");
-      const data = parseSceneJSON(raw);
+      const raw = fs.readFileSync(filePath, "utf8");
+      const data = stripScenePatchSentinels(JSON.parse(raw) as SceneObject);
       return createSceneModuleCode(data);
     },
     transform(code, id) {

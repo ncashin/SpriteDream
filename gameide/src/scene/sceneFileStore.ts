@@ -4,25 +4,19 @@ import {
   SCENE_CHANNEL,
   type SceneEditorState,
 } from "./sceneChannel/sceneChannel.js";
-import { getDevSceneChannelTransport } from "./sceneChannel/sceneChannelDevTransport.js";
+import type { Scene, SceneObject } from "./scene.js";
+import { stripScenePatchSentinels } from "./scene.js";
 
-const SCENES_API = "/__gameide/scenes";
 const STORAGE_KEY = "gameide-scene-file";
+const SCENES_API = "/__gameide/scenes";
+const SCENE_FILE_API = "/__gameide/scene";
+
+function sceneSnapshot(data: SceneObject): string {
+  return JSON.stringify(stripScenePatchSentinels(data));
+}
 
 function isEmbeddedInParentFrame(): boolean {
   return typeof window !== "undefined" && window.parent !== window;
-}
-
-function sendSceneChannelMessage(message: {
-  type: string;
-  content?: unknown;
-}): void {
-  if (isEmbeddedInParentFrame()) {
-    window.parent.postMessage(message, "*");
-    return;
-  }
-
-  getDevSceneChannelTransport().send(message);
 }
 
 async function fetchSceneList(): Promise<string[]> {
@@ -34,6 +28,20 @@ async function fetchSceneList(): Promise<string[]> {
     return data.filter((entry): entry is string => typeof entry === "string");
   } catch {
     return [];
+  }
+}
+
+async function fetchSceneFile(
+  relativePath: string,
+): Promise<SceneObject | null> {
+  try {
+    const res = await fetch(
+      `${SCENE_FILE_API}?path=${encodeURIComponent(relativePath)}`,
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as SceneObject;
+  } catch {
+    return null;
   }
 }
 
@@ -97,12 +105,15 @@ export const useSceneFileStore = create<SceneFileStore>()(
       setActiveScenePath: (path, options) => {
         if (!path || path === get().activeScenePath) return;
         set({ activeScenePath: path });
-        if (options?.notifyHost !== false) {
-          sendSceneChannelMessage({
+        if (options?.notifyHost === false) return;
+        if (!isEmbeddedInParentFrame()) return;
+        window.parent.postMessage(
+          {
             type: SCENE_CHANNEL.requestSceneSwitch,
             content: path,
-          });
-        }
+          },
+          "*",
+        );
       },
 
       applyHostEditorState: (state) => {
@@ -128,16 +139,17 @@ export const useSceneFileStore = create<SceneFileStore>()(
         const previousPath = get().activeScenePath;
         const activeScenePath = pickActiveScene(scenes, previousPath);
         set({ scenes, activeScenePath, scenesLoaded: true });
-        if (activeScenePath && activeScenePath !== previousPath) {
-          sendSceneChannelMessage({
-            type: SCENE_CHANNEL.requestSceneSwitch,
-            content: activeScenePath,
-          });
-        }
       },
 
       requestSave: () => {
-        sendSceneChannelMessage({ type: SCENE_CHANNEL.requestSceneSave });
+        if (isEmbeddedInParentFrame()) {
+          window.parent.postMessage(
+            { type: SCENE_CHANNEL.requestSceneSave },
+            "*",
+          );
+          return;
+        }
+        void saveActiveScene();
       },
     }),
     {
@@ -146,6 +158,88 @@ export const useSceneFileStore = create<SceneFileStore>()(
     },
   ),
 );
+
+let boundScene: Scene | null = null;
+let savedSnapshot = "";
+let applyingExternalUpdate = false;
+let unsubscribeOnChange: (() => void) | undefined;
+let unsubscribeStore: (() => void) | undefined;
+
+function syncDirtyState(): void {
+  if (!boundScene) return;
+  useSceneFileStore.setState({
+    dirty: sceneSnapshot(boundScene.getRaw()) !== savedSnapshot,
+  });
+}
+
+async function loadSceneAtPath(relativePath: string): Promise<void> {
+  if (!boundScene || !relativePath) return;
+
+  const data = await fetchSceneFile(relativePath);
+  if (!data) return;
+
+  applyingExternalUpdate = true;
+  try {
+    boundScene.replace(data);
+    savedSnapshot = sceneSnapshot(data);
+  } finally {
+    applyingExternalUpdate = false;
+  }
+  syncDirtyState();
+}
+
+async function saveActiveScene(): Promise<void> {
+  const { activeScenePath, saving, dirty } = useSceneFileStore.getState();
+  if (!boundScene || !activeScenePath || saving || !dirty) return;
+
+  useSceneFileStore.setState({ saving: true });
+  try {
+    const res = await fetch(SCENE_FILE_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: activeScenePath,
+        content: stripScenePatchSentinels(boundScene.getRaw()),
+      }),
+    });
+    if (!res.ok) throw new Error("Failed to save scene");
+    savedSnapshot = sceneSnapshot(boundScene.getRaw());
+    useSceneFileStore.setState({ dirty: false });
+  } finally {
+    useSceneFileStore.setState({ saving: false });
+  }
+}
+
+export function bindSceneFileStore(
+  scene: Scene,
+  initialPath?: string,
+): () => void {
+  boundScene = scene;
+  savedSnapshot = sceneSnapshot(scene.getRaw());
+
+  unsubscribeOnChange = scene.onChange(() => {
+    if (applyingExternalUpdate || useSceneFileStore.getState().saving) return;
+    syncDirtyState();
+  });
+
+  unsubscribeStore = useSceneFileStore.subscribe((state, previous) => {
+    if (state.activeScenePath === previous.activeScenePath) return;
+    if (!state.activeScenePath) return;
+    void loadSceneAtPath(state.activeScenePath);
+  });
+
+  if (initialPath) {
+    void loadSceneAtPath(initialPath);
+  } else {
+    syncDirtyState();
+  }
+
+  return () => {
+    unsubscribeOnChange?.();
+    unsubscribeStore?.();
+    boundScene = null;
+  };
+}
 
 export async function hydrateSceneFileStore(): Promise<string> {
   await useSceneFileStore.persist.rehydrate();
@@ -169,10 +263,7 @@ export function subscribeSceneFileHostState(): () => void {
 
   window.addEventListener("message", onParentMessage);
 
-  const unsubscribeDev = getDevSceneChannelTransport().onMessage(handleHostState);
-
   return () => {
     window.removeEventListener("message", onParentMessage);
-    unsubscribeDev();
   };
 }

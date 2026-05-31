@@ -1,5 +1,4 @@
 import { createSceneTransportPostMessage } from "../../scene/sceneChannel/sceneChannelTransport.js";
-import { getDevSceneChannelTransport } from "../../scene/sceneChannel/sceneChannelDevTransport.js";
 import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import { GameIDEMode, getMode, onModeChange } from "../../lifecycle/mode.js";
@@ -8,6 +7,7 @@ import { createEditorUI } from "./createEditorUI.js";
 import type { EditorWithGameViewReference } from "./createEditorUI.js";
 import { restoreSceneSnapshot, saveSceneSnapshot } from "../../scene/snapshot.js";
 import {
+  bindSceneFileStore,
   hydrateSceneFileStore,
   subscribeSceneFileHostState,
   useSceneFileStore,
@@ -23,33 +23,41 @@ export const editorPlugin =
     const persistedScenePath = await hydrateSceneFileStore();
     const releaseSceneFileHostState = subscribeSceneFileHostState();
 
+    await useSceneFileStore.getState().loadScenes();
+
     const embeddedInParentIFrame = window && window.parent !== window;
-    const transport = embeddedInParentIFrame
-      ? createSceneTransportPostMessage({
-          target: window.parent,
-          source: window,
-        })
-      : getDevSceneChannelTransport();
+    let channel: SceneChannel | undefined;
+    let releaseDevRuntime: (() => void) | undefined;
 
-    const channel = await createSceneChannel({
-      transport,
-      scene: input.scene,
-      initializeScene: true,
-      initialScenePath: persistedScenePath || undefined,
-    });
-
-    void useSceneFileStore.getState().loadScenes();
+    if (embeddedInParentIFrame) {
+      const transport = createSceneTransportPostMessage({
+        target: window.parent,
+        source: window,
+      });
+      channel = await createSceneChannel({
+        transport,
+        scene: input.scene,
+        initializeScene: true,
+        initialScenePath: persistedScenePath || undefined,
+      });
+    } else {
+      const activeScenePath =
+        useSceneFileStore.getState().activeScenePath || persistedScenePath;
+      releaseDevRuntime = bindSceneFileStore(
+        input.scene,
+        activeScenePath || undefined,
+      );
+    }
 
     const handleModeChange = (mode: GameIDEMode) => {
       switch (mode) {
         case GameIDEMode.Game:
           saveSceneSnapshot();
-          channel.pause();
+          channel?.pause();
           break;
         case GameIDEMode.Editor:
           restoreSceneSnapshot();
-          channel.unpause();
-
+          channel?.unpause();
           break;
       }
     };
@@ -62,7 +70,8 @@ export const editorPlugin =
     input.dispose(() => {
       releaseModeWatcher();
       releaseSceneFileHostState();
-      channel.dispose();
+      releaseDevRuntime?.();
+      channel?.dispose();
       mount.dispose();
     });
 
@@ -70,6 +79,6 @@ export const editorPlugin =
       ...input,
       initialScene: structuredClone(input.scene.getRaw()),
       rootElement: mount.gameViewRoot,
-      editorSceneChannel: channel,
+      ...(channel ? { editorSceneChannel: channel } : {}),
     };
   };
