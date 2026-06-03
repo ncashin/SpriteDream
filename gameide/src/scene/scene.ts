@@ -35,6 +35,64 @@ export function stripScenePatchSentinels(data: SceneObject): SceneObject {
   return out;
 }
 
+function sceneValuesEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") {
+    return false;
+  }
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+  const aKeys = Reflect.ownKeys(a);
+  const bKeys = Reflect.ownKeys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (!Reflect.has(b, key)) return false;
+    if (!sceneValuesEqual(Reflect.get(a, key), Reflect.get(b, key))) return false;
+  }
+  return true;
+}
+
+/** Build a minimal patch from `previous` to `next` for applyPatch. */
+export function diffScenePatch(
+  previous: SceneObject,
+  next: SceneObject,
+): Partial<SceneObject> {
+  const patch: SceneObject = {};
+  const prev = stripScenePatchSentinels(previous);
+  const nxt = stripScenePatchSentinels(next);
+  const nextKeySet = new Set(Reflect.ownKeys(nxt));
+
+  for (const key of Reflect.ownKeys(prev)) {
+    if (!nextKeySet.has(key)) {
+      Reflect.set(patch, key, SCENE_PATCH_DELETED);
+    }
+  }
+
+  for (const key of Reflect.ownKeys(nxt)) {
+    const oldValue = Reflect.get(prev, key);
+    const newValue = Reflect.get(nxt, key);
+
+    if (isNestedRecord(oldValue) && isNestedRecord(newValue)) {
+      const childPatch = diffScenePatch(oldValue, newValue);
+      if (Reflect.ownKeys(childPatch).length > 0) {
+        Reflect.set(patch, key, childPatch);
+      }
+      continue;
+    }
+
+    if (sceneValuesEqual(oldValue, newValue)) continue;
+
+    Reflect.set(
+      patch,
+      key,
+      isNestedRecord(newValue) ? stripScenePatchSentinels(newValue) : newValue,
+    );
+  }
+
+  return patch;
+}
+
 export function createSceneProxy<T extends object = GameObject>(
   target: T,
   scenePath?: ScenePath,

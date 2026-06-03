@@ -46,7 +46,7 @@ export {
 } from "./scene/objectSelection.js";
 export { getValueAtPath, setValueAtPath } from "./scene/path.js";
 
-export type { Scene, SceneObject, GameObject } from "./scene/scene.js";
+export type { Scene, SceneObject, GameObject, ScenePath } from "./scene/scene.js";
 export {
   defineTrait,
   implementsTrait,

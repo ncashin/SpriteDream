@@ -8,6 +8,7 @@ import { SearchDropdown } from "./components/SearchDropdown";
 import { Sidebar } from "./components/Sidebar";
 import { SidebarToggleButton } from "./components/SidebarToggleButton";
 import { TransformGizmoBar } from "./components/TransformGizmoBar";
+import SceneTreeTest from "./components/SceneTreeTest";
 
 function SceneFileSelector() {
   const { scenes, activeScenePath, switchScene } = useSceneFile();
@@ -35,13 +36,14 @@ export function Editor({
   const { save, dirty, saving } = useSceneFile();
 
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "s" && e.key !== "S") return;
-      if (!e.ctrlKey && !e.metaKey) return;
-      if (e.altKey) return;
-      e.preventDefault();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "s" && event.key !== "S") return;
+      if (!event.ctrlKey && !event.metaKey) return;
+      if (event.altKey) return;
+      event.preventDefault();
       save();
     };
+
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [save]);
@@ -49,12 +51,12 @@ export function Editor({
   return (
     <EditorRoot>
       <Sidebar open={sidebarOpen}>
-        <div className="flex flex-col w-full h-full bg-[var(--color-bg)] min-w-0">
-          <header className="sticky top-0 z-30 w-full shrink-0 bg-[var(--color-bg)] pt-3 min-h-9">
+        <div className="flex flex-col w-full h-full bg-[var(--color-bg)]">
+          <header className="sticky w-full shrink-0 bg-[var(--color-bg)]">
             <SceneFileSelector />
           </header>
-          <div className="flex flex-1 flex-col min-w-0 min-h-0 py-2 px-3">
-            <SceneTree />
+          <div className="flex flex-1 flex-col min-w-0 min-h-0">
+            <SceneTreeTest />
           </div>
         </div>
    

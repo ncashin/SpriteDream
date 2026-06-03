@@ -41,7 +41,7 @@ export function OverlayInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={cn(
-          "absolute inset-0 flex items-center px-1.5 py-0 text-xs leading-none text-[var(--color-fg)]",
+          "absolute inset-0 flex items-center px-1.5 py-0 text-xs leading-none text-[var(--color-text)]",
           "bg-[var(--color-bg)] hover:bg-[var(--color-bg)]",
           "border-none rounded outline-none font-[var(--vscode-font-family)]",
           "truncate",

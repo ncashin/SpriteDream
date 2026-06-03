@@ -236,7 +236,7 @@ export function SearchDropdown({
           onKeyDown={onSearchKeyDown}
           className={cn(
             "min-w-0 flex-1 border-0 bg-transparent py-0.5 text-xs outline-none",
-            "text-[var(--color-fg)] placeholder:text-[var(--color-muted)]",
+            "text-[var(--color-text)] placeholder:text-[var(--color-muted)]",
             "font-[var(--vscode-font-family)]",
           )}
         />
@@ -284,10 +284,10 @@ export function SearchDropdown({
                       optionPaddingX,
                       "font-[var(--vscode-font-family)] cursor-pointer border-0",
                       selectedOption
-                        ? "bg-[var(--color-selection)] font-medium text-[var(--color-fg)]"
+                        ? "bg-[var(--color-selection)] font-medium text-[var(--color-text)]"
                         : active
-                          ? "bg-[var(--color-hover)] text-[var(--color-fg)]"
-                          : "bg-transparent text-[var(--color-fg)] hover:bg-[var(--color-hover)]",
+                          ? "bg-[var(--color-hover)] text-[var(--color-text)]"
+                          : "bg-transparent text-[var(--color-text)] hover:bg-[var(--color-hover)]",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -321,7 +321,7 @@ export function SearchDropdown({
           variant === "header" &&
             cn(
               "h-[26px] min-h-[26px] w-full max-w-full items-center gap-0.5 px-3",
-              "text-sm font-semibold leading-none text-[var(--color-fg)]",
+              "text-sm font-semibold leading-none text-[var(--color-text)]",
               "hover:bg-[var(--color-hover)]",
               "focus-visible:ring-1 focus-visible:ring-[var(--color-highlight)]",
               open && "bg-[var(--color-hover)]",

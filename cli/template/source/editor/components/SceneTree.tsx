@@ -1,10 +1,8 @@
 import {
-  Box,
   ChevronRight,
   Plus,
   Trash2,
 } from "lucide-react";
-import dynamicIconImports from "lucide-react/dynamicIconImports";
 import {
   useCallback,
   useEffect,
@@ -13,7 +11,6 @@ import {
   useState,
   type MouseEvent,
   type ReactNode,
-  type RefObject,
 } from "react";
 import {
   deselectObject,
@@ -25,13 +22,13 @@ import {
   type GameObject,
 } from "gameide";
 import {
+  SCENE_OBJECT_PROPERTY_ICONS,
+  SceneTreeObjectLeadIcon,
   SceneTreeRowIconFrame,
   sceneTreeRowIconFrameSizeClass,
 } from "./SceneTreeRowIcon.js";
 import { SearchDropdown } from "./SearchDropdown.js";
 import { cn } from "../../utils/cn.js";
-
-type IconSlug = string;
 
 function isExpandable(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -89,7 +86,7 @@ const iconSize = 14;
 const iconClass = "text-white";
 const font = "font-[var(--vscode-font-family)]";
 const muted = "text-[var(--color-muted)]";
-const foreground = "text-[var(--color-fg)]";
+const foreground = "text-[var(--color-text)]";
 const rowHover = "hover:bg-[var(--color-hover)]";
 const inputClass = `w-full min-w-0 flex-1 py-0.5 border-0 bg-transparent text-inherit ${textSize} font-[inherit] outline-none`;
 
@@ -102,82 +99,23 @@ const SCENE_TREE_INDENT_REM = 0.75;
 /** Shallow object headers paint above deeper stickies when bands overlap while scrolling. */
 const SCENE_TREE_STICKY_Z_BASE = 50;
 
-/** Scene-tree row icon when a nested object omits `__icon` (e.g. hand-authored collider payloads). */
-const SCENE_OBJECT_PROPERTY_ICONS: Partial<Record<string, IconSlug>> = {
-  boxCollider: "square",
-  circleCollider: "circle",
-  collisionBody: "atom",
-  sprite: "image",
-};
-
-type LeadIconComponent = typeof Box;
-
-function normalizeIconSlug(raw: string): string {
-  const t = raw.trim();
-  if (!t) return "";
-  if (t.includes("-")) return t.toLowerCase();
-  return t
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/([A-Z])([A-Z][a-z])/g, "$1-$2")
-    .toLowerCase();
-}
-
-function SceneTreeObjectLeadIcon({ iconKey }: { iconKey: unknown }) {
-  const [Icon, setIcon] = useState<LeadIconComponent>(() => Box);
-
-  useEffect(() => {
-    if (typeof iconKey !== "string" || iconKey.trim() === "") {
-      setIcon(() => Box);
-      return;
-    }
-    const slug = normalizeIconSlug(iconKey);
-    const loaders = dynamicIconImports as Record<
-      string,
-      () => Promise<{ default: LeadIconComponent }>
-    >;
-    const load = loaders[slug];
-    if (!load) {
-      setIcon(() => Box);
-      return;
-    }
-    let cancelled = false;
-    void load()
-      .then((mod) => {
-        if (!cancelled && mod?.default) {
-          setIcon(() => mod.default);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setIcon(() => Box);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [iconKey]);
-
-  const Cmp = Icon;
-  return <Cmp size={iconSize} className={iconClass} aria-hidden />;
-}
-
 function ObjectAddSelect({
   objectPath,
   setAtPath,
-  templates,
+  traits,
   mergeTraitInto,
 }: {
   objectPath: PropertyKey[];
   setAtPath: (path: PropertyKey[], value: unknown) => void;
-  templates: { id: number; label: string }[];
+  traits: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
 }) {
   const options = [
     { value: "obj", label: "object", group: "Property" },
     { value: "prop", label: "property", group: "Property" },
-    ...templates.map((template) => ({
-      value: `trait:${template.id}`,
-      label: template.label,
+    ...traits.map((trait) => ({
+      value: `trait:${trait.id}`,
+      label: trait.label,
       group: "Traits",
     })),
   ];
@@ -219,7 +157,7 @@ type RowActionsProps = {
   isObject: boolean;
   setAtPath: (path: PropertyKey[], value: unknown) => void;
   onDelete: () => void;
-  templates: { id: number; label: string }[];
+  traits: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
 };
 
@@ -228,7 +166,7 @@ function RowActions({
   isObject,
   setAtPath,
   onDelete,
-  templates,
+  traits,
   mergeTraitInto,
 }: RowActionsProps) {
   return (
@@ -237,7 +175,7 @@ function RowActions({
         <ObjectAddSelect
           objectPath={path}
           setAtPath={setAtPath}
-          templates={templates}
+          traits={traits}
           mergeTraitInto={mergeTraitInto}
         />
       )}
@@ -266,7 +204,7 @@ type RowShellProps = {
   isObject: boolean;
   setAtPath: (path: PropertyKey[], value: unknown) => void;
   onDelete: () => void;
-  templates: { id: number; label: string }[];
+  traits: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
   trailing?: ReactNode;
   label: ReactNode;
@@ -282,7 +220,6 @@ type RowShellProps = {
   /** When set, the header row sticks while scrolling the scene tree list. */
   stickyStackDepth?: number;
   selected?: boolean;
-  rowRef?: RefObject<HTMLDivElement | null>;
 };
 
 function RowShell({
@@ -290,7 +227,7 @@ function RowShell({
   isObject,
   setAtPath,
   onDelete,
-  templates,
+  traits,
   mergeTraitInto,
   trailing,
   label,
@@ -303,7 +240,6 @@ function RowShell({
   objectLeadIconKey,
   stickyStackDepth,
   selected = false,
-  rowRef,
 }: RowShellProps) {
   let lead: ReactNode = null;
   if (dropInto) {
@@ -372,7 +308,7 @@ function RowShell({
           isObject={isObject}
           setAtPath={setAtPath}
           onDelete={onDelete}
-          templates={templates}
+          traits={traits}
           mergeTraitInto={mergeTraitInto}
         />
         {trailing}
@@ -381,7 +317,7 @@ function RowShell({
   );
 
   return (
-    <div className="min-w-0" ref={rowRef}>
+    <div className="min-w-0" {...(selected ? { "data-scene-tree-selected": "" } : {})}>
       {isSticky ? (
         <div
           className={cn(
@@ -418,7 +354,7 @@ type PropertyNodeProps = {
   value: unknown;
   setAtPath: (path: PropertyKey[], value: unknown) => void;
   onDelete: () => void;
-  templates: { id: number; label: string }[];
+  traits: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
   selectedPath?: PropertyKey[] | null;
 };
@@ -429,17 +365,11 @@ function PropertyNode({
   value,
   setAtPath,
   onDelete,
-  templates,
+  traits,
   mergeTraitInto,
   selectedPath,
 }: PropertyNodeProps) {
-  const rowRef = useRef<HTMLDivElement>(null);
   const selected = Boolean(selectedPath && pathsEqual(path, selectedPath));
-
-  useLayoutEffect(() => {
-    if (!selected) return;
-    rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [selected, selectedPath]);
 
   const [draft, setDraft] = useState<string | null>(null);
   const skipCommitOnBlurRef = useRef(false);
@@ -469,10 +399,9 @@ function PropertyNode({
       propertyRow
       highlightable={false}
       selected={selected}
-      rowRef={rowRef}
       setAtPath={setAtPath}
       onDelete={onDelete}
-      templates={templates}
+      traits={traits}
       mergeTraitInto={mergeTraitInto}
       label={
         <>
@@ -506,7 +435,7 @@ type ObjectNodeProps = {
   sceneObject: Record<string, unknown>;
   setAtPath: (path: PropertyKey[], value: unknown) => void;
   onDelete: () => void;
-  templates: { id: number; label: string }[];
+  traits: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
   expandObjectsByDefault?: boolean;
   depth: number;
@@ -519,13 +448,12 @@ function ObjectNode({
   sceneObject,
   setAtPath,
   onDelete,
-  templates,
+  traits,
   mergeTraitInto,
   expandObjectsByDefault = false,
   depth,
   selectedPath,
 }: ObjectNodeProps) {
-  const rowRef = useRef<HTMLDivElement>(null);
   const selected = Boolean(selectedPath && pathsEqual(path, selectedPath));
   const selectionKey = selectedPath?.map(String).join("\0") ?? "";
   const autoOpen =
@@ -536,11 +464,6 @@ function ObjectNode({
   } | null>(null);
   const open =
     openOverride?.selectionKey === selectionKey ? openOverride.open : autoOpen;
-
-  useLayoutEffect(() => {
-    if (!selected) return;
-    rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [selected, selectedPath, open]);
 
   const keys = Object.keys(sceneObject).filter((k) => !SCENE_TREE_META_KEYS.has(k));
 
@@ -554,7 +477,7 @@ function ObjectNode({
             path={path.concat(key)}
             value={sceneObject[key]}
             setAtPath={setAtPath}
-            templates={templates}
+            traits={traits}
             mergeTraitInto={mergeTraitInto}
             expandObjectsByDefault={
               expandObjectsByDefault || isSelectionRelatedPath(path, selectedPath)
@@ -581,10 +504,9 @@ function ObjectNode({
       path={path}
       isObject
       selected={selected}
-      rowRef={rowRef}
       setAtPath={setAtPath}
       onDelete={onDelete}
-      templates={templates}
+      traits={traits}
       mergeTraitInto={mergeTraitInto}
       dropInto
       objectLeadIconKey={
@@ -646,7 +568,7 @@ type TreeNodeProps = {
   path: PropertyKey[];
   value: unknown;
   setAtPath: (path: PropertyKey[], value: unknown) => void;
-  templates: { id: number; label: string }[];
+  traits: { id: number; label: string }[];
   mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
   expandObjectsByDefault?: boolean;
   depth?: number;
@@ -658,7 +580,7 @@ function TreeNode({
   path,
   value,
   setAtPath,
-  templates,
+  traits,
   mergeTraitInto,
   expandObjectsByDefault = false,
   depth = 0,
@@ -675,7 +597,7 @@ function TreeNode({
         value={value}
         setAtPath={setAtPath}
         onDelete={onDelete}
-        templates={templates}
+        traits={traits}
         mergeTraitInto={mergeTraitInto}
         selectedPath={selectedPath}
       />
@@ -689,7 +611,7 @@ function TreeNode({
       sceneObject={value as GameObject}
       setAtPath={setAtPath}
       onDelete={onDelete}
-      templates={templates}
+      traits={traits}
       mergeTraitInto={mergeTraitInto}
       expandObjectsByDefault={expandObjectsByDefault}
       depth={depth}
@@ -720,30 +642,40 @@ function elementIsTextInputLike(el: Element): boolean {
 }
 
 export function SceneTree() {
-  const [root] = useScene();
-  const { templates, mergeTraitInto } = useTraits();
+  const [root] = useScene([]);
+  const { traits, mergeTraitInto } = useTraits();
   const { selectedPath } = useSelectedObject();
+  const listRef = useRef<HTMLDivElement>(null);
+  const didScrollToSelectionRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (didScrollToSelectionRef.current || !selectedPath?.length) return;
+    const row = listRef.current?.querySelector("[data-scene-tree-selected]");
+    if (!row) return;
+    row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    didScrollToSelectionRef.current = true;
+  }, [selectedPath, root]);
 
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
+    const onKeyDown = (event: KeyboardEvent) => {
       if (!selectedPath?.length) return;
-      if (e.key !== "Escape" && e.key !== "x" && e.key !== "X") return;
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (elementIsTextInputLike(e.target as Element)) return;
-      e.preventDefault();
+      if (event.key !== "Escape" && event.key !== "x" && event.key !== "X") return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (elementIsTextInputLike(event.target as Element)) return;
+      event.preventDefault();
       deselectObject();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selectedPath]);
 
-  let rootObject: GameObject | undefined;
+  let rootObject;
   if (isExpandable(root)) {
-    rootObject = root as GameObject;
+    rootObject = root;
   }
 
   const setAtPath = useCallback((scenePath: PropertyKey[], next: unknown) => {
-    setValueAtPath(getScene().get() as Record<PropertyKey, unknown>, scenePath, next);
+    setValueAtPath(getScene().get(), scenePath, next);
   }, []);
 
   if (!rootObject) {
@@ -753,14 +685,14 @@ export function SceneTree() {
   return (
     <>
       <CreateObjectRow setAtPath={setAtPath} />
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div ref={listRef} className="flex-1 min-h-0 overflow-auto">
         {Object.keys(rootObject).map((key) => (
           <TreeNode
             name={key}
             path={[key]}
             value={rootObject[key]}
             setAtPath={setAtPath}
-            templates={templates}
+            traits={traits}
             mergeTraitInto={mergeTraitInto}
             selectedPath={selectedPath}
             key={key}

@@ -27,7 +27,7 @@ function mergeMissing(target: Record<string, unknown>, incoming: Record<string, 
 
 
 export function useTraits() {
-  const templates = useMemo(
+  const traits = useMemo(
     () =>
       getTraitDefinitions().map((definition: TraitDefinitionEntry, index: number) => ({
         id: index,
@@ -40,7 +40,7 @@ export function useTraits() {
   );
 
   const mergeTraitInto = useCallback((objectPath: PropertyKey[], traitId: number) => {
-    const traitDefinition = templates.find((template) => template.id === traitId);
+    const traitDefinition = traits.find((trait) => trait.id === traitId);
     if (!traitDefinition) return;
 
     const sceneNode = getValueAtPath(
@@ -51,14 +51,7 @@ export function useTraits() {
 
     const target = sceneNode as Record<string, unknown>;
     mergeMissing(target, traitDefinition.defaults as Record<string, unknown>);
-    if (
-      typeof traitDefinition.icon === "string" &&
-      traitDefinition.icon.trim() !== "" &&
-      !("__icon" in target)
-    ) {
-      target.__icon = traitDefinition.icon;
-    }
-  }, [templates]);
+  }, [traits]);
 
-  return { templates, mergeTraitInto };
+  return { traits, mergeTraitInto };
 }

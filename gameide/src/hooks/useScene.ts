@@ -1,23 +1,36 @@
-import { useSyncExternalStore, useCallback, useMemo } from "react";
-import { getScene, setScene } from "../scene/scene.js";
-import type { SceneObject } from "../scene/scene.js";
+import { useSyncExternalStore, useCallback } from "react";
+import { getScene } from "../scene/scene.js";
+import type { ScenePath } from "../scene/scene.js";
+import { getValueAtPath, setValueAtPath } from "../scene/path.js";
 import {
   getExternalSceneSnapshot,
   subscribeExternalSceneSnapshot,
 } from "../scene/sceneExternalStore.js";
 
-export function useScene(): [SceneObject, (data: SceneObject) => void] {
-  const subscribe = useMemo(
-    () => (onStoreChange: () => void) => subscribeExternalSceneSnapshot(onStoreChange),
-    [],
-  );
+function pathKey(path: ScenePath): string {
+  return path.map(String).join("\0");
+}
 
-  const snapshot = useSyncExternalStore(subscribe, getExternalSceneSnapshot, getExternalSceneSnapshot);
+function pathFromKey(key: string): ScenePath {
+  return key === "" ? [] : key.split("\0");
+}
+
+export function useScene(path: ScenePath): [unknown, (value: unknown) => void] {
+  const key = pathKey(path);
+
+  const snapshot = useSyncExternalStore(
+    subscribeExternalSceneSnapshot,
+    getExternalSceneSnapshot,
+    getExternalSceneSnapshot,
+  );
   void snapshot;
 
-  const value = getScene().get();
+  const root = getScene().get();
+  const value = path.length === 0 ? root : getValueAtPath(root, path);
 
-  const setValue = useCallback((data: SceneObject) => setScene(data), []);
+  const setValue = useCallback((next: unknown) => {
+    setValueAtPath(getScene().get(), pathFromKey(key), next);
+  }, [key]);
 
   return [value, setValue];
 }

@@ -2,7 +2,10 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { SCENE_CHANNEL } from "../../../scene/sceneChannel/sceneChannel.js";
 import type { Scene, SceneObject } from "../../../scene/scene.js";
-import { stripScenePatchSentinels } from "../../../scene/scene.js";
+import {
+  diffScenePatch,
+  stripScenePatchSentinels,
+} from "../../../scene/scene.js";
 
 const STORAGE_KEY = "gameide-scene-file";
 const SCENE_FILE_API = "/gameide/scene";
@@ -106,10 +109,14 @@ function onSceneHmr(event: Event): void {
   const { activeScenePath } = useSceneFileStore.getState();
   if (detail.path !== activeScenePath) return;
 
+  const data = stripScenePatchSentinels(detail.data as SceneObject);
+  const patch = diffScenePatch(boundScene.getRaw(), data);
+
   applyingExternalUpdate = true;
   try {
-    const data = stripScenePatchSentinels(detail.data as SceneObject);
-    boundScene.replace(data);
+    if (Reflect.ownKeys(patch).length > 0) {
+      boundScene.applyPatch(patch);
+    }
     savedSnapshot = sceneSnapshot(data);
   } finally {
     applyingExternalUpdate = false;
