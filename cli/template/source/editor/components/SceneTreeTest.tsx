@@ -48,7 +48,7 @@ function PropertyInput({
           e.currentTarget.blur();
         }
       }}
-      className="min-w-0 flex-1 border-0 bg-transparent py-0.5  text-[var(--color-text)] outline-none font-[inherit]"
+      className="min-w-0 flex-1 border-0 bg-transparent text-[var(--color-text)] outline-none font-[inherit]"
     />
   );
 }
