@@ -55,9 +55,11 @@ function PropertyInput({
 
 function TreeNode({
   path,
+  depth = 0,
   defaultExpanded = true,
 }: {
   path: PropertyKey[];
+  depth?: number;
   defaultExpanded?: boolean;
 }) {
   const [value, setValue] = useScene(path);
@@ -76,9 +78,13 @@ function TreeNode({
     <div>
       <div
         className={cn(
-          "group flex items-center gap-1 px-2 py-1  text-[var(--color-text)] hover:bg-[var(--color-hover)]",
+          "sticky bg-[var(--color-bg)] group flex items-center gap-1 px-2 py-1 text-[var(--color-text)] hover:bg-[var(--color-hover)]",
           isObject && "cursor-pointer",
         )}
+        style={{
+          top: `calc(${depth} * (1lh + 0.5rem))`,
+          zIndex: 100 - depth,
+        }}
         onClick={isObject ? () => setExpanded((open) => !open) : undefined}
       >
         {isObject ? (
@@ -108,6 +114,7 @@ function TreeNode({
             <TreeNode
               key={String(key)}
               path={[...path, key]}
+              depth={depth + 1}
               defaultExpanded={true}
             />
           ))}
@@ -121,7 +128,7 @@ export default function SceneTreeTest() {
   const [root] = useScene([]);
 
   return (
-    <div className="flex-1 min-h-0 overflow-auto text-xs">
+    <div className="relative isolate flex-1 min-h-0 overflow-auto text-xs">
       {Object.keys(root ?? {}).map((key) => (
         <TreeNode key={key} path={[key]} defaultExpanded={false} />
       ))}
