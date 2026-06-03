@@ -1,6 +1,8 @@
+import { ChevronRight } from "lucide-react";
 import { useRef, useState } from "react";
 import { useScene } from "gameide";
 import DynamicIcon from "./DynamicIcon.js";
+import { cn } from "../../utils/cn.js";
 
 function PropertyInput({
   value,
@@ -12,7 +14,7 @@ function PropertyInput({
   const [draft, setDraft] = useState<string | null>(null);
   const skipCommitOnBlurRef = useRef(false);
   const text =
-    draft ?? (typeof value === "string" ? value : String(value ?? ""));
+    draft ?? String(value ?? "")
 
   const commitEdit = () => {
     if (typeof value === "number") setValue(Number(text));
@@ -46,13 +48,20 @@ function PropertyInput({
           e.currentTarget.blur();
         }
       }}
-      className="min-w-0 flex-1 border-0 bg-transparent py-0.5 text-sm text-[var(--color-text)] outline-none font-[inherit]"
+      className="min-w-0 flex-1 border-0 bg-transparent py-0.5  text-[var(--color-text)] outline-none font-[inherit]"
     />
   );
 }
 
-function TreeNode({ path }: { path: PropertyKey[] }) {
+function TreeNode({
+  path,
+  defaultExpanded = true,
+}: {
+  path: PropertyKey[];
+  defaultExpanded?: boolean;
+}) {
   const [value, setValue] = useScene(path);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const name = String(path[path.length - 1] ?? "Scene");
   const isObject = value !== null && typeof value === "object";
   const iconKey =
@@ -65,11 +74,26 @@ function TreeNode({ path }: { path: PropertyKey[] }) {
 
   return (
     <div>
-      <div className="flex items-center gap-1 px-2 py-1 text-sm text-[var(--color-text)] hover:bg-[var(--color-hover)]">
+      <div
+        className={cn(
+          "group flex items-center gap-1 px-2 py-1  text-[var(--color-text)] hover:bg-[var(--color-hover)]",
+          isObject && "cursor-pointer",
+        )}
+        onClick={isObject ? () => setExpanded((open) => !open) : undefined}
+      >
         {isObject ? (
           <>
             <DynamicIcon name={iconKey} className="shrink-0 text-white" />
-            {name}
+            <span className="min-w-0 flex-1 truncate">{name}</span>
+            <ChevronRight
+              size={14}
+              className={cn(
+                "shrink-0 text-white transition-[opacity,transform] duration-150 ease-out",
+                "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto",
+                expanded && "rotate-90",
+              )}
+              aria-hidden
+            />
           </>
         ) : (
           <>
@@ -78,10 +102,14 @@ function TreeNode({ path }: { path: PropertyKey[] }) {
           </>
         )}
       </div>
-      {childKeys.length > 0 && (
-        <div className="pl-3">
+      {expanded && childKeys.length > 0 && (
+        <div className="pl-3.5">
           {childKeys.map((key) => (
-            <TreeNode key={String(key)} path={[...path, key]} />
+            <TreeNode
+              key={String(key)}
+              path={[...path, key]}
+              defaultExpanded={true}
+            />
           ))}
         </div>
       )}
@@ -93,9 +121,9 @@ export default function SceneTreeTest() {
   const [root] = useScene([]);
 
   return (
-    <div className="flex-1 min-h-0 overflow-auto">
+    <div className="flex-1 min-h-0 overflow-auto text-xs">
       {Object.keys(root ?? {}).map((key) => (
-        <TreeNode key={key} path={[key]} />
+        <TreeNode key={key} path={[key]} defaultExpanded={false} />
       ))}
     </div>
   );

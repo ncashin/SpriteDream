@@ -3,7 +3,6 @@ import { useEffect, useState, type Ref } from "react";
 import { EditorRoot, GameView, useSceneFile } from "gameide";
 import { OverlayButton } from "./components/OverlayButton";
 import { RunButton } from "./components/RunButton";
-import { SceneTree } from "./components/SceneTree";
 import { SearchDropdown } from "./components/SearchDropdown";
 import { Sidebar } from "./components/Sidebar";
 import { SidebarToggleButton } from "./components/SidebarToggleButton";
@@ -55,7 +54,7 @@ export function Editor({
           <header className="sticky w-full shrink-0 bg-[var(--color-bg)]">
             <SceneFileSelector />
           </header>
-          <div className="flex flex-1 flex-col min-w-0 min-h-0">
+          <div className="flex flex-1 flex-col min-w-0 min-h-0 px-2">
             <SceneTreeTest />
           </div>
         </div>
