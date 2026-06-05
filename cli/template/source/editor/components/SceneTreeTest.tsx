@@ -1,4 +1,4 @@
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useScene, useTraits } from "gameide";
 import DynamicIcon from "./DynamicIcon.js";
@@ -129,6 +129,15 @@ function TreeNode({
                 <Plus size={14} className="text-white" aria-hidden />
               </IconButton>
             </Dropdown>
+            <IconButton
+              aria-label="Delete"
+              onClick={(e) => {
+                e.stopPropagation();
+                setValue(undefined);
+              }}
+            >
+              <Trash2 size={14} className="text-white" aria-hidden />
+            </IconButton>
             <IconButton
               aria-label={expanded ? "Collapse" : "Expand"}
               aria-expanded={expanded}
