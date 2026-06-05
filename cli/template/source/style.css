@@ -3,13 +3,11 @@
 @import "gameide/styles.css";
 
 :root {
-  /* Accents (gizmo axes, actions, selection outline) */
   --color-red: #ff5252;
   --color-blue: #4da3ff;
   --color-green: #39d353;
   --color-highlight: #7ec8ff;
 
-  /* Surfaces & text */
   --color-bg: #1e1e1e;
   --color-text: #ffffff;
   --color-muted: #cccccc;

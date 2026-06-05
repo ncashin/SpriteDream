@@ -54,7 +54,7 @@ export function Editor({
           <header className="sticky w-full shrink-0 bg-[var(--color-bg)]">
             <SceneFileSelector />
           </header>
-          <div className="flex flex-1 flex-col min-w-0 min-h-0 px-2">
+          <div className="flex flex-1 flex-col min-w-0 min-h-0">
             <SceneTreeTest />
           </div>
         </div>

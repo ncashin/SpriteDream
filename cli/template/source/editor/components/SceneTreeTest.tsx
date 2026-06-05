@@ -1,7 +1,9 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { useRef, useState } from "react";
-import { useScene } from "gameide";
+import { useScene, useTraits } from "gameide";
 import DynamicIcon from "./DynamicIcon.js";
+import { Dropdown } from "./Dropdown.js";
+import { IconButton } from "./IconButton.js";
 import { cn } from "../../utils/cn.js";
 
 function PropertyInput({
@@ -18,7 +20,6 @@ function PropertyInput({
 
   const commitEdit = () => {
     if (typeof value === "number") setValue(Number(text));
-    else if (typeof value === "boolean") setValue(text === "true");
     else setValue(text);
     setDraft(null);
   };
@@ -63,7 +64,9 @@ function TreeNode({
   defaultExpanded?: boolean;
 }) {
   const [value, setValue] = useScene(path);
+  const { traits, mergeTraitInto } = useTraits();
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [addOpen, setAddOpen] = useState(false);
   const name = String(path[path.length - 1] ?? "Scene");
   const isObject = value !== null && typeof value === "object";
   const iconKey =
@@ -78,7 +81,9 @@ function TreeNode({
     <div>
       <div
         className={cn(
-          "sticky bg-[var(--color-bg)] group flex items-center gap-1 px-2 py-1 text-[var(--color-text)] hover:bg-[var(--color-hover)]",
+          "sticky bg-[var(--color-bg)] group flex items-center gap-1 px-2 py-1 text-[var(--color-text)]",
+          "hover:bg-[var(--color-hover)] focus-within:bg-[var(--color-hover)]",
+          addOpen && "bg-[var(--color-hover)]",
           isObject && "cursor-pointer",
         )}
         style={{
@@ -91,15 +96,57 @@ function TreeNode({
           <>
             <DynamicIcon name={iconKey} className="shrink-0 text-white" />
             <span className="min-w-0 flex-1 truncate">{name}</span>
-            <ChevronRight
-              size={14}
+            <div
               className={cn(
-                "shrink-0 text-white transition-[opacity,transform] duration-150 ease-out",
-                "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto",
-                expanded && "rotate-90",
+                "flex flex-row opacity-0 pointer-events-none",
+                "group-hover:opacity-100 group-hover:pointer-events-auto",
+                "group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
+                addOpen && "opacity-100 pointer-events-auto",
               )}
-              aria-hidden
-            />
+            >
+            <Dropdown
+              open={addOpen}
+              onOpenChange={setAddOpen}
+              options={traits.map((t) => ({
+                value: String(t.id),
+                label: t.label,
+              }))}
+              onChange={(id: string) => mergeTraitInto(path, Number(id))}
+            >
+              <IconButton
+                aria-label="Add trait"
+                aria-expanded={addOpen}
+                disabled={traits.length === 0}
+                className={cn(
+                  addOpen &&
+                    "bg-[var(--color-hover)] hover:bg-[var(--color-hover)]",
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (traits.length > 0) setAddOpen((o) => !o);
+                }}
+              >
+                <Plus size={14} className="text-white" aria-hidden />
+              </IconButton>
+            </Dropdown>
+            <IconButton
+              aria-label={expanded ? "Collapse" : "Expand"}
+              aria-expanded={expanded}
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded((open) => !open);
+              }}
+            >
+              <ChevronRight
+                size={14}
+                className={cn(
+                  "text-white transition-transform duration-150 ease-out",
+                  expanded && "rotate-90",
+                )}
+                aria-hidden
+              />
+            </IconButton>
+            </div>
           </>
         ) : (
           <>
