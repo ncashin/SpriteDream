@@ -5,10 +5,15 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn.js";
+
+const stopMousePropagation = (event: ReactMouseEvent) => {
+  event.stopPropagation();
+};
 
 export type DropdownOption = {
   value: string;
@@ -86,6 +91,9 @@ export function Dropdown({
     <div
       ref={menuRef}
       style={menuStyle}
+      onMouseDown={stopMousePropagation}
+      onMouseUp={stopMousePropagation}
+      onClick={stopMousePropagation}
       className={cn(
         "overflow-hidden rounded",
         "border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)]",
@@ -97,7 +105,8 @@ export function Dropdown({
           <button
             key={option.value}
             type="button"
-            onClick={() => {
+            onClick={(event) => {
+              event.stopPropagation();
               onChange(option.value);
               onOpenChange(false);
             }}
@@ -117,7 +126,13 @@ export function Dropdown({
   ) : null;
 
   return (
-    <div ref={rootRef} className={cn("relative min-w-0 shrink-0", className)}>
+    <div
+      ref={rootRef}
+      onMouseDown={stopMousePropagation}
+      onMouseUp={stopMousePropagation}
+      onClick={stopMousePropagation}
+      className={cn("relative min-w-0 shrink-0", className)}
+    >
       {children}
       {menu ? createPortal(menu, document.body) : null}
     </div>

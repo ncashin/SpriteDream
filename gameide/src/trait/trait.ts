@@ -32,6 +32,7 @@ export const defineTrait = <S extends ZodTypeAny>(
     ...defaults,
     ...metadata,
     schema,
+    defaults,
   } as TraitDefinitionEntry<S>;
   traitDefinitions.push(entry);
   return entry;
