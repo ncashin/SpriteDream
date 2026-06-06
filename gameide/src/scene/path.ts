@@ -18,10 +18,6 @@ export function setValueAtPath(
   value: unknown,
 ): void {
   if (path.length === 0) return;
-  if (value === undefined) {
-    deleteValueAtPath(root, path);
-    return;
-  }
   let node: Record<PropertyKey, unknown> = root;
   for (let i = 0; i < path.length - 1; i++) {
     const key = path[i];

@@ -13,6 +13,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  deleteValueAtPath,
   deselectObject,
   getScene,
   setValueAtPath,
@@ -587,7 +588,7 @@ function TreeNode({
   selectedPath,
 }: TreeNodeProps) {
   const root = getScene().get() as Record<PropertyKey, unknown>;
-  const onDelete = () => setValueAtPath(root, path, undefined);
+  const onDelete = () => deleteValueAtPath(root, path);
 
   if (!isExpandable(value)) {
     return (
@@ -642,7 +643,7 @@ function elementIsTextInputLike(el: Element): boolean {
 }
 
 export function SceneTree() {
-  const [root] = useScene([]);
+  const { value: root } = useScene([]);
   const { traits, mergeTraitInto } = useTraits();
   const { selectedPath } = useSelectedObject();
   const listRef = useRef<HTMLDivElement>(null);

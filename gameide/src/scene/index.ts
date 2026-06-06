@@ -16,7 +16,7 @@ export {
   setScene,
 } from "./scene.js";
 
-export { getValueAtPath, setValueAtPath } from "./path.js";
+export { deleteValueAtPath, getValueAtPath, setValueAtPath } from "./path.js";
 
 export type { SceneChannelMessage } from "./sceneChannel/sceneChannel.js";
 export {

@@ -63,7 +63,7 @@ function TreeNode({
   depth?: number;
   defaultExpanded?: boolean;
 }) {
-  const [value, setValue] = useScene(path);
+  const { value, setValue, deleteValue } = useScene(path);
   const { traits, mergeTraitInto } = useTraits();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [addOpen, setAddOpen] = useState(false);
@@ -133,7 +133,7 @@ function TreeNode({
               aria-label="Delete"
               onClick={(e) => {
                 e.stopPropagation();
-                setValue(undefined);
+                deleteValue();
               }}
             >
               <Trash2 size={14} className="text-white" aria-hidden />
@@ -181,7 +181,7 @@ function TreeNode({
 }
 
 export default function SceneTreeTest() {
-  const [root] = useScene([]);
+  const { value: root } = useScene([]);
 
   return (
     <div className="relative isolate flex-1 min-h-0 overflow-auto text-xs">

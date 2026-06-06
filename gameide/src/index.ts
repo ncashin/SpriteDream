@@ -44,7 +44,7 @@ export {
   selectObject,
   deselectObject,
 } from "./scene/objectSelection.js";
-export { getValueAtPath, setValueAtPath } from "./scene/path.js";
+export { deleteValueAtPath, getValueAtPath, setValueAtPath } from "./scene/path.js";
 
 export type { Scene, SceneObject, GameObject, ScenePath } from "./scene/scene.js";
 export {
