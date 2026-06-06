@@ -95,7 +95,7 @@ export function Dropdown({
       onMouseUp={stopMousePropagation}
       onClick={stopMousePropagation}
       className={cn(
-        "overflow-hidden rounded",
+        "overflow-hidden",
         "border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)]",
         "bg-[var(--color-bg)] shadow-[0_4px_16px_var(--color-shadow)]",
       )}
@@ -111,7 +111,7 @@ export function Dropdown({
               onOpenChange(false);
             }}
             className={cn(
-              "flex w-full min-w-0 items-center rounded py-1 pl-1.5 pr-1.5 text-left text-xs",
+              "flex w-full min-w-0 items-center py-1 pl-1.5 pr-1.5 text-left text-xs",
               "font-[var(--vscode-font-family)] cursor-pointer border-0",
               option.value === value
                 ? "bg-[var(--color-selection)] font-medium text-[var(--color-text)]"

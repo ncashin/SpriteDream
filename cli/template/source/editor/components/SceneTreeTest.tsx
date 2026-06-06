@@ -87,30 +87,36 @@ function KeyInput({
   };
 
   return (
-    <input
-      type="text"
-      value={text}
-      size={Math.max(text.length, 1)}
-      onFocus={(e) => {
-        stopRowToggle(e);
-        setDraft(name);
-      }}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={endEdit}
-      onClick={stopRowToggle}
-      onKeyDown={(e) => {
-        e.stopPropagation();
-        if (e.key === "Enter") e.currentTarget.blur();
-        if (e.key === "Escape") {
-          skipCommitOnBlurRef.current = true;
-          e.currentTarget.blur();
-        }
-      }}
-      className={cn(
-        "w-auto max-w-full border-0 bg-transparent outline-none font-[inherit]",
-        className,
-      )}
-    />
+    <span
+      className={cn("relative inline-flex max-w-full min-w-0", className)}
+    >
+      <span
+        aria-hidden="true"
+        className="invisible whitespace-pre font-[inherit] pointer-events-none"
+      >
+        {text || "\u00a0"}
+      </span>
+      <input
+        type="text"
+        value={text}
+        onFocus={(e) => {
+          stopRowToggle(e);
+          setDraft(name);
+        }}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={endEdit}
+        onClick={stopRowToggle}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") {
+            skipCommitOnBlurRef.current = true;
+            e.currentTarget.blur();
+          }
+        }}
+        className="absolute inset-0 w-full min-w-0 border-0 bg-transparent outline-none font-[inherit] text-inherit"
+      />
+    </span>
   );
 }
 
@@ -141,7 +147,7 @@ function TreeNode({
     <div>
       <div
         className={cn(
-          "sticky bg-[var(--color-bg)] group flex items-center gap-1 px-2 py-1 text-[var(--color-text)]",
+          "sticky bg-[var(--color-bg)] group flex items-center gap-1 pl-2 pr-0.5 py-1 text-[var(--color-text)]",
           "hover:bg-[var(--color-hover)] focus-within:bg-[var(--color-hover)]",
           addOpen && "bg-[var(--color-hover)]",
           isObject && "cursor-pointer",
@@ -248,11 +254,16 @@ function TreeNode({
   );
 }
 
-export default function SceneTreeTest() {
+export default function SceneTreeTest({ className }: { className?: string }) {
   const { value: root } = useScene([]);
 
   return (
-    <div className="relative isolate flex-1 min-h-0 overflow-auto text-xs">
+    <div
+      className={cn(
+        "relative isolate flex-1 min-h-0 overflow-auto text-xs",
+        className,
+      )}
+    >
       {Object.keys(root ?? {}).map((key) => (
         <TreeNode key={key} path={[key]} defaultExpanded={false} />
       ))}

@@ -3,28 +3,11 @@ import { useEffect, useState, type Ref } from "react";
 import { EditorRoot, GameView, useSceneFile } from "gameide";
 import { OverlayButton } from "./components/OverlayButton";
 import { RunButton } from "./components/RunButton";
-import { SearchDropdown } from "./components/SearchDropdown";
+import { SceneFileHeader } from "./components/SceneFileHeader";
 import { Sidebar } from "./components/Sidebar";
 import { SidebarToggleButton } from "./components/SidebarToggleButton";
 import { TransformGizmoBar } from "./components/TransformGizmoBar";
 import SceneTreeTest from "./components/SceneTreeTest";
-
-function SceneFileSelector() {
-  const { scenes, activeScenePath, switchScene } = useSceneFile();
-
-  return (
-    <SearchDropdown
-      variant="header"
-      value={activeScenePath}
-      options={scenes.map((file) => ({ value: file, label: file }))}
-      onSelect={(file) => void switchScene(file)}
-      searchPlaceholder="Search scenes…"
-      emptyMessage="No scenes found"
-      ariaLabel="Active scene file"
-      className="w-full min-w-0"
-    />
-  );
-}
 
 export function Editor({
   gameViewRef,
@@ -50,13 +33,9 @@ export function Editor({
   return (
     <EditorRoot>
       <Sidebar open={sidebarOpen}>
-        <div className="flex flex-col w-full h-full bg-[var(--color-bg)]">
-          <header className="sticky w-full shrink-0 bg-[var(--color-bg)]">
-            <SceneFileSelector />
-          </header>
-          <div className="flex flex-1 flex-col min-w-0 min-h-0">
-            <SceneTreeTest />
-          </div>
+        <div className="flex flex-col w-full h-full bg-[var(--color-bg)] gap-1.5 pt-4">
+            <SceneFileHeader className="px-2" />
+            <SceneTreeTest className="px-2" />
         </div>
    
       </Sidebar>
