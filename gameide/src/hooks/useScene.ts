@@ -1,7 +1,12 @@
 import { useSyncExternalStore, useCallback } from "react";
 import { getScene } from "../scene/scene.js";
 import type { ScenePath } from "../scene/scene.js";
-import { deleteValueAtPath, getValueAtPath, setValueAtPath } from "../scene/path.js";
+import {
+  deleteValueAtPath,
+  getValueAtPath,
+  renameKeyAtPath,
+  setValueAtPath,
+} from "../scene/path.js";
 import {
   getExternalSceneSnapshot,
   subscribeExternalSceneSnapshot,
@@ -19,6 +24,7 @@ export function useScene(path: ScenePath): {
   value: unknown;
   setValue: (value: unknown) => void;
   deleteValue: () => void;
+  renameKey: (newKey: PropertyKey) => boolean;
 } {
   const key = pathKey(path);
 
@@ -40,5 +46,9 @@ export function useScene(path: ScenePath): {
     deleteValueAtPath(getScene().get(), pathFromKey(key));
   }, [key]);
 
-  return { value, setValue, deleteValue };
+  const renameKey = useCallback((newKey: PropertyKey) => {
+    return renameKeyAtPath(getScene().get(), pathFromKey(key), newKey);
+  }, [key]);
+
+  return { value, setValue, deleteValue, renameKey };
 }

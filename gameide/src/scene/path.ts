@@ -51,6 +51,42 @@ export function deleteValueAtPath(
   Reflect.deleteProperty(node, path[path.length - 1]);
 }
 
+export function renameKeyAtPath(
+  root: Record<PropertyKey, unknown>,
+  path: PropertyKey[],
+  newKey: PropertyKey,
+): boolean {
+  if (path.length === 0) return false;
+  const oldKey = path[path.length - 1];
+  const oldKeyStr = String(oldKey);
+  const newKeyStr = String(newKey).trim();
+  if (newKeyStr === "" || newKeyStr === oldKeyStr) return false;
+
+  const parentPath = path.slice(0, -1);
+  const parent =
+    parentPath.length === 0 ? root : getRecordAtPath(root, parentPath);
+  if (!parent) return false;
+  if (
+    Object.prototype.hasOwnProperty.call(parent, newKeyStr) &&
+    oldKeyStr !== newKeyStr
+  ) {
+    return false;
+  }
+
+  const value = (parent as Record<string, unknown>)[oldKeyStr];
+  if (!Object.prototype.hasOwnProperty.call(parent, oldKeyStr)) return false;
+
+  const keys = Object.keys(parent as object);
+  const index = keys.indexOf(oldKeyStr);
+  if (index === -1) return false;
+
+  Reflect.deleteProperty(parent, oldKeyStr);
+  (parent as Record<string, unknown>)[newKeyStr] = value;
+  keys[index] = newKeyStr;
+  setChildKeyOrder(parent, keys);
+  return true;
+}
+
 export function setChildKeyOrder(
   parent: Record<PropertyKey, unknown>,
   orderedKeys: string[],

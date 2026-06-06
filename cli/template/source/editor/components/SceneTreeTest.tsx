@@ -54,6 +54,66 @@ function PropertyInput({
   );
 }
 
+function KeyInput({
+  name,
+  renameKey,
+  className,
+}: {
+  name: string;
+  renameKey: (newKey: string) => void;
+  className?: string;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const skipCommitOnBlurRef = useRef(false);
+  const text = draft ?? name;
+
+  const commitEdit = () => {
+    const trimmed = text.trim();
+    if (trimmed && trimmed !== name) renameKey(trimmed);
+    setDraft(null);
+  };
+
+  const endEdit = () => {
+    if (skipCommitOnBlurRef.current) {
+      skipCommitOnBlurRef.current = false;
+      setDraft(null);
+      return;
+    }
+    commitEdit();
+  };
+
+  const stopRowToggle = (e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+  };
+
+  return (
+    <input
+      type="text"
+      value={text}
+      size={Math.max(text.length, 1)}
+      onFocus={(e) => {
+        stopRowToggle(e);
+        setDraft(name);
+      }}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={endEdit}
+      onClick={stopRowToggle}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          skipCommitOnBlurRef.current = true;
+          e.currentTarget.blur();
+        }
+      }}
+      className={cn(
+        "w-auto max-w-full border-0 bg-transparent outline-none font-[inherit]",
+        className,
+      )}
+    />
+  );
+}
+
 function TreeNode({
   path,
   depth = 0,
@@ -63,7 +123,7 @@ function TreeNode({
   depth?: number;
   defaultExpanded?: boolean;
 }) {
-  const { value, setValue, deleteValue } = useScene(path);
+  const { value, setValue, deleteValue, renameKey } = useScene(path);
   const { traits, mergeTraitInto } = useTraits();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [addOpen, setAddOpen] = useState(false);
@@ -95,10 +155,14 @@ function TreeNode({
         {isObject ? (
           <>
             <DynamicIcon name={iconKey} className="shrink-0 text-white" />
-            <span className="min-w-0 flex-1 truncate">{name}</span>
+            <KeyInput
+              name={name}
+              renameKey={renameKey}
+              className="shrink-0 text-[var(--color-text)]"
+            />
             <div
               className={cn(
-                "flex flex-row opacity-0 pointer-events-none",
+                "ml-auto flex shrink-0 flex-row opacity-0 pointer-events-none",
                 "group-hover:opacity-100 group-hover:pointer-events-auto",
                 "group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
                 addOpen && "opacity-100 pointer-events-auto",
@@ -159,7 +223,11 @@ function TreeNode({
           </>
         ) : (
           <>
-            <span className="shrink-0 text-[var(--color-muted)]">{name}</span>
+            <KeyInput
+              name={name}
+              renameKey={renameKey}
+              className="shrink-0 text-[var(--color-muted)]"
+            />
             <PropertyInput value={value} setValue={setValue} />
           </>
         )}
