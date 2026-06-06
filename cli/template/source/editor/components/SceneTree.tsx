@@ -1,389 +1,29 @@
-import {
-  ChevronRight,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
-import {
-  deleteValueAtPath,
-  deselectObject,
-  getScene,
-  setValueAtPath,
-  useScene,
-  useSelectedObject,
-  useTraits,
-  type GameObject,
-} from "gameide";
-import {
-  SCENE_OBJECT_PROPERTY_ICONS,
-  SceneTreeObjectLeadIcon,
-  SceneTreeRowIconFrame,
-  sceneTreeRowIconFrameSizeClass,
-} from "./SceneTreeRowIcon.js";
-import { SearchDropdown } from "./SearchDropdown.js";
+import { ChevronRight, Plus, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { useScene, useTraits } from "gameide";
+import DynamicIcon from "./DynamicIcon.js";
+import { Dropdown } from "./Dropdown.js";
+import { IconButton } from "./IconButton.js";
 import { cn } from "../../utils/cn.js";
 
-function isExpandable(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function formatValue(value: unknown): string {
-  if (value == null) {
-    if (value === null) return "null";
-    return "undefined";
-  }
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
-  if (typeof value === "bigint") return `${value}n`;
-  if (typeof value === "symbol") {
-    try {
-      return String(value);
-    } catch {
-      return "[Symbol]";
-    }
-  }
-  if (typeof value === "function") {
-    try {
-      return Function.prototype.toString.call(value);
-    } catch {
-      return "[Function]";
-    }
-  }
-  if (Array.isArray(value)) return `[${value.length}]`;
-  if (typeof value === "object") {
-    try {
-      return Object.prototype.toString.call(value);
-    } catch {
-      return "[object]";
-    }
-  }
-  return "";
-}
-
-function parseInput(s: string): unknown {
-  const t = s.trim();
-  if (t === "null") return null;
-  if (t === "undefined") return undefined;
-  if (t === "true") return true;
-  if (t === "false") return false;
-  const n = Number(t);
-  if (Number.isNaN(n)) {
-    return t;
-  }
-  return n;
-}
-
-const textSize = "text-xs";
-const iconSize = 14;
-const iconClass = "text-white";
-const font = "font-[var(--vscode-font-family)]";
-const muted = "text-[var(--color-muted)]";
-const foreground = "text-[var(--color-text)]";
-const rowHover = "hover:bg-[var(--color-hover)]";
-const inputClass = `w-full min-w-0 flex-1 py-0.5 border-0 bg-transparent text-inherit ${textSize} font-[inherit] outline-none`;
-
-const SCENE_TREE_META_KEYS = new Set(["__icon"]);
-
-/** Sticky band height and per-depth `top` step (py-1 + text-xs line-height ≈ 1.5rem). */
-const SCENE_TREE_STICKY_STACK_REM = 1.5;
-/** Matches `pl-3` on nested object bodies — sticky headers bleed left by depth × this. */
-const SCENE_TREE_INDENT_REM = 0.75;
-/** Shallow object headers paint above deeper stickies when bands overlap while scrolling. */
-const SCENE_TREE_STICKY_Z_BASE = 50;
-
-function ObjectAddSelect({
-  objectPath,
-  setAtPath,
-  traits,
-  mergeTraitInto,
-}: {
-  objectPath: PropertyKey[];
-  setAtPath: (path: PropertyKey[], value: unknown) => void;
-  traits: { id: number; label: string }[];
-  mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
-}) {
-  const options = [
-    { value: "obj", label: "object", group: "Property" },
-    { value: "prop", label: "property", group: "Property" },
-    ...traits.map((trait) => ({
-      value: `trait:${trait.id}`,
-      label: trait.label,
-      group: "Traits",
-    })),
-  ];
-
-  return (
-    <SearchDropdown
-      variant="icon"
-      title="Add child or trait"
-      ariaLabel="Add child or trait"
-      searchPlaceholder="Search traits…"
-      emptyMessage="No traits found"
-      options={options}
-      icon={
-        <Plus
-          size={iconSize}
-          className={cn("block pointer-events-none", iconClass)}
-          aria-hidden
-        />
-      }
-      triggerClassName={cn(sceneTreeRowIconFrameSizeClass, rowHover)}
-      onSelect={(value) => {
-        if (value.startsWith("trait:")) {
-          mergeTraitInto(objectPath, Number(value.slice("trait:".length)));
-          return;
-        }
-        if (value === "obj" || value === "prop") {
-          const key = window.prompt("Property name");
-          if (key == null || key === "") return;
-          const initial = value === "obj" ? {} : null;
-          setAtPath(objectPath.concat(key), initial);
-        }
-      }}
-    />
-  );
-}
-
-type RowActionsProps = {
-  path: PropertyKey[];
-  isObject: boolean;
-  setAtPath: (path: PropertyKey[], value: unknown) => void;
-  onDelete: () => void;
-  traits: { id: number; label: string }[];
-  mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
-};
-
-function RowActions({
-  path,
-  isObject,
-  setAtPath,
-  onDelete,
-  traits,
-  mergeTraitInto,
-}: RowActionsProps) {
-  return (
-    <div className="flex items-center gap-0 shrink-0">
-      {isObject && (
-        <ObjectAddSelect
-          objectPath={path}
-          setAtPath={setAtPath}
-          traits={traits}
-          mergeTraitInto={mergeTraitInto}
-        />
-      )}
-      <button
-        type="button"
-        className={cn(
-          "flex items-center justify-center p-0.5 rounded self-center",
-          sceneTreeRowIconFrameSizeClass,
-          rowHover,
-          "opacity-70 hover:opacity-100",
-        )}
-        aria-label="Delete"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-      >
-        <Trash2 size={iconSize} className={iconClass} />
-      </button>
-    </div>
-  );
-}
-
-type RowShellProps = {
-  path: PropertyKey[];
-  isObject: boolean;
-  setAtPath: (path: PropertyKey[], value: unknown) => void;
-  onDelete: () => void;
-  traits: { id: number; label: string }[];
-  mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
-  trailing?: ReactNode;
-  label: ReactNode;
-  body?: ReactNode;
-  dropInto?: boolean;
-  onHeaderClick?: (e: MouseEvent) => void;
-  headerExpanded?: boolean;
-  /** List-style hover background; off for property (non-object) rows. */
-  highlightable?: boolean;
-  propertyRow?: boolean;
-  /** When `dropInto`, Lucide icon name/slug from scene `__icon` (kebab-case or PascalCase). */
-  objectLeadIconKey?: unknown;
-  /** When set, the header row sticks while scrolling the scene tree list. */
-  stickyStackDepth?: number;
-  selected?: boolean;
-};
-
-function RowShell({
-  path,
-  isObject,
-  setAtPath,
-  onDelete,
-  traits,
-  mergeTraitInto,
-  trailing,
-  label,
-  body,
-  dropInto,
-  onHeaderClick,
-  headerExpanded,
-  highlightable = true,
-  propertyRow = false,
-  objectLeadIconKey,
-  stickyStackDepth,
-  selected = false,
-}: RowShellProps) {
-  let lead: ReactNode = null;
-  if (dropInto) {
-    lead = (
-      <SceneTreeRowIconFrame>
-        <SceneTreeObjectLeadIcon iconKey={objectLeadIconKey} />
-      </SceneTreeRowIconFrame>
-    );
-  }
-
-  let rowOnClick: ((e: MouseEvent) => void) | undefined;
-  if (onHeaderClick) {
-    rowOnClick = (e) => {
-      if (
-        (e.target as HTMLElement).closest(
-          "button, input, select, textarea, option, a",
-        )
-      ) {
-        return;
-      }
-      onHeaderClick(e);
-    };
-  }
-
-  let ariaExpanded: boolean | undefined;
-  if (onHeaderClick) {
-    ariaExpanded = headerExpanded;
-  }
-
-  const isSticky = stickyStackDepth !== undefined;
-  const rowPadLRem = propertyRow ? 0.5 : 0.375;
-
-  const headerRow = (
-    <div
-      className={cn(
-        "group flex items-center gap-0.5 min-w-0",
-        !isSticky && "rounded",
-        !isSticky && (propertyRow ? "pl-2 pr-1.5" : "pl-1.5 pr-1.5"),
-        textSize,
-        font,
-        !isSticky && selected && "bg-[var(--color-selection)]",
-        !isSticky && highlightable && !selected && rowHover,
-      )}
-      aria-expanded={ariaExpanded}
-      onClick={rowOnClick}
-    >
-      {lead}
-      <div
-        className={cn(
-          "flex-1 min-w-0 flex items-center gap-1",
-          propertyRow ? "py-1" : "py-1",
-        )}
-      >
-        {label}
-      </div>
-      <div
-        className={cn(
-          "flex items-center gap-0 shrink-0 opacity-0 pointer-events-none",
-          "transition-opacity duration-150 ease-out",
-          "group-hover:opacity-100 group-hover:pointer-events-auto",
-          "group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
-        )}
-      >
-        <RowActions
-          path={path}
-          isObject={isObject}
-          setAtPath={setAtPath}
-          onDelete={onDelete}
-          traits={traits}
-          mergeTraitInto={mergeTraitInto}
-        />
-        {trailing}
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="min-w-0" {...(selected ? { "data-scene-tree-selected": "" } : {})}>
-      {isSticky ? (
-        <div
-          className={cn(
-            "sticky flex min-w-0 items-center",
-            "bg-[var(--color-bg)]",
-            selected && "bg-[var(--color-selection)]",
-            highlightable && !selected && rowHover,
-            "[&_.scene-tree-icon-frame]:bg-transparent",
-            "[&_.scene-tree-icon-frame]:hover:bg-transparent",
-          )}
-          style={{
-            top: `calc(${stickyStackDepth} * ${SCENE_TREE_STICKY_STACK_REM}rem)`,
-            height: `${SCENE_TREE_STICKY_STACK_REM}rem`,
-            zIndex: SCENE_TREE_STICKY_Z_BASE - stickyStackDepth,
-            marginLeft: `calc(-0.75rem - ${stickyStackDepth} * ${SCENE_TREE_INDENT_REM}rem)`,
-            marginRight: "-0.75rem",
-            paddingLeft: `calc(0.75rem + ${stickyStackDepth} * ${SCENE_TREE_INDENT_REM}rem + ${rowPadLRem}rem)`,
-            paddingRight: "calc(0.75rem + 0.375rem)",
-          }}
-        >
-          {headerRow}
-        </div>
-      ) : (
-        headerRow
-      )}
-      {body}
-    </div>
-  );
-}
-
-type PropertyNodeProps = {
-  name: string;
-  path: PropertyKey[];
-  value: unknown;
-  setAtPath: (path: PropertyKey[], value: unknown) => void;
-  onDelete: () => void;
-  traits: { id: number; label: string }[];
-  mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
-  selectedPath?: PropertyKey[] | null;
-};
-
-function PropertyNode({
-  name,
-  path,
+function PropertyInput({
   value,
-  setAtPath,
-  onDelete,
-  traits,
-  mergeTraitInto,
-  selectedPath,
-}: PropertyNodeProps) {
-  const selected = Boolean(selectedPath && pathsEqual(path, selectedPath));
-
+  setValue,
+}: {
+  value: unknown;
+  setValue: (value: unknown) => void;
+}) {
   const [draft, setDraft] = useState<string | null>(null);
   const skipCommitOnBlurRef = useRef(false);
-  let displayText: string;
-  if (draft !== null) {
-    displayText = draft;
-  } else {
-    displayText = formatValue(value);
-  }
+  const text =
+    draft ?? String(value ?? "")
+
   const commitEdit = () => {
-    setAtPath(path, parseInput(displayText));
+    if (typeof value === "number") setValue(Number(text));
+    else setValue(text);
     setDraft(null);
   };
+
   const endEdit = () => {
     if (skipCommitOnBlurRef.current) {
       skipCommitOnBlurRef.current = false;
@@ -394,312 +34,245 @@ function PropertyNode({
   };
 
   return (
-    <RowShell
-      path={path}
-      isObject={false}
-      propertyRow
-      highlightable={false}
-      selected={selected}
-      setAtPath={setAtPath}
-      onDelete={onDelete}
-      traits={traits}
-      mergeTraitInto={mergeTraitInto}
-      label={
-        <>
-          <span className={cn(muted, "shrink-0")}>{name}</span>
-          <input
-            type="text"
-            value={displayText}
-            onFocus={() => setDraft(formatValue(value))}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={endEdit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.currentTarget.blur();
-              }
-              if (e.key === "Escape") {
-                skipCommitOnBlurRef.current = true;
-                e.currentTarget.blur();
-              }
-            }}
-            className={inputClass}
-          />
-        </>
+    <input
+      type="text"
+      value={text}
+      onFocus={() =>
+        setDraft(typeof value === "string" ? value : String(value ?? ""))
       }
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={endEdit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          skipCommitOnBlurRef.current = true;
+          e.currentTarget.blur();
+        }
+      }}
+      className="min-w-0 flex-1 border-0 bg-transparent text-[var(--color-text)] outline-none font-[inherit]"
     />
   );
 }
 
-type ObjectNodeProps = {
-  name: string;
-  path: PropertyKey[];
-  sceneObject: Record<string, unknown>;
-  setAtPath: (path: PropertyKey[], value: unknown) => void;
-  onDelete: () => void;
-  traits: { id: number; label: string }[];
-  mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
-  expandObjectsByDefault?: boolean;
-  depth: number;
-  selectedPath?: PropertyKey[] | null;
-};
-
-function ObjectNode({
+function KeyInput({
   name,
-  path,
-  sceneObject,
-  setAtPath,
-  onDelete,
-  traits,
-  mergeTraitInto,
-  expandObjectsByDefault = false,
-  depth,
-  selectedPath,
-}: ObjectNodeProps) {
-  const selected = Boolean(selectedPath && pathsEqual(path, selectedPath));
-  const selectionKey = selectedPath?.map(String).join("\0") ?? "";
-  const autoOpen =
-    expandObjectsByDefault || isSelectionRelatedPath(path, selectedPath);
-  const [openOverride, setOpenOverride] = useState<{
-    selectionKey: string;
-    open: boolean;
-  } | null>(null);
-  const open =
-    openOverride?.selectionKey === selectionKey ? openOverride.open : autoOpen;
+  renameKey,
+  className,
+}: {
+  name: string;
+  renameKey: (newKey: string) => void;
+  className?: string;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const skipCommitOnBlurRef = useRef(false);
+  const text = draft ?? name;
 
-  const keys = Object.keys(sceneObject).filter((k) => !SCENE_TREE_META_KEYS.has(k));
+  const commitEdit = () => {
+    const trimmed = text.trim();
+    if (trimmed && trimmed !== name) renameKey(trimmed);
+    setDraft(null);
+  };
 
-  let childBody: ReactNode = null;
-  if (open) {
-    childBody = (
-      <div className="min-w-0 pl-3">
-        {keys.map((key) => (
-          <TreeNode
-            name={key}
-            path={path.concat(key)}
-            value={sceneObject[key]}
-            setAtPath={setAtPath}
-            traits={traits}
-            mergeTraitInto={mergeTraitInto}
-            expandObjectsByDefault={
-              expandObjectsByDefault || isSelectionRelatedPath(path, selectedPath)
-            }
-            depth={depth + 1}
-            selectedPath={selectedPath}
-            key={key}
-          />
-        ))}
-      </div>
-    );
-  }
+  const endEdit = () => {
+    if (skipCommitOnBlurRef.current) {
+      skipCommitOnBlurRef.current = false;
+      setDraft(null);
+      return;
+    }
+    commitEdit();
+  };
 
-  let chevronClass = cn(
-    "block shrink-0 transition-transform pointer-events-none",
-    iconClass,
-  );
-  if (open) {
-    chevronClass = cn(chevronClass, "rotate-90");
-  }
+  const stopRowToggle = (e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+  };
 
   return (
-    <RowShell
-      path={path}
-      isObject
-      selected={selected}
-      setAtPath={setAtPath}
-      onDelete={onDelete}
-      traits={traits}
-      mergeTraitInto={mergeTraitInto}
-      dropInto
-      objectLeadIconKey={
-        sceneObject.__icon ?? SCENE_OBJECT_PROPERTY_ICONS[name]
-      }
-      trailing={
-        <SceneTreeRowIconFrame>
-          <ChevronRight size={iconSize} className={chevronClass} aria-hidden />
-        </SceneTreeRowIconFrame>
-      }
-      onHeaderClick={() =>
-        setOpenOverride({ selectionKey, open: !open })
-      }
-      headerExpanded={open}
-      stickyStackDepth={depth}
-      label={
-        <span className={cn("truncate font-medium", foreground)}>{name}</span>
-      }
-      body={childBody}
-    />
+    <span
+      className={cn("relative inline-flex max-w-full min-w-0", className)}
+    >
+      <span
+        aria-hidden="true"
+        className="invisible whitespace-pre font-[inherit] pointer-events-none"
+      >
+        {text || "\u00a0"}
+      </span>
+      <input
+        type="text"
+        value={text}
+        onFocus={(e) => {
+          stopRowToggle(e);
+          setDraft(name);
+        }}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={endEdit}
+        onClick={stopRowToggle}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") {
+            skipCommitOnBlurRef.current = true;
+            e.currentTarget.blur();
+          }
+        }}
+        className="absolute inset-0 w-full min-w-0 border-0 bg-transparent outline-none font-[inherit] text-inherit"
+      />
+    </span>
   );
 }
 
-function CreateObjectRow({
-  setAtPath,
+function TreeNode({
+  path,
+  depth = 0,
+  defaultExpanded = true,
 }: {
-  setAtPath: (path: PropertyKey[], value: unknown) => void;
+  path: PropertyKey[];
+  depth?: number;
+  defaultExpanded?: boolean;
 }) {
+  const { value, setValue, deleteValue, renameKey } = useScene(path);
+  const { traits, mergeTraitInto } = useTraits();
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [addOpen, setAddOpen] = useState(false);
+  const name = String(path[path.length - 1] ?? "Scene");
+  const isObject = value !== null && typeof value === "object";
+  const iconKey =
+    isObject && "__icon" in value && typeof value.__icon === "string"
+      ? value.__icon
+      : null;
+  const childKeys = isObject
+    ? Object.keys(value).filter((key) => key !== "__icon")
+    : [];
+
   return (
-    <div className="min-w-0 shrink-0 pt-2 pb-2.5">
-      <button
-        type="button"
-        aria-label="Create Object"
-        onClick={() => {
-          const key = window.prompt("Object name");
-          if (key == null || key === "") return;
-          setAtPath([key], {});
+    <div>
+      <div
+        className="sticky bg-[var(--color-bg)]"
+        style={{
+          top: `calc(${depth} * (1lh + 0.5rem))`,
+          zIndex: 100 - depth,
         }}
-        className={cn(
-          "flex w-full min-w-0 items-center justify-start gap-0.5 rounded pl-1.5 pr-1.5",
-          textSize,
-          font,
-          rowHover,
-        )}
       >
-        <span className="flex w-[18px] shrink-0 justify-center self-center">
-          <Plus size={iconSize} className={iconClass} aria-hidden />
-        </span>
-        <span className={cn("min-w-0 truncate py-1 font-bold", foreground)}>
-          Create Object
-        </span>
-      </button>
+        <div
+          className={cn(
+            "group flex items-center gap-1 pl-2 pr-1 py-1 text-[var(--color-text)]",
+            "hover:bg-[var(--color-hover)] focus-within:bg-[var(--color-hover)]",
+            addOpen && "bg-[var(--color-hover)]",
+            isObject && "cursor-pointer",
+          )}
+          onClick={isObject ? () => setExpanded((open) => !open) : undefined}
+        >
+          {isObject ? (
+            <>
+              <DynamicIcon name={iconKey} className="shrink-0 text-white" />
+              <KeyInput
+                name={name}
+                renameKey={renameKey}
+                className="shrink-0 text-[var(--color-text)]"
+              />
+              <div
+                className={cn(
+                  "ml-auto flex shrink-0 flex-row opacity-0 pointer-events-none",
+                  "group-hover:opacity-100 group-hover:pointer-events-auto",
+                  "group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
+                  addOpen && "opacity-100 pointer-events-auto",
+                )}
+              >
+                <Dropdown
+                  open={addOpen}
+                  onOpenChange={setAddOpen}
+                  options={traits.map((t) => ({
+                    value: String(t.id),
+                    label: t.label,
+                  }))}
+                  onChange={(id) => mergeTraitInto(path, Number(id))}
+                  searchPlaceholder="Search traits…"
+                  emptyMessage="No traits found"
+                >
+                  <IconButton
+                    aria-label="Add trait"
+                    aria-expanded={addOpen}
+                    disabled={traits.length === 0}
+                    className={cn(
+                      addOpen &&
+                        "bg-[var(--color-hover)] hover:bg-[var(--color-hover)]",
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (traits.length > 0) setAddOpen((o) => !o);
+                    }}
+                  >
+                    <Plus size={14} className="text-white" aria-hidden />
+                  </IconButton>
+                </Dropdown>
+                <IconButton
+                  aria-label="Delete"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteValue();
+                  }}
+                >
+                  <Trash2 size={14} className="text-white" aria-hidden />
+                </IconButton>
+                <IconButton
+                  aria-label={expanded ? "Collapse" : "Expand"}
+                  aria-expanded={expanded}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpanded((open) => !open);
+                  }}
+                >
+                  <ChevronRight
+                    size={14}
+                    className={cn(
+                      "text-white transition-transform duration-150 ease-out",
+                      expanded && "rotate-90",
+                    )}
+                    aria-hidden
+                  />
+                </IconButton>
+              </div>
+            </>
+          ) : (
+            <>
+              <KeyInput
+                name={name}
+                renameKey={renameKey}
+                className="shrink-0 text-[var(--color-muted)]"
+              />
+              <PropertyInput value={value} setValue={setValue} />
+            </>
+          )}
+        </div>
+      </div>
+      {expanded && childKeys.length > 0 && (
+        <div className="pl-3.5 flex flex-col gap-0">
+          {childKeys.map((key) => (
+            <TreeNode
+              key={String(key)}
+              path={[...path, key]}
+              depth={depth + 1}
+              defaultExpanded={true}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-type TreeNodeProps = {
-  name: string;
-  path: PropertyKey[];
-  value: unknown;
-  setAtPath: (path: PropertyKey[], value: unknown) => void;
-  traits: { id: number; label: string }[];
-  mergeTraitInto: (path: PropertyKey[], traitId: number) => void;
-  expandObjectsByDefault?: boolean;
-  depth?: number;
-  selectedPath?: PropertyKey[] | null;
-};
-
-function TreeNode({
-  name,
-  path,
-  value,
-  setAtPath,
-  traits,
-  mergeTraitInto,
-  expandObjectsByDefault = false,
-  depth = 0,
-  selectedPath,
-}: TreeNodeProps) {
-  const root = getScene().get() as Record<PropertyKey, unknown>;
-  const onDelete = () => deleteValueAtPath(root, path);
-
-  if (!isExpandable(value)) {
-    return (
-      <PropertyNode
-        name={name}
-        path={path}
-        value={value}
-        setAtPath={setAtPath}
-        onDelete={onDelete}
-        traits={traits}
-        mergeTraitInto={mergeTraitInto}
-        selectedPath={selectedPath}
-      />
-    );
-  }
-
-  return (
-    <ObjectNode
-      name={name}
-      path={path}
-      sceneObject={value as GameObject}
-      setAtPath={setAtPath}
-      onDelete={onDelete}
-      traits={traits}
-      mergeTraitInto={mergeTraitInto}
-      expandObjectsByDefault={expandObjectsByDefault}
-      depth={depth}
-      selectedPath={selectedPath}
-    />
-  );
-}
-
-function pathsEqual(a: PropertyKey[], b: PropertyKey[]): boolean {
-  return a.length === b.length && a.every((key, index) => key === b[index]);
-}
-
-function isSelectionRelatedPath(
-  path: PropertyKey[],
-  selectedPath: PropertyKey[] | null | undefined,
-): boolean {
-  if (!selectedPath?.length) return false;
-  const shorter = path.length <= selectedPath.length ? path : selectedPath;
-  const longer = path.length <= selectedPath.length ? selectedPath : path;
-  return shorter.every((key, index) => key === longer[index]);
-}
-
-function elementIsTextInputLike(el: Element): boolean {
-  if (!(el instanceof HTMLElement)) return false;
-  const tag = el.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-  return el.isContentEditable;
-}
-
-export function SceneTree() {
+export function SceneTree({ className }: { className?: string }) {
   const { value: root } = useScene([]);
-  const { traits, mergeTraitInto } = useTraits();
-  const { selectedPath } = useSelectedObject();
-  const listRef = useRef<HTMLDivElement>(null);
-  const didScrollToSelectionRef = useRef(false);
-
-  useLayoutEffect(() => {
-    if (didScrollToSelectionRef.current || !selectedPath?.length) return;
-    const row = listRef.current?.querySelector("[data-scene-tree-selected]");
-    if (!row) return;
-    row.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    didScrollToSelectionRef.current = true;
-  }, [selectedPath, root]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!selectedPath?.length) return;
-      if (event.key !== "Escape" && event.key !== "x" && event.key !== "X") return;
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (elementIsTextInputLike(event.target as Element)) return;
-      event.preventDefault();
-      deselectObject();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedPath]);
-
-  let rootObject;
-  if (isExpandable(root)) {
-    rootObject = root;
-  }
-
-  const setAtPath = useCallback((scenePath: PropertyKey[], next: unknown) => {
-    setValueAtPath(getScene().get(), scenePath, next);
-  }, []);
-
-  if (!rootObject) {
-    return null;
-  }
 
   return (
-    <>
-      <CreateObjectRow setAtPath={setAtPath} />
-      <div ref={listRef} className="flex-1 min-h-0 overflow-auto">
-        {Object.keys(rootObject).map((key) => (
-          <TreeNode
-            name={key}
-            path={[key]}
-            value={rootObject[key]}
-            setAtPath={setAtPath}
-            traits={traits}
-            mergeTraitInto={mergeTraitInto}
-            selectedPath={selectedPath}
-            key={key}
-          />
-        ))}
-      </div>
-    </>
+    <div
+      className={cn(
+        "relative isolate flex-1 min-h-0 overflow-auto text-xs pb-24",
+        className,
+      )}
+    >
+      {Object.keys(root ?? {}).map((key) => (
+        <TreeNode key={key} path={[key]} defaultExpanded={false} />
+      ))}
+    </div>
   );
 }

@@ -140,7 +140,7 @@ export function Dropdown({
           <Search
             size={14}
             aria-hidden
-            className="shrink-0 text-[var(--color-muted)]"
+            className="shrink-0 text-white"
           />
           <input
             ref={searchRef}

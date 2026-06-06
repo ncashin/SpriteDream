@@ -7,7 +7,7 @@ import { SceneFileHeader } from "./components/SceneFileHeader";
 import { Sidebar } from "./components/Sidebar";
 import { SidebarToggleButton } from "./components/SidebarToggleButton";
 import { TransformGizmoBar } from "./components/TransformGizmoBar";
-import SceneTreeTest from "./components/SceneTreeTest";
+import { SceneTree } from "./components/SceneTree";
 
 export function Editor({
   gameViewRef,
@@ -34,10 +34,9 @@ export function Editor({
     <EditorRoot>
       <Sidebar open={sidebarOpen}>
         <div className="flex flex-col w-full h-full bg-[var(--color-bg)] gap-1.5 pt-4">
-            <SceneFileHeader className="px-2" />
-            <SceneTreeTest className="px-2" />
+          <SceneFileHeader className="px-2" />
+          <SceneTree className="pl-2 pr-4" />
         </div>
-   
       </Sidebar>
 
       <div className="relative flex-1 min-w-0 overflow-hidden">

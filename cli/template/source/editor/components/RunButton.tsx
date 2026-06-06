@@ -20,7 +20,7 @@ export function RunButton({
 
   return (
     <OverlayButton
-      variant={isRunning ? "danger" : "default"}
+      variant={isRunning ? "danger" : undefined}
       onClick={() =>
         setMode(isRunning ? GameIDEMode.Editor : GameIDEMode.Game)
       }
