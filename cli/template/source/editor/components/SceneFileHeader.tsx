@@ -16,6 +16,8 @@ export function SceneFileHeader({ className }: { className?: string }) {
       options={scenes.map((file) => ({ value: file, label: file }))}
       value={activeScenePath}
       onChange={(file) => void switchScene(file)}
+      searchPlaceholder="Search scenes…"
+      emptyMessage="No scenes found"
       className="w-full min-w-0"
     >
       <button

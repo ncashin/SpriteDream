@@ -147,7 +147,7 @@ function TreeNode({
     <div>
       <div
         className={cn(
-          "sticky bg-[var(--color-bg)] group flex items-center gap-1 pl-2 pr-0.5 py-1 text-[var(--color-text)]",
+          "sticky bg-[var(--color-bg)] group flex items-center gap-1 pl-2 pr-1 py-1 text-[var(--color-text)]",
           "hover:bg-[var(--color-hover)] focus-within:bg-[var(--color-hover)]",
           addOpen && "bg-[var(--color-hover)]",
           isObject && "cursor-pointer",
@@ -182,6 +182,8 @@ function TreeNode({
                 label: t.label,
               }))}
               onChange={(id: string) => mergeTraitInto(path, Number(id))}
+              searchPlaceholder="Search traits…"
+              emptyMessage="No traits found"
             >
               <IconButton
                 aria-label="Add trait"
