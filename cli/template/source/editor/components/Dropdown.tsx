@@ -106,11 +106,6 @@ export function Dropdown({
     };
   }, [open, onOpenChange]);
 
-  useEffect(() => {
-    if (!open || !searchable) return;
-    searchRef.current?.focus();
-  }, [open, searchable]);
-
   useLayoutEffect(() => {
     if (!open) return;
     updateMenuPosition();
@@ -144,6 +139,7 @@ export function Dropdown({
           />
           <input
             ref={searchRef}
+            autoFocus
             type="search"
             value={query}
             placeholder={searchPlaceholder}
