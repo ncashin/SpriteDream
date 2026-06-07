@@ -1,18 +1,16 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { GameIDEMode, getMode } from "../../../lifecycle/mode.js";
 import { SCENE_CHANNEL } from "../../../scene/sceneChannel/sceneChannel.js";
 import type { Scene, SceneObject } from "../../../scene/scene.js";
-import {
-  diffScenePatch,
-  stripScenePatchSentinels,
-} from "../../../scene/scene.js";
+import { diffScenePatch } from "../../../scene/scene.js";
 
 const STORAGE_KEY = "gameide-scene-file";
 const SCENE_FILE_API = "/gameide/scene";
 const SCENE_HMR_EVENT = "gameide:scene-hmr";
 
 function sceneSnapshot(data: SceneObject): string {
-  return JSON.stringify(stripScenePatchSentinels(data));
+  return JSON.stringify(data);
 }
 
 function pickActiveScene(scenes: readonly string[], preferred: string): string {
@@ -109,7 +107,7 @@ function onSceneHmr(event: Event): void {
   const { activeScenePath } = useSceneFileStore.getState();
   if (detail.path !== activeScenePath) return;
 
-  const data = stripScenePatchSentinels(detail.data as SceneObject);
+  const data = detail.data as SceneObject;
   const patch = diffScenePatch(boundScene.getRaw(), data);
 
   applyingExternalUpdate = true;
@@ -140,7 +138,7 @@ function syncDirtyState(): void {
 async function importSceneModule(relativePath: string): Promise<SceneObject | null> {
   try {
     const mod = await import(/* @vite-ignore */ `/${relativePath}`);
-    return stripScenePatchSentinels((mod.default ?? {}) as SceneObject);
+    return (mod.default ?? {}) as SceneObject;
   } catch {
     return null;
   }
@@ -173,7 +171,7 @@ async function saveActiveScene(): Promise<void> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         path: activeScenePath,
-        content: stripScenePatchSentinels(boundScene.getRaw()),
+        content: boundScene.getRaw(),
       }),
     });
     if (!res.ok) throw new Error("Failed to save scene");

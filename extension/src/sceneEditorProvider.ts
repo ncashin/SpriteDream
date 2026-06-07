@@ -3,7 +3,6 @@ import {
   curryScene,
   createSceneChannel,
   SCENE_CHANNEL,
-  stripScenePatchSentinels,
   type Scene,
   type SceneChannelMessage,
   type SceneChannelTransport,
@@ -48,11 +47,11 @@ export class SceneDocument implements vscode.CustomDocument {
   }
 
   getData(): SceneObject {
-    return structuredClone(stripScenePatchSentinels(this.rawScene));
+    return structuredClone(this.rawScene);
   }
 
   getDocumentData(): SceneObject {
-    return structuredClone(stripScenePatchSentinels(this.rawScene));
+    return structuredClone(this.rawScene);
   }
 
   getSavedData(): SceneObject {

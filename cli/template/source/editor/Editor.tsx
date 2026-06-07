@@ -1,6 +1,12 @@
 import { Cuboid, MoveLeft, Save } from "lucide-react";
 import { useEffect, useState, type Ref } from "react";
-import { EditorRoot, GameView, useSceneFile } from "gameide";
+import {
+  EditorRoot,
+  GameIDEMode,
+  GameView,
+  useGameIDEMode,
+  useSceneFile,
+} from "gameide";
 import { OverlayButton } from "./components/OverlayButton";
 import { RunButton } from "./components/RunButton";
 import { SceneFileHeader } from "./components/SceneFileHeader";
@@ -15,6 +21,8 @@ export function Editor({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { save, dirty, saving } = useSceneFile();
+  const mode = useGameIDEMode();
+  const canSave = mode === GameIDEMode.Editor && dirty && !saving;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -32,7 +40,7 @@ export function Editor({
   return (
     <EditorRoot>
       <Sidebar open={sidebarOpen}>
-        <div className="flex flex-col w-full h-full bg-[var(--color-bg)] gap-1.5 pt-4">
+        <div className="flex flex-col w-full h-full bg-[var(--color-bg)] gap-3.5 pt-4.5 ">
           <SceneFileHeader className="px-2" />
           <SceneTree className="pl-2 pr-4" />
         </div>
@@ -70,7 +78,7 @@ export function Editor({
               <OverlayButton
                 className="w-full justify-center"
                 onClick={() => save()}
-                disabled={!dirty || saving}
+                disabled={!canSave}
               >
                 <Save size={12} aria-hidden />
                 Save

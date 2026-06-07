@@ -29,6 +29,7 @@ export function subscribePlanckWorldContacts(world: World, maps: PlanckContactMa
     contact: Contact,
     selfFixture: Fixture,
   ): PlanckCollisionInfo => {
+    if (phase === "exit") return { phase, self };
     const worldManifold = contact.getWorldManifold(collisionWorldManifold);
     const manifoldNormal = worldManifold?.normal;
     const selfIsFixtureA = selfFixture === contact.getFixtureA();

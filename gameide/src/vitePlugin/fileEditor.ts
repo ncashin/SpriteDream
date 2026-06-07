@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import type { IncomingMessage } from "node:http";
 import type { ViteDevServer } from "vite";
-import { stripScenePatchSentinels, type SceneObject } from "../scene/scene.js";
 
 const FILE_WRITE_PATH = "/gameide/scene";
 
@@ -60,8 +59,11 @@ export function attachFileEditorMiddleware(
         }
 
         const absolute = path.join(projectRoot, path.normalize(payload.path));
-        const data = stripScenePatchSentinels(payload.content as SceneObject);
-        fs.writeFileSync(absolute, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+        fs.writeFileSync(
+          absolute,
+          `${JSON.stringify(payload.content, null, 2)}\n`,
+          "utf8",
+        );
         res.statusCode = 204;
         res.end();
       })

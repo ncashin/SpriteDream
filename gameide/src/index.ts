@@ -37,7 +37,6 @@ export {
   setScene,
   SCENE_PATCH_DELETED,
   isScenePatchDeletion,
-  stripScenePatchSentinels,
 } from "./scene/scene.js";
 export {
   selectedObject,

@@ -18,39 +18,15 @@ export type SceneListener = (
 const isNestedRecord = (value: unknown): value is GameObject =>
   !!value && typeof value === "object" && !Array.isArray(value);
 
+const sceneProxyTargets = new WeakMap<object, object>();
+
+function unwrapSceneProxy<T>(value: T): T {
+  if (value === null || typeof value !== "object") return value;
+  return (sceneProxyTargets.get(value) ?? value) as T;
+}
+
 export function isScenePatchDeletion(value: unknown): boolean {
   return value === SCENE_PATCH_DELETED;
-}
-
-/** Remove patch deletion sentinels so they are never persisted or imported as data. */
-export function stripScenePatchSentinels(data: SceneObject): SceneObject {
-  const out: SceneObject = {};
-  for (const key of Reflect.ownKeys(data)) {
-    const value = Reflect.get(data, key);
-    if (isScenePatchDeletion(value)) continue;
-    const next = isNestedRecord(value) ? stripScenePatchSentinels(value) : value;
-    if (isNestedRecord(next) && Reflect.ownKeys(next).length === 0) continue;
-    Reflect.set(out, key, next);
-  }
-  return out;
-}
-
-function sceneValuesEqual(a: unknown, b: unknown): boolean {
-  if (Object.is(a, b)) return true;
-  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") {
-    return false;
-  }
-  if (Array.isArray(a) || Array.isArray(b)) {
-    return JSON.stringify(a) === JSON.stringify(b);
-  }
-  const aKeys = Reflect.ownKeys(a);
-  const bKeys = Reflect.ownKeys(b);
-  if (aKeys.length !== bKeys.length) return false;
-  for (const key of aKeys) {
-    if (!Reflect.has(b, key)) return false;
-    if (!sceneValuesEqual(Reflect.get(a, key), Reflect.get(b, key))) return false;
-  }
-  return true;
 }
 
 /** Build a minimal patch from `previous` to `next` for applyPatch. */
@@ -59,35 +35,24 @@ export function diffScenePatch(
   next: SceneObject,
 ): Partial<SceneObject> {
   const patch: SceneObject = {};
-  const prev = stripScenePatchSentinels(previous);
-  const nxt = stripScenePatchSentinels(next);
-  const nextKeySet = new Set(Reflect.ownKeys(nxt));
 
-  for (const key of Reflect.ownKeys(prev)) {
-    if (!nextKeySet.has(key)) {
-      Reflect.set(patch, key, SCENE_PATCH_DELETED);
-    }
+  for (const key of Reflect.ownKeys(previous)) {
+    if (!Reflect.has(next, key)) Reflect.set(patch, key, SCENE_PATCH_DELETED);
   }
 
-  for (const key of Reflect.ownKeys(nxt)) {
-    const oldValue = Reflect.get(prev, key);
-    const newValue = Reflect.get(nxt, key);
+  for (const key of Reflect.ownKeys(next)) {
+    const before = Reflect.get(previous, key);
+    const after = Reflect.get(next, key);
 
-    if (isNestedRecord(oldValue) && isNestedRecord(newValue)) {
-      const childPatch = diffScenePatch(oldValue, newValue);
-      if (Reflect.ownKeys(childPatch).length > 0) {
-        Reflect.set(patch, key, childPatch);
-      }
+    if (isNestedRecord(before) && isNestedRecord(after)) {
+      const child = diffScenePatch(before, after);
+      if (Reflect.ownKeys(child).length > 0) Reflect.set(patch, key, child);
       continue;
     }
 
-    if (sceneValuesEqual(oldValue, newValue)) continue;
+    if (Object.is(before, after)) continue;
 
-    Reflect.set(
-      patch,
-      key,
-      isNestedRecord(newValue) ? stripScenePatchSentinels(newValue) : newValue,
-    );
+    Reflect.set(patch, key, after);
   }
 
   return patch;
@@ -121,10 +86,11 @@ export function createSceneProxy<T extends object = GameObject>(
 
       return value;
     },
-    set(object, property, value, receiver) {
-      const ok = Reflect.set(object, property, value, receiver);
+    set(object, property, value) {
+      const nextValue = unwrapSceneProxy(value);
+      const ok = Reflect.set(object, property, nextValue);
       if (ok && onChange) {
-        onChange(object as GameObject, [...trail, property], value);
+        onChange(object as GameObject, [...trail, property], nextValue);
       }
       return ok;
     },
@@ -146,6 +112,7 @@ export function createSceneProxy<T extends object = GameObject>(
     },
   });
   proxyCache.set(target as object, proxy);
+  sceneProxyTargets.set(proxy, target);
   return proxy;
 }
 
@@ -224,7 +191,7 @@ export const curryScene = (rawScene: SceneObject) => {
   };
 
   const replace = (data: SceneObject) => {
-    const snapshot = structuredClone(stripScenePatchSentinels(data ?? {}));
+    const snapshot = structuredClone(data ?? {});
     for (const key of Reflect.ownKeys(rawScene)) {
       Reflect.deleteProperty(scene, key);
     }
