@@ -4,10 +4,7 @@ import { useScene, useSelectedObject, useTraits } from "gameide";
 import { Dropdown } from "./Dropdown.js";
 import { IconButton } from "./IconButton.js";
 import { cn } from "../../utils/cn.js";
-import {
-  SCENE_OBJECT_PROPERTY_ICONS,
-  SceneTreeObjectLeadIcon,
-} from "./SceneTreeRowIcon.js";
+import { SceneIcon } from "./SceneIcon.js";
 
 function PropertyInput({
   value,
@@ -143,9 +140,7 @@ function TreeNode({
   const name = String(path[path.length - 1] ?? "Scene");
   const isObject = value !== null && typeof value === "object";
   const childKeys = isObject ? Object.keys(value) : [];
-  const iconKey = isObject
-    ? Reflect.get(value, "__icon") ?? SCENE_OBJECT_PROPERTY_ICONS[name]
-    : SCENE_OBJECT_PROPERTY_ICONS[name];
+  const icon = isObject ? Reflect.get(value, "__icon") : undefined;
   const isSelected =
     selectedPath &&
     path.length === selectedPath.length &&
@@ -184,7 +179,7 @@ function TreeNode({
         >
           {isObject ? (
             <>
-              <SceneTreeObjectLeadIcon iconKey={iconKey} />
+              <SceneIcon name={icon} />
               <KeyInput
                 name={name}
                 renameKey={renameKey}
