@@ -20,22 +20,40 @@ export function Editor({
   gameViewRef?: Ref<HTMLDivElement>;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { save, dirty, saving } = useSceneFile();
+  const { save, dirty, saving, undo, redo } = useSceneFile();
   const mode = useGameIDEMode();
   const canSave = mode === GameIDEMode.Editor && dirty && !saving;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "s" && event.key !== "S") return;
       if (!event.ctrlKey && !event.metaKey) return;
       if (event.altKey) return;
-      event.preventDefault();
-      save();
+
+      if (event.key === "s" || event.key === "S") {
+        event.preventDefault();
+        save();
+        return;
+      }
+
+      if (event.key === "z" || event.key === "Z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          redo();
+          return;
+        }
+        undo();
+        return;
+      }
+
+      if (event.key === "y" || event.key === "Y") {
+        event.preventDefault();
+        redo();
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [save]);
+  }, [redo, save, undo]);
 
   return (
     <EditorRoot>

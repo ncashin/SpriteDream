@@ -1,10 +1,13 @@
 import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
-import { useScene, useTraits } from "gameide";
-import DynamicIcon from "./DynamicIcon.js";
+import { useScene, useSelectedObject, useTraits } from "gameide";
 import { Dropdown } from "./Dropdown.js";
 import { IconButton } from "./IconButton.js";
 import { cn } from "../../utils/cn.js";
+import {
+  SCENE_OBJECT_PROPERTY_ICONS,
+  SceneTreeObjectLeadIcon,
+} from "./SceneTreeRowIcon.js";
 
 function PropertyInput({
   value,
@@ -15,8 +18,7 @@ function PropertyInput({
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const skipCommitOnBlurRef = useRef(false);
-  const text =
-    draft ?? String(value ?? "")
+  const text = draft ?? String(value ?? "");
 
   const commitEdit = () => {
     if (typeof value === "number") setValue(Number(text));
@@ -87,9 +89,7 @@ function KeyInput({
   };
 
   return (
-    <span
-      className={cn("relative inline-flex max-w-full min-w-0", className)}
-    >
+    <span className={cn("relative inline-flex max-w-full min-w-0", className)}>
       <span
         aria-hidden="true"
         className="invisible whitespace-pre font-[inherit] pointer-events-none"
@@ -120,6 +120,11 @@ function KeyInput({
   );
 }
 
+function isPathPrefix(prefix: PropertyKey[], path: PropertyKey[]): boolean {
+  if (path.length < prefix.length) return false;
+  return prefix.every((segment, i) => segment === path[i]);
+}
+
 function TreeNode({
   path,
   depth = 0,
@@ -130,18 +135,33 @@ function TreeNode({
   defaultExpanded?: boolean;
 }) {
   const { value, setValue, deleteValue, renameKey } = useScene(path);
+  const { selectedPath } = useSelectedObject();
   const { traits, mergeTraitInto } = useTraits();
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [userCollapsed, setUserCollapsed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const name = String(path[path.length - 1] ?? "Scene");
   const isObject = value !== null && typeof value === "object";
-  const iconKey =
-    isObject && "__icon" in value && typeof value.__icon === "string"
-      ? value.__icon
-      : null;
-  const childKeys = isObject
-    ? Object.keys(value).filter((key) => key !== "__icon")
-    : [];
+  const childKeys = isObject ? Object.keys(value) : [];
+  const iconKey = isObject
+    ? Reflect.get(value, "__icon") ?? SCENE_OBJECT_PROPERTY_ICONS[name]
+    : SCENE_OBJECT_PROPERTY_ICONS[name];
+  const isSelected =
+    selectedPath &&
+    path.length === selectedPath.length &&
+    isPathPrefix(path, selectedPath);
+  const ancestorOfSelection = selectedPath && isPathPrefix(path, selectedPath);
+  const isOpen = expanded || (ancestorOfSelection && !userCollapsed);
+
+  const toggleExpanded = () => {
+    if (isOpen) {
+      setExpanded(false);
+      if (ancestorOfSelection) setUserCollapsed(true);
+      return;
+    }
+    setExpanded(true);
+    setUserCollapsed(false);
+  };
 
   return (
     <div>
@@ -156,14 +176,15 @@ function TreeNode({
           className={cn(
             "group flex items-center gap-1 pl-2 pr-1 py-1 text-[var(--color-text)]",
             "hover:bg-[var(--color-hover)] focus-within:bg-[var(--color-hover)]",
+            isSelected && "bg-[var(--color-selection)]",
             addOpen && "bg-[var(--color-hover)]",
             isObject && "cursor-pointer",
           )}
-          onClick={isObject ? () => setExpanded((open) => !open) : undefined}
+          onClick={isObject ? toggleExpanded : undefined}
         >
           {isObject ? (
             <>
-              <DynamicIcon name={iconKey} className="shrink-0 text-white" />
+              <SceneTreeObjectLeadIcon iconKey={iconKey} />
               <KeyInput
                 name={name}
                 renameKey={renameKey}
@@ -218,14 +239,14 @@ function TreeNode({
                   aria-expanded={expanded}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setExpanded((open) => !open);
+                    toggleExpanded();
                   }}
                 >
                   <ChevronRight
                     size={14}
                     className={cn(
                       "text-white transition-transform duration-150 ease-out",
-                      expanded && "rotate-90",
+                      isOpen && "rotate-90",
                     )}
                     aria-hidden
                   />
@@ -244,7 +265,7 @@ function TreeNode({
           )}
         </div>
       </div>
-      {expanded && childKeys.length > 0 && (
+      {isOpen && childKeys.length > 0 && (
         <div className="pl-3.5 flex flex-col gap-0">
           {childKeys.map((key) => (
             <TreeNode

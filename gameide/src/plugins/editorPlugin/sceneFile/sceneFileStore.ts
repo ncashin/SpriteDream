@@ -4,10 +4,15 @@ import { GameIDEMode, getMode } from "../../../lifecycle/mode.js";
 import { SCENE_CHANNEL } from "../../../scene/sceneChannel/sceneChannel.js";
 import type { Scene, SceneObject } from "../../../scene/scene.js";
 import { diffScenePatch } from "../../../scene/scene.js";
+import {
+  getSelectedObjectKey,
+  restoreSelectedObjectKey,
+} from "../../../scene/objectSelection.js";
 
 const STORAGE_KEY = "gameide-scene-file";
 const SCENE_FILE_API = "/gameide/scene";
 const SCENE_HMR_EVENT = "gameide:scene-hmr";
+const SCENE_HISTORY_DEBOUNCE_MS = 400;
 
 function sceneSnapshot(data: SceneObject): string {
   return JSON.stringify(data);
@@ -27,10 +32,14 @@ type SceneFileStore = {
   scenes: string[];
   dirty: boolean;
   saving: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
   setScenes: (scenes: string[]) => void;
   setActiveScenePath: (path: string) => void;
   loadScenes: () => Promise<void>;
   requestSave: () => void;
+  undo: () => void;
+  redo: () => void;
 };
 
 export const useSceneFileStore = create<SceneFileStore>()(
@@ -40,6 +49,8 @@ export const useSceneFileStore = create<SceneFileStore>()(
       scenes: [],
       dirty: false,
       saving: false,
+      canUndo: false,
+      canRedo: false,
 
       setScenes: (scenes) => {
         set({
@@ -83,6 +94,14 @@ export const useSceneFileStore = create<SceneFileStore>()(
         }
         void saveActiveScene();
       },
+
+      undo: () => {
+        undoSceneChange();
+      },
+
+      redo: () => {
+        redoSceneChange();
+      },
     }),
     {
       name: STORAGE_KEY,
@@ -93,10 +112,91 @@ export const useSceneFileStore = create<SceneFileStore>()(
 
 let boundScene: Scene | null = null;
 let savedSnapshot = "";
+let currentSnapshot = "";
 let applyingExternalUpdate = false;
+let applyingHistoryNavigation = false;
 let unsubscribeOnChange: (() => void) | undefined;
 let unsubscribeStore: (() => void) | undefined;
 let unsubscribeSceneHmr: (() => void) | undefined;
+let undoStack: SceneObject[] = [];
+let redoStack: SceneObject[] = [];
+let pendingUndoSnapshot: SceneObject | null = null;
+let pendingHistoryTimer: ReturnType<typeof setTimeout> | null = null;
+
+function syncHistoryState(): void {
+  const canUndo = undoStack.length > 0 || pendingUndoSnapshot !== null;
+  const canRedo = redoStack.length > 0;
+  const { canUndo: prevCanUndo, canRedo: prevCanRedo } =
+    useSceneFileStore.getState();
+  if (canUndo === prevCanUndo && canRedo === prevCanRedo) return;
+  useSceneFileStore.setState({ canUndo, canRedo });
+}
+
+function clearPendingHistoryTimer(): void {
+  if (pendingHistoryTimer === null) return;
+  clearTimeout(pendingHistoryTimer);
+  pendingHistoryTimer = null;
+}
+
+function flushPendingHistory(): void {
+  clearPendingHistoryTimer();
+  if (!pendingUndoSnapshot) return;
+  if (sceneSnapshot(pendingUndoSnapshot) !== currentSnapshot) {
+    undoStack.push(pendingUndoSnapshot);
+  }
+  pendingUndoSnapshot = null;
+  syncHistoryState();
+}
+
+function schedulePendingHistoryCommit(): void {
+  clearPendingHistoryTimer();
+  pendingHistoryTimer = setTimeout(() => {
+    flushPendingHistory();
+  }, SCENE_HISTORY_DEBOUNCE_MS);
+}
+
+function resetSceneHistory(nextScene: SceneObject): void {
+  clearPendingHistoryTimer();
+  currentSnapshot = sceneSnapshot(nextScene);
+  undoStack = [];
+  redoStack = [];
+  pendingUndoSnapshot = null;
+  syncHistoryState();
+}
+
+function applySceneSnapshotFromHistory(nextScene: SceneObject): void {
+  if (!boundScene) return;
+  const selectedKey = getSelectedObjectKey();
+  applyingHistoryNavigation = true;
+  try {
+    boundScene.replace(nextScene);
+    currentSnapshot = sceneSnapshot(nextScene);
+    restoreSelectedObjectKey(selectedKey);
+  } finally {
+    applyingHistoryNavigation = false;
+  }
+  syncDirtyState();
+}
+
+function undoSceneChange(): void {
+  flushPendingHistory();
+  if (!boundScene || undoStack.length === 0) return;
+  redoStack.push(structuredClone(boundScene.getRaw()));
+  const previousScene = undoStack.pop();
+  if (!previousScene) return;
+  applySceneSnapshotFromHistory(previousScene);
+  syncHistoryState();
+}
+
+function redoSceneChange(): void {
+  flushPendingHistory();
+  if (!boundScene || redoStack.length === 0) return;
+  undoStack.push(structuredClone(boundScene.getRaw()));
+  const nextScene = redoStack.pop();
+  if (!nextScene) return;
+  applySceneSnapshotFromHistory(nextScene);
+  syncHistoryState();
+}
 
 function onSceneHmr(event: Event): void {
   if (!boundScene) return;
@@ -116,6 +216,7 @@ function onSceneHmr(event: Event): void {
       boundScene.applyPatch(patch);
     }
     savedSnapshot = sceneSnapshot(data);
+    resetSceneHistory(data);
   } finally {
     applyingExternalUpdate = false;
   }
@@ -154,6 +255,7 @@ async function loadSceneAtPath(relativePath: string): Promise<void> {
   try {
     boundScene.replace(data);
     savedSnapshot = sceneSnapshot(data);
+    resetSceneHistory(data);
   } finally {
     applyingExternalUpdate = false;
   }
@@ -161,6 +263,7 @@ async function loadSceneAtPath(relativePath: string): Promise<void> {
 }
 
 async function saveActiveScene(): Promise<void> {
+  flushPendingHistory();
   const { activeScenePath, saving, dirty } = useSceneFileStore.getState();
   if (!boundScene || !activeScenePath || saving || !dirty) return;
 
@@ -188,10 +291,27 @@ export function bindSceneFileStore(
 ): () => void {
   boundScene = scene;
   savedSnapshot = sceneSnapshot(scene.getRaw());
+  resetSceneHistory(scene.getRaw());
   unsubscribeSceneHmr = subscribeSceneHmr();
 
   unsubscribeOnChange = scene.onChange(() => {
-    if (applyingExternalUpdate || useSceneFileStore.getState().saving) return;
+    if (
+      applyingExternalUpdate ||
+      applyingHistoryNavigation ||
+      useSceneFileStore.getState().saving
+    ) {
+      return;
+    }
+    const nextSnapshot = sceneSnapshot(scene.getRaw());
+    if (nextSnapshot !== currentSnapshot) {
+      if (!pendingUndoSnapshot) {
+        pendingUndoSnapshot = JSON.parse(currentSnapshot) as SceneObject;
+      }
+      redoStack = [];
+      currentSnapshot = nextSnapshot;
+      syncHistoryState();
+      schedulePendingHistoryCommit();
+    }
     syncDirtyState();
   });
 
@@ -209,10 +329,12 @@ export function bindSceneFileStore(
   }
 
   return () => {
+    flushPendingHistory();
     unsubscribeOnChange?.();
     unsubscribeStore?.();
     unsubscribeSceneHmr?.();
     boundScene = null;
+    resetSceneHistory({});
   };
 }
 

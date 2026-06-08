@@ -1,32 +1,10 @@
 import { useMemo, useSyncExternalStore } from "react";
-import { GameObject, getScene, SceneObject } from "../scene/scene.js";
-import { selectedObject } from "../scene/objectSelection.js";
+import { GameObject } from "../scene/scene.js";
+import { selectedObject, selectedObjectKey } from "../scene/objectSelection.js";
 import {
   getExternalSceneSnapshot,
   subscribeExternalSceneSnapshot,
 } from "../scene/sceneExternalStore.js";
-
-function findSceneObjectPath(
-  root: SceneObject,
-  target: GameObject,
-): PropertyKey[] | null {
-  const visited = new WeakSet<object>();
-
-  const walk = (node: unknown, path: PropertyKey[]): PropertyKey[] | null => {
-    if (node === target) return path;
-    if (!node || typeof node !== "object") return null;
-    if (visited.has(node)) return null;
-    visited.add(node);
-    const record = node as Record<string, unknown>;
-    for (const key of Object.keys(record)) {
-      const found = walk(record[key], path.concat(key));
-      if (found !== null) return found;
-    }
-    return null;
-  };
-
-  return walk(root, []);
-}
 
 export function useSelectedObject(): {
   selectedObject: GameObject | null;
@@ -38,13 +16,12 @@ export function useSelectedObject(): {
     getExternalSceneSnapshot,
   );
 
-  const sel = selectedObject;
+  const selected = selectedObject;
 
   const selectedPath = useMemo(() => {
     void snapshot;
-    if (!sel) return null;
-    return findSceneObjectPath(getScene().get(), sel);
-  }, [snapshot, sel]);
+    return selectedObjectKey === null ? null : [selectedObjectKey];
+  }, [snapshot]);
 
-  return { selectedObject: sel, selectedPath };
+  return { selectedObject: selected, selectedPath };
 }
