@@ -55,15 +55,38 @@ export function resolveAssetURL(
   return assetURL(trimmedAsset, assetBaseURL);
 }
 
+function positiveFiniteNumberOr(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : fallback;
+}
+
 export async function loadGraphicTexture(
-  asset: string,
-  options?: { assetBaseURL?: string },
-): Promise<Texture> {
-  const resolved = resolveAssetURL(asset, options?.assetBaseURL);
-  if (!resolved) {
-    throw new Error("loadGraphicTexture: empty asset");
+  asset: string | undefined,
+  options?: { assetBaseURL?: string; resolution?: number },
+): Promise<Texture | undefined> {
+  const trimmedAsset = asset?.trim() ?? "";
+  if (!trimmedAsset) return undefined;
+
+  const resolved = resolveAssetURL(trimmedAsset, options?.assetBaseURL);
+  if (!resolved) return undefined;
+
+  const resolution = positiveFiniteNumberOr(options?.resolution, 1);
+
+  try {
+    if (resolution === 1) {
+      return await Assets.load<Texture>(resolved);
+    }
+
+    const cacheKey = `${resolved}#resolution=${resolution}`;
+    return await Assets.load<Texture>({
+      alias: cacheKey,
+      src: resolved,
+      data: { resolution },
+    });
+  } catch {
+    return undefined;
   }
-  return Assets.load<Texture>(resolved);
 }
 
 export function unloadGraphicTextures(

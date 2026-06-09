@@ -12,6 +12,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn.js";
+import { fuzzyScore } from "../../utils/fuzzyMatch.js";
 import { IconButton } from "./IconButton.js";
 
 const stopMousePropagation = (event: ReactMouseEvent) => {
@@ -31,6 +32,7 @@ type DropdownProps = {
   onChange: (value: string) => void;
   className?: string;
   children: ReactNode;
+  showSearch?: boolean;
   searchPlaceholder?: string;
   emptyMessage?: string;
 };
@@ -43,24 +45,52 @@ export function Dropdown({
   onChange,
   className,
   children,
-  searchPlaceholder,
+  showSearch = true,
+  searchPlaceholder = "Search…",
   emptyMessage = "No matches",
 }: DropdownProps) {
-  const searchable = searchPlaceholder != null;
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const [query, setQuery] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const filteredOptions = useMemo(() => {
-    if (!searchable) return options;
-    const normalized = query.trim().toLowerCase();
+    if (!showSearch) return options;
+    const normalized = query.trim();
     if (!normalized) return options;
-    return options.filter((option) =>
-      option.label.toLowerCase().includes(normalized),
-    );
-  }, [options, query, searchable]);
+    return options
+      .map((option) => ({ option, score: fuzzyScore(normalized, option.label) }))
+      .filter(
+        (entry): entry is { option: DropdownOption; score: number } =>
+          entry.score != null,
+      )
+      .sort(
+        (a, b) =>
+          b.score - a.score || a.option.label.localeCompare(b.option.label),
+      )
+      .map((entry) => entry.option);
+  }, [options, query, showSearch]);
+
+  useEffect(() => {
+    if (!open) return;
+    setHighlightedIndex(0);
+  }, [open, filteredOptions]);
+
+  useEffect(() => {
+    if (!open) return;
+    optionRefs.current[highlightedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [highlightedIndex, open]);
+
+  const selectOption = useCallback(
+    (option: DropdownOption) => {
+      onChange(option.value);
+      onOpenChange(false);
+    },
+    [onChange, onOpenChange],
+  );
 
   const updateMenuPosition = useCallback(() => {
     const trigger = rootRef.current;
@@ -95,16 +125,43 @@ export function Dropdown({
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onOpenChange(false);
+      if (event.key === "Escape") {
+        onOpenChange(false);
+        return;
+      }
+
+      const count = filteredOptions.length;
+      if (count === 0) return;
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        event.stopPropagation();
+        setHighlightedIndex((index) => Math.min(index + 1, count - 1));
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        event.stopPropagation();
+        setHighlightedIndex((index) => Math.max(index - 1, 0));
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        event.stopPropagation();
+        const option = filteredOptions[highlightedIndex];
+        if (option) selectOption(option);
+      }
     };
 
     document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown, true);
     return () => {
       document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [open, onOpenChange]);
+  }, [open, onOpenChange, filteredOptions, highlightedIndex, selectOption]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -125,12 +182,12 @@ export function Dropdown({
       onMouseUp={stopMousePropagation}
       onClick={stopMousePropagation}
       className={cn(
-        searchable ? "flex flex-col overflow-hidden" : "overflow-hidden",
+        showSearch ? "flex flex-col overflow-hidden" : "overflow-hidden",
         "border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)]",
         "bg-[var(--color-bg)] shadow-[0_4px_16px_var(--color-shadow)]",
       )}
     >
-      {searchable ? (
+      {showSearch ? (
         <div className="flex items-center gap-1 border-b border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] pl-1.5 pr-1 py-1">
           <Search
             size={14}
@@ -170,32 +227,44 @@ export function Dropdown({
       ) : null}
       <div className="max-h-56 overflow-auto p-1">
         {filteredOptions.length === 0 ? (
-          searchable ? (
+          showSearch ? (
             <div className="py-1 pl-1.5 pr-1.5 text-xs text-[var(--color-muted)]">
               {emptyMessage}
             </div>
           ) : null
         ) : (
-          filteredOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onChange(option.value);
-                onOpenChange(false);
-              }}
-              className={cn(
-                "flex w-full min-w-0 items-center py-1 pl-1.5 pr-1.5 text-left text-xs",
-                "font-[var(--vscode-font-family)] cursor-pointer border-0",
-                option.value === value
-                  ? "bg-[var(--color-selection)] font-medium text-[var(--color-text)]"
-                  : "bg-transparent text-[var(--color-text)] hover:bg-[var(--color-hover)]",
-              )}
-            >
-              <span className="min-w-0 truncate">{option.label}</span>
-            </button>
-          ))
+          filteredOptions.map((option, index) => {
+            const isSelected = option.value === value;
+            const isHighlighted = index === highlightedIndex;
+
+            return (
+              <button
+                key={option.value}
+                ref={(element) => {
+                  optionRefs.current[index] = element;
+                }}
+                type="button"
+                onMouseEnter={() => setHighlightedIndex(index)}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  selectOption(option);
+                }}
+                className={cn(
+                  "flex w-full min-w-0 items-center py-1 pl-1.5 pr-1.5 text-left text-xs",
+                  "font-[var(--vscode-font-family)] cursor-pointer border-0 text-[var(--color-text)]",
+                  isHighlighted
+                    ? "bg-[var(--color-hover)]"
+                    : isSelected
+                      ? "bg-[var(--color-selection)] font-medium"
+                      : "bg-transparent hover:bg-[var(--color-hover)]",
+                  isHighlighted && isSelected && "font-medium",
+                )}
+              >
+                <span className="min-w-0 truncate">{option.label}</span>
+              </button>
+            );
+          })
         )}
       </div>
     </div>

@@ -2,8 +2,8 @@
   "ground": {
     "position": {
       "__icon": "move-3d",
-      "x": 0,
-      "y": -420,
+      "x": 120,
+      "y": -474.9048777832396,
       "z": 0
     },
     "rotation": {
@@ -14,14 +14,14 @@
     },
     "scale": {
       "__icon": "scaling",
-      "x": 1,
+      "x": 28,
       "y": 1,
       "z": 1
     },
     "boxCollider": {
       "__icon": "square",
-      "width": 2400,
-      "height": 40,
+      "width": 32,
+      "height": 32,
       "offset": {
         "x": 0,
         "y": 0
@@ -41,6 +41,14 @@
       "restitution": 0,
       "friction": 0.3,
       "disabled": false
+    },
+    "sprite": {
+      "__icon": "image",
+      "asset": "vite.svg",
+      "width": 32,
+      "height": 32,
+      "resolution": 32,
+      "tint": "#ffffff"
     }
   },
   "platform_0": {

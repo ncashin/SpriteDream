@@ -1,57 +1,11 @@
 import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useScene, useSelectedObject, useTraits } from "gameide";
+import { PropertyInput } from "./PropertyInput.js";
 import { Dropdown } from "./Dropdown.js";
 import { IconButton } from "./IconButton.js";
 import { cn } from "../../utils/cn.js";
 import { SceneIcon } from "./SceneIcon.js";
-
-function PropertyInput({
-  value,
-  setValue,
-}: {
-  value: unknown;
-  setValue: (value: unknown) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-  const skipCommitOnBlurRef = useRef(false);
-  const text = draft ?? String(value ?? "");
-
-  const commitEdit = () => {
-    if (typeof value === "number") setValue(Number(text));
-    else setValue(text);
-    setDraft(null);
-  };
-
-  const endEdit = () => {
-    if (skipCommitOnBlurRef.current) {
-      skipCommitOnBlurRef.current = false;
-      setDraft(null);
-      return;
-    }
-    commitEdit();
-  };
-
-  return (
-    <input
-      type="text"
-      value={text}
-      onFocus={() =>
-        setDraft(typeof value === "string" ? value : String(value ?? ""))
-      }
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={endEdit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") e.currentTarget.blur();
-        if (e.key === "Escape") {
-          skipCommitOnBlurRef.current = true;
-          e.currentTarget.blur();
-        }
-      }}
-      className="min-w-0 flex-1 border-0 bg-transparent text-[var(--color-text)] outline-none font-[inherit]"
-    />
-  );
-}
 
 function KeyInput({
   name,

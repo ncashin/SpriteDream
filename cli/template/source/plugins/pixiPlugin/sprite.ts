@@ -7,27 +7,38 @@ import {
   type GameObject,
 } from "gameide";
 import { loadGraphicTexture } from "./asset.js";
-import { transformSchema } from "../transform.js";
+import { transformSchema, transformTrait } from "../transform.js";
 
-const spriteFieldsSchema = z.object({
-  sprite: z.object({
-    __icon: z.literal("image"),
-    asset: z.string().default(""),
-    width: z.number().default(1),
-    height: z.number().default(1),
-    tint: z.string().default("#ffffff"),
-  }),
+const spriteDataSchema = z.object({
+  __icon: z.literal("image"),
+  asset: z.string().default(""),
+  width: z.number().default(1),
+  height: z.number().default(1),
+  resolution: z.number().default(1),
+  tint: z.string().default("#ffffff"),
 });
 
-export const spriteRenderableSchema = transformSchema.merge(spriteFieldsSchema);
+export const spriteTrait = defineTrait(
+  z.object({
+    sprite: spriteDataSchema.default({
+      __icon: "image",
+      asset: "",
+      width: 1,
+      height: 1,
+      resolution: 1,
+      tint: "#ffffff",
+    }),
+  }),
+  {
+    name: "Sprite",
+    description: "2D textured sprite from the project assets folder.",
+    icon: "image",
+  },
+);
+
+export const spriteRenderableSchema = transformSchema.merge(spriteTrait.schema);
 
 export type SpriteRenderable = GameObject & z.infer<typeof spriteRenderableSchema>;
-
-export const spriteTrait = defineTrait(spriteRenderableSchema, {
-  name: "Sprite",
-  description: "2D textured sprite from the project assets folder.",
-  icon: "image",
-});
 
 type ScenePath = PropertyKey[];
 
@@ -47,10 +58,15 @@ function parseTintRGB(tintString: string): number {
   return tintHexMatch ? Number.parseInt(tintHexMatch[1]!, 16) : 0xffffff;
 }
 
+function isBindingActive(binding: SpritePixiBinding): boolean {
+  return !binding.root.destroyed;
+}
+
 function syncWorldFromSceneObject(
   binding: SpritePixiBinding,
   entity: SpriteRenderable,
 ) {
+  if (!isBindingActive(binding)) return;
   binding.root.position.set(
     finiteNumberOr(entity.position?.x, 0),
     finiteNumberOr(entity.position?.y, 0),
@@ -67,40 +83,39 @@ function syncWorldFromSceneObject(
   );
 }
 
+function applyPlaceholderTexture(
+  binding: SpritePixiBinding,
+  entity: SpriteRenderable,
+): void {
+  if (!isBindingActive(binding)) return;
+  binding.innerSprite.texture = Texture.WHITE;
+  binding.innerSprite.alpha = 0.45;
+  syncWorldFromSceneObject(binding, entity);
+}
+
 function scheduleTextureLoad(
   binding: SpritePixiBinding,
   entity: SpriteRenderable,
 ): void {
   binding.loadGeneration += 1;
   const generationAtStart = binding.loadGeneration;
-  syncWorldFromSceneObject(binding, entity);
-  binding.innerSprite.texture = Texture.WHITE;
-  binding.innerSprite.alpha = 0.45;
-
-  const trimmedAssetField = String(entity.sprite.asset ?? "").trim();
+  applyPlaceholderTexture(binding, entity);
 
   void (async () => {
-    try {
-      if (!trimmedAssetField) {
-        if (binding.loadGeneration !== generationAtStart) return;
-        binding.innerSprite.texture = Texture.WHITE;
-        binding.innerSprite.alpha = 0.45;
-        syncWorldFromSceneObject(binding, entity);
-        return;
-      }
+    const texture = await loadGraphicTexture(entity.sprite?.asset, {
+      resolution: finiteNumberOr(entity.sprite?.resolution, 1),
+    });
+    if (binding.loadGeneration !== generationAtStart) return;
+    if (!isBindingActive(binding)) return;
 
-      const texture = await loadGraphicTexture(trimmedAssetField);
-      if (binding.loadGeneration !== generationAtStart) return;
-
-      binding.innerSprite.texture = texture;
-      binding.innerSprite.alpha = 1;
-      syncWorldFromSceneObject(binding, entity);
-    } catch {
-      if (binding.loadGeneration !== generationAtStart) return;
-      binding.innerSprite.texture = Texture.WHITE;
-      binding.innerSprite.alpha = 0.45;
-      syncWorldFromSceneObject(binding, entity);
+    if (!texture) {
+      applyPlaceholderTexture(binding, entity);
+      return;
     }
+
+    binding.innerSprite.texture = texture;
+    binding.innerSprite.alpha = 1;
+    syncWorldFromSceneObject(binding, entity);
   })();
 }
 
@@ -128,11 +143,15 @@ export function pixiSprites(stage: Container): {
 } {
   const scene = getScene();
   const spriteBindingsBySceneKey = new Map<PropertyKey, SpritePixiBinding>();
-  const qualifiesAsSpriteRenderable = implementsTrait([spriteTrait]);
+  const qualifiesAsSpriteRenderable = implementsTrait([
+    transformTrait,
+    spriteTrait,
+  ]);
 
   function removeSpriteBindingIfPresent(sceneRootKey: PropertyKey): void {
     const existingBinding = spriteBindingsBySceneKey.get(sceneRootKey);
     if (!existingBinding) return;
+    existingBinding.loadGeneration += 1;
     existingBinding.root.destroy({ children: true });
     spriteBindingsBySceneKey.delete(sceneRootKey);
   }

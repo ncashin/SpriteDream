@@ -12,6 +12,7 @@ import bouncyBallScene from "./scenes/bouncyBall.scene";
 import type { RuntimeGameContext } from "./index";
 import { collisionBodyTrait } from "./plugins/planckPlugin/index";
 import { spriteTrait } from "./plugins/pixiPlugin/index";
+import { transformTrait } from "./plugins/transform.js";
 
 const playerTrait = defineTrait(
   z.object({
@@ -47,7 +48,12 @@ export default function main(gameContext: RuntimeGameContext): void {
 
     const player = scene.getObject(
       networking.peerId,
-      implementsTrait([playerTrait, spriteTrait, collisionBodyTrait]),
+      implementsTrait([
+        playerTrait,
+        transformTrait,
+        spriteTrait,
+        collisionBodyTrait,
+      ]),
     );
 
     if (player) {
@@ -62,7 +68,12 @@ export default function main(gameContext: RuntimeGameContext): void {
 
     const ball = scene.getObject(
       "bouncyBall",
-      implementsTrait([spriteTrait, collisionBodyTrait, ownerTrait]),
+      implementsTrait([
+        transformTrait,
+        spriteTrait,
+        collisionBodyTrait,
+        ownerTrait,
+      ]),
     );
 
     if (ball && networking.isOwned(ball)) {

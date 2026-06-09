@@ -8,11 +8,10 @@ export type TraitMetadata = {
 };
 
 export type TraitDefinitionEntry<S extends ZodTypeAny = ZodTypeAny> =
-  TraitMetadata &
-    z.infer<S> & {
-      schema: S;
-      defaults: z.infer<S>;
-    };
+  TraitMetadata & {
+    schema: S;
+    defaults: Record<string, unknown>;
+  };
 
 const traitDefinitions: TraitDefinitionEntry[] = [];
 
@@ -25,11 +24,8 @@ export const defineTrait = <S extends ZodTypeAny>(
   metadata: TraitMetadata = {},
 ): TraitDefinitionEntry<S> => {
   const parsed = schema.safeParse({});
-  const defaults = (
-    parsed.success ? parsed.data : {}
-  ) as z.infer<S>;
+  const defaults = parsed.success ? (parsed.data as Record<string, unknown>) : {};
   const entry = {
-    ...defaults,
     ...metadata,
     schema,
     defaults,
@@ -58,12 +54,36 @@ function intersectTraitSchemas(
     .reduce((acc, s) => z.intersection(acc, s), schemas[0]!);
 }
 
+function unwrapObjectSchema(schema: ZodTypeAny): z.ZodObject<z.ZodRawShape> | null {
+  if (schema instanceof z.ZodObject) return schema;
+  if (schema instanceof z.ZodEffects) {
+    return unwrapObjectSchema(schema._def.schema);
+  }
+  return null;
+}
+
+function hasTraitKeys(value: object, schema: ZodTypeAny): boolean {
+  const objectSchema = unwrapObjectSchema(schema);
+  if (!objectSchema) return true;
+
+  for (const [key, fieldSchema] of Object.entries(objectSchema.shape)) {
+    const field = fieldSchema as ZodTypeAny;
+    if (field instanceof z.ZodOptional) continue;
+    if (!Object.prototype.hasOwnProperty.call(value, key)) return false;
+  }
+
+  return true;
+}
+
 export function implementsTrait<
   const T extends readonly TraitDefinitionEntry[],
 >(traits: T): (value: unknown) => value is TraitIntersection<T> & object {
   const schema = intersectTraitSchemas(traits);
-  return (value): value is TraitIntersection<T> & object =>
-    typeof value === "object" &&
-    value !== null &&
-    schema.safeParse(value).success;
+  return (value): value is TraitIntersection<T> & object => {
+    if (typeof value !== "object" || value === null) return false;
+    for (const trait of traits) {
+      if (!hasTraitKeys(value, trait.schema)) return false;
+    }
+    return schema.safeParse(value).success;
+  };
 }

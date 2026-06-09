@@ -3,24 +3,36 @@ import { getScene } from "../scene/scene.js";
 import { getValueAtPath } from "../scene/path.js";
 import { getTraitDefinitions, TraitDefinitionEntry } from "../trait/trait.js";
 
-function mergeMissing(target: Record<string, unknown>, incoming: Record<string, unknown>) {
+function cloneDefaultValue<T>(value: T): T {
+  if (!value || typeof value !== "object") return value;
+  return structuredClone(value);
+}
+
+function mergeMissing(
+  target: Record<string, unknown>,
+  incoming: Record<string, unknown>,
+) {
   for (const [key, value] of Object.entries(incoming)) {
     if (value === undefined) continue;
 
-    if (!(key in target)) {
-      target[key] = value;
+    if (!Object.prototype.hasOwnProperty.call(target, key)) {
+      target[key] = cloneDefaultValue(value);
       continue;
     }
 
+    const existing = target[key];
     if (
       value &&
       typeof value === "object" &&
       !Array.isArray(value) &&
-      target[key] &&
-      typeof target[key] === "object" &&
-      !Array.isArray(target[key])
+      existing &&
+      typeof existing === "object" &&
+      !Array.isArray(existing)
     ) {
-      mergeMissing(target[key] as Record<string, unknown>, value as Record<string, unknown>);
+      mergeMissing(
+        existing as Record<string, unknown>,
+        value as Record<string, unknown>,
+      );
     }
   }
 }
