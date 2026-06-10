@@ -33,13 +33,13 @@
       "velocity": {
         "x": 0,
         "y": 0,
-        "angular": 0
+        "angular": 10
       },
       "fixedRotation": false,
       "continuous": false,
       "isTrigger": false,
       "restitution": 0,
-      "friction": 0.3,
+      "friction": 10,
       "disabled": false
     },
     "sprite": {
@@ -48,7 +48,7 @@
       "width": 32,
       "height": 32,
       "resolution": 32,
-      "tint": "#ffffff"
+      "tint": "#ff0000"
     }
   },
   "platform_0": {

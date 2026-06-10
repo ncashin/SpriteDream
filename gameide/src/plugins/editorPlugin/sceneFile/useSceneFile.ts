@@ -4,6 +4,7 @@ import { useSceneFileStore } from "./sceneFileStore.js";
 
 export function useSceneFile() {
   const activeScenePath = useSceneFileStore((state) => state.activeScenePath);
+  const isUntitled = useSceneFileStore((state) => state.isUntitled);
   const scenes = useSceneFileStore((state) => state.scenes);
   const dirty = useSceneFileStore((state) => state.dirty);
   const saving = useSceneFileStore((state) => state.saving);
@@ -11,12 +12,14 @@ export function useSceneFile() {
   const canRedo = useSceneFileStore((state) => state.canRedo);
   const setActiveScenePath = useSceneFileStore((state) => state.setActiveScenePath);
   const requestSave = useSceneFileStore((state) => state.requestSave);
+  const createScene = useSceneFileStore((state) => state.createScene);
   const undo = useSceneFileStore((state) => state.undo);
   const redo = useSceneFileStore((state) => state.redo);
 
   const switchScene = useCallback(
     (relativePath: string) => {
-      if (!relativePath || relativePath === activeScenePath) return;
+      if (!relativePath) return;
+      if (!isUntitled && relativePath === activeScenePath) return;
 
       if (dirty) {
         const discard = window.confirm(
@@ -31,17 +34,19 @@ export function useSceneFile() {
 
       setActiveScenePath(relativePath);
     },
-    [activeScenePath, dirty, setActiveScenePath],
+    [activeScenePath, dirty, isUntitled, setActiveScenePath],
   );
 
   return {
     scenes,
     activeScenePath,
+    isUntitled,
     dirty,
     saving,
     canUndo,
     canRedo,
     switchScene,
+    createScene,
     save: requestSave,
     undo,
     redo,

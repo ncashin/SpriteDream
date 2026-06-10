@@ -30,6 +30,7 @@ async function readBody(req: IncomingMessage): Promise<string> {
 export function attachFileEditorMiddleware(
   server: ViteDevServer,
   projectRoot: string,
+  onSceneWritten?: (relativePath: string) => void,
 ): void {
   server.middlewares.use((req, res, next) => {
     const hostHeader = req.headers.host ?? "localhost";
@@ -64,6 +65,7 @@ export function attachFileEditorMiddleware(
           `${JSON.stringify(payload.content, null, 2)}\n`,
           "utf8",
         );
+        onSceneWritten?.(path.normalize(payload.path));
         res.statusCode = 204;
         res.end();
       })

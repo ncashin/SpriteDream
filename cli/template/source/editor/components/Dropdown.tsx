@@ -19,6 +19,12 @@ const stopMousePropagation = (event: ReactMouseEvent) => {
   event.stopPropagation();
 };
 
+const itemClassName = cn(
+  "flex w-full min-w-0 items-center py-1 pl-1.5 pr-1.5 text-left text-xs",
+  "font-[var(--vscode-font-family)] cursor-pointer border-0 text-[var(--color-text)]",
+  "bg-transparent hover:bg-[var(--color-hover)]",
+);
+
 export type DropdownOption = {
   value: string;
   label: string;
@@ -52,7 +58,6 @@ export function Dropdown({
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const [query, setQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -73,16 +78,6 @@ export function Dropdown({
       )
       .map((entry) => entry.option);
   }, [options, query, showSearch]);
-
-  useEffect(() => {
-    if (!open) return;
-    setHighlightedIndex(0);
-  }, [open, filteredOptions]);
-
-  useEffect(() => {
-    if (!open) return;
-    optionRefs.current[highlightedIndex]?.scrollIntoView({ block: "nearest" });
-  }, [highlightedIndex, open]);
 
   const selectOption = useCallback(
     (option: DropdownOption) => {
@@ -111,6 +106,8 @@ export function Dropdown({
       setQuery("");
       return;
     }
+
+    setHighlightedIndex(0);
 
     const close = (event: MouseEvent) => {
       const target = event.target;
@@ -200,7 +197,10 @@ export function Dropdown({
             type="search"
             value={query}
             placeholder={searchPlaceholder}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setHighlightedIndex(0);
+            }}
             onMouseDown={stopMousePropagation}
             onClick={stopMousePropagation}
             className={cn(
@@ -217,6 +217,7 @@ export function Dropdown({
               onClick={(event) => {
                 event.stopPropagation();
                 setQuery("");
+                setHighlightedIndex(0);
                 searchRef.current?.focus();
               }}
             >
@@ -240,9 +241,6 @@ export function Dropdown({
             return (
               <button
                 key={option.value}
-                ref={(element) => {
-                  optionRefs.current[index] = element;
-                }}
                 type="button"
                 onMouseEnter={() => setHighlightedIndex(index)}
                 onMouseDown={(event) => {
@@ -251,13 +249,9 @@ export function Dropdown({
                   selectOption(option);
                 }}
                 className={cn(
-                  "flex w-full min-w-0 items-center py-1 pl-1.5 pr-1.5 text-left text-xs",
-                  "font-[var(--vscode-font-family)] cursor-pointer border-0 text-[var(--color-text)]",
-                  isHighlighted
-                    ? "bg-[var(--color-hover)]"
-                    : isSelected
-                      ? "bg-[var(--color-selection)] font-medium"
-                      : "bg-transparent hover:bg-[var(--color-hover)]",
+                  itemClassName,
+                  isHighlighted && "bg-[var(--color-hover)]",
+                  isSelected && "bg-[var(--color-selection)] font-medium",
                   isHighlighted && isSelected && "font-medium",
                 )}
               >

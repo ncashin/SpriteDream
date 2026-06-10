@@ -3,9 +3,11 @@ import { getScene } from "../scene/scene.js";
 import type { ScenePath } from "../scene/scene.js";
 import {
   deleteValueAtPath,
+  getRecordAtPath,
   getValueAtPath,
   renameKeyAtPath,
   setValueAtPath,
+  uniqueChildKey,
 } from "../scene/path.js";
 import {
   getExternalSceneSnapshot,
@@ -25,6 +27,7 @@ export function useScene(path: ScenePath): {
   setValue: (value: unknown) => void;
   deleteValue: () => void;
   renameKey: (newKey: PropertyKey) => boolean;
+  addChild: (childValue: unknown) => void;
 } {
   const key = pathKey(path);
 
@@ -50,5 +53,21 @@ export function useScene(path: ScenePath): {
     return renameKeyAtPath(getScene().get(), pathFromKey(key), newKey);
   }, [key]);
 
-  return { value, setValue, deleteValue, renameKey };
+  const addChild = useCallback((childValue: unknown) => {
+    const root = getScene().get() as Record<PropertyKey, unknown>;
+    const parentPath = pathFromKey(key);
+    const container =
+      parentPath.length === 0 ? root : getRecordAtPath(root, parentPath);
+    if (!container) return;
+
+    const base =
+      childValue !== null &&
+      typeof childValue === "object" &&
+      !Array.isArray(childValue)
+        ? "object"
+        : "property";
+    container[uniqueChildKey(container, base)] = childValue;
+  }, [key]);
+
+  return { value, setValue, deleteValue, renameKey, addChild };
 }

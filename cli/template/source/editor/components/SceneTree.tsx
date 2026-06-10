@@ -1,11 +1,21 @@
-import { ChevronRight, Plus, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { ChevronRight, Plus, Search, Trash2, X } from "lucide-react";
+import {
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useScene, useSelectedObject, useTraits } from "gameide";
 import { PropertyInput } from "./PropertyInput.js";
 import { Dropdown } from "./Dropdown.js";
 import { IconButton } from "./IconButton.js";
 import { cn } from "../../utils/cn.js";
+import { fuzzyScore } from "../../utils/fuzzyMatch.js";
 import { SceneIcon } from "./SceneIcon.js";
+
+const sceneRowClassName = cn(
+  "group flex items-center gap-1 pl-2 pr-1 py-1 text-[var(--color-text)]",
+  "hover:bg-[var(--color-hover)] focus-within:bg-[var(--color-hover)]",
+);
 
 function KeyInput({
   name,
@@ -76,18 +86,101 @@ function isPathPrefix(prefix: PropertyKey[], path: PropertyKey[]): boolean {
   return prefix.every((segment, i) => segment === path[i]);
 }
 
+function subtreeMatches(
+  path: PropertyKey[],
+  value: unknown,
+  query: string,
+): boolean {
+  const trimmed = query.trim();
+  if (!trimmed) return true;
+
+  const name = String(path[path.length - 1] ?? "");
+  if (fuzzyScore(trimmed, name) != null) return true;
+  if (typeof value === "string" && fuzzyScore(trimmed, value) != null) {
+    return true;
+  }
+
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    for (const key of Object.keys(value as object)) {
+      if (
+        subtreeMatches(
+          [...path, key],
+          (value as Record<string, unknown>)[key],
+          trimmed,
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function AddToSceneDropdown({
+  path,
+  open,
+  onOpenChange,
+  children,
+  className,
+  onAdded,
+}: {
+  path: PropertyKey[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactNode;
+  className?: string;
+  onAdded?: () => void;
+}) {
+  const { addChild } = useScene(path);
+  const { traits, mergeTraitInto } = useTraits();
+
+  return (
+    <Dropdown
+      open={open}
+      onOpenChange={onOpenChange}
+      options={[
+        { value: "__new_object__", label: "New Object" },
+        { value: "__new_property__", label: "New Property" },
+        ...traits.map((t) => ({
+          value: String(t.id),
+          label: t.label,
+        })),
+      ]}
+      onChange={(value) => {
+        if (value === "__new_object__") {
+          addChild({});
+          onAdded?.();
+          return;
+        }
+        if (value === "__new_property__") {
+          addChild("");
+          onAdded?.();
+          return;
+        }
+        mergeTraitInto(path, Number(value));
+      }}
+      searchPlaceholder="Search traits…"
+      emptyMessage="No traits found"
+      className={className}
+    >
+      {children}
+    </Dropdown>
+  );
+}
+
 function TreeNode({
   path,
   depth = 0,
   defaultExpanded = true,
+  searchQuery = "",
 }: {
   path: PropertyKey[];
   depth?: number;
   defaultExpanded?: boolean;
+  searchQuery?: string;
 }) {
   const { value, setValue, deleteValue, renameKey } = useScene(path);
   const { selectedPath } = useSelectedObject();
-  const { traits, mergeTraitInto } = useTraits();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [userCollapsed, setUserCollapsed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -100,7 +193,25 @@ function TreeNode({
     path.length === selectedPath.length &&
     isPathPrefix(path, selectedPath);
   const ancestorOfSelection = selectedPath && isPathPrefix(path, selectedPath);
-  const isOpen = expanded || (ancestorOfSelection && !userCollapsed);
+  const hasActiveSearch = searchQuery.trim().length > 0;
+  const hasMatchingDescendant =
+    hasActiveSearch &&
+    isObject &&
+    childKeys.some((key) =>
+      subtreeMatches(
+        [...path, key],
+        (value as Record<string, unknown>)[key],
+        searchQuery,
+      ),
+    );
+  const isOpen =
+    expanded ||
+    (ancestorOfSelection && !userCollapsed) ||
+    (hasActiveSearch && hasMatchingDescendant);
+
+  if (hasActiveSearch && !subtreeMatches(path, value, searchQuery)) {
+    return null;
+  }
 
   const toggleExpanded = () => {
     if (isOpen) {
@@ -112,19 +223,24 @@ function TreeNode({
     setUserCollapsed(false);
   };
 
+  const onAdded = () => {
+    setExpanded(true);
+    setUserCollapsed(false);
+    setAddOpen(false);
+  };
+
   return (
     <div>
       <div
         className="sticky bg-[var(--color-bg)]"
         style={{
-          top: `calc(${depth} * (1lh + 0.5rem))`,
+          top: `calc(${depth} * (1lh + 0.5rem) + 1lh + 0.5rem)`,
           zIndex: 100 - depth,
         }}
       >
         <div
           className={cn(
-            "group flex items-center gap-1 pl-2 pr-1 py-1 text-[var(--color-text)]",
-            "hover:bg-[var(--color-hover)] focus-within:bg-[var(--color-hover)]",
+            sceneRowClassName,
             isSelected && "bg-[var(--color-selection)]",
             addOpen && "bg-[var(--color-hover)]",
             isObject && "cursor-pointer",
@@ -147,33 +263,27 @@ function TreeNode({
                   addOpen && "opacity-100 pointer-events-auto",
                 )}
               >
-                <Dropdown
+                <AddToSceneDropdown
+                  path={path}
                   open={addOpen}
                   onOpenChange={setAddOpen}
-                  options={traits.map((t) => ({
-                    value: String(t.id),
-                    label: t.label,
-                  }))}
-                  onChange={(id) => mergeTraitInto(path, Number(id))}
-                  searchPlaceholder="Search traits…"
-                  emptyMessage="No traits found"
+                  onAdded={onAdded}
                 >
                   <IconButton
-                    aria-label="Add trait"
+                    aria-label="Add property"
                     aria-expanded={addOpen}
-                    disabled={traits.length === 0}
                     className={cn(
                       addOpen &&
                         "bg-[var(--color-hover)] hover:bg-[var(--color-hover)]",
                     )}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (traits.length > 0) setAddOpen((o) => !o);
+                      setAddOpen((o) => !o);
                     }}
                   >
                     <Plus size={14} className="text-white" aria-hidden />
                   </IconButton>
-                </Dropdown>
+                </AddToSceneDropdown>
                 <IconButton
                   aria-label="Delete"
                   onClick={(e) => {
@@ -222,6 +332,7 @@ function TreeNode({
               path={[...path, key]}
               depth={depth + 1}
               defaultExpanded={true}
+              searchQuery={searchQuery}
             />
           ))}
         </div>
@@ -232,7 +343,9 @@ function TreeNode({
 
 export function SceneTree({ className }: { className?: string }) {
   const { value: root } = useScene([]);
-
+  const [searchQuery, setSearchQuery] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
   return (
     <div
       className={cn(
@@ -240,8 +353,66 @@ export function SceneTree({ className }: { className?: string }) {
         className,
       )}
     >
+      <div className="sticky top-0 z-[100] bg-[var(--color-bg)]">
+        <div className={sceneRowClassName}>
+          <div className="flex min-w-0 flex-1 items-center gap-1">
+            <Search size={14} aria-hidden className="shrink-0 text-white" />
+            <input
+              ref={searchRef}
+              type="search"
+              value={searchQuery}
+              placeholder="Search scene…"
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className={cn(
+                "min-w-0 flex-1 border-0 bg-transparent py-0.5 text-xs outline-none",
+                "text-[var(--color-text)] placeholder:text-[var(--color-muted)]",
+                "font-[var(--vscode-font-family)]",
+                "[&::-webkit-search-cancel-button]:hidden",
+              )}
+            />
+            {searchQuery && (
+              <IconButton
+                aria-label="Clear search"
+                onClick={() => {
+                  setSearchQuery("");
+                  searchRef.current?.focus();
+                }}
+              >
+                <X size={14} aria-hidden />
+              </IconButton>
+            )}
+          </div>
+        </div>
+        <AddToSceneDropdown
+          path={[]}
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          className="w-full"
+        >
+          <button
+            type="button"
+            aria-label="Add to scene"
+            aria-haspopup="listbox"
+            aria-expanded={addOpen}
+            onClick={() => setAddOpen((open) => !open)}
+            className={cn(
+              sceneRowClassName,
+              "w-full cursor-pointer",
+              addOpen && "bg-[var(--color-hover)]",
+            )}
+          >
+            <Plus size={14} className="shrink-0 text-white" aria-hidden />
+            <span>Add to scene</span>
+          </button>
+        </AddToSceneDropdown>
+      </div>
       {Object.keys(root ?? {}).map((key) => (
-        <TreeNode key={key} path={[key]} defaultExpanded={false} />
+        <TreeNode
+          key={key}
+          path={[key]}
+          defaultExpanded={false}
+          searchQuery={searchQuery}
+        />
       ))}
     </div>
   );

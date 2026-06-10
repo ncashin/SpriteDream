@@ -209,7 +209,10 @@ export function gameidePlugin(): Plugin {
     configureServer(server) {
       knownScenes = listProjectScenes(projectRoot);
       return () => {
-        attachFileEditorMiddleware(server, projectRoot);
+        attachFileEditorMiddleware(server, projectRoot, () => {
+          invalidateCatalogModules(server);
+          knownScenes = listProjectScenes(projectRoot);
+        });
         if (server.httpServer) {
           attachRoomWebSocket(server.httpServer);
         }
@@ -232,7 +235,13 @@ export function gameidePlugin(): Plugin {
       const filePath = id.replace(/\?.*$/, "");
       if (!filePath.endsWith(".scene")) return;
 
-      const raw = fs.readFileSync(filePath, "utf8");
+      let raw: string;
+      try {
+        raw = fs.readFileSync(filePath, "utf8");
+      } catch {
+        const relativePath = toPosixRelative(projectRoot, filePath);
+        return `throw new Error(${JSON.stringify(`Scene not found: ${relativePath}`)});\n`;
+      }
       const data = JSON.parse(raw) as SceneObject;
       const relativePath = toPosixRelative(projectRoot, filePath);
       return createSceneModuleCode(data, relativePath);

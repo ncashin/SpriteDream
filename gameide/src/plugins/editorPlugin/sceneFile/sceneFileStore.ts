@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { GameIDEMode, getMode } from "../../../lifecycle/mode.js";
+import { GameIDEMode, getMode, setMode } from "../../../lifecycle/mode.js";
 import { SCENE_CHANNEL } from "../../../scene/sceneChannel/sceneChannel.js";
 import type { Scene, SceneObject } from "../../../scene/scene.js";
 import { diffScenePatch } from "../../../scene/scene.js";
@@ -27,8 +27,54 @@ function isEmbeddedInParentFrame(): boolean {
   return typeof window !== "undefined" && window.parent !== window;
 }
 
+function nextScenePath(
+  scenes: readonly string[],
+  dir: string,
+  stem: string,
+): string {
+  const base = `${dir}${stem}.scene`;
+  if (!scenes.includes(base)) return base;
+  let n = 2;
+  while (scenes.includes(`${dir}${stem}-${n}.scene`)) n += 1;
+  return `${dir}${stem}-${n}.scene`;
+}
+
+function listSceneDirectories(scenes: readonly string[]): string[] {
+  const dirs = new Set<string>();
+  for (const scene of scenes) {
+    const slash = scene.lastIndexOf("/");
+    dirs.add(slash >= 0 ? scene.slice(0, slash + 1) : "");
+  }
+  if (dirs.size === 0) {
+    dirs.add("source/scenes/");
+  }
+  return [...dirs].sort();
+}
+
+function promptSaveDirectory(scenes: readonly string[]): string | null {
+  const dirs = listSceneDirectories(scenes);
+  const defaultDir = dirs[0] ?? "source/scenes/";
+
+  if (dirs.length === 1) {
+    const saveHere = window.confirm(`Save scene to ${defaultDir}?`);
+    return saveHere ? defaultDir : null;
+  }
+
+  const listing = dirs.map((dir, index) => `${index + 1}. ${dir}`).join("\n");
+  const input = window.prompt(
+    `Choose a directory for this scene file:\n${listing}\n\nEnter directory path:`,
+    defaultDir,
+  );
+  if (input === null) return null;
+
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  return trimmed.endsWith("/") ? trimmed : `${trimmed}/`;
+}
+
 type SceneFileStore = {
   activeScenePath: string;
+  isUntitled: boolean;
   scenes: string[];
   dirty: boolean;
   saving: boolean;
@@ -38,6 +84,7 @@ type SceneFileStore = {
   setActiveScenePath: (path: string) => void;
   loadScenes: () => Promise<void>;
   requestSave: () => void;
+  createScene: () => void;
   undo: () => void;
   redo: () => void;
 };
@@ -46,6 +93,7 @@ export const useSceneFileStore = create<SceneFileStore>()(
   persist(
     (set, get) => ({
       activeScenePath: "",
+      isUntitled: false,
       scenes: [],
       dirty: false,
       saving: false,
@@ -53,15 +101,21 @@ export const useSceneFileStore = create<SceneFileStore>()(
       canRedo: false,
 
       setScenes: (scenes) => {
+        const { isUntitled, activeScenePath } = get();
+        if (isUntitled) {
+          set({ scenes });
+          return;
+        }
         set({
           scenes,
-          activeScenePath: pickActiveScene(scenes, get().activeScenePath),
+          activeScenePath: pickActiveScene(scenes, activeScenePath),
         });
       },
 
       setActiveScenePath: (path) => {
-        if (!path || path === get().activeScenePath) return;
-        set({ activeScenePath: path });
+        if (!path) return;
+        if (path === get().activeScenePath && !get().isUntitled) return;
+        set({ activeScenePath: path, isUntitled: false });
       },
 
       loadScenes: async () => {
@@ -95,6 +149,26 @@ export const useSceneFileStore = create<SceneFileStore>()(
         void saveActiveScene();
       },
 
+      createScene: () => {
+        const { dirty } = get();
+        if (dirty) {
+          const discard = window.confirm(
+            "Discard unsaved changes and create a new scene?",
+          );
+          if (!discard) return;
+        }
+
+        if (getMode() === GameIDEMode.Game) {
+          setMode(GameIDEMode.Editor);
+        }
+
+        const wasUntitled = get().isUntitled;
+        set({ isUntitled: true });
+        if (wasUntitled) {
+          void openUntitledScene();
+        }
+      },
+
       undo: () => {
         undoSceneChange();
       },
@@ -105,7 +179,8 @@ export const useSceneFileStore = create<SceneFileStore>()(
     }),
     {
       name: STORAGE_KEY,
-      partialize: (state) => ({ activeScenePath: state.activeScenePath }),
+      partialize: (state) =>
+        state.isUntitled ? {} : { activeScenePath: state.activeScenePath },
     },
   ),
 );
@@ -115,6 +190,7 @@ let savedSnapshot = "";
 let currentSnapshot = "";
 let applyingExternalUpdate = false;
 let applyingHistoryNavigation = false;
+let skipNextSceneLoad = false;
 let unsubscribeOnChange: (() => void) | undefined;
 let unsubscribeStore: (() => void) | undefined;
 let unsubscribeSceneHmr: (() => void) | undefined;
@@ -249,7 +325,10 @@ async function loadSceneAtPath(relativePath: string): Promise<void> {
   if (!boundScene || !relativePath) return;
 
   const data = await importSceneModule(relativePath);
-  if (!data) return;
+  if (!data) {
+    await useSceneFileStore.getState().loadScenes();
+    return;
+  }
 
   applyingExternalUpdate = true;
   try {
@@ -262,10 +341,34 @@ async function loadSceneAtPath(relativePath: string): Promise<void> {
   syncDirtyState();
 }
 
+async function openUntitledScene(): Promise<void> {
+  if (!boundScene) return;
+
+  applyingExternalUpdate = true;
+  try {
+    boundScene.replace({});
+    savedSnapshot = sceneSnapshot({});
+    resetSceneHistory({});
+  } finally {
+    applyingExternalUpdate = false;
+  }
+  syncDirtyState();
+}
+
 async function saveActiveScene(): Promise<void> {
   flushPendingHistory();
-  const { activeScenePath, saving, dirty } = useSceneFileStore.getState();
-  if (!boundScene || !activeScenePath || saving || !dirty) return;
+  const state = useSceneFileStore.getState();
+  const { activeScenePath, isUntitled, saving, dirty, scenes } = state;
+  if (!boundScene || saving || !dirty) return;
+
+  let targetPath = activeScenePath;
+  if (isUntitled) {
+    const directory = promptSaveDirectory(scenes);
+    if (!directory) return;
+    targetPath = nextScenePath(scenes, directory, "untitled");
+  }
+
+  if (!targetPath) return;
 
   useSceneFileStore.setState({ saving: true });
   try {
@@ -273,13 +376,20 @@ async function saveActiveScene(): Promise<void> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        path: activeScenePath,
+        path: targetPath,
         content: boundScene.getRaw(),
       }),
     });
     if (!res.ok) throw new Error("Failed to save scene");
     savedSnapshot = sceneSnapshot(boundScene.getRaw());
-    useSceneFileStore.setState({ dirty: false });
+    currentSnapshot = savedSnapshot;
+    skipNextSceneLoad = true;
+    useSceneFileStore.setState({
+      activeScenePath: targetPath,
+      isUntitled: false,
+      dirty: false,
+    });
+    await useSceneFileStore.getState().loadScenes();
   } finally {
     useSceneFileStore.setState({ saving: false });
   }
@@ -316,13 +426,28 @@ export function bindSceneFileStore(
   });
 
   unsubscribeStore = useSceneFileStore.subscribe((state, previous) => {
-    if (state.activeScenePath === previous.activeScenePath) return;
+    const untitledChanged = state.isUntitled !== previous.isUntitled;
+    const pathChanged = state.activeScenePath !== previous.activeScenePath;
+    if (!untitledChanged && !pathChanged) return;
+
+    if (skipNextSceneLoad) {
+      skipNextSceneLoad = false;
+      return;
+    }
+
+    if (state.isUntitled) {
+      void openUntitledScene();
+      return;
+    }
     if (!state.activeScenePath) return;
     void loadSceneAtPath(state.activeScenePath);
   });
 
-  const path = initialPath || useSceneFileStore.getState().activeScenePath;
-  if (path) {
+  const { activeScenePath, isUntitled } = useSceneFileStore.getState();
+  const path = initialPath || activeScenePath;
+  if (isUntitled) {
+    void openUntitledScene();
+  } else if (path) {
     void loadSceneAtPath(path);
   } else {
     syncDirtyState();
@@ -363,6 +488,7 @@ export function subscribeSceneFileHostState(): () => void {
     };
     if (typeof state.path === "string" && state.path) {
       updates.activeScenePath = state.path;
+      updates.isUntitled = false;
     }
     useSceneFileStore.setState(updates);
   }
