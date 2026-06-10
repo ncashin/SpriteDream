@@ -61,6 +61,8 @@ export function Dropdown({
   const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const [query, setQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const highlightedIndexRef = useRef(0);
+  highlightedIndexRef.current = highlightedIndex;
 
   const filteredOptions = useMemo(() => {
     if (!showSearch) return options;
@@ -106,8 +108,11 @@ export function Dropdown({
       setQuery("");
       return;
     }
-
     setHighlightedIndex(0);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
 
     const close = (event: MouseEvent) => {
       const target = event.target;
@@ -147,7 +152,7 @@ export function Dropdown({
       if (event.key === "Enter") {
         event.preventDefault();
         event.stopPropagation();
-        const option = filteredOptions[highlightedIndex];
+        const option = filteredOptions[highlightedIndexRef.current];
         if (option) selectOption(option);
       }
     };
@@ -158,7 +163,7 @@ export function Dropdown({
       document.removeEventListener("mousedown", close);
       document.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [open, onOpenChange, filteredOptions, highlightedIndex, selectOption]);
+  }, [open, onOpenChange, filteredOptions, selectOption]);
 
   useLayoutEffect(() => {
     if (!open) return;
