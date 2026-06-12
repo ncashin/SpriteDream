@@ -4,11 +4,11 @@
   "description": "GameIDE editor library and CLI",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ncashin/gameide.git"
+    "url": "git+https://github.com/ncashin/gameide.git"
   },
   "type": "module",
   "bin": {
-    "gameide": "./dist/cli.js"
+    "gameide": "dist/cli.js"
   },
   "main": "./dist/gameide.umd.js",
   "module": "./dist/gameide.es.js",
