@@ -1,12 +1,9 @@
 {
   "name": "gameide-cli",
   "version": "0.1.0",
+  "private": true,
   "type": "module",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "gameide-cli": "./dist/cli.js",
-    "gameide": "./dist/cli.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

@@ -36,7 +36,7 @@
         "angular": 10
       },
       "fixedRotation": false,
-      "continuous": true,
+      "continuous": false,
       "isTrigger": false,
       "restitution": 0,
       "friction": 10,
@@ -237,8 +237,8 @@
       }
     },
     "position": {
-      "x": 90.04949395238094,
-      "y": -455.6657977453153,
+      "x": 228.6350840132962,
+      "y": -47.30025903248503,
       "z": 0
     },
     "rotation": {
