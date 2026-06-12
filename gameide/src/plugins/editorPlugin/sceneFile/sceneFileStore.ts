@@ -8,6 +8,7 @@ import {
   getSelectedObjectKey,
   restoreSelectedObjectKey,
 } from "../../../scene/objectSelection.js";
+import { pickUntitledSceneSavePath } from "./pickSceneSavePath.js";
 
 const STORAGE_KEY = "gameide-scene-file";
 const SCENE_FILE_API = "/gameide/scene";
@@ -25,51 +26,6 @@ function pickActiveScene(scenes: readonly string[], preferred: string): string {
 
 function isEmbeddedInParentFrame(): boolean {
   return typeof window !== "undefined" && window.parent !== window;
-}
-
-function nextScenePath(
-  scenes: readonly string[],
-  dir: string,
-  stem: string,
-): string {
-  const base = `${dir}${stem}.scene`;
-  if (!scenes.includes(base)) return base;
-  let n = 2;
-  while (scenes.includes(`${dir}${stem}-${n}.scene`)) n += 1;
-  return `${dir}${stem}-${n}.scene`;
-}
-
-function listSceneDirectories(scenes: readonly string[]): string[] {
-  const dirs = new Set<string>();
-  for (const scene of scenes) {
-    const slash = scene.lastIndexOf("/");
-    dirs.add(slash >= 0 ? scene.slice(0, slash + 1) : "");
-  }
-  if (dirs.size === 0) {
-    dirs.add("source/scenes/");
-  }
-  return [...dirs].sort();
-}
-
-function promptSaveDirectory(scenes: readonly string[]): string | null {
-  const dirs = listSceneDirectories(scenes);
-  const defaultDir = dirs[0] ?? "source/scenes/";
-
-  if (dirs.length === 1) {
-    const saveHere = window.confirm(`Save scene to ${defaultDir}?`);
-    return saveHere ? defaultDir : null;
-  }
-
-  const listing = dirs.map((dir, index) => `${index + 1}. ${dir}`).join("\n");
-  const input = window.prompt(
-    `Choose a directory for this scene file:\n${listing}\n\nEnter directory path:`,
-    defaultDir,
-  );
-  if (input === null) return null;
-
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  return trimmed.endsWith("/") ? trimmed : `${trimmed}/`;
 }
 
 type SceneFileStore = {
@@ -362,25 +318,34 @@ async function saveActiveScene(): Promise<void> {
   if (!boundScene || saving || !dirty) return;
 
   let targetPath = activeScenePath;
+  let alreadyWritten = false;
   if (isUntitled) {
-    const directory = promptSaveDirectory(scenes);
-    if (!directory) return;
-    targetPath = nextScenePath(scenes, directory, "untitled");
+    const pick = await pickUntitledSceneSavePath({
+      scenes,
+      content: boundScene.getRaw(),
+      reloadScenes: () => useSceneFileStore.getState().loadScenes(),
+      getScenes: () => useSceneFileStore.getState().scenes,
+    });
+    if (!pick) return;
+    targetPath = pick.path;
+    alreadyWritten = pick.kind === "written";
   }
 
   if (!targetPath) return;
 
   useSceneFileStore.setState({ saving: true });
   try {
-    const res = await fetch(SCENE_FILE_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        path: targetPath,
-        content: boundScene.getRaw(),
-      }),
-    });
-    if (!res.ok) throw new Error("Failed to save scene");
+    if (!alreadyWritten) {
+      const res = await fetch(SCENE_FILE_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: targetPath,
+          content: boundScene.getRaw(),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save scene");
+    }
     savedSnapshot = sceneSnapshot(boundScene.getRaw());
     currentSnapshot = savedSnapshot;
     skipNextSceneLoad = true;

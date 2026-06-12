@@ -11,7 +11,7 @@ const FALLBACK: Record<EditorColorName, number> = {
   red: 0xff5252,
   blue: 0x4da3ff,
   green: 0x39d353,
-  highlight: 0x7ec8ff,
+  highlight: 0x61afef,
 };
 
 export function editorColor(name: EditorColorName): number {

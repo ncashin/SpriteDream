@@ -13,7 +13,8 @@ import { fuzzyScore } from "../../utils/fuzzyMatch.js";
 import { SceneIcon } from "./SceneIcon.js";
 
 const sceneRowClassName = cn(
-  "group flex items-center gap-1 pl-2 pr-1 py-1 text-[var(--color-text)]",
+  "group flex min-h-[calc(1lh+0.5rem)] items-center gap-1 pl-2 pr-1 py-1",
+  "text-xs font-[var(--vscode-font-family)] text-[var(--color-text)]",
   "hover:bg-[var(--color-hover)] focus-within:bg-[var(--color-hover)]",
 );
 
@@ -159,7 +160,6 @@ function AddToSceneDropdown({
         }
         mergeTraitInto(path, Number(value));
       }}
-      searchPlaceholder="Search traits…"
       emptyMessage="No traits found"
       className={className}
     >
@@ -249,22 +249,7 @@ function TreeNode({
         >
           {isObject ? (
             <>
-              <span
-                className="relative flex size-3.5 shrink-0 items-center justify-center"
-                aria-hidden
-              >
-                <span className="group-hover:opacity-0">
-                  <SceneIcon name={icon} />
-                </span>
-                <ChevronRight
-                  size={14}
-                  className={cn(
-                    "absolute opacity-0 group-hover:opacity-100",
-                    "text-white transition-transform duration-150 ease-out",
-                    isOpen && "rotate-90",
-                  )}
-                />
-              </span>
+              <SceneIcon name={icon} />
               <KeyInput
                 name={name}
                 renameKey={renameKey}
@@ -307,6 +292,23 @@ function TreeNode({
                   }}
                 >
                   <Trash2 size={14} className="text-white" aria-hidden />
+                </IconButton>
+                <IconButton
+                  aria-label={isOpen ? "Collapse" : "Expand"}
+                  aria-expanded={isOpen}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleExpanded();
+                  }}
+                >
+                  <ChevronRight
+                    size={14}
+                    className={cn(
+                      "text-white transition-transform duration-150 ease-out",
+                      isOpen && "rotate-90",
+                    )}
+                    aria-hidden
+                  />
                 </IconButton>
               </div>
             </>
@@ -371,33 +373,36 @@ export function SceneTree({ className }: { className?: string }) {
       <div className="sticky top-0 z-[100] bg-[var(--color-bg)]">
         <div className="flex flex-col pb-4">
           <div className={sceneRowClassName}>
-            <div className="flex min-w-0 flex-1 items-center gap-1">
-              <Search size={14} aria-hidden className="shrink-0 text-white" />
-              <input
-                ref={searchRef}
-                type="search"
-                value={searchQuery}
-                placeholder="Search Scene…"
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className={cn(
-                  "min-w-0 flex-1 border-0 bg-transparent py-0.5 text-xs outline-none",
-                  "text-[var(--color-text)] placeholder:text-[var(--color-muted)]",
-                  "font-[var(--vscode-font-family)]",
-                  "[&::-webkit-search-cancel-button]:hidden",
-                )}
-              />
-              {searchQuery && (
-                <IconButton
-                  aria-label="Clear search"
-                  onClick={() => {
-                    setSearchQuery("");
-                    searchRef.current?.focus();
-                  }}
-                >
-                  <X size={14} aria-hidden />
-                </IconButton>
+            <span
+              className="relative flex size-3.5 shrink-0 items-center justify-center"
+              aria-hidden
+            >
+              <Search size={14} className="text-white" />
+            </span>
+            <input
+              ref={searchRef}
+              type="search"
+              value={searchQuery}
+              placeholder="Search Scene…"
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className={cn(
+                "min-w-0 flex-1 border-0 bg-transparent p-0 outline-none font-[inherit] leading-[inherit] text-inherit",
+                "placeholder:text-[var(--color-muted)]",
+                "[&::-webkit-search-cancel-button]:hidden",
               )}
-            </div>
+            />
+            {searchQuery ? (
+              <IconButton
+                aria-label="Clear search"
+                className="size-3.5 p-0"
+                onClick={() => {
+                  setSearchQuery("");
+                  searchRef.current?.focus();
+                }}
+              >
+                <X size={14} aria-hidden />
+              </IconButton>
+            ) : null}
           </div>
           <AddToSceneDropdown
             path={[]}
@@ -413,11 +418,16 @@ export function SceneTree({ className }: { className?: string }) {
               onClick={() => setAddOpen((open) => !open)}
               className={cn(
                 sceneRowClassName,
-                "w-full cursor-pointer",
+                "w-full cursor-pointer border-0 bg-transparent",
                 addOpen && "bg-[var(--color-hover)]",
               )}
             >
-              <Plus size={14} className="shrink-0 text-white" aria-hidden />
+              <span
+                className="relative flex size-3.5 shrink-0 items-center justify-center"
+                aria-hidden
+              >
+                <Plus size={14} className="text-white" />
+              </span>
               <span>Add to Scene</span>
             </button>
           </AddToSceneDropdown>
