@@ -371,7 +371,7 @@ export function SceneTree({ className }: { className?: string }) {
       )}
     >
       <div className="sticky top-0 z-[100] bg-[var(--color-bg)]">
-        <div className="flex flex-col pb-4">
+        <div className="flex flex-col pb-4.5">
           <div className={sceneRowClassName}>
             <span
               className="relative flex size-3.5 shrink-0 items-center justify-center"

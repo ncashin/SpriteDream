@@ -13,7 +13,6 @@ import type {
   PixiViewportInput,
   ViewportController,
 } from "./viewport.js";
-import { editorColor } from "../../editor/editorColors.js";
 
 type Vector2 = {
   x: number;
@@ -137,7 +136,7 @@ function angleDeltaRadians(from: number, to: number): number {
 function drawAxisLine(
   graphics: Graphics,
   axis: "x" | "y",
-  color: number,
+  color: string,
   length: number,
   strokeWidth: number,
 ): void {
@@ -152,7 +151,7 @@ function drawAxisLine(
 function drawArrowHead(
   graphics: Graphics,
   axis: "x" | "y",
-  color: number,
+  color: string,
   length: number,
   size: number,
 ): void {
@@ -173,7 +172,7 @@ function drawSquareHandle(
   centerX: number,
   centerY: number,
   size: number,
-  color: number,
+  color: string,
   strokeWidth: number,
 ): void {
   graphics
@@ -185,7 +184,7 @@ function drawSquareHandle(
 function drawCornerHandle(
   graphics: Graphics,
   size: number,
-  color: number,
+  color: string,
   strokeWidth: number,
 ): void {
   graphics
@@ -195,9 +194,10 @@ function drawCornerHandle(
 }
 
 function drawTranslateGizmo(graphics: Graphics, unit: (pixels: number) => number): void {
-  const red = editorColor("red");
-  const green = editorColor("green");
-  const highlight = editorColor("highlight");
+  const style = getComputedStyle(document.documentElement);
+  const red = style.getPropertyValue("--color-red").trim();
+  const green = style.getPropertyValue("--color-green").trim();
+  const highlight = style.getPropertyValue("--color-highlight").trim();
   const axisLength = unit(68);
   const arrowSize = unit(12);
   const cornerSize = unit(24);
@@ -212,7 +212,9 @@ function drawTranslateGizmo(graphics: Graphics, unit: (pixels: number) => number
 }
 
 function drawRotateGizmo(graphics: Graphics, unit: (pixels: number) => number): void {
-  const blue = editorColor("blue");
+  const blue = getComputedStyle(document.documentElement)
+    .getPropertyValue("--color-blue")
+    .trim();
   const radius = unit(46);
   const handleRadius = unit(5);
   const strokeWidth = unit(3);
@@ -228,9 +230,10 @@ function drawRotateGizmo(graphics: Graphics, unit: (pixels: number) => number): 
 }
 
 function drawScaleGizmo(graphics: Graphics, unit: (pixels: number) => number): void {
-  const red = editorColor("red");
-  const green = editorColor("green");
-  const highlight = editorColor("highlight");
+  const style = getComputedStyle(document.documentElement);
+  const red = style.getPropertyValue("--color-red").trim();
+  const green = style.getPropertyValue("--color-green").trim();
+  const highlight = style.getPropertyValue("--color-highlight").trim();
   const axisLength = unit(60);
   const handleSize = unit(12);
   const cornerSize = unit(24);

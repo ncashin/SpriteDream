@@ -5,7 +5,6 @@ import {
   selectedObject,
   type GameObject,
 } from "gameide";
-import { editorColor } from "../../editor/editorColors.js";
 
 export type SpriteBindingLike = {
   root: Container;
@@ -53,7 +52,9 @@ function drawColliderBoundsStroke(
     entity as { circleCollider?: { radius?: unknown; offset?: { x?: number; y?: number } } }
   ).circleCollider;
 
-  const color = editorColor("highlight");
+  const color = getComputedStyle(document.documentElement)
+    .getPropertyValue("--color-highlight")
+    .trim();
   const alpha = 1;
 
   if (box && typeof box === "object") {
@@ -127,7 +128,9 @@ export function selectionOverlay(
 
     const binding = spriteBindingsBySceneKey.get(key);
     const strokeWidth = 2;
-    const color = editorColor("highlight");
+    const color = getComputedStyle(document.documentElement)
+      .getPropertyValue("--color-highlight")
+      .trim();
     const alpha = 1;
 
     if (binding) {

@@ -58,7 +58,7 @@ export function Editor({
   return (
     <EditorRoot>
       <Sidebar open={sidebarOpen}>
-        <div className="flex flex-col w-full h-full bg-[var(--color-bg)] gap-3.5 pt-4.5 ">
+        <div className="flex flex-col w-full h-full bg-[var(--color-bg)] gap-4 pt-4 ">
           <SceneFileHeader className="px-2" />
           <SceneTree className="pl-2 pr-4" />
         </div>
