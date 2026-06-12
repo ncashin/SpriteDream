@@ -1,6 +1,4 @@
-import { Cuboid, icons } from "lucide-react";
-
-type LucideIcon = typeof Cuboid;
+import { Cuboid, icons, type LucideIcon } from "lucide-react";
 
 function isLucideIconKey(iconKey: string): iconKey is keyof typeof icons {
   return iconKey in icons;
@@ -21,21 +19,19 @@ function iconNameToKey(iconName: string): string {
     .join("");
 }
 
-function resolveIcon(iconKey: string): LucideIcon {
-  if (!isLucideIconKey(iconKey)) return Cuboid;
-  return icons[iconKey];
-}
-
 export default function DynamicIcon({
   name,
   size = 14,
   className,
+  fallback = Cuboid,
 }: {
   name?: string | null;
   size?: number;
   className?: string;
+  fallback?: LucideIcon;
 }) {
   const iconKey = name ? iconNameToKey(name) : "";
-  const Icon = iconKey ? resolveIcon(iconKey) : Cuboid;
+  const Icon =
+    iconKey && isLucideIconKey(iconKey) ? icons[iconKey] : fallback;
   return <Icon size={size} className={className} />;
 }

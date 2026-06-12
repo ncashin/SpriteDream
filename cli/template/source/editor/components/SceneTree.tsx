@@ -234,7 +234,7 @@ function TreeNode({
       <div
         className="sticky bg-[var(--color-bg)]"
         style={{
-          top: `calc(${depth + 2} * (1lh + 0.5rem) + 1rem)`,
+          top: `calc(${depth + 1} * (1lh + 0.5rem))`,
           zIndex: 100 - depth,
         }}
       >
@@ -370,67 +370,69 @@ export function SceneTree({ className }: { className?: string }) {
         className,
       )}
     >
-      <div className="sticky top-0 z-[100] bg-[var(--color-bg)]">
-        <div className="flex flex-col pb-4.5">
-          <div className={sceneRowClassName}>
-            <span
-              className="relative flex size-3.5 shrink-0 items-center justify-center"
-              aria-hidden
-            >
-              <Search size={14} className="text-white" />
-            </span>
-            <input
-              ref={searchRef}
-              type="search"
-              value={searchQuery}
-              placeholder="Search Scene…"
-              onChange={(event) => setSearchQuery(event.target.value)}
-              className={cn(
-                "min-w-0 flex-1 border-0 bg-transparent p-0 outline-none font-[inherit] leading-[inherit] text-inherit",
-                "placeholder:text-[var(--color-muted)]",
-                "[&::-webkit-search-cancel-button]:hidden",
-              )}
-            />
+      <div className="sticky top-0 z-[101] bg-[var(--color-bg)]">
+        <div
+          className={cn(
+            sceneRowClassName,
+            addOpen && "bg-[var(--color-hover)]",
+          )}
+        >
+          <span
+            className="relative flex size-3.5 shrink-0 items-center justify-center"
+            aria-hidden
+          >
+            <Search size={14} className="text-white" />
+          </span>
+          <input
+            ref={searchRef}
+            type="search"
+            value={searchQuery}
+            placeholder="Search Scene…"
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className={cn(
+              "min-w-0 flex-1 border-0 bg-transparent p-0 outline-none font-[inherit] leading-[inherit] text-inherit",
+              "placeholder:text-[var(--color-muted)]",
+              "[&::-webkit-search-cancel-button]:hidden",
+            )}
+          />
+          <div
+            className={cn(
+              "ml-auto flex shrink-0 flex-row items-center",
+              "opacity-0 pointer-events-none",
+              "group-hover:opacity-100 group-hover:pointer-events-auto",
+              "group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
+              addOpen && "opacity-100 pointer-events-auto",
+            )}
+          >
             {searchQuery ? (
               <IconButton
                 aria-label="Clear search"
-                className="size-3.5 p-0"
                 onClick={() => {
                   setSearchQuery("");
                   searchRef.current?.focus();
                 }}
               >
-                <X size={14} aria-hidden />
+                <X size={14} className="text-white" aria-hidden />
               </IconButton>
             ) : null}
-          </div>
-          <AddToSceneDropdown
-            path={[]}
-            open={addOpen}
-            onOpenChange={setAddOpen}
-            className="w-full"
-          >
-            <button
-              type="button"
-              aria-label="Add to Scene"
-              aria-haspopup="listbox"
-              aria-expanded={addOpen}
-              onClick={() => setAddOpen((open) => !open)}
-              className={cn(
-                sceneRowClassName,
-                "w-full cursor-pointer border-0 bg-transparent",
-                addOpen && "bg-[var(--color-hover)]",
-              )}
+            <AddToSceneDropdown
+              path={[]}
+              open={addOpen}
+              onOpenChange={setAddOpen}
             >
-              <span
-                className="relative flex size-3.5 shrink-0 items-center justify-center"
-                aria-hidden
+              <IconButton
+                aria-label="Add to Scene"
+                aria-expanded={addOpen}
+                className={cn(
+                  addOpen &&
+                    "bg-[var(--color-hover)] hover:bg-[var(--color-hover)]",
+                )}
+                onClick={() => setAddOpen((open) => !open)}
               >
-                <Plus size={14} className="text-white" />
-              </span>
-              <span>Add to Scene</span>
-            </button>
-          </AddToSceneDropdown>
+                <Plus size={14} className="text-white" aria-hidden />
+              </IconButton>
+            </AddToSceneDropdown>
+          </div>
         </div>
       </div>
       {Object.keys(root ?? {}).map((key) => (

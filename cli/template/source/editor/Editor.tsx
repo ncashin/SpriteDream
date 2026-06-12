@@ -4,8 +4,13 @@ import {
   EditorRoot,
   GameIDEMode,
   GameView,
+  deleteValueAtPath,
+  deselectObject,
+  getMode,
+  getScene,
   useGameIDEMode,
   useSceneFile,
+  useSelectedObject,
 } from "gameide";
 import { OverlayButton } from "./components/OverlayButton";
 import { RunButton } from "./components/RunButton";
@@ -22,10 +27,29 @@ export function Editor({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { save, dirty, saving, undo, redo } = useSceneFile();
   const mode = useGameIDEMode();
+  const { selectedPath } = useSelectedObject();
   const canSave = mode === GameIDEMode.Editor && dirty && !saving;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      const isEditableTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target instanceof HTMLElement && target.isContentEditable);
+
+      if (
+        !isEditableTarget &&
+        getMode() === GameIDEMode.Editor &&
+        (event.key === "Delete" || event.key === "Backspace") &&
+        selectedPath
+      ) {
+        event.preventDefault();
+        deleteValueAtPath(getScene().get(), selectedPath);
+        deselectObject();
+        return;
+      }
+
       if (!event.ctrlKey && !event.metaKey) return;
       if (event.altKey) return;
 
@@ -53,7 +77,7 @@ export function Editor({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [redo, save, undo]);
+  }, [redo, save, undo, selectedPath]);
 
   return (
     <EditorRoot>
