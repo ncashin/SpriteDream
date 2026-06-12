@@ -14,11 +14,13 @@ import { collisionBodyTrait } from "./plugins/planckPlugin/index";
 import { spriteTrait } from "./plugins/pixiPlugin/index";
 import { transformTrait } from "./plugins/transform.js";
 
+const BALL_GRAVITY_Y = -1500;
+
 const playerTrait = defineTrait(
   z.object({
     moveSpeed: z.number().default(260),
     jumpSpeed: z.number().default(650),
-    playerGravityY: z.number().default(-1500),
+    gravity: z.number().default(-1500),
     grounded: z.boolean().default(false),
   }),
 );
@@ -44,8 +46,6 @@ export default function main(gameContext: RuntimeGameContext): void {
   });
 
   onGameUpdate((deltaTime) => {
-    const sharedGravity = playerTrait.playerGravityY * deltaTime;
-
     const player = scene.getObject(
       networking.peerId,
       implementsTrait([
@@ -56,14 +56,14 @@ export default function main(gameContext: RuntimeGameContext): void {
       ]),
     );
 
+
     if (player) {
-      const gravityStep = player.playerGravityY * deltaTime;
       if (input.buttons.Jump.pressed && player.grounded) {
         player.collisionBody.velocity.y = player.jumpSpeed;
       }
       player.collisionBody.velocity.x =
         input.axes.Horizontal * player.moveSpeed;
-      player.collisionBody.velocity.y += gravityStep;
+      player.collisionBody.velocity.y += (player?.gravity ?? 0) * deltaTime;
     }
 
     const ball = scene.getObject(
@@ -77,7 +77,7 @@ export default function main(gameContext: RuntimeGameContext): void {
     );
 
     if (ball && networking.isOwned(ball)) {
-      ball.collisionBody.velocity.y += sharedGravity;
+      ball.collisionBody.velocity.y += BALL_GRAVITY_Y * deltaTime;
     }
   });
 }
