@@ -154,7 +154,7 @@ function AddToSceneDropdown({
           return;
         }
         if (value === "__new_property__") {
-          addChild("");
+          addChild("value");
           onAdded?.();
           return;
         }
