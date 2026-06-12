@@ -34,8 +34,11 @@
     "dist",
     "styles.css"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "npm run build -w gameide-cli && vite build && vite build --config vite.plugin.config.ts && cp src/vitePlugin/client.d.ts dist/viteClient.d.ts && cp ../cli/dist/cli.js ../cli/dist/index.js dist/",
+    "build": "npm run build -w gameide-cli && vite build && vite build --config vite.plugin.config.ts && cp src/vitePlugin/client.d.ts dist/viteClient.d.ts && cp ../cli/dist/cli.js ../cli/dist/index.js dist/ && chmod +x dist/cli.js",
     "prepare": "npm run build"
   },
   "peerDependencies": {

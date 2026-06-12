@@ -189,6 +189,8 @@ function createCatalogModuleCode(values: readonly string[]): string {
   return `export default ${JSON.stringify(values)};\n`;
 }
 
+const VIRTUAL_MODULE_PREFIX = /^gameide:/;
+
 export function gameidePlugin(): Plugin {
   let isServe = false;
   let projectRoot = process.cwd();
@@ -197,6 +199,26 @@ export function gameidePlugin(): Plugin {
   return {
     name: "gameide-plugin",
     enforce: "post",
+    config() {
+      return {
+        optimizeDeps: {
+          exclude: ["gameide"],
+          esbuildOptions: {
+            plugins: [
+              {
+                name: "gameide-virtual-modules",
+                setup(build) {
+                  build.onResolve({ filter: VIRTUAL_MODULE_PREFIX }, (args) => ({
+                    path: args.path,
+                    external: true,
+                  }));
+                },
+              },
+            ],
+          },
+        },
+      };
+    },
     configResolved(config) {
       isServe = config.command === "serve";
       projectRoot = config.root;

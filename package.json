@@ -14,6 +14,8 @@
   ],
   "scripts": {
     "dev": "sh -c 'npm run build -w gameide && npm run dev --prefix webapp & npm run dev --prefix cli/template'",
-    "watch": "npm run watch -w extension"
+    "watch": "npm run watch -w extension",
+    "publish": "npm run build -w gameide && npm whoami && npm publish -w gameide --access public",
+    "publish:ci": "npm run build -w gameide && npm publish -w gameide --access public --provenance"
   }
 }
