@@ -1,11 +1,11 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6b7a4163-6bb8-401c-9b1a-cf17c81c99c5",
+  "id": "40305343-1a02-4064-ae84-e2ba1eedcd5e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
-    "game": {
-      "name": "game",
+    "games": {
+      "name": "games",
       "columns": {
         "id": {
           "name": "id",
@@ -19,6 +19,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         }
       },

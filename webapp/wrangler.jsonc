@@ -18,7 +18,7 @@
 			"binding": "DB",
 			"database_name": "gameide-db",
 			"database_id": "530fcb1c-c715-4aba-9d73-94145de4bf8d",
-			"migrations_dir": "./migrations"
+			"migrations_dir": "./drizzle"
 		}
 	],
 	"r2_buckets": [
