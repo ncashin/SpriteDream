@@ -28,7 +28,7 @@ export type GameIDEManifest = {
 
 export type UploadGameOptions = {
   projectRoot?: string;
-  baseUrl?: string;
+  baseURL?: string;
   buildCommand?: string;
   distDirectory?: string;
   skipBuild?: boolean;
@@ -43,7 +43,7 @@ export type UploadGameOptions = {
 export type UploadGameResult = {
   gameId: string;
   uploadedFiles: number;
-  baseUrl: string;
+  baseURL: string;
 };
 
 type PackageJsonBasics = {
@@ -193,10 +193,10 @@ async function writeGameIDEManifest(
 }
 
 async function createGameOnServer(
-  baseUrl: string,
+  baseURL: string,
   fields: ManifestFields,
 ): Promise<string> {
-  const endpoint = new URL("/game/create", baseUrl);
+  const endpoint = new URL("/game/create", baseURL);
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -289,7 +289,7 @@ function buildManifestFields(
     pkg.name?.trim();
   if (!name) {
     throw new Error(
-      "No game name found. Add gameide.json, package.json name, or pass --name.",
+      "No game name found. Add a name to gameide.json or package.json.",
     );
   }
 
@@ -310,7 +310,7 @@ function buildManifestFields(
 
 export async function uploadGame(options: UploadGameOptions): Promise<UploadGameResult> {
   const projectRoot = path.resolve(options.projectRoot ?? process.cwd());
-  const baseUrl = options.baseUrl ?? PRODUCTION_UPLOAD_BASE_URL;
+  const baseURL = options.baseURL ?? PRODUCTION_UPLOAD_BASE_URL;
   const buildCommand = options.buildCommand ?? "npm run build";
   const progress = options.onProgress ?? (() => {});
   const manifest = await readGameIDEManifest(projectRoot);
@@ -322,7 +322,7 @@ export async function uploadGame(options: UploadGameOptions): Promise<UploadGame
     const pkg = await readPackageJsonBasics(projectRoot);
     const fields = buildManifestFields(manifest, pkg, options.manifestFields);
     progress("Creating game on GameIDE...");
-    targetGameId = await createGameOnServer(baseUrl, fields);
+    targetGameId = await createGameOnServer(baseURL, fields);
     progress("Saving GameIDE manifest...");
     await writeGameIDEManifest(projectRoot, targetGameId, fields, Boolean(manifest));
   }
@@ -343,7 +343,7 @@ export async function uploadGame(options: UploadGameOptions): Promise<UploadGame
     throw new Error("dist folder is empty, nothing to upload.");
   }
 
-  const endpoint = new URL(`/game/${encodeURIComponent(targetGameId)}/upload`, baseUrl);
+  const endpoint = new URL(`/game/${encodeURIComponent(targetGameId)}/upload`, baseURL);
   progress("Uploading bundle to GameIDE...");
   const response = await fetch(endpoint, {
     method: "POST",
@@ -359,6 +359,6 @@ export async function uploadGame(options: UploadGameOptions): Promise<UploadGame
   return {
     gameId: targetGameId,
     uploadedFiles: files.length,
-    baseUrl,
+    baseURL,
   };
 }

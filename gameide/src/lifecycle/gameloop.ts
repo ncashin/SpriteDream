@@ -252,6 +252,13 @@ export function __runHotModuleReplay(scopeId: string, replay: () => void): void 
   runWithHotScope(scopeId, true, replay);
 }
 
+export function __runModeStarts(mode: GameIDEMode): void {
+  const registrations = mode === GameIDEMode.Game ? gameStarts : editorStarts;
+  for (const registration of registrations) {
+    registration.callback();
+  }
+}
+
 export function start(callback: StartCallback): DisposeRegistration {
   callback();
   return () => {};

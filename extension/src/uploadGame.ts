@@ -123,13 +123,13 @@ async function uploadGame(
     async (progress) => {
       const result = await uploadGameWithCLI({
         projectRoot,
-        baseUrl: baseURL,
+        baseURL: baseURL,
         manifestFields,
         onProgress: (message) => progress.report({ message }),
       });
 
       vscode.window.showInformationMessage(
-        `Uploaded ${result.uploadedFiles} files to game ${result.gameId} (${result.baseUrl}).`,
+        `Uploaded ${result.uploadedFiles} files to game ${result.gameId} (${result.baseURL}).`,
       );
     },
   );

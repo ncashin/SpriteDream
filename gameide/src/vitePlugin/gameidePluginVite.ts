@@ -1,11 +1,15 @@
+import fs from "node:fs";
 import type { Plugin } from "vite";
 import { attachRoomWebSocket } from "../room/roomWebSocket.js";
+import { SCENE_HMR_EVENT } from "../scene/sceneHMREvent.js";
+import type { SceneObject } from "../scene/scene.js";
 import {
   catalogFileAffects,
   invalidateCatalogModules,
   listProjectScenes,
   loadCatalogModule,
   resolvedVirtualModuleId,
+  toPosixRelative,
   VIRTUAL_ASSETS_MODULE,
 } from "./virtualCatalog";
 import { attachFileEditorMiddleware } from "./fileEditor";
@@ -70,6 +74,20 @@ export function gameidePlugin(): Plugin {
         invalidateCatalogModules(server);
       }
       knownScenes = listProjectScenes(projectRoot);
+
+      if (file.endsWith(".scene")) {
+        try {
+          const data = JSON.parse(fs.readFileSync(file, "utf8")) as SceneObject;
+          server.ws.send({
+            type: "custom",
+            event: SCENE_HMR_EVENT,
+            data: {
+              path: toPosixRelative(projectRoot, file),
+              data,
+            },
+          });
+        } catch {}
+      }
     },
     load(id: string) {
       return loadCatalogModule(id, projectRoot) ?? loadSceneModule(id, projectRoot);

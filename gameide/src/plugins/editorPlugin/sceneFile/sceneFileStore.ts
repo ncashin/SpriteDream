@@ -255,10 +255,24 @@ function onSceneHMR(event: Event): void {
   syncDirtyState();
 }
 
+type SceneHMRDetail = { path: string; data: SceneObject };
+
 function subscribeSceneHMR(): () => void {
   if (typeof window === "undefined") return () => {};
   window.addEventListener(SCENE_HMR_EVENT, onSceneHMR);
-  return () => window.removeEventListener(SCENE_HMR_EVENT, onSceneHMR);
+
+  const hot = import.meta.hot;
+  const onHotSceneUpdate = (detail: SceneHMRDetail) => {
+    window.dispatchEvent(
+      new CustomEvent(SCENE_HMR_EVENT, { detail }),
+    );
+  };
+  hot?.on(SCENE_HMR_EVENT, onHotSceneUpdate);
+
+  return () => {
+    window.removeEventListener(SCENE_HMR_EVENT, onSceneHMR);
+    hot?.off(SCENE_HMR_EVENT, onHotSceneUpdate);
+  };
 }
 
 function syncDirtyState(): void {

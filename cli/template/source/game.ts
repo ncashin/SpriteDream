@@ -56,7 +56,6 @@ export default function main(gameContext: RuntimeGameContext): void {
       ]),
     );
 
-
     if (player) {
       if (input.buttons.Jump.pressed && player.grounded) {
         player.collisionBody.velocity.y = player.jumpSpeed;

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import path from "node:path";
+import readline from "node:readline/promises";
+import { stdin as input, stdout as output } from "node:process";
 import {
   PRODUCTION_UPLOAD_BASE_URL,
   createGameIDEProject,
@@ -43,20 +45,31 @@ function parseFlags(args: string[]): ParsedFlags {
   return { flags, positional };
 }
 
-function stringFlag(
-  flags: Record<string, string | boolean>,
-  key: string,
-): string | undefined {
-  const value = flags[key];
-  return typeof value === "string" ? value : undefined;
+async function promptProjectName(): Promise<string> {
+  if (!input.isTTY) {
+    throw new Error(
+      "gameide create requires an interactive terminal to prompt for a project name.",
+    );
+  }
+
+  const rl = readline.createInterface({ input, output });
+  try {
+    while (true) {
+      const answer = (await rl.question("Project name: ")).trim();
+      if (answer) return answer;
+      console.log("Project name is required.");
+    }
+  } finally {
+    rl.close();
+  }
 }
 
 function printHelp(): void {
   console.log(`gameide
 
 Usage:
-  gameide create [directory] [--name my-game]
-  gameide upload [project-directory] [--base-url URL] [--name my-game] [--description "..."] [--version 0.1.0]
+  gameide create [directory]   Default directory: ./{project-name}
+  gameide upload [directory]   Default directory: .
 
 Commands:
   create   Scaffold a new GameIDE game
@@ -73,11 +86,15 @@ async function main(): Promise<void> {
 
   const { flags, positional } = parseFlags(rest);
   if (command === "create" || command === "init") {
-    const directory = positional[0] ?? stringFlag(flags, "name") ?? "my-gameide-game";
+    if (Object.keys(flags).length > 0) {
+      throw new Error("gameide create does not accept flags.");
+    }
+
+    const name = await promptProjectName();
     const result = await createGameIDEProject({
       cwd: process.cwd(),
-      directory,
-      name: stringFlag(flags, "name") ?? path.basename(directory),
+      ...(positional[0] ? { directory: positional[0] } : {}),
+      name,
     });
     console.log(`Created ${result.name} in ${result.directory}`);
     console.log("");
@@ -89,21 +106,17 @@ async function main(): Promise<void> {
   }
 
   if (command === "upload" || command === "deploy") {
+    if (Object.keys(flags).length > 0) {
+      throw new Error("gameide upload does not accept flags.");
+    }
+
     const result = await uploadGame({
-      projectRoot: positional[0] ?? process.cwd(),
-      baseUrl: stringFlag(flags, "baseUrl") ?? PRODUCTION_UPLOAD_BASE_URL,
-      buildCommand: stringFlag(flags, "buildCommand"),
-      distDirectory: stringFlag(flags, "dist"),
-      skipBuild: Boolean(flags.skipBuild),
-      manifestFields: {
-        name: stringFlag(flags, "name"),
-        description: stringFlag(flags, "description"),
-        version: stringFlag(flags, "version"),
-      },
+      projectRoot: path.resolve(process.cwd(), positional[0] ?? "."),
+      baseURL: PRODUCTION_UPLOAD_BASE_URL,
       onProgress: (message) => console.log(message),
     });
     console.log(
-      `Uploaded ${result.uploadedFiles} files to game ${result.gameId} (${result.baseUrl}).`,
+      `Uploaded ${result.uploadedFiles} files to game ${result.gameId} (${result.baseURL}).`,
     );
     return;
   }
