@@ -70,11 +70,36 @@ function printHelp(): void {
 Usage:
   gameide create [directory]   Default directory: ./{project-name}
   gameide upload [directory]   Default directory: .
+      --url <base-url>         GameIDE server URL (default: https://gameide.app)
 
 Commands:
   create   Scaffold a new GameIDE game
   upload   Build and upload a GameIDE game
 `);
+}
+
+function parseUploadBaseURL(flags: Record<string, string | boolean>): string {
+  const unknownFlags = Object.keys(flags).filter((key) => key !== "url");
+  if (unknownFlags.length > 0) {
+    throw new Error(
+      `Unknown flag(s): ${unknownFlags.map((flag) => `--${flag}`).join(", ")}`,
+    );
+  }
+
+  const urlFlag = flags.url;
+  if (urlFlag === undefined) {
+    return PRODUCTION_UPLOAD_BASE_URL;
+  }
+  if (typeof urlFlag !== "string") {
+    throw new Error("--url requires a value.");
+  }
+
+  try {
+    new URL(urlFlag);
+    return urlFlag;
+  } catch {
+    throw new Error(`Invalid --url value: ${urlFlag}`);
+  }
 }
 
 async function main(): Promise<void> {
@@ -106,13 +131,11 @@ async function main(): Promise<void> {
   }
 
   if (command === "upload" || command === "deploy") {
-    if (Object.keys(flags).length > 0) {
-      throw new Error("gameide upload does not accept flags.");
-    }
+    const baseURL = parseUploadBaseURL(flags);
 
     const result = await uploadGame({
       projectRoot: path.resolve(process.cwd(), positional[0] ?? "."),
-      baseURL: PRODUCTION_UPLOAD_BASE_URL,
+      baseURL,
       onProgress: (message) => console.log(message),
     });
     console.log(

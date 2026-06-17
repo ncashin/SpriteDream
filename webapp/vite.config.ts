@@ -1,24 +1,14 @@
+import { cloudflare } from "@cloudflare/vite-plugin";
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
-import type { Plugin } from "vite";
 import { defineConfig } from "vite";
-import { attachRoomWebSocket } from "./app/.server/roomWebSocket";
-
-function roomWebSocketPlugin(): Plugin {
-  return {
-    name: "room-websocket",
-    configureServer(server) {
-      return () => {
-        if (server.httpServer) {
-          attachRoomWebSocket(server.httpServer);
-        }
-      };
-    },
-  };
-}
 
 export default defineConfig({
-  plugins: [tailwindcss(), reactRouter(), roomWebSocketPlugin()],
+  plugins: [
+    cloudflare({ viteEnvironment: { name: "ssr" } }),
+    tailwindcss(),
+    reactRouter(),
+  ],
   resolve: {
     tsconfigPaths: true,
   },

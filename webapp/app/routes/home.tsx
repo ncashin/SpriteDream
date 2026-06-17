@@ -6,8 +6,8 @@ export function meta({}: Route.MetaArgs) {
   return [{ title: "GameIDE" }, { name: "description", content: "GameIDE" }];
 }
 
-export async function loader() {
-  const games = await listGames();
+export async function loader({ context }: Route.LoaderArgs) {
+  const games = await listGames(context.cloudflare.env);
   return { games };
 }
 

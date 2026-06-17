@@ -8,12 +8,23 @@ type UploadBundleRequest = {
   }>;
 };
 
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 export async function action({
   params,
   request,
+  context,
 }: {
   params: { gameId?: string };
   request: Request;
+  context: { cloudflare: { env: Env } };
 }) {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -24,7 +35,7 @@ export async function action({
     return new Response("Game not found", { status: 404 });
   }
 
-  const game = await getGameById(gameId);
+  const game = await getGameById(context.cloudflare.env, gameId);
   if (!game) {
     return new Response("Game not found", { status: 404 });
   }
@@ -52,10 +63,10 @@ export async function action({
     }
   }
 
-  await uploadGameFrontendBundle(gameId, {
+  await uploadGameFrontendBundle(context.cloudflare.env, gameId, {
     files: files.map((file) => ({
       path: file.path as string,
-      content: Buffer.from(file.contentBase64 as string, "base64"),
+      content: base64ToUint8Array(file.contentBase64 as string),
     })),
   });
 

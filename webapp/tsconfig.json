@@ -3,11 +3,12 @@
     "**/*",
     "**/.server/**/*",
     "**/.client/**/*",
-    ".react-router/types/**/*"
+    ".react-router/types/**/*",
+    "worker-configuration.d.ts"
   ],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "types": ["node", "vite/client"],
+    "types": ["@cloudflare/workers-types", "vite/client"],
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "bundler",

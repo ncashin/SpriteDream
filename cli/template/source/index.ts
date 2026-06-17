@@ -17,6 +17,8 @@ import { planckPlugin } from "./gameide/plugins/planckPlugin/index";
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
+console.log("TEST")
+
 const game = await gameide({
   rootElement,
   initialContext: {},

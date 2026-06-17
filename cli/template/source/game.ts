@@ -26,6 +26,7 @@ const playerTrait = defineTrait(
 );
 
 export default function main(gameContext: RuntimeGameContext): void {
+  console.log("GOOD MORNING VIETNAM")
   const { input, networking, planck, scene } = gameContext;
 
   onGameStart(() => {

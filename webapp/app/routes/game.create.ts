@@ -6,7 +6,7 @@ type CreateGameBody = {
   description?: unknown;
 };
 
-export async function action({ request }: { request: Request }) {
+export async function action({ request, context }: { request: Request; context: { cloudflare: { env: Env } } }) {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -30,6 +30,6 @@ export async function action({ request }: { request: Request }) {
     typeof body.description === "string" ? body.description.trim() : "";
   const description = rawDescription.length > 0 ? rawDescription : null;
 
-  const id = await createGame({ title, description });
+  const id = await createGame(context.cloudflare.env, { title, description });
   return Response.json({ id });
 }

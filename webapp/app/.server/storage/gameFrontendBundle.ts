@@ -1,5 +1,3 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
 import invariant from "tiny-invariant";
 
 type FrontendBundleFile = {
@@ -11,54 +9,45 @@ export type FrontendBundleUpload = {
   files: FrontendBundleFile[];
 };
 
-export function getGameBundlesVolumePath() {
-  const volumePath = process.env.GAME_BUNDLE_VOLUME_PATH;
-  invariant(volumePath, "Missing required env var: GAME_BUNDLE_VOLUME_PATH");
-  return volumePath;
-}
-
-export function getGameBundleDirectory(gameId: string) {
-  return path.resolve(getGameBundlesVolumePath(), gameId);
+function getBundleKey(gameId: string, filePath: string) {
+  const normalized = filePath.replace(/^\/+/, "");
+  if (normalized.includes("..")) {
+    throw new Error(`Invalid bundle file path: ${filePath}`);
+  }
+  return `${gameId}/${normalized}`;
 }
 
 export async function uploadGameFrontendBundle(
+  env: Env,
   gameId: string,
   bundle: FrontendBundleUpload,
 ) {
-  const gameBundleDirectory = getGameBundleDirectory(gameId);
-  await mkdir(gameBundleDirectory, { recursive: true });
+  invariant(env.GAME_BUNDLES, "Missing R2 binding: GAME_BUNDLES");
 
   await Promise.all(
     bundle.files.map(async (file) => {
-      const outputPath = path.resolve(gameBundleDirectory, file.path);
-      if (!outputPath.startsWith(gameBundleDirectory)) {
-        throw new Error(`Invalid bundle file path: ${file.path}`);
-      }
-
-      await mkdir(path.dirname(outputPath), { recursive: true });
-      await writeFile(outputPath, file.content);
+      const key = getBundleKey(gameId, file.path);
+      await env.GAME_BUNDLES.put(key, file.content);
     }),
   );
 }
 
 export async function readGameFrontendBundleFile(
+  env: Env,
   gameId: string,
   requestPath: string,
 ) {
-  const gameBundleDirectory = getGameBundleDirectory(gameId);
+  invariant(env.GAME_BUNDLES, "Missing R2 binding: GAME_BUNDLES");
+
   const safeRelativePath = requestPath === "" ? "index.html" : requestPath;
-  const absolutePath = path.resolve(gameBundleDirectory, safeRelativePath);
-
-  if (!absolutePath.startsWith(gameBundleDirectory)) {
+  const key = getBundleKey(gameId, safeRelativePath);
+  const object = await env.GAME_BUNDLES.get(key);
+  if (!object) {
     return null;
   }
 
-  try {
-    const content = await readFile(absolutePath);
-    return { content, absolutePath };
-  } catch {
-    return null;
-  }
+  const content = new Uint8Array(await object.arrayBuffer());
+  return { content, path: safeRelativePath };
 }
 
 export function getDefaultFrontendBundle(

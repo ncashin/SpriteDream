@@ -18,11 +18,11 @@ export function createEditorUI(
   return new Promise((resolve) => {
     let settled = false;
     const root = createRoot(parentRoot);
-    const gameViewRef = (el: HTMLDivElement | null) => {
-      if (el && !settled) {
+    const gameViewRef = (element: HTMLDivElement | null) => {
+      if (element && !settled) {
         settled = true;
         resolve({
-          gameViewRoot: el,
+          gameViewRoot: element,
           dispose: () => {
             root.unmount();
           },

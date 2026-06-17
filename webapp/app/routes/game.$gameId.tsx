@@ -7,8 +7,8 @@ export function meta({ data }: Route.MetaArgs) {
   return [{ title: data.game.title }];
 }
 
-export async function loader({ params, request }: Route.LoaderArgs) {
-  const game = await getGameById(params.gameId);
+export async function loader({ params, request, context }: Route.LoaderArgs) {
+  const game = await getGameById(context.cloudflare.env, params.gameId);
   if (!game) {
     throw new Response("Game not found", { status: 404 });
   }
@@ -35,7 +35,7 @@ export default function Game() {
           width="800"
           height="450"
         />
-  
+
         <p>
           <a href="/">Back</a>
         </p>
