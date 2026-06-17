@@ -1,85 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
+import {
+  getVirtualCatalog,
+  loadVirtualCatalogs,
+  subscribeVirtualCatalogs,
+  type VirtualCatalogId,
+} from "gameide";
 
-type CatalogId = "assets" | "scenes";
+const CATALOG_IDS: readonly VirtualCatalogId[] = ["assets", "scenes"];
 
-const CATALOG_IDS: readonly CatalogId[] = ["assets", "scenes"];
-
-const catalogModules: Record<
-  CatalogId,
-  () => Promise<{ default: readonly string[] }>
-> = {
-  assets: () => import("gameide:assets"),
-  scenes: () => import("gameide:scenes"),
-};
-
-const catalogState: Partial<Record<CatalogId, string[]>> = {};
-const catalogListeners = new Set<() => void>();
-const catalogLoads = new Map<CatalogId, Promise<void>>();
-
-function notifyCatalogListeners() {
-  for (const listener of catalogListeners) listener();
-}
-
-function setCatalog(id: CatalogId, items: string[]) {
-  catalogState[id] = items;
-  notifyCatalogListeners();
-}
-
-function parseCatalogItems(mod: { default: unknown }): string[] {
-  return Array.isArray(mod.default)
-    ? mod.default.filter((entry): entry is string => typeof entry === "string")
-    : [];
-}
-
-let hmrRegistered = false;
-
-function registerCatalogHmr() {
-  if (!import.meta.hot || hmrRegistered) return;
-  hmrRegistered = true;
-
-  import.meta.hot.accept("gameide:assets", (next) => {
-    if (!next) return;
-    setCatalog("assets", parseCatalogItems(next));
-  });
-
-  import.meta.hot.accept("gameide:scenes", (next) => {
-    if (!next) return;
-    setCatalog("scenes", parseCatalogItems(next));
-  });
-}
-
-async function ensureCatalogLoaded(id: CatalogId): Promise<void> {
-  const existing = catalogLoads.get(id);
-  if (existing) return existing;
-
-  const load = (async () => {
-    try {
-      const mod = await catalogModules[id]();
-      setCatalog(id, parseCatalogItems(mod));
-    } catch {
-      setCatalog(id, []);
-    }
-    registerCatalogHmr();
-  })();
-
-  catalogLoads.set(id, load);
-  return load;
-}
-
-function useCatalog(id: CatalogId): string[] {
-  const [items, setItems] = useState(catalogState[id] ?? []);
-
-  useEffect(() => {
-    void ensureCatalogLoaded(id);
-    const onUpdate = () => setItems(catalogState[id] ?? []);
-    catalogListeners.add(onUpdate);
-    onUpdate();
-    return () => {
-      catalogListeners.delete(onUpdate);
-    };
-  }, [id]);
-
-  return items;
+function useCatalog(id: VirtualCatalogId): readonly string[] {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      void loadVirtualCatalogs();
+      return subscribeVirtualCatalogs(onStoreChange);
+    },
+    () => getVirtualCatalog(id),
+    () => getVirtualCatalog(id),
+  );
 }
 
 function mergeCatalogs(): string[] {
@@ -87,7 +24,7 @@ function mergeCatalogs(): string[] {
   const merged: string[] = [];
 
   for (const id of CATALOG_IDS) {
-    for (const item of catalogState[id] ?? []) {
+    for (const item of getVirtualCatalog(id)) {
       if (seen.has(item)) continue;
       seen.add(item);
       merged.push(item);

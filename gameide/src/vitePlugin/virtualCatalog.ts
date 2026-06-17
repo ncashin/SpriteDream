@@ -3,27 +3,19 @@ import path from "node:path";
 import type { ViteDevServer } from "vite";
 
 export const VIRTUAL_ASSETS_MODULE = "gameide:assets";
-export const VIRTUAL_SCENES_MODULE = "gameide:scenes";
 
 const SKIP_DIR_NAMES = new Set(["node_modules", "dist", ".git"]);
 
-const virtualModulePrefix = "\0";
-
-const virtualModuleInternalId: Record<string, string> = {
-  [VIRTUAL_ASSETS_MODULE]: "gameide-assets",
-  [VIRTUAL_SCENES_MODULE]: "gameide-scenes",
-};
-
 export function resolvedVirtualModuleId(publicId: string): string {
-  const internal = virtualModuleInternalId[publicId] ?? publicId;
-  return virtualModulePrefix + internal;
+  const internal = publicId === VIRTUAL_ASSETS_MODULE ? "gameide-assets" : publicId;
+  return "\0" + internal;
 }
 
 export function invalidateCatalogModules(server: ViteDevServer): void {
-  for (const virtualId of [VIRTUAL_ASSETS_MODULE, VIRTUAL_SCENES_MODULE]) {
-    const mod = server.moduleGraph.getModuleById(resolvedVirtualModuleId(virtualId));
-    if (mod) server.moduleGraph.invalidateModule(mod);
-  }
+  const mod = server.moduleGraph.getModuleById(
+    resolvedVirtualModuleId(VIRTUAL_ASSETS_MODULE),
+  );
+  if (mod) server.moduleGraph.invalidateModule(mod);
 }
 
 export function toPosixRelative(base: string, absolutePath: string): string {
@@ -56,15 +48,12 @@ function walkFiles(
   return results;
 }
 
-/** Project `public/assets` or top-level `assets` (template layout). */
 export function resolveAssetsDir(projectRoot: string): string | null {
   for (const relative of ["public/assets", "assets"]) {
     const dir = path.join(projectRoot, relative);
     try {
       if (fs.statSync(dir).isDirectory()) return dir;
-    } catch {
-      // try next candidate
-    }
+    } catch {}
   }
   return null;
 }
@@ -86,7 +75,21 @@ export function listProjectScenes(projectRoot: string): string[] {
     .sort((a, b) => a.localeCompare(b));
 }
 
-/** True when a filesystem change should refresh virtual asset/scene catalogs. */
+export function createCatalogModuleCode(projectRoot: string): string {
+  return `export default ${JSON.stringify({
+    assets: listProjectAssets(projectRoot),
+    scenes: listProjectScenes(projectRoot),
+  })};\n`;
+}
+
+export function loadCatalogModule(
+  id: string,
+  projectRoot: string,
+): string | undefined {
+  if (id !== resolvedVirtualModuleId(VIRTUAL_ASSETS_MODULE)) return;
+  return createCatalogModuleCode(projectRoot);
+}
+
 export function catalogFileAffects(
   projectRoot: string,
   file: string,
@@ -96,18 +99,15 @@ export function catalogFileAffects(
   if (normalized.endsWith(".scene")) {
     try {
       fs.statSync(normalized);
+      return !knownScenes.includes(toPosixRelative(projectRoot, normalized));
     } catch {
       return true;
     }
-    const relative = toPosixRelative(projectRoot, normalized);
-    return !knownScenes.includes(relative);
   }
 
   const assetsDir = resolveAssetsDir(projectRoot);
   if (!assetsDir) return false;
 
   const assetsPath = path.normalize(assetsDir);
-  return (
-    normalized === assetsPath || normalized.startsWith(assetsPath + path.sep)
-  );
+  return normalized === assetsPath || normalized.startsWith(assetsPath + path.sep);
 }

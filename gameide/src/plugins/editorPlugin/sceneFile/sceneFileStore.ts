@@ -9,11 +9,25 @@ import {
   restoreSelectedObjectKey,
 } from "../../../scene/objectSelection.js";
 import { pickUntitledSceneSavePath } from "./pickSceneSavePath.js";
+import {
+  getVirtualCatalogs,
+  loadVirtualCatalogs,
+  subscribeVirtualCatalogs,
+} from "../../../virtualCatalogStore.js";
+import { SCENE_HMR_EVENT } from "../../../scene/sceneHMREvent.js";
 
 const STORAGE_KEY = "gameide-scene-file";
 const SCENE_FILE_API = "/gameide/scene";
-const SCENE_HMR_EVENT = "gameide:scene-hmr";
 const SCENE_HISTORY_DEBOUNCE_MS = 400;
+let catalogListenerRegistered = false;
+
+function ensureCatalogListener(): void {
+  if (catalogListenerRegistered) return;
+  catalogListenerRegistered = true;
+  subscribeVirtualCatalogs(() => {
+    useSceneFileStore.getState().setScenes([...getVirtualCatalogs().scenes]);
+  });
+}
 
 function sceneSnapshot(data: SceneObject): string {
   return JSON.stringify(data);
@@ -75,23 +89,9 @@ export const useSceneFileStore = create<SceneFileStore>()(
       },
 
       loadScenes: async () => {
-        const mod = await import("gameide:scenes");
-        const scenes = Array.isArray(mod.default)
-          ? mod.default.filter((entry): entry is string => typeof entry === "string")
-          : [];
-        get().setScenes(scenes);
-
-        if (import.meta.hot) {
-          import.meta.hot.accept("gameide:scenes", (next) => {
-            if (!next) return;
-            const updated = Array.isArray(next.default)
-              ? (next.default as unknown[]).filter(
-                  (entry): entry is string => typeof entry === "string",
-                )
-              : [];
-            get().setScenes(updated);
-          });
-        }
+        await loadVirtualCatalogs();
+        ensureCatalogListener();
+        get().setScenes([...getVirtualCatalogs().scenes]);
       },
 
       requestSave: () => {

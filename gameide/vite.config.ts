@@ -26,7 +26,7 @@ export default defineConfig({
         "lucide-react",
         "tailwind-merge",
         "tiny-invariant",
-        "gameide:scenes",
+        "gameide:assets",
         "node:fs",
         "node:path",
         "fs",

@@ -30,7 +30,6 @@ const alwaysUpdates: UpdateRegistration[] = [];
 const scheduledDisposes: (() => void)[] = [];
 const disposedHotScopes = new Set<string>();
 
-/** Persists across HMR dispose/re-eval so replay uses the same args as the last entry call. */
 type HotModuleReplayArgsState = {
   kind: "unset" | "called";
   args: unknown[];
@@ -101,7 +100,6 @@ export function __hotModuleDefaultExport<T>(
 let frameId: number | undefined;
 const activeHotScopes: HotModuleScope[] = [];
 
-/** Saved hot scopes while plugins run so they do not inherit the entry module's scopeId. */
 export function __suspendHotScopes(): HotModuleScope[] {
   return activeHotScopes.splice(0);
 }
@@ -115,15 +113,11 @@ export function dispose(fn: () => void): void {
   scheduledDisposes.push(fn);
 }
 
-function runScheduledDisposes(): void {
+export function flushScheduledDisposes(): void {
   while (scheduledDisposes.length > 0) {
     const callback = scheduledDisposes.pop();
     callback?.();
   }
-}
-
-export function flushScheduledDisposes(): void {
-  runScheduledDisposes();
 }
 
 function runUpdates(
@@ -150,11 +144,20 @@ function removeRegistration<T>(registrations: T[], registration: T): void {
   if (index !== -1) registrations.splice(index, 1);
 }
 
-function removeUpdateRegistration(
-  registrations: UpdateRegistration[],
-  registration: UpdateRegistration,
-): void {
-  removeRegistration(registrations, registration);
+function removeFromEndWhere<T>(
+  registrations: T[],
+  predicate: (registration: T) => boolean,
+  onRemove?: (registration: T) => void,
+): number {
+  let removed = 0;
+  for (let index = registrations.length - 1; index >= 0; index -= 1) {
+    const registration = registrations[index];
+    if (!registration || !predicate(registration)) continue;
+    onRemove?.(registration);
+    registrations.splice(index, 1);
+    removed += 1;
+  }
+  return removed;
 }
 
 function registerUpdate(
@@ -166,7 +169,7 @@ function registerUpdate(
     scopeId: currentScopeId(),
   };
   registrations.push(registration);
-  return () => removeUpdateRegistration(registrations, registration);
+  return () => removeRegistration(registrations, registration);
 }
 
 function registerModeStart(
@@ -200,32 +203,18 @@ function registerModeStart(
 }
 
 function removeScopedRegistrations(scopeId: string): number {
+  const matchesScope = (registration: { scopeId?: string }) =>
+    registration.scopeId === scopeId;
+
   let removed = 0;
-
-  const removeScopedUpdates = (registrations: UpdateRegistration[]) => {
-    for (let index = registrations.length - 1; index >= 0; index -= 1) {
-      if (registrations[index]?.scopeId !== scopeId) continue;
-      registrations.splice(index, 1);
-      removed += 1;
-    }
-  };
-
-  const removeScopedStarts = (registrations: StartRegistration[]) => {
-    for (let index = registrations.length - 1; index >= 0; index -= 1) {
-      const registration = registrations[index];
-      if (!registration || registration.scopeId !== scopeId) continue;
+  for (const registrations of [alwaysUpdates, gameUpdates, editorUpdates]) {
+    removed += removeFromEndWhere(registrations, matchesScope);
+  }
+  for (const registrations of [gameStarts, editorStarts]) {
+    removed += removeFromEndWhere(registrations, matchesScope, (registration) => {
       registration.releaseModeWatcher();
-      registrations.splice(index, 1);
-      removed += 1;
-    }
-  };
-
-  removeScopedUpdates(alwaysUpdates);
-  removeScopedUpdates(gameUpdates);
-  removeScopedUpdates(editorUpdates);
-  removeScopedStarts(gameStarts);
-  removeScopedStarts(editorStarts);
-
+    });
+  }
   return removed;
 }
 
@@ -259,7 +248,6 @@ export function __disposeHotModule(scopeId: string): void {
   }
 }
 
-/** Ensures replay runs while this hot scope is active so hooks get correct `scopeId`. */
 export function __runHotModuleReplay(scopeId: string, replay: () => void): void {
   runWithHotScope(scopeId, true, replay);
 }

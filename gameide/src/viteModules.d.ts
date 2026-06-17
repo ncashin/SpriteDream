@@ -1,4 +1,7 @@
-declare module "gameide:scenes" {
-  const scenes: readonly string[];
-  export default scenes;
+declare module "gameide:assets" {
+  const catalog: {
+    readonly assets: readonly string[];
+    readonly scenes: readonly string[];
+  };
+  export default catalog;
 }

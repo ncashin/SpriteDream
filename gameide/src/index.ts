@@ -95,6 +95,14 @@ export { useTraits } from "./hooks/useTraits.js";
 export { useGameIDEMode } from "./hooks/useGameIDEMode.js";
 export { useEditorDebugUI } from "./hooks/useEditorDebugUI.js";
 export {
+  getVirtualCatalog,
+  getVirtualCatalogs,
+  loadVirtualCatalogs,
+  subscribeVirtualCatalogs,
+  type VirtualCatalogId,
+  type VirtualCatalogs,
+} from "./virtualCatalogStore.js";
+export {
   getEditorDebugUIEnabled,
   setEditorDebugUIEnabled,
   toggleEditorDebugUI,
