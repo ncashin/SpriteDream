@@ -1,4 +1,14 @@
-import { __beginHotModule, __endHotModule, __disposeHotModule, __runHotModuleReplay, __runModeStarts, __hotModuleDefaultExport, __hotModuleLastArgsForScope, getGameContext, getMode } from "gameide";
+import {
+  __beginHotModule,
+  __endHotModule,
+  __disposeHotModule,
+  __runHotModuleReplay,
+  __runModeStarts,
+  __hotModuleDefaultExport,
+  __hotModuleLastArgsForScope,
+  getGameContext as __gameideGetGameContext,
+  getMode as __gameideGetMode,
+} from "gameide";
 const __gameideHotScope = __beginHotModule(import.meta.url);
 const __gameideHotLastArgs = __hotModuleLastArgsForScope(__gameideHotScope);
 __GAMEIDE_HOT_MODULE_BODY__
@@ -10,9 +20,9 @@ if (import.meta.hot) {
     const args =
       __gameideHotLastArgs.kind === "called"
         ? __gameideHotLastArgs.args
-        : [getGameContext()];
+        : [__gameideGetGameContext()];
     __runHotModuleReplay(__gameideHotScope, () => replay.apply(undefined, args));
-    __runModeStarts(getMode());
+    __runModeStarts(__gameideGetMode());
   });
   import.meta.hot.dispose(() => __disposeHotModule(__gameideHotScope));
 }
