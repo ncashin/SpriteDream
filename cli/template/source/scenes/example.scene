@@ -2,8 +2,8 @@
   "ground": {
     "position": {
       "__icon": "move-3d",
-      "x": 120,
-      "y": -474.9048777832396,
+      "x": -56,
+      "y": -357.9048777832396,
       "z": 0
     },
     "rotation": {
@@ -14,7 +14,7 @@
     },
     "scale": {
       "__icon": "scaling",
-      "x": 28,
+      "x": 30,
       "y": 1,
       "z": 1
     },
@@ -47,8 +47,7 @@
       "asset": "vite.svg",
       "width": 32,
       "height": 32,
-      "resolution": 32,
-      "tint": "#ff0000"
+      "tint": "#ffffff"
     }
   },
   "platform_0": {

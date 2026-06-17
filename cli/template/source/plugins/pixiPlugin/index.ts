@@ -6,7 +6,7 @@ export {
   type Viewport,
 } from "./pixiPlugin.js";
 export { spriteTrait, type SpriteRenderable } from "./sprite.js";
-export { colliderDebug, type ColliderDebugOptions } from "./colliderDebug.js";
+export { colliderDebug, type ColliderDebugController, type ColliderDebugOptions } from "./colliderDebug.js";
 export {
   pickSceneObjectAtWorldPoint,
   type SpriteBindingForPick,

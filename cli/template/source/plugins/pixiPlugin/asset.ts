@@ -1,4 +1,5 @@
 import { Assets, type Texture } from "pixi.js";
+import { getDevicePixelRatio } from "./displayMetrics.js";
 
 /** Matches runtime vite: project files served from the built `assets/` directory. */
 export const DEFAULT_ASSET_BASE_URL = "assets";
@@ -61,9 +62,20 @@ function positiveFiniteNumberOr(value: unknown, fallback: number): number {
     : fallback;
 }
 
+export function isSVGAsset(asset: string): boolean {
+  const trimmed = asset.trim().toLowerCase();
+  return (
+    trimmed.endsWith(".svg") ||
+    trimmed.startsWith("data:image/svg+xml")
+  );
+}
+
 export async function loadGraphicTexture(
   asset: string | undefined,
-  options?: { assetBaseURL?: string; resolution?: number },
+  options?: {
+    assetBaseURL?: string;
+    displaySize?: { width?: number; height?: number };
+  },
 ): Promise<Texture | undefined> {
   const trimmedAsset = asset?.trim() ?? "";
   if (!trimmedAsset) return undefined;
@@ -71,19 +83,20 @@ export async function loadGraphicTexture(
   const resolved = resolveAssetURL(trimmedAsset, options?.assetBaseURL);
   if (!resolved) return undefined;
 
-  const resolution = positiveFiniteNumberOr(options?.resolution, 1);
-
   try {
-    if (resolution === 1) {
-      return await Assets.load<Texture>(resolved);
+    if (isSVGAsset(trimmedAsset)) {
+      const width = positiveFiniteNumberOr(options?.displaySize?.width, 1);
+      const height = positiveFiniteNumberOr(options?.displaySize?.height, 1);
+      const resolution = getDevicePixelRatio();
+      const cacheKey = `${resolved}#w=${width}&h=${height}&dpr=${resolution}`;
+      return await Assets.load<Texture>({
+        alias: cacheKey,
+        src: resolved,
+        data: { width, height, resolution },
+      });
     }
 
-    const cacheKey = `${resolved}#resolution=${resolution}`;
-    return await Assets.load<Texture>({
-      alias: cacheKey,
-      src: resolved,
-      data: { resolution },
-    });
+    return await Assets.load<Texture>(resolved);
   } catch {
     return undefined;
   }

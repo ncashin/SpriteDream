@@ -46,6 +46,7 @@ export function createViewport(
   setScreenSize(width: number, height: number): void;
   onChange(callback: ViewportListener): () => void;
   screenToWorld(clientX: number, clientY: number): { x: number; y: number };
+  worldToScreen(worldX: number, worldY: number): { screenX: number; screenY: number };
 } {
   const state: ViewportState = {
     centerX: options.centerX ?? 0,
@@ -115,6 +116,13 @@ export function createViewport(
         y: (worldOriginScreenY - screenY) / scale,
       };
     },
+    worldToScreen(worldX: number, worldY: number): { screenX: number; screenY: number } {
+      const { width, height, centerX, centerY, scale } = state;
+      return {
+        screenX: width / 2 + (worldX - centerX) * scale,
+        screenY: height / 2 - (worldY - centerY) * scale,
+      };
+    },
   };
 }
 
@@ -150,6 +158,7 @@ export type PixiViewportOptions = {
 
 export function pixiViewport(options: PixiViewportOptions): {
   viewport: ViewportController;
+  syncViewportScreenSize: () => void;
   unsubscribe: () => void;
 } {
   const {
@@ -172,12 +181,16 @@ export function pixiViewport(options: PixiViewportOptions): {
     applyViewportToWorldContainer(world, next);
   });
 
-  const resizeObserver = new ResizeObserver(() => {
+  const syncViewportScreenSize = (): void => {
     const { width, height } = rootElement.getBoundingClientRect();
     if (width > 0 && height > 0) {
       app.resize();
-      viewport.setScreenSize(width, height);
+      viewport.setScreenSize(app.screen.width, app.screen.height);
     }
+  };
+
+  const resizeObserver = new ResizeObserver(() => {
+    syncViewportScreenSize();
   });
   resizeObserver.observe(rootElement);
 
@@ -224,6 +237,7 @@ export function pixiViewport(options: PixiViewportOptions): {
 
   return {
     viewport,
+    syncViewportScreenSize,
     unsubscribe: () => {
       disposed = true;
       releaseModeViewportReset();

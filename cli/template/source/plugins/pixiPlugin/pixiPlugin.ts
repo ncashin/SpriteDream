@@ -4,7 +4,13 @@ import {
   type ApplicationOptions,
 } from "pixi.js";
 import type { PlanckPluginAPI } from "../planckPlugin/planckPlugin.js";
-import { deselectObject, selectObject, type Plugin } from "gameide";
+import {
+  deselectObject,
+  getEditorDebugUIEnabled,
+  onEditorDebugUIChange,
+  selectObject,
+  type Plugin,
+} from "gameide";
 import { pickSceneObjectAtWorldPoint } from "./editorPick.js";
 import { pixiSprites } from "./sprite.js";
 import {
@@ -14,11 +20,18 @@ import {
 import { colliderDebug } from "./colliderDebug.js";
 import { selectionOverlay } from "./selectionOverlay.js";
 import { transformGizmoOverlay } from "./transformGizmoOverlay.js";
+import {
+  getDevicePixelRatio,
+  subscribeDevicePixelRatioChange,
+} from "./displayMetrics.js";
 
 export type PixiPluginOptions = {
   initOptions?: Omit<Partial<ApplicationOptions>, "resizeTo">;
   enableEditorObjectPick?: boolean;
-  /** When true (default), draws collider outlines in scene pixel units. */
+  /**
+   * When false, collider debug overlays are never created. When true (default),
+   * visibility follows the editor Debug menu toggle.
+   */
   enableColliderDebug?: boolean;
 };
 
@@ -63,6 +76,7 @@ export function pixiPlugin(
     await app.init({
       resizeTo: rootElement,
       autoDensity: true,
+      resolution: getDevicePixelRatio(),
       antialias: true,
       preference: "webgl",
       ...options.initOptions,
@@ -77,12 +91,21 @@ export function pixiPlugin(
     const input = context.input;
     const planck = context.planck;
 
-    const { unsubscribe: unsubscribePixiSprites, spriteBindingsBySceneKey } =
-      pixiSprites(world);
+    const {
+      unsubscribe: unsubscribePixiSprites,
+      spriteBindingsBySceneKey,
+      reloadSvgTextures,
+    } = pixiSprites(world);
 
-    const colliderDebugEnabled = options.enableColliderDebug !== false;
-    const unsubscribeColliderDebug = colliderDebugEnabled
-      ? colliderDebug(world).unsubscribe
+    const colliderDebugAllowed = options.enableColliderDebug !== false;
+    const colliderDebugController = colliderDebugAllowed
+      ? colliderDebug(world)
+      : null;
+    colliderDebugController?.setEnabled(getEditorDebugUIEnabled());
+    const unsubscribeColliderDebugSettings = colliderDebugController
+      ? onEditorDebugUIChange(() => {
+          colliderDebugController.setEnabled(getEditorDebugUIEnabled());
+        })
       : null;
 
     const unsubscribeSelectionOverlay = selectionOverlay(
@@ -93,7 +116,11 @@ export function pixiPlugin(
     const pickEnabled = options.enableEditorObjectPick !== false;
     let shouldSuppressEditorViewport = () => false;
 
-    const { viewport, unsubscribe: unsubscribePixiViewport } = pixiViewport({
+    const {
+      viewport,
+      syncViewportScreenSize,
+      unsubscribe: unsubscribePixiViewport,
+    } = pixiViewport({
       world,
       app,
       rootElement,
@@ -113,15 +140,24 @@ export function pixiPlugin(
           }
         : undefined,
     });
-    const transformGizmoOverlayController = transformGizmoOverlay(world, {
+    const transformGizmoOverlayController = transformGizmoOverlay(app.stage, {
       input,
       viewport,
+      rootElement,
     });
     shouldSuppressEditorViewport =
       transformGizmoOverlayController.shouldSuppressViewportGesture;
 
+    const unsubscribeDevicePixelRatio = subscribeDevicePixelRatioChange(() => {
+      app.renderer.resolution = getDevicePixelRatio();
+      syncViewportScreenSize();
+      reloadSvgTextures();
+    });
+
     context.dispose(() => {
-      unsubscribeColliderDebug?.();
+      unsubscribeDevicePixelRatio();
+      unsubscribeColliderDebugSettings?.();
+      colliderDebugController?.unsubscribe();
       transformGizmoOverlayController.unsubscribe();
       unsubscribeSelectionOverlay();
       unsubscribePixiViewport();

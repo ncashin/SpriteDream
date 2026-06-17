@@ -93,6 +93,13 @@ export {
 export { useSelectedObject } from "./hooks/useSelectedObject.js";
 export { useTraits } from "./hooks/useTraits.js";
 export { useGameIDEMode } from "./hooks/useGameIDEMode.js";
+export { useEditorDebugUI } from "./hooks/useEditorDebugUI.js";
+export {
+  getEditorDebugUIEnabled,
+  setEditorDebugUIEnabled,
+  toggleEditorDebugUI,
+  onEditorDebugUIChange,
+} from "./plugins/editorPlugin/editorDebugUI.js";
 export { GameIDEMode, getMode, setMode, onModeChange } from "./lifecycle/mode.js";
 export { inputPlugin } from "./plugins/inputPlugin/inputPlugin.js";
 export type {

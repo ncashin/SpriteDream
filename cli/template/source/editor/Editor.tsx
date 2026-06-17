@@ -1,4 +1,4 @@
-import { Cuboid, MoveLeft, Save } from "lucide-react";
+import { Cuboid, Eye, EyeOff, MoveLeft, Save } from "lucide-react";
 import { useEffect, useState, type Ref } from "react";
 import {
   EditorRoot,
@@ -8,6 +8,7 @@ import {
   deselectObject,
   getMode,
   getScene,
+  useEditorDebugUI,
   useGameIDEMode,
   useSceneFile,
   useSelectedObject,
@@ -29,6 +30,7 @@ export function Editor({
   const mode = useGameIDEMode();
   const { selectedPath } = useSelectedObject();
   const canSave = mode === GameIDEMode.Editor && dirty && !saving;
+  const { enabled: debugUIEnabled, toggle: toggleDebugUI } = useEditorDebugUI();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -116,6 +118,25 @@ export function Editor({
             <div className="flex w-14 shrink-0 items-center">
               <TransformGizmoBar />
             </div>
+            <OverlayButton
+              className="w-24 justify-center"
+              title={debugUIEnabled ? "Hide debug overlays" : "Show debug overlays"}
+              aria-pressed={debugUIEnabled}
+              aria-label="Debug UI"
+              onClick={() => toggleDebugUI()}
+            >
+              {debugUIEnabled ? (
+                <>
+                  <Eye size={12} aria-hidden />
+                  Debug UI
+                </>
+              ) : (
+                <>
+                  <EyeOff size={12} aria-hidden />
+                  Debug UI
+                </>
+              )}
+            </OverlayButton>
             <div className="flex w-14 shrink-0 items-center">
               <OverlayButton
                 className="w-full justify-center"

@@ -91,13 +91,19 @@ export type ColliderDebugOptions = {
  * (same numbers as `boxCollider` / `circleCollider` traits). No pixels-per-meter
  * conversion — this is for visual debugging aligned with sprite space.
  */
+export type ColliderDebugController = {
+  unsubscribe: () => void;
+  setEnabled: (enabled: boolean) => void;
+};
+
 export function colliderDebug(
   stage: Container,
   options: ColliderDebugOptions = {},
-): { unsubscribe: () => void } {
+): ColliderDebugController {
   const zIndex = options.zIndex ?? 10_000;
   const scene = getScene();
   const bindingsBySceneKey = new Map<PropertyKey, ColliderDebugBinding>();
+  let enabled = true;
 
   function removeBindingIfPresent(sceneRootKey: PropertyKey): void {
     const existing = bindingsBySceneKey.get(sceneRootKey);
@@ -107,6 +113,8 @@ export function colliderDebug(
   }
 
   function reconcileSceneRootKey(sceneRootKey: PropertyKey): void {
+    if (!enabled) return;
+
     const rawNode = Reflect.get(scene.getRaw(), sceneRootKey);
     if (rawNode === undefined || !isColliderNode(rawNode)) {
       removeBindingIfPresent(sceneRootKey);
@@ -146,5 +154,19 @@ export function colliderDebug(
     reconcileSceneRootKey(anchoredRootKey);
   });
 
-  return { unsubscribe };
+  function setEnabled(next: boolean): void {
+    if (enabled === next) return;
+    enabled = next;
+    if (enabled) {
+      for (const key of Reflect.ownKeys(scene.getRaw())) {
+        reconcileSceneRootKey(key);
+      }
+      return;
+    }
+    for (const key of [...bindingsBySceneKey.keys()]) {
+      removeBindingIfPresent(key);
+    }
+  }
+
+  return { unsubscribe, setEnabled };
 }

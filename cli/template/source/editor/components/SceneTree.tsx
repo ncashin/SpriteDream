@@ -1,9 +1,23 @@
-import { ChevronRight, Plus, Search, Trash2, X } from "lucide-react";
 import {
+  Check,
+  ChevronRight,
+  Cog,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { useScene, useSelectedObject, useTraits } from "gameide";
 import { PropertyInput } from "./PropertyInput.js";
 import { Dropdown } from "./Dropdown.js";
@@ -82,15 +96,32 @@ function KeyInput({
   );
 }
 
+const stopMousePropagation = (event: ReactMouseEvent) => {
+  event.stopPropagation();
+};
+
 function isPathPrefix(prefix: PropertyKey[], path: PropertyKey[]): boolean {
   if (path.length < prefix.length) return false;
   return prefix.every((segment, i) => segment === path[i]);
+}
+
+function isHiddenPropertyKey(key: PropertyKey): boolean {
+  return String(key).startsWith("__");
+}
+
+function filterVisibleKeys(
+  keys: string[],
+  showHiddenProperties: boolean,
+): string[] {
+  if (showHiddenProperties) return keys;
+  return keys.filter((key) => !isHiddenPropertyKey(key));
 }
 
 function subtreeMatches(
   path: PropertyKey[],
   value: unknown,
   query: string,
+  showHiddenProperties: boolean,
 ): boolean {
   const trimmed = query.trim();
   if (!trimmed) return true;
@@ -103,11 +134,13 @@ function subtreeMatches(
 
   if (value !== null && typeof value === "object" && !Array.isArray(value)) {
     for (const key of Object.keys(value as object)) {
+      if (!showHiddenProperties && isHiddenPropertyKey(key)) continue;
       if (
         subtreeMatches(
           [...path, key],
           (value as Record<string, unknown>)[key],
           trimmed,
+          showHiddenProperties,
         )
       ) {
         return true;
@@ -115,6 +148,134 @@ function subtreeMatches(
     }
   }
   return false;
+}
+
+function SceneSettingsMenu({
+  open,
+  onOpenChange,
+  showHiddenProperties,
+  onShowHiddenPropertiesChange,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  showHiddenProperties: boolean;
+  onShowHiddenPropertiesChange: (value: boolean) => void;
+  children: ReactNode;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
+
+  const updateMenuPosition = useCallback(() => {
+    const trigger = rootRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    setMenuStyle({
+      position: "fixed",
+      top: rect.bottom + 2,
+      right: window.innerWidth - rect.right,
+      minWidth: "12rem",
+      zIndex: 2147483647,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const close = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (
+        rootRef.current?.contains(target) ||
+        menuRef.current?.contains(target)
+      ) {
+        return;
+      }
+      onOpenChange(false);
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onOpenChange(false);
+    };
+
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open, onOpenChange]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [open, updateMenuPosition]);
+
+  const menu = open
+    ? createPortal(
+        <div
+          ref={menuRef}
+          style={menuStyle}
+          onMouseDown={stopMousePropagation}
+          onMouseUp={stopMousePropagation}
+          onClick={stopMousePropagation}
+          className={cn(
+            "overflow-hidden border border-[color-mix(in_srgb,var(--color-border)_80%,transparent)]",
+            "bg-[var(--color-bg)] p-1 shadow-[0_4px_16px_var(--color-shadow)]",
+          )}
+        >
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={showHiddenProperties}
+            onClick={() =>
+              onShowHiddenPropertiesChange(!showHiddenProperties)
+            }
+            className={cn(
+              "flex w-full min-w-0 items-center gap-2 py-1 pl-1.5 pr-1.5 text-left text-xs",
+              "font-[var(--vscode-font-family)] cursor-pointer border-0 text-[var(--color-text)]",
+              "bg-transparent hover:bg-[var(--color-hover)]",
+            )}
+          >
+            <span
+              className={cn(
+                "flex size-4 shrink-0 items-center justify-center border border-[var(--color-border)]",
+                showHiddenProperties
+                  ? "bg-[var(--color-highlight)] text-[var(--color-on-accent)]"
+                  : "bg-transparent",
+              )}
+            >
+              {showHiddenProperties ? (
+                <Check size={12} strokeWidth={3} aria-hidden />
+              ) : null}
+            </span>
+            <span className="min-w-0 truncate">Show hidden properties</span>
+          </button>
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <div
+      ref={rootRef}
+      onMouseDown={stopMousePropagation}
+      onMouseUp={stopMousePropagation}
+      onClick={stopMousePropagation}
+      className="relative min-w-0 shrink-0"
+    >
+      {children}
+      {menu}
+    </div>
+  );
 }
 
 function AddToSceneDropdown({
@@ -173,11 +334,13 @@ function TreeNode({
   depth = 0,
   defaultExpanded = true,
   searchQuery = "",
+  showHiddenProperties = false,
 }: {
   path: PropertyKey[];
   depth?: number;
   defaultExpanded?: boolean;
   searchQuery?: string;
+  showHiddenProperties?: boolean;
 }) {
   const { value, setValue, deleteValue, renameKey } = useScene(path);
   const { selectedPath } = useSelectedObject();
@@ -187,6 +350,7 @@ function TreeNode({
   const name = String(path[path.length - 1] ?? "Scene");
   const isObject = value !== null && typeof value === "object";
   const childKeys = isObject ? Object.keys(value) : [];
+  const visibleChildKeys = filterVisibleKeys(childKeys, showHiddenProperties);
   const icon = isObject ? Reflect.get(value, "__icon") : undefined;
   const isSelected =
     selectedPath &&
@@ -197,11 +361,12 @@ function TreeNode({
   const hasMatchingDescendant =
     hasActiveSearch &&
     isObject &&
-    childKeys.some((key) =>
+    visibleChildKeys.some((key) =>
       subtreeMatches(
         [...path, key],
         (value as Record<string, unknown>)[key],
         searchQuery,
+        showHiddenProperties,
       ),
     );
   const isOpen =
@@ -209,7 +374,10 @@ function TreeNode({
     (ancestorOfSelection && !userCollapsed) ||
     (hasActiveSearch && hasMatchingDescendant);
 
-  if (hasActiveSearch && !subtreeMatches(path, value, searchQuery)) {
+  if (
+    hasActiveSearch &&
+    !subtreeMatches(path, value, searchQuery, showHiddenProperties)
+  ) {
     return null;
   }
 
@@ -341,15 +509,16 @@ function TreeNode({
           )}
         </div>
       </div>
-      {isOpen && childKeys.length > 0 && (
+      {isOpen && visibleChildKeys.length > 0 && (
         <div className="pl-3.5 flex flex-col gap-0">
-          {childKeys.map((key) => (
+          {visibleChildKeys.map((key) => (
             <TreeNode
               key={String(key)}
               path={[...path, key]}
               depth={depth + 1}
               defaultExpanded={true}
               searchQuery={searchQuery}
+              showHiddenProperties={showHiddenProperties}
             />
           ))}
         </div>
@@ -362,7 +531,10 @@ export function SceneTree({ className }: { className?: string }) {
   const { value: root } = useScene([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showHiddenProperties, setShowHiddenProperties] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const actionsVisible = addOpen || settingsOpen;
   return (
     <div
       className={cn(
@@ -374,7 +546,7 @@ export function SceneTree({ className }: { className?: string }) {
         <div
           className={cn(
             sceneRowClassName,
-            addOpen && "bg-[var(--color-hover)]",
+            actionsVisible && "bg-[var(--color-hover)]",
           )}
         >
           <span
@@ -401,7 +573,7 @@ export function SceneTree({ className }: { className?: string }) {
               "opacity-0 pointer-events-none",
               "group-hover:opacity-100 group-hover:pointer-events-auto",
               "group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
-              addOpen && "opacity-100 pointer-events-auto",
+              actionsVisible && "opacity-100 pointer-events-auto",
             )}
           >
             {searchQuery ? (
@@ -432,17 +604,38 @@ export function SceneTree({ className }: { className?: string }) {
                 <Plus size={14} className="text-white" aria-hidden />
               </IconButton>
             </AddToSceneDropdown>
+            <SceneSettingsMenu
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+              showHiddenProperties={showHiddenProperties}
+              onShowHiddenPropertiesChange={setShowHiddenProperties}
+            >
+              <IconButton
+                aria-label="Scene settings"
+                aria-expanded={settingsOpen}
+                className={cn(
+                  settingsOpen &&
+                    "bg-[var(--color-hover)] hover:bg-[var(--color-hover)]",
+                )}
+                onClick={() => setSettingsOpen((open) => !open)}
+              >
+                <Cog size={14} className="text-white" aria-hidden />
+              </IconButton>
+            </SceneSettingsMenu>
           </div>
         </div>
       </div>
-      {Object.keys(root ?? {}).map((key) => (
-        <TreeNode
-          key={key}
-          path={[key]}
-          defaultExpanded={false}
-          searchQuery={searchQuery}
-        />
-      ))}
+      {filterVisibleKeys(Object.keys(root ?? {}), showHiddenProperties).map(
+        (key) => (
+          <TreeNode
+            key={key}
+            path={[key]}
+            defaultExpanded={false}
+            searchQuery={searchQuery}
+            showHiddenProperties={showHiddenProperties}
+          />
+        ),
+      )}
     </div>
   );
 }

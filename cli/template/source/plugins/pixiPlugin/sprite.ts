@@ -6,7 +6,7 @@ import {
   implementsTrait,
   type GameObject,
 } from "gameide";
-import { loadGraphicTexture } from "./asset.js";
+import { isSVGAsset, loadGraphicTexture } from "./asset.js";
 import { transformSchema, transformTrait } from "../transform.js";
 
 const spriteDataSchema = z.object({
@@ -14,7 +14,6 @@ const spriteDataSchema = z.object({
   asset: z.string().default(""),
   width: z.number().default(1),
   height: z.number().default(1),
-  resolution: z.number().default(1),
   tint: z.string().default("#ffffff"),
 });
 
@@ -25,7 +24,6 @@ export const spriteTrait = defineTrait(
       asset: "",
       width: 1,
       height: 1,
-      resolution: 1,
       tint: "#ffffff",
     }),
   }),
@@ -102,8 +100,10 @@ function scheduleTextureLoad(
   applyPlaceholderTexture(binding, entity);
 
   void (async () => {
+    const width = finiteNumberOr(entity.sprite?.width, 1);
+    const height = finiteNumberOr(entity.sprite?.height, 1);
     const texture = await loadGraphicTexture(entity.sprite?.asset, {
-      resolution: finiteNumberOr(entity.sprite?.resolution, 1),
+      displaySize: { width, height },
     });
     if (binding.loadGeneration !== generationAtStart) return;
     if (!isBindingActive(binding)) return;
@@ -119,7 +119,10 @@ function scheduleTextureLoad(
   })();
 }
 
-function spriteChangeNeedsTextureReload(scenePath: ScenePath): boolean {
+function spriteChangeNeedsTextureReload(
+  scenePath: ScenePath,
+  entity: SpriteRenderable,
+): boolean {
   const secondSegment = scenePath[1];
   const thirdSegment = scenePath[2];
   const isTopSegmentOnly = scenePath.length === 1;
@@ -134,12 +137,24 @@ function spriteChangeNeedsTextureReload(scenePath: ScenePath): boolean {
     scenePath.length === 3 &&
     thirdSegment === "asset";
 
-  return isTopSegmentOnly || replacesSpriteBlock || assetFieldChanged;
+  const svgSizeFieldChanged =
+    secondSegment === "sprite" &&
+    scenePath.length === 3 &&
+    (thirdSegment === "width" || thirdSegment === "height") &&
+    isSVGAsset(String(entity.sprite?.asset ?? ""));
+
+  return (
+    isTopSegmentOnly ||
+    replacesSpriteBlock ||
+    assetFieldChanged ||
+    svgSizeFieldChanged
+  );
 }
 
 export function pixiSprites(stage: Container): {
   unsubscribe: () => void;
   spriteBindingsBySceneKey: Map<PropertyKey, SpritePixiBinding>;
+  reloadSvgTextures: () => void;
 } {
   const scene = getScene();
   const spriteBindingsBySceneKey = new Map<PropertyKey, SpritePixiBinding>();
@@ -167,7 +182,6 @@ export function pixiSprites(stage: Container): {
     innerSprite.anchor.set(0.5, 0.5);
     innerSprite.eventMode = "none";
     rootContainer.addChild(innerSprite);
-    stage.addChild(rootContainer);
 
     const binding: SpritePixiBinding = {
       root: rootContainer,
@@ -175,6 +189,7 @@ export function pixiSprites(stage: Container): {
       loadGeneration: 0,
     };
     spriteBindingsBySceneKey.set(sceneRootKey, binding);
+    stage.addChild(rootContainer);
     scheduleTextureLoad(binding, entity);
   }
 
@@ -200,6 +215,18 @@ export function pixiSprites(stage: Container): {
 
   for (const initialSceneOwnedKeyCandidate of Reflect.ownKeys(scene.getRaw())) {
     reconcileSpriteRenderableForSceneRootKey(initialSceneOwnedKeyCandidate);
+  }
+
+  function reloadSvgTextures(): void {
+    for (const sceneRootKey of spriteBindingsBySceneKey.keys()) {
+      const entity = Reflect.get(scene.get(), sceneRootKey) as
+        | SpriteRenderable
+        | undefined;
+      if (!entity) continue;
+      if (!isSVGAsset(String(entity.sprite?.asset ?? ""))) continue;
+      const binding = spriteBindingsBySceneKey.get(sceneRootKey);
+      if (binding) scheduleTextureLoad(binding, entity);
+    }
   }
 
   const releaseSceneListenerSubscription = scene.onChange(
@@ -233,7 +260,12 @@ export function pixiSprites(stage: Container): {
         anchoredSceneIdentifier,
       ) as SpriteRenderable;
 
-      if (spriteChangeNeedsTextureReload(mutationPathTrail)) {
+      if (
+        spriteChangeNeedsTextureReload(
+          mutationPathTrail,
+          hydratedLiveRenderableSurface,
+        )
+      ) {
         scheduleTextureLoad(spriteBindingPayload, hydratedLiveRenderableSurface);
       } else {
         syncWorldFromSceneObject(
@@ -247,5 +279,6 @@ export function pixiSprites(stage: Container): {
   return {
     unsubscribe: releaseSceneListenerSubscription,
     spriteBindingsBySceneKey,
+    reloadSvgTextures,
   };
 }
