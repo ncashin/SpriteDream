@@ -9,24 +9,24 @@ export type FrontendBundleUpload = {
   files: FrontendBundleFile[];
 };
 
-function getBundleKey(gameId: string, filePath: string) {
+function getBundleKey(id: string, filePath: string) {
   const normalized = filePath.replace(/^\/+/, "");
   if (normalized.includes("..")) {
     throw new Error(`Invalid bundle file path: ${filePath}`);
   }
-  return `${gameId}/${normalized}`;
+  return `${id}/${normalized}`;
 }
 
 export async function uploadGameFrontendBundle(
   env: Env,
-  gameId: string,
+  id: string,
   bundle: FrontendBundleUpload,
 ) {
   invariant(env.GAME_BUNDLES, "Missing R2 binding: GAME_BUNDLES");
 
   await Promise.all(
     bundle.files.map(async (file) => {
-      const key = getBundleKey(gameId, file.path);
+      const key = getBundleKey(id, file.path);
       await env.GAME_BUNDLES.put(key, file.content);
     }),
   );
@@ -34,13 +34,13 @@ export async function uploadGameFrontendBundle(
 
 export async function readGameFrontendBundleFile(
   env: Env,
-  gameId: string,
+  id: string,
   requestPath: string,
 ) {
   invariant(env.GAME_BUNDLES, "Missing R2 binding: GAME_BUNDLES");
 
   const safeRelativePath = requestPath === "" ? "index.html" : requestPath;
-  const key = getBundleKey(gameId, safeRelativePath);
+  const key = getBundleKey(id, safeRelativePath);
   const object = await env.GAME_BUNDLES.get(key);
   if (!object) {
     return null;

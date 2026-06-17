@@ -7,6 +7,7 @@ interface __BaseEnv_Env {
 	ASSETS: Fetcher;
 	DB_FILE_NAME: string;
 	GAME_BUNDLE_VOLUME_PATH: string;
+	GAMEIDE_DOMAIN: string;
 	ROOM: DurableObjectNamespace<import("./workers/app").Room>;
 }
 declare namespace Cloudflare {
@@ -21,7 +22,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "DB_FILE_NAME" | "GAME_BUNDLE_VOLUME_PATH">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "DB_FILE_NAME" | "GAME_BUNDLE_VOLUME_PATH" | "GAMEIDE_DOMAIN">> {}
 }
 
 // Begin runtime types

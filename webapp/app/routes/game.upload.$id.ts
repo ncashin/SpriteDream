@@ -1,5 +1,6 @@
 import { getGameById } from "~/.server/database/game";
 import { uploadGameFrontendBundle } from "~/.server/storage/gameFrontendBundle";
+import { isValidGameId } from "../../shared/gameId";
 
 type UploadBundleRequest = {
   files?: Array<{
@@ -22,7 +23,7 @@ export async function action({
   request,
   context,
 }: {
-  params: { gameId?: string };
+  params: { id?: string };
   request: Request;
   context: { cloudflare: { env: Env } };
 }) {
@@ -30,12 +31,12 @@ export async function action({
     return new Response("Method not allowed", { status: 405 });
   }
 
-  const gameId = params.gameId;
-  if (!gameId) {
+  const id = params.id?.trim();
+  if (!id || !isValidGameId(id)) {
     return new Response("Game not found", { status: 404 });
   }
 
-  const game = await getGameById(context.cloudflare.env, gameId);
+  const game = await getGameById(context.cloudflare.env, id);
   if (!game) {
     return new Response("Game not found", { status: 404 });
   }
@@ -63,7 +64,7 @@ export async function action({
     }
   }
 
-  await uploadGameFrontendBundle(context.cloudflare.env, gameId, {
+  await uploadGameFrontendBundle(context.cloudflare.env, game.id, {
     files: files.map((file) => ({
       path: file.path as string,
       content: base64ToUint8Array(file.contentBase64 as string),
@@ -72,7 +73,7 @@ export async function action({
 
   return Response.json({
     ok: true,
-    gameId,
+    id: game.id,
     uploadedFiles: files.length,
   });
 }

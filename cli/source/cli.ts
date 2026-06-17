@@ -3,6 +3,10 @@ import path from "node:path";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import {
+  assertValidGameId,
+  InvalidGameIdError,
+} from "./gameId";
+import {
   PRODUCTION_UPLOAD_BASE_URL,
   createGameIDEProject,
   uploadGame,
@@ -64,6 +68,32 @@ async function promptProjectName(): Promise<string> {
   }
 }
 
+async function promptGameId(defaultId: string, gameName: string): Promise<string> {
+  const rl = readline.createInterface({ input, output });
+  try {
+    while (true) {
+      const answer = (
+        await rl.question(
+          `Game URL for "${gameName}" (${defaultId}.gameide.app) [${defaultId}]: `,
+        )
+      ).trim();
+      const id = answer || defaultId;
+      try {
+        assertValidGameId(id);
+        return id;
+      } catch (error) {
+        console.log(
+          error instanceof InvalidGameIdError
+            ? error.message
+            : "Invalid game URL slug.",
+        );
+      }
+    }
+  } finally {
+    rl.close();
+  }
+}
+
 function printHelp(): void {
   console.log(`gameide
 
@@ -71,6 +101,7 @@ Usage:
   gameide create [directory]   Default directory: ./{project-name}
   gameide upload [directory]   Default directory: .
       --url <base-url>         GameIDE server URL (default: https://gameide.app)
+      --id <slug>              Game URL slug (default: derived from game name)
 
 Commands:
   create   Scaffold a new GameIDE game
@@ -78,8 +109,13 @@ Commands:
 `);
 }
 
-function parseUploadBaseURL(flags: Record<string, string | boolean>): string {
-  const unknownFlags = Object.keys(flags).filter((key) => key !== "url");
+function parseUploadFlags(flags: Record<string, string | boolean>): {
+  baseURL: string;
+  id?: string;
+} {
+  const unknownFlags = Object.keys(flags).filter(
+    (key) => key !== "url" && key !== "id",
+  );
   if (unknownFlags.length > 0) {
     throw new Error(
       `Unknown flag(s): ${unknownFlags.map((flag) => `--${flag}`).join(", ")}`,
@@ -87,19 +123,27 @@ function parseUploadBaseURL(flags: Record<string, string | boolean>): string {
   }
 
   const urlFlag = flags.url;
-  if (urlFlag === undefined) {
-    return PRODUCTION_UPLOAD_BASE_URL;
-  }
-  if (typeof urlFlag !== "string") {
-    throw new Error("--url requires a value.");
+  let baseURL = PRODUCTION_UPLOAD_BASE_URL;
+  if (urlFlag !== undefined) {
+    if (typeof urlFlag !== "string") {
+      throw new Error("--url requires a value.");
+    }
+    try {
+      baseURL = new URL(urlFlag).toString().replace(/\/$/, "");
+    } catch {
+      throw new Error(`Invalid --url value: ${urlFlag}`);
+    }
   }
 
-  try {
-    new URL(urlFlag);
-    return urlFlag;
-  } catch {
-    throw new Error(`Invalid --url value: ${urlFlag}`);
+  const idFlag = flags.id;
+  if (idFlag !== undefined && typeof idFlag !== "string") {
+    throw new Error("--id requires a value.");
   }
+
+  return {
+    baseURL,
+    ...(typeof idFlag === "string" ? { id: idFlag } : {}),
+  };
 }
 
 async function main(): Promise<void> {
@@ -131,15 +175,19 @@ async function main(): Promise<void> {
   }
 
   if (command === "upload" || command === "deploy") {
-    const baseURL = parseUploadBaseURL(flags);
+    const { baseURL, id } = parseUploadFlags(flags);
 
     const result = await uploadGame({
       projectRoot: path.resolve(process.cwd(), positional[0] ?? "."),
       baseURL,
+      id,
+      ...(input.isTTY && !id
+        ? { promptForId: promptGameId }
+        : {}),
       onProgress: (message) => console.log(message),
     });
     console.log(
-      `Uploaded ${result.uploadedFiles} files to game ${result.gameId} (${result.baseURL}).`,
+      `Uploaded ${result.uploadedFiles} files to https://${result.id}.gameide.app/`,
     );
     return;
   }

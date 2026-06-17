@@ -42,5 +42,22 @@
 				"Room"
 			]
 		}
+	],
+	"vars": {
+		"GAMEIDE_DOMAIN": "gameide.app"
+	},
+	"routes": [
+		{
+			"pattern": "gameide.app/*",
+			"zone_name": "gameide.app"
+		},
+		{
+			"pattern": "www.gameide.app/*",
+			"zone_name": "gameide.app"
+		},
+		{
+			"pattern": "*.gameide.app/*",
+			"zone_name": "gameide.app"
+		}
 	]
 }

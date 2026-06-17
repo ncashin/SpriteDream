@@ -1,14 +1,22 @@
 import { useLoaderData } from "react-router";
 import type { Route } from "./+types/home";
 import { listGames } from "~/.server/database/game";
+import { getGameBundleURL } from "../../shared/gameId";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "GameIDE" }, { name: "description", content: "GameIDE" }];
 }
 
-export async function loader({ context }: Route.LoaderArgs) {
+export async function loader({ context, request }: Route.LoaderArgs) {
+  const requestURL = new URL(request.url);
   const games = await listGames(context.cloudflare.env);
-  return { games };
+  return {
+    games: games.map((game) => ({
+      id: game.id,
+      title: game.title,
+      bundleURL: getGameBundleURL(game.id, requestURL, context.cloudflare.env),
+    })),
+  };
 }
 
 export default function Home() {
@@ -21,7 +29,7 @@ export default function Home() {
         <ul>
           {games.map((game) => (
             <li key={game.id}>
-              <a href={`/game/${game.id}`}>{game.title}</a>
+              <a href={game.bundleURL}>{game.title}</a>
             </li>
           ))}
         </ul>

@@ -1,9 +1,15 @@
 import { createGame } from "~/.server/database/game";
+import {
+  GameIdConflictError,
+  getGameBundleURL,
+  InvalidGameIdError,
+} from "../../shared/gameId";
 
 type CreateGameBody = {
   title?: unknown;
   name?: unknown;
   description?: unknown;
+  id?: unknown;
 };
 
 export async function action({ request, context }: { request: Request; context: { cloudflare: { env: Env } } }) {
@@ -29,7 +35,26 @@ export async function action({ request, context }: { request: Request; context: 
   const rawDescription =
     typeof body.description === "string" ? body.description.trim() : "";
   const description = rawDescription.length > 0 ? rawDescription : null;
+  const rawId = typeof body.id === "string" ? body.id.trim() : "";
 
-  const id = await createGame(context.cloudflare.env, { title, description });
-  return Response.json({ id });
+  try {
+    const { id } = await createGame(context.cloudflare.env, {
+      title,
+      description,
+      ...(rawId ? { id: rawId } : {}),
+    });
+    const requestURL = new URL(request.url);
+    return Response.json({
+      id,
+      bundleURL: getGameBundleURL(id, requestURL, context.cloudflare.env),
+    });
+  } catch (error) {
+    if (error instanceof InvalidGameIdError) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
+    if (error instanceof GameIdConflictError) {
+      return Response.json({ error: error.message }, { status: 409 });
+    }
+    throw error;
+  }
 }
