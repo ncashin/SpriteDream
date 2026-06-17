@@ -54,7 +54,7 @@ export function attachRoomWebSocket(httpServer: Server | Http2SecureServer): Web
     const room = getRoomName(req);
     const client = websocket as RoomClient;
     client.room = room;
-    client.peerId = `p${nextPeer++}`;
+    client.peerId = `peer-${nextPeer++}`;
 
     let set = rooms.get(room);
     if (!set) {

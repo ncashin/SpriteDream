@@ -1,4 +1,4 @@
-import type { SceneChannelTransport } from "../../scene/sceneChannel/sceneChannelTransport.js";
+import type { SceneChannelTransport } from "../scene/sceneChannel/sceneChannelTransport.js";
 
 const ROOM_PEERS_UPDATE = "roomPeersUpdate";
 

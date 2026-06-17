@@ -1,4 +1,4 @@
-import { connectWebSocketRoomTransport } from "./websocketRoomTransport.js";
+import { connectWebSocketRoomTransport } from "../../room/webSocketRoomTransport.js";
 import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { GameObject, Scene, SceneObject } from "../../scene/scene.js";

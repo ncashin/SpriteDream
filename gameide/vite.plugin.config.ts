@@ -21,6 +21,7 @@ export default defineConfig({
         "node:path",
         "node:url",
         "node:http",
+        "node:http2",
         "node:stream",
         "fs",
         "path",

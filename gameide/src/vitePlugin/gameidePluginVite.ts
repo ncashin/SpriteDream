@@ -1,5 +1,5 @@
 import type { Plugin } from "vite";
-import { attachRoomWebSocket } from "./roomWebSocket";
+import { attachRoomWebSocket } from "../room/roomWebSocket.js";
 import {
   catalogFileAffects,
   invalidateCatalogModules,
