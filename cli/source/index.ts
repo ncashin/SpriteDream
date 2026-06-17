@@ -21,7 +21,6 @@ export type CreateGameIDEProjectResult = {
 export type GameIDEManifest = {
   id?: string;
   name?: string;
-  version?: string;
   description?: string;
   [key: string]: unknown;
 };
@@ -34,7 +33,6 @@ export type UploadGameOptions = {
   skipBuild?: boolean;
   manifestFields?: {
     name?: string;
-    version?: string;
     description?: string;
   };
   onProgress?: (message: string) => void;
@@ -48,14 +46,12 @@ export type UploadGameResult = {
 
 type PackageJsonBasics = {
   name?: string;
-  version?: string;
   description?: string;
 };
 
 type ManifestFields = {
   name: string;
   description: string;
-  version: string;
 };
 
 function toProjectName(rawName: string): string {
@@ -154,7 +150,6 @@ export async function readPackageJsonBasics(
     const pkg = parsed as Record<string, unknown>;
     return {
       name: typeof pkg.name === "string" ? pkg.name : undefined,
-      version: typeof pkg.version === "string" ? pkg.version : undefined,
       description:
         typeof pkg.description === "string" ? pkg.description : undefined,
     };
@@ -184,7 +179,6 @@ async function writeGameIDEManifest(
 
   const merged = {
     name: fields.name,
-    version: fields.version,
     description: fields.description,
     id: gameId,
     ...extra,
@@ -300,11 +294,6 @@ function buildManifestFields(
       (typeof manifest?.description === "string" ? manifest.description.trim() : "") ||
       pkg.description?.trim() ||
       "",
-    version:
-      overrides.version?.trim() ||
-      (typeof manifest?.version === "string" ? manifest.version.trim() : "") ||
-      pkg.version?.trim() ||
-      "0.0.0",
   };
 }
 
