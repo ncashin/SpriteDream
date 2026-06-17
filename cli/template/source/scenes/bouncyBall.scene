@@ -19,7 +19,7 @@
   },
   "sprite": {
     "__icon": "image",
-    "asset": "assets/typescript.svg",
+    "asset": "typescript.svg",
     "width": 36,
     "height": 36,
     "tint": "#ff8c42"

@@ -49,12 +49,10 @@ function walkFiles(
 }
 
 export function resolveAssetsDir(projectRoot: string): string | null {
-  for (const relative of ["public/assets", "assets"]) {
-    const dir = path.join(projectRoot, relative);
-    try {
-      if (fs.statSync(dir).isDirectory()) return dir;
-    } catch {}
-  }
+  const dir = path.join(projectRoot, "public");
+  try {
+    if (fs.statSync(dir).isDirectory()) return dir;
+  } catch {}
   return null;
 }
 

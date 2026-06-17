@@ -110,6 +110,7 @@ export {
   onEditorDebugUIChange,
 } from "./plugins/editorPlugin/editorDebugUI.js";
 export { GameIDEMode, getMode, setMode, onModeChange } from "./lifecycle/mode.js";
+export { ASSET_BASE_URL } from "./assetBaseURL.js";
 export { inputPlugin } from "./plugins/inputPlugin/inputPlugin.js";
 export type {
   InputBinding,

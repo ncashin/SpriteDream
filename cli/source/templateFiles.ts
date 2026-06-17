@@ -7,7 +7,7 @@ const templateModules = import.meta.glob<string>(
     "../template/package.json",
     "../template/tsconfig.json",
     "../template/vite.config.ts",
-    "../template/assets/**/*",
+    "../template/public/**/*",
     "../template/source/**/*",
   ],
   {

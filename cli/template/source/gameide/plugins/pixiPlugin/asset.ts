@@ -1,8 +1,6 @@
 import { Assets, type Texture } from "pixi.js";
+import { ASSET_BASE_URL } from "gameide";
 import { getDevicePixelRatio } from "./displayMetrics.js";
-
-/** Matches runtime vite: project files served from the built `assets/` directory. */
-export const DEFAULT_ASSET_BASE_URL = "assets";
 
 function normalizeProjectPath(raw: string): string {
   const trimmed = raw.trim();
@@ -13,8 +11,7 @@ function normalizeProjectPath(raw: string): string {
   if (noLeadingSlash.includes("..")) {
     throw new Error(`Invalid asset path (path traversal): ${raw}`);
   }
-  // URLs are `assets/<path>` where <path> is relative to the project's assets folder.
-  // Strip a redundant `assets/` prefix when the scene stores repo-style paths (e.g. `assets/vite.svg`).
+  // Paths are relative to `public/` (e.g. `vite.svg`). Legacy `assets/` prefixes are stripped.
   return noLeadingSlash.replace(/^assets\/+/i, "");
 }
 
@@ -34,21 +31,20 @@ export function isAbsoluteAssetURL(reference: string): boolean {
 
 export function assetURL(
   projectRelativePath: string,
-  assetBaseURL: string = DEFAULT_ASSET_BASE_URL,
+  assetBaseURL: string = ASSET_BASE_URL,
 ): string {
   const normalized = normalizeProjectPath(projectRelativePath);
   if (!normalized) {
     throw new Error("assetURL: empty path");
   }
-  const base = stripTrailingSlash(
-    assetBaseURL.trim() || DEFAULT_ASSET_BASE_URL,
-  );
+  const base = stripTrailingSlash(assetBaseURL.trim());
+  if (!base) return normalized;
   return `${base}/${normalized}`;
 }
 
 export function resolveAssetURL(
   asset: string,
-  assetBaseURL: string = DEFAULT_ASSET_BASE_URL,
+  assetBaseURL: string = ASSET_BASE_URL,
 ): string {
   const trimmedAsset = asset.trim();
   if (!trimmedAsset) return "";

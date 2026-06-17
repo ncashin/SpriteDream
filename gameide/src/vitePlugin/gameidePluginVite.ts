@@ -16,6 +16,7 @@ import { attachFileEditorMiddleware } from "./fileEditor";
 import { loadSceneModule } from "./sceneVirtualModule";
 import { transformLifecycleHMR } from "./lifecycleHMR/transform";
 
+export { ASSET_BASE_URL } from "../assetBaseURL.js";
 export { SCENE_HMR_EVENT } from "../scene/sceneHMREvent.js";
 
 const VIRTUAL_MODULE_PREFIX = /^gameide:/;
@@ -30,6 +31,9 @@ export function gameidePlugin(): Plugin {
     enforce: "post",
     config() {
       return {
+        build: {
+          assetsInlineLimit: 0,
+        },
         optimizeDeps: {
           exclude: ["gameide"],
           esbuildOptions: {
