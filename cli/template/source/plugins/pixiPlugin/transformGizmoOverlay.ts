@@ -176,10 +176,14 @@ function hitTestSquareHandle(
   );
 }
 
-function hitTestRotateGizmo(localX: number, localY: number): boolean {
+function hitTestRotateGizmo(
+  localX: number,
+  localY: number,
+  handleAngle: number,
+): boolean {
   const { endCapSize, rotate } = GIZMO_LAYOUT;
   const radius = gizmoOuterReach();
-  const idleHandle = worldAngleToScreenPoint(0, radius);
+  const idleHandle = worldAngleToScreenPoint(handleAngle, radius);
 
   if (
     hitTestSquareHandle(
@@ -403,6 +407,7 @@ function drawRotateGizmo(
   graphics: Graphics,
   unit: (pixels: number) => number,
   dragVisual: RotateDragVisual | null,
+  handleAngle: number,
 ): void {
   const blue = getComputedStyle(document.documentElement)
     .getPropertyValue("--color-blue")
@@ -421,23 +426,10 @@ function drawRotateGizmo(
       dragVisual.currentAngle,
       blue,
     );
-
-    const currentPoint = worldAngleToScreenPoint(
-      dragVisual.currentAngle,
-      ringRadius,
-    );
-    drawSquareHandle(
-      graphics,
-      currentPoint.x,
-      currentPoint.y,
-      handleSize,
-      blue,
-    );
-    return;
   }
 
-  const idleHandle = worldAngleToScreenPoint(0, ringRadius);
-  drawSquareHandle(graphics, idleHandle.x, idleHandle.y, handleSize, blue);
+  const handlePoint = worldAngleToScreenPoint(handleAngle, ringRadius);
+  drawSquareHandle(graphics, handlePoint.x, handlePoint.y, handleSize, blue);
 }
 
 function drawScaleGizmo(graphics: Graphics, unit: (pixels: number) => number): void {
@@ -516,7 +508,8 @@ function hitTestSelectedGizmo(
   }
 
   if (tool === "rotate") {
-    return hitTestRotateGizmo(x, y) ? "rotate-z" : null;
+    const rotationZ = readTransform(sel).rotationZ;
+    return hitTestRotateGizmo(x, y, rotationZ) ? "rotate-z" : null;
   }
 
   const { gap, axisLength, endCapSize, axisHitSlop, cornerSize } = GIZMO_LAYOUT;
@@ -708,7 +701,7 @@ export function transformGizmoOverlay(
         drawTranslateGizmo(gizmo, unit);
         break;
       case "rotate":
-        drawRotateGizmo(gizmo, unit, rotateDragVisual);
+        drawRotateGizmo(gizmo, unit, rotateDragVisual, t.rotationZ);
         break;
       case "scale":
         drawScaleGizmo(gizmo, unit);

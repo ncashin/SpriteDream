@@ -149,7 +149,7 @@ let applyingHistoryNavigation = false;
 let skipNextSceneLoad = false;
 let unsubscribeOnChange: (() => void) | undefined;
 let unsubscribeStore: (() => void) | undefined;
-let unsubscribeSceneHmr: (() => void) | undefined;
+let unsubscribeSceneHMR: (() => void) | undefined;
 let undoStack: SceneObject[] = [];
 let redoStack: SceneObject[] = [];
 let pendingUndoSnapshot: SceneObject | null = null;
@@ -230,7 +230,7 @@ function redoSceneChange(): void {
   syncHistoryState();
 }
 
-function onSceneHmr(event: Event): void {
+function onSceneHMR(event: Event): void {
   if (!boundScene) return;
   const detail = (event as CustomEvent<{ path?: unknown; data?: unknown }>).detail;
   if (!detail || typeof detail.path !== "string" || !detail.data || typeof detail.data !== "object") {
@@ -255,10 +255,10 @@ function onSceneHmr(event: Event): void {
   syncDirtyState();
 }
 
-function subscribeSceneHmr(): () => void {
+function subscribeSceneHMR(): () => void {
   if (typeof window === "undefined") return () => {};
-  window.addEventListener(SCENE_HMR_EVENT, onSceneHmr);
-  return () => window.removeEventListener(SCENE_HMR_EVENT, onSceneHmr);
+  window.addEventListener(SCENE_HMR_EVENT, onSceneHMR);
+  return () => window.removeEventListener(SCENE_HMR_EVENT, onSceneHMR);
 }
 
 function syncDirtyState(): void {
@@ -318,34 +318,24 @@ async function saveActiveScene(): Promise<void> {
   if (!boundScene || saving || !dirty) return;
 
   let targetPath = activeScenePath;
-  let alreadyWritten = false;
   if (isUntitled) {
-    const pick = await pickUntitledSceneSavePath({
-      scenes,
-      content: boundScene.getRaw(),
-      reloadScenes: () => useSceneFileStore.getState().loadScenes(),
-      getScenes: () => useSceneFileStore.getState().scenes,
-    });
-    if (!pick) return;
-    targetPath = pick.path;
-    alreadyWritten = pick.kind === "written";
+    targetPath = pickUntitledSceneSavePath(scenes) ?? "";
+    if (!targetPath) return;
   }
 
   if (!targetPath) return;
 
   useSceneFileStore.setState({ saving: true });
   try {
-    if (!alreadyWritten) {
-      const res = await fetch(SCENE_FILE_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          path: targetPath,
-          content: boundScene.getRaw(),
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save scene");
-    }
+    const res = await fetch(SCENE_FILE_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: targetPath,
+        content: boundScene.getRaw(),
+      }),
+    });
+    if (!res.ok) throw new Error("Failed to save scene");
     savedSnapshot = sceneSnapshot(boundScene.getRaw());
     currentSnapshot = savedSnapshot;
     skipNextSceneLoad = true;
@@ -367,7 +357,7 @@ export function bindSceneFileStore(
   boundScene = scene;
   savedSnapshot = sceneSnapshot(scene.getRaw());
   resetSceneHistory(scene.getRaw());
-  unsubscribeSceneHmr = subscribeSceneHmr();
+  unsubscribeSceneHMR = subscribeSceneHMR();
 
   unsubscribeOnChange = scene.onChange(() => {
     if (
@@ -422,7 +412,7 @@ export function bindSceneFileStore(
     flushPendingHistory();
     unsubscribeOnChange?.();
     unsubscribeStore?.();
-    unsubscribeSceneHmr?.();
+    unsubscribeSceneHMR?.();
     boundScene = null;
     resetSceneHistory({});
   };

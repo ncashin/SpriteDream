@@ -8,6 +8,7 @@ import {
   deselectObject,
   getMode,
   getScene,
+  onModeChange,
   useEditorDebugUI,
   useGameIDEMode,
   useSceneFile,
@@ -31,6 +32,12 @@ export function Editor({
   const { selectedPath } = useSelectedObject();
   const canSave = mode === GameIDEMode.Editor && dirty && !saving;
   const { enabled: debugUIEnabled, toggle: toggleDebugUI } = useEditorDebugUI();
+
+  useEffect(() => {
+    return onModeChange(() => {
+      deselectObject();
+    });
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
