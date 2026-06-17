@@ -1,4 +1,4 @@
-import { connectWebSocketRoomTransport } from "../../room/webSocketRoomTransport.js";
+import { connectWebRTCRoomTransport } from "../../room/webrtcRoomTransport.js";
 import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { GameObject, Scene, SceneObject } from "../../scene/scene.js";
@@ -22,6 +22,7 @@ export { ownerTrait };
 export type NetworkingPluginOptions = {
   room?: string;
   url?: string;
+  iceServers?: RTCIceServer[];
 };
 
 export type NetworkingPluginRequiredContext = {
@@ -47,8 +48,11 @@ export const networkingPlugin = (
   async (input) => {
     const room = options.room ?? "default";
 
-    const { transport, dispose: disposeTransport } =
-      await connectWebSocketRoomTransport({ room, url: options.url });
+    const { transport, dispose: disposeTransport } = await connectWebRTCRoomTransport({
+      room,
+      url: options.url,
+      iceServers: options.iceServers,
+    });
 
     const shouldBootstrapScene = transport.getPeers().length === 1;
     if (shouldBootstrapScene && input.initialScene !== undefined) {
