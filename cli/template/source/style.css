@@ -4,16 +4,14 @@
 
 :root {
   --color-red: #ff5252;
-  --color-blue: #4da3ff;
+  --color-blue: #00d4ff;
   --color-green: #39d353;
-  --color-highlight: #7ec8ff;
+  --color-highlight: #00d4ff;
 
-  --color-bg: #1e1e1e;
-  --color-text: #ffffff;
-  --color-muted: #cccccc;
+  --color-bg: #000000;
   --color-border: rgba(255, 255, 255, 0.1);
   --color-hover: rgba(255, 255, 255, 0.08);
-  --color-selection: color-mix(in srgb, var(--color-highlight) 28%, var(--color-bg));
-  --color-on-accent: #ffffff;
+  --color-selection: #001620;
+  --color-on-accent: #05050a;
   --color-shadow: rgba(0, 0, 0, 0.28);
 }

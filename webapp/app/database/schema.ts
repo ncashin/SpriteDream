@@ -4,4 +4,5 @@ export const gamesTable = sqliteTable("games", {
   id: text("id").primaryKey().notNull(),
   title: text("title").notNull(),
   description: text("description"),
+  thumbnailContentType: text("thumbnail_content_type"),
 });

@@ -1,5 +1,6 @@
-import { getGameById } from "~/.server/database/game";
+import { getGameById, setGameThumbnail } from "~/.server/database/game";
 import { uploadGameFrontendBundle } from "~/.server/storage/gameFrontendBundle";
+import { uploadGameThumbnail } from "~/.server/storage/gameThumbnail";
 import { isValidGameId } from "../../shared/gameId";
 
 type UploadBundleRequest = {
@@ -7,7 +8,18 @@ type UploadBundleRequest = {
     path?: string;
     contentBase64?: string;
   }>;
+  thumbnail?: {
+    contentBase64?: string;
+    contentType?: string;
+  };
 };
+
+const ALLOWED_THUMBNAIL_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
 
 function base64ToUint8Array(base64: string): Uint8Array {
   const binary = atob(base64);
@@ -70,6 +82,29 @@ export async function action({
       content: base64ToUint8Array(file.contentBase64 as string),
     })),
   });
+
+  const thumbnail = body.thumbnail;
+  if (thumbnail) {
+    if (
+      typeof thumbnail.contentBase64 !== "string" ||
+      typeof thumbnail.contentType !== "string" ||
+      !ALLOWED_THUMBNAIL_TYPES.has(thumbnail.contentType)
+    ) {
+      return new Response("Invalid thumbnail entry", { status: 400 });
+    }
+
+    await uploadGameThumbnail(
+      context.cloudflare.env,
+      game.id,
+      base64ToUint8Array(thumbnail.contentBase64),
+      thumbnail.contentType,
+    );
+    await setGameThumbnail(
+      context.cloudflare.env,
+      game.id,
+      thumbnail.contentType,
+    );
+  }
 
   return Response.json({
     ok: true,

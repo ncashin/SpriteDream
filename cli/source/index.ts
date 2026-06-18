@@ -28,6 +28,7 @@ export type GameIDEManifest = {
   id?: string;
   name?: string;
   description?: string;
+  thumbnail?: string;
   [key: string]: unknown;
 };
 
@@ -60,6 +61,19 @@ type PackageJsonBasics = {
 type ManifestFields = {
   name: string;
   description: string;
+};
+
+type UploadThumbnail = {
+  contentBase64: string;
+  contentType: string;
+};
+
+const THUMBNAIL_CONTENT_TYPES: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
 };
 
 function toProjectName(rawName: string): string {
@@ -301,6 +315,47 @@ async function collectBundleFiles(
   return files;
 }
 
+function contentTypeFromThumbnailPath(thumbnailPath: string): string {
+  const ext = path.extname(thumbnailPath).toLowerCase();
+  const contentType = THUMBNAIL_CONTENT_TYPES[ext];
+  if (!contentType) {
+    throw new Error(
+      `Unsupported thumbnail format "${ext}". Use PNG, JPEG, WebP, or GIF.`,
+    );
+  }
+  return contentType;
+}
+
+async function readThumbnailForUpload(
+  projectRoot: string,
+  manifest: GameIDEManifest | undefined,
+): Promise<UploadThumbnail | undefined> {
+  const thumbnailPath =
+    typeof manifest?.thumbnail === "string" ? manifest.thumbnail.trim() : "";
+  if (!thumbnailPath) {
+    return undefined;
+  }
+
+  const absolutePath = path.resolve(projectRoot, thumbnailPath);
+  if (!absolutePath.startsWith(`${projectRoot}${path.sep}`)) {
+    throw new Error("Thumbnail path must stay inside the project directory.");
+  }
+  if (!(await pathExists(absolutePath))) {
+    throw new Error(`Thumbnail not found: ${thumbnailPath}`);
+  }
+
+  const stat = await fs.stat(absolutePath);
+  if (!stat.isFile()) {
+    throw new Error(`Thumbnail must be a file: ${thumbnailPath}`);
+  }
+
+  const content = await fs.readFile(absolutePath);
+  return {
+    contentBase64: content.toString("base64"),
+    contentType: contentTypeFromThumbnailPath(thumbnailPath),
+  };
+}
+
 function buildManifestFields(
   manifest: GameIDEManifest | undefined,
   pkg: PackageJsonBasics,
@@ -362,12 +417,17 @@ export async function uploadGame(options: UploadGameOptions): Promise<UploadGame
     throw new Error("dist folder is empty, nothing to upload.");
   }
 
+  const thumbnail = await readThumbnailForUpload(projectRoot, manifest);
+
   const endpoint = new URL(`/game/upload/${encodeURIComponent(id)}`, baseURL);
   progress("Uploading bundle to GameIDE...");
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ files }),
+    body: JSON.stringify({
+      files,
+      ...(thumbnail ? { thumbnail } : {}),
+    }),
   });
 
   if (!response.ok) {

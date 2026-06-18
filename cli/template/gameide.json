@@ -1,5 +1,5 @@
 {
-  "name": "GameIDE Template Test",
+  "name": "gameide-template",
   "description": "__GAMEIDE_DISPLAY_NAME__",
-  "id": "gameide-template-test"
+  "id": "gameide-template"
 }

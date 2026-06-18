@@ -71,6 +71,18 @@ export async function updateGame(env: Env, input: UpdateGameInput) {
   await database.update(gamesTable).set(values).where(eq(gamesTable.id, id));
 }
 
+export async function setGameThumbnail(
+  env: Env,
+  id: string,
+  contentType: string,
+) {
+  const database = getDatabase(env);
+  await database
+    .update(gamesTable)
+    .set({ thumbnailContentType: contentType })
+    .where(eq(gamesTable.id, id));
+}
+
 export async function deleteGame(env: Env, id: string) {
   const database = getDatabase(env);
   await database.delete(gamesTable).where(eq(gamesTable.id, id));

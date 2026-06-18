@@ -22,7 +22,6 @@ export default defineConfig({
       external: [
         "react",
         "react-dom",
-        "clsx",
         "lucide-react",
         "tailwind-merge",
         "tiny-invariant",

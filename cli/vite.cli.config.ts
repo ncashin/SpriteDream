@@ -11,19 +11,18 @@ export default {
   build: {
     target: "node18",
     outDir: "dist",
-    emptyOutDir: true,
+    emptyOutDir: false,
     sourcemap: true,
     minify: false,
     rollupOptions: {
-      preserveEntrySignatures: "exports-only",
       input: {
-        index: path.resolve(__dirname, "source/index.ts"),
+        cli: path.resolve(__dirname, "source/cli.ts"),
       },
       external,
       output: {
         format: "es",
         entryFileNames: "[name].js",
-        minifyInternalExports: false,
+        inlineDynamicImports: true,
       },
     },
   },
