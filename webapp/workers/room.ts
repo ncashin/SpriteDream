@@ -32,11 +32,12 @@ export class Room extends DurableObject {
     server.send(
       JSON.stringify({
         type: "ready",
+        peerId,
         peers: this.peerIds(),
       }),
     );
 
-    this.broadcastPeers();
+    this.broadcastPeers(server);
 
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -74,13 +75,13 @@ export class Room extends DurableObject {
       .filter((peerId): peerId is string => peerId !== undefined);
   }
 
-  private broadcastPeers() {
+  private broadcastPeers(except?: WebSocket) {
     const payload = JSON.stringify({
       type: "roomPeersUpdate",
       peers: this.peerIds(),
     });
     for (const webSocket of this.ctx.getWebSockets()) {
-      if (webSocket.readyState === WebSocket.OPEN) {
+      if (webSocket !== except && webSocket.readyState === WebSocket.OPEN) {
         webSocket.send(payload);
       }
     }

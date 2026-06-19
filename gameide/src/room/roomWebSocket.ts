@@ -66,6 +66,7 @@ export function attachRoomWebSocket(httpServer: Server | Http2SecureServer): Web
     websocket.send(
       JSON.stringify({
         type: "ready",
+        peerId: client.peerId,
         peers: peerIdsInRoom(room),
       }),
     );

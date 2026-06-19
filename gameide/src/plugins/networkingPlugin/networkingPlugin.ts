@@ -47,7 +47,7 @@ export const networkingPlugin = (
   async (input) => {
     const room = options.room ?? "default";
 
-    const { transport, dispose: disposeTransport } =
+    const { transport, peerId, dispose: disposeTransport } =
       await connectWebSocketRoomTransport({ room, url: options.url });
 
     const shouldBootstrapScene = transport.getPeers().length === 1;
@@ -55,7 +55,6 @@ export const networkingPlugin = (
       input.scene.replace(input.initialScene);
     }
 
-    const peerId = crypto.randomUUID();
     const channel = await createSceneChannel({
       transport,
       scene: input.scene,

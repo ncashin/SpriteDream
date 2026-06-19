@@ -138,6 +138,7 @@ export async function createSceneChannel(
   function handleMessage(message: SceneChannelMessage): void {
     switch (message.type) {
       case SCENE_CHANNEL.requestInitialScene:
+        if (!sceneInitialized) return;
         if (shouldRespondToInitialScene && !shouldRespondToInitialScene()) return;
         try {
           sendInitialScene(JSON.stringify(scene.getRaw()));
