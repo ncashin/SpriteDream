@@ -25,8 +25,21 @@ const playerTrait = defineTrait(
   }),
 );
 
+const playerTraits = implementsTrait([
+  playerTrait,
+  transformTrait,
+  spriteTrait,
+  collisionBodyTrait,
+]);
+
+const ballTraits = implementsTrait([
+  transformTrait,
+  spriteTrait,
+  collisionBodyTrait,
+  ownerTrait,
+]);
+
 export default function main(gameContext: RuntimeGameContext): void {
-  console.log("GOOD MORNING VIETNAM")
   const { input, networking, planck, scene } = gameContext;
 
   onGameStart(() => {
@@ -47,15 +60,7 @@ export default function main(gameContext: RuntimeGameContext): void {
   });
 
   onGameUpdate((deltaTime) => {
-    const player = scene.getObject(
-      networking.peerId,
-      implementsTrait([
-        playerTrait,
-        transformTrait,
-        spriteTrait,
-        collisionBodyTrait,
-      ]),
-    );
+    const player = scene.getObject(networking.peerId, playerTraits);
 
     if (player) {
       if (input.buttons.Jump.pressed && player.grounded) {
@@ -63,18 +68,10 @@ export default function main(gameContext: RuntimeGameContext): void {
       }
       player.collisionBody.velocity.x =
         input.axes.Horizontal * player.moveSpeed;
-      player.collisionBody.velocity.y += (player?.gravity ?? 0) * deltaTime;
+      player.collisionBody.velocity.y += player.gravity * deltaTime;
     }
 
-    const ball = scene.getObject(
-      "bouncyBall",
-      implementsTrait([
-        transformTrait,
-        spriteTrait,
-        collisionBodyTrait,
-        ownerTrait,
-      ]),
-    );
+    const ball = scene.getObject("bouncyBall", ballTraits);
 
     if (ball && networking.isOwned(ball)) {
       ball.collisionBody.velocity.y += BALL_GRAVITY_Y * deltaTime;

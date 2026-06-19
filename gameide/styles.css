@@ -2,21 +2,12 @@
 
 @source "./src/**/*.{js,ts,jsx,tsx}";
 
-@theme {
-  --font-sans: "Satoshi", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-}
-
 :root {
-  --color-text: #ffffff;
-  --color-muted: #cccccc;
-
-  font-family: var(--font-sans);
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: dark;
+  color-scheme: light dark;
   color: var(--color-text);
   background-color: var(--color-bg);
 
@@ -25,12 +16,16 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --vscode-font-family: var(--font-sans);
+  --vscode-font-family: inherit;
 }
 
 a {
-  color: inherit;
+  font-weight: 500;
+  color: var(--color-blue);
   text-decoration: inherit;
+}
+a:hover {
+  color: var(--color-highlight);
 }
 
 html,

@@ -1,36 +1,22 @@
 import { DurableObject } from "cloudflare:workers";
 
-const ROOM_MESSAGE = {
-  ready: "ready",
-  roomPeersUpdate: "roomPeersUpdate",
-  signal: "signal",
-} as const;
-
-type RoomAttachment = {
+type RoomSocketAttachment = {
   peerId: string;
 };
 
-function isRoomSignalMessage(message: unknown): message is {
-  type: typeof ROOM_MESSAGE.signal;
-  to: string;
-  payload: unknown;
-} {
-  if (message == null || typeof message !== "object") return false;
-  const record = message as Record<string, unknown>;
-  return record.type === ROOM_MESSAGE.signal && typeof record.to === "string";
-}
+export class Room extends DurableObject {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    ctx.blockConcurrencyWhile(async () => {
+      this.ctx.storage.sql.exec(`
+        CREATE TABLE IF NOT EXISTS room_state (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          next_peer INTEGER NOT NULL
+        )
+      `);
+    });
+  }
 
-function messageText(message: string | ArrayBuffer): string {
-  return typeof message === "string" ? message : new TextDecoder().decode(message);
-}
-
-function getAttachment(ws: WebSocket): RoomAttachment | null {
-  const attachment = ws.deserializeAttachment() as RoomAttachment | null;
-  if (attachment == null || typeof attachment.peerId !== "string") return null;
-  return attachment;
-}
-
-export class Room extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("Expected WebSocket", { status: 426 });
@@ -41,12 +27,11 @@ export class Room extends DurableObject<Env> {
     this.ctx.acceptWebSocket(server);
 
     const peerId = this.allocatePeerId();
-    server.serializeAttachment({ peerId } satisfies RoomAttachment);
+    server.serializeAttachment({ peerId } satisfies RoomSocketAttachment);
 
     server.send(
       JSON.stringify({
-        type: ROOM_MESSAGE.ready,
-        peerId,
+        type: "ready",
         peers: this.peerIds(),
       }),
     );
@@ -56,31 +41,13 @@ export class Room extends DurableObject<Env> {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
-    const attachment = getAttachment(ws);
-    if (!attachment) return;
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(messageText(message));
-    } catch {
-      return;
-    }
-    if (!isRoomSignalMessage(parsed)) return;
-
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
+    const text =
+      typeof message === "string" ? message : new TextDecoder().decode(message);
     for (const other of this.ctx.getWebSockets()) {
-      if (other === ws) continue;
-      const otherAttachment = getAttachment(other);
-      if (otherAttachment?.peerId !== parsed.to) continue;
-      other.send(
-        JSON.stringify({
-          type: ROOM_MESSAGE.signal,
-          to: parsed.to,
-          from: attachment.peerId,
-          payload: parsed.payload,
-        }),
-      );
-      return;
+      if (other !== ws && other.readyState === WebSocket.OPEN) {
+        other.send(text);
+      }
     }
   }
 
@@ -88,39 +55,55 @@ export class Room extends DurableObject<Env> {
     ws: WebSocket,
     code: number,
     reason: string,
-    wasClean: boolean,
-  ): Promise<void> {
+    _wasClean: boolean,
+  ) {
     ws.close(code, reason);
     this.broadcastPeers();
   }
 
-  private allocatePeerId(): string {
-    let max = 0;
-    for (const ws of this.ctx.getWebSockets()) {
-      const peerId = getAttachment(ws)?.peerId;
-      if (!peerId) continue;
-      const numeric = Number.parseInt(peerId.slice(1), 10);
-      if (!Number.isNaN(numeric)) {
-        max = Math.max(max, numeric);
-      }
-    }
-    return `p${max + 1}`;
+  async webSocketError(ws: WebSocket, _error: unknown) {
+    ws.close();
+    this.broadcastPeers();
   }
 
   private peerIds(): string[] {
     return this.ctx
       .getWebSockets()
-      .map((ws) => getAttachment(ws)?.peerId)
-      .filter((peerId): peerId is string => typeof peerId === "string");
+      .filter((webSocket) => webSocket.readyState === WebSocket.OPEN)
+      .map((webSocket) => this.peerIdFor(webSocket))
+      .filter((peerId): peerId is string => peerId !== undefined);
   }
 
   private broadcastPeers() {
     const payload = JSON.stringify({
-      type: ROOM_MESSAGE.roomPeersUpdate,
+      type: "roomPeersUpdate",
       peers: this.peerIds(),
     });
-    for (const ws of this.ctx.getWebSockets()) {
-      ws.send(payload);
+    for (const webSocket of this.ctx.getWebSockets()) {
+      if (webSocket.readyState === WebSocket.OPEN) {
+        webSocket.send(payload);
+      }
     }
+  }
+
+  private peerIdFor(webSocket: WebSocket): string | undefined {
+    const attachment = webSocket.deserializeAttachment();
+    if (attachment == null || typeof attachment !== "object") return undefined;
+    const { peerId } = attachment as Record<string, unknown>;
+    return typeof peerId === "string" ? peerId : undefined;
+  }
+
+  private allocatePeerId(): string {
+    const row = this.ctx.storage.sql
+      .exec<{ peer_id: number }>(
+        `
+          INSERT INTO room_state (id, next_peer)
+          VALUES (1, 2)
+          ON CONFLICT(id) DO UPDATE SET next_peer = next_peer + 1
+          RETURNING next_peer - 1 AS peer_id
+        `,
+      )
+      .one();
+    return `p${row.peer_id}`;
   }
 }

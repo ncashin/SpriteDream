@@ -2,7 +2,6 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Http2SecureServer } from "node:http2";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, WebSocket } from "ws";
-import { isRoomSignalMessage, ROOM_MESSAGE } from "./roomSignalingMessages.js";
 
 const ROOM_PATH = "/room";
 
@@ -66,14 +65,13 @@ export function attachRoomWebSocket(httpServer: Server | Http2SecureServer): Web
 
     websocket.send(
       JSON.stringify({
-        type: ROOM_MESSAGE.ready,
-        peerId: client.peerId,
+        type: "ready",
         peers: peerIdsInRoom(room),
       }),
     );
 
     const peersPayload = JSON.stringify({
-      type: ROOM_MESSAGE.roomPeersUpdate,
+      type: "roomPeersUpdate",
       peers: peerIdsInRoom(room),
     });
     for (const other of set) {
@@ -84,31 +82,11 @@ export function attachRoomWebSocket(httpServer: Server | Http2SecureServer): Web
 
     websocket.on("message", (data: Buffer | ArrayBuffer | Buffer[]) => {
       const text = messageDataToUTF8(data);
-      let message: unknown;
-      try {
-        message = JSON.parse(text);
-      } catch {
-        return;
-      }
-      if (!isRoomSignalMessage(message)) return;
-
       const others = rooms.get(room);
       if (!others) return;
       for (const other of others) {
-        if (
-          other.peerId === message.to &&
-          other !== client &&
-          other.readyState === WebSocket.OPEN
-        ) {
-          other.send(
-            JSON.stringify({
-              type: ROOM_MESSAGE.signal,
-              to: message.to,
-              from: client.peerId,
-              payload: message.payload,
-            }),
-          );
-          return;
+        if (other !== client && other.readyState === WebSocket.OPEN) {
+          other.send(text);
         }
       }
     });
@@ -122,7 +100,7 @@ export function attachRoomWebSocket(httpServer: Server | Http2SecureServer): Web
         return;
       }
       const peersPayload = JSON.stringify({
-        type: ROOM_MESSAGE.roomPeersUpdate,
+        type: "roomPeersUpdate",
         peers: peerIdsInRoom(room),
       });
       for (const peer of roomClients) {

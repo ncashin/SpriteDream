@@ -1,6 +1,6 @@
 import type { SceneChannelTransport } from "./sceneChannelTransport.js";
 import { setValueAtPath } from "../path.js";
-import { SCENE_PATCH_DELETED, Scene, SceneObject } from "../scene.js";
+import { SCENE_PATCH_DELETED, Scene, SceneObject, type ScenePath } from "../scene.js";
 
 export const SCENE_CHANNEL = {
   requestInitialScene: "gameide.editor.requestInitialScene",
@@ -52,6 +52,8 @@ export interface CreateSceneChannelOptions {
   scene: Scene;
   initializeScene?: boolean;
   initialScenePath?: string;
+  shouldBroadcastUpdate?: (path: ScenePath) => boolean;
+  shouldRespondToInitialScene?: () => boolean;
 }
 
 export interface SceneChannel {
@@ -71,7 +73,14 @@ export interface SceneChannel {
 export async function createSceneChannel(
   options: CreateSceneChannelOptions,
 ): Promise<SceneChannel> {
-  const { transport, scene, initializeScene = true, initialScenePath } = options;
+  const {
+    transport,
+    scene,
+    initializeScene = true,
+    initialScenePath,
+    shouldBroadcastUpdate,
+    shouldRespondToInitialScene,
+  } = options;
   let sceneInitialized = !initializeScene;
   let paused = false;
   let applyingRemoteChange = false;
@@ -100,9 +109,36 @@ export async function createSceneChannel(
     transport.send({ type: SCENE_CHANNEL.sceneChange, content });
   }
 
+  const pendingMessagesWhileWaiting: SceneChannelMessage[] = [];
+
+  function finishSceneInitialization(content: SceneObject | string): void {
+    if (sceneInitialized) return;
+    sceneInitialized = true;
+    if (requestInitialSceneTimer !== undefined) {
+      clearInterval(requestInitialSceneTimer);
+      requestInitialSceneTimer = undefined;
+    }
+    applyingRemoteChange = true;
+    try {
+      scene.replace(parsePatchContent(content));
+      for (const message of pendingMessagesWhileWaiting) {
+        if (message.type === SCENE_CHANNEL.scenePatch) {
+          scene.applyPatch(message.content);
+        } else if (message.type === SCENE_CHANNEL.sceneChange) {
+          scene.replace(parsePatchContent(message.content));
+        }
+      }
+    } finally {
+      pendingMessagesWhileWaiting.length = 0;
+      applyingRemoteChange = false;
+      markReady();
+    }
+  }
+
   function handleMessage(message: SceneChannelMessage): void {
     switch (message.type) {
       case SCENE_CHANNEL.requestInitialScene:
+        if (shouldRespondToInitialScene && !shouldRespondToInitialScene()) return;
         try {
           sendInitialScene(JSON.stringify(scene.getRaw()));
         } catch {
@@ -110,19 +146,15 @@ export async function createSceneChannel(
         }
         return;
       case SCENE_CHANNEL.initialScene: {
-        if (sceneInitialized) return;
-        sceneInitialized = true;
-        applyingRemoteChange = true;
-        try {
-          scene.replace(parsePatchContent(message.content));
-        } finally {
-          applyingRemoteChange = false;
-          markReady();
-        }
+        finishSceneInitialization(message.content);
         return;
       }
       case SCENE_CHANNEL.scenePatch: {
-        if (!sceneInitialized || paused) return;
+        if (!sceneInitialized) {
+          pendingMessagesWhileWaiting.push(message);
+          return;
+        }
+        if (paused) return;
         applyingRemoteChange = true;
         try {
           scene.applyPatch(message.content);
@@ -132,7 +164,11 @@ export async function createSceneChannel(
         return;
       }
       case SCENE_CHANNEL.sceneChange: {
-        if (!sceneInitialized || paused) return;
+        if (!sceneInitialized) {
+          pendingMessagesWhileWaiting.push(message);
+          return;
+        }
+        if (paused) return;
         applyingRemoteChange = true;
         try {
           scene.replace(parsePatchContent(message.content));
@@ -145,8 +181,13 @@ export async function createSceneChannel(
   }
 
   const unsubscribeTransport = transport.onMessage(handleMessage as any);
+  let requestInitialSceneTimer: ReturnType<typeof setInterval> | undefined;
   if (!sceneInitialized) {
     queueMicrotask(() => requestInitialScene());
+    requestInitialSceneTimer = setInterval(() => {
+      if (sceneInitialized) return;
+      requestInitialScene();
+    }, 1000);
   }
 
   let pendingPatch: SceneObject = {};
@@ -164,6 +205,7 @@ export async function createSceneChannel(
 
   const unsubscribeOnChange = scene.onChange((_object, property, newValue) => {
     if (!sceneInitialized || paused || applyingRemoteChange) return;
+    if (shouldBroadcastUpdate && !shouldBroadcastUpdate(property)) return;
     setValueAtPath(
       pendingPatch,
       property,
@@ -176,6 +218,9 @@ export async function createSceneChannel(
   return {
     dispose() {
       patchLoopDisposed = true;
+      if (requestInitialSceneTimer !== undefined) {
+        clearInterval(requestInitialSceneTimer);
+      }
       unsubscribeTransport();
       unsubscribeOnChange?.();
     },
