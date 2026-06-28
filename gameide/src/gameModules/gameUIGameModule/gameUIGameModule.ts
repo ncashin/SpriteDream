@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { createGameUI } from "./createGameUI.js";
 
-export const gameUIPlugin =
+export const gameUIGameModule =
   (GameUI: ComponentType) =>
   async (input: { rootElement: HTMLElement; dispose: (callback: () => void) => void }) => {
     const mount = await createGameUI(

@@ -1,13 +1,13 @@
 import { GameIDEMode, getMode, onModeChange } from "./mode.js";
+import {
+  __wireGameloopHMR,
+  currentHotScopeId,
+  shouldRunStartImmediately,
+} from "./gameloopHMR.js";
 
 type StartCallback = () => void;
 type UpdateCallback = (deltaTime: number) => void;
 type DisposeRegistration = () => void;
-
-type HotModuleScope = {
-  id: string;
-  isReplacement: boolean;
-};
 
 type UpdateRegistration = {
   callback: UpdateCallback;
@@ -28,86 +28,8 @@ const editorUpdates: UpdateRegistration[] = [];
 const alwaysUpdates: UpdateRegistration[] = [];
 
 const scheduledDisposes: (() => void)[] = [];
-const disposedHotScopes = new Set<string>();
-
-type HotModuleReplayArgsState = {
-  kind: "unset" | "called";
-  args: unknown[];
-};
-
-const hotModuleReplayArgsByScope = new Map<string, HotModuleReplayArgsState>();
-
-export function __hotModuleLastArgsForScope(scopeId: string): HotModuleReplayArgsState {
-  const key = normalizeHotScopeId(scopeId);
-  let state = hotModuleReplayArgsByScope.get(key);
-  if (!state) {
-    state = { kind: "unset", args: [] };
-    hotModuleReplayArgsByScope.set(key, state);
-  }
-  return state;
-}
-
-function runWithHotScope<T>(
-  scopeId: string,
-  isReplacement: boolean,
-  callback: () => T,
-): T {
-  const normalizedScopeId = normalizeHotScopeId(scopeId);
-  const topBefore = activeHotScopes.length - 1;
-  const alreadyActive =
-    topBefore >= 0 && activeHotScopes[topBefore]?.id === normalizedScopeId;
-  if (!alreadyActive) {
-    activeHotScopes.push({ id: normalizedScopeId, isReplacement });
-  }
-
-  const releaseScope = () => {
-    if (alreadyActive) return;
-    const top = activeHotScopes.length - 1;
-    const scope = top >= 0 ? activeHotScopes[top] : undefined;
-    if (scope?.id === normalizedScopeId) {
-      activeHotScopes.splice(top, 1);
-    }
-  };
-
-  try {
-    const result = callback();
-    const maybePromise = result as unknown as PromiseLike<unknown> | undefined;
-    if (maybePromise && typeof maybePromise.then === "function") {
-      return Promise.resolve(result).finally(releaseScope) as T;
-    }
-    releaseScope();
-    return result;
-  } catch (error) {
-    releaseScope();
-    throw error;
-  }
-}
-
-export function __hotModuleDefaultExport<T>(
-  scopeId: string,
-  state: HotModuleReplayArgsState,
-  exported: T,
-): T {
-  if (typeof exported !== "function") return exported;
-  const fn = exported as (...args: unknown[]) => unknown;
-  return function hotModuleDefaultWrapper(this: unknown, ...args: unknown[]) {
-    state.kind = "called";
-    state.args = args;
-    return runWithHotScope(scopeId, false, () => fn.apply(this, args));
-  } as T;
-}
 
 let frameId: number | undefined;
-const activeHotScopes: HotModuleScope[] = [];
-
-export function __suspendHotScopes(): HotModuleScope[] {
-  return activeHotScopes.splice(0);
-}
-
-export function __restoreHotScopes(snapshot: readonly HotModuleScope[]): void {
-  activeHotScopes.length = 0;
-  activeHotScopes.push(...snapshot);
-}
 
 export function dispose(fn: () => void): void {
   scheduledDisposes.push(fn);
@@ -125,18 +47,6 @@ function runUpdates(
   deltaTime: number,
 ): void {
   for (const registration of callbacks) registration.callback(deltaTime);
-}
-
-function currentScopeId(): string | undefined {
-  return activeHotScopes[activeHotScopes.length - 1]?.id;
-}
-
-function normalizeHotScopeId(scopeId: string): string {
-  return scopeId.replace(/[?#].*$/, "");
-}
-
-function shouldRunStartImmediately(): boolean {
-  return activeHotScopes[activeHotScopes.length - 1]?.isReplacement !== true;
 }
 
 function removeRegistration<T>(registrations: T[], registration: T): void {
@@ -166,7 +76,7 @@ function registerUpdate(
 ): DisposeRegistration {
   const registration: UpdateRegistration = {
     callback,
-    scopeId: currentScopeId(),
+    scopeId: currentHotScopeId(),
   };
   registrations.push(registration);
   return () => removeRegistration(registrations, registration);
@@ -177,7 +87,7 @@ function registerModeStart(
   mode: GameIDEMode,
   callback: StartCallback,
 ): DisposeRegistration {
-  const scopeId = currentScopeId();
+  const scopeId = currentHotScopeId();
   const registration: StartRegistration = {
     callback,
     mode,
@@ -218,39 +128,7 @@ function removeScopedRegistrations(scopeId: string): number {
   return removed;
 }
 
-export function __beginHotModule(scopeId: string): string {
-  const normalizedScopeId = normalizeHotScopeId(scopeId);
-  const isReplacement =
-    disposedHotScopes.delete(normalizedScopeId) ||
-    removeScopedRegistrations(normalizedScopeId) > 0;
-  activeHotScopes.push({ id: normalizedScopeId, isReplacement });
-  return normalizedScopeId;
-}
-
-export function __endHotModule(scopeId: string): void {
-  const normalizedScopeId = normalizeHotScopeId(scopeId);
-  for (let index = activeHotScopes.length - 1; index >= 0; index -= 1) {
-    const scope = activeHotScopes[index];
-    if (scope?.id !== normalizedScopeId) continue;
-    activeHotScopes.splice(index, 1);
-    return;
-  }
-}
-
-export function __disposeHotModule(scopeId: string): void {
-  const normalizedScopeId = normalizeHotScopeId(scopeId);
-  removeScopedRegistrations(normalizedScopeId);
-  disposedHotScopes.add(normalizedScopeId);
-  for (let index = activeHotScopes.length - 1; index >= 0; index -= 1) {
-    if (activeHotScopes[index]?.id === normalizedScopeId) {
-      activeHotScopes.splice(index, 1);
-    }
-  }
-}
-
-export function __runHotModuleReplay(scopeId: string, replay: () => void): void {
-  runWithHotScope(scopeId, true, replay);
-}
+__wireGameloopHMR(removeScopedRegistrations);
 
 export function __runModeStarts(mode: GameIDEMode): void {
   const registrations = mode === GameIDEMode.Game ? gameStarts : editorStarts;
@@ -259,12 +137,12 @@ export function __runModeStarts(mode: GameIDEMode): void {
   }
 }
 
-export function start(callback: StartCallback): DisposeRegistration {
+export function onStart(callback: StartCallback): DisposeRegistration {
   callback();
   return () => {};
 }
 
-export function update(callback: UpdateCallback): DisposeRegistration {
+export function onUpdate(callback: UpdateCallback): DisposeRegistration {
   return registerUpdate(alwaysUpdates, callback);
 }
 

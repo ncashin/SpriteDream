@@ -1,10 +1,10 @@
 export {
-  pixiPlugin,
-  type PixiPluginAPI,
-  type PixiPluginInputContext,
-  type PixiPluginOptions,
+  pixiGameModule,
+  type PixiGameModuleAPI,
+  type PixiGameModuleInputContext,
+  type PixiGameModuleOptions,
   type Viewport,
-} from "./pixiPlugin.js";
+} from "./pixiGameModule.js";
 export { spriteTrait, type SpriteRenderable } from "./sprite.js";
 export { colliderDebug, type ColliderDebugController, type ColliderDebugOptions } from "./colliderDebug.js";
 export {

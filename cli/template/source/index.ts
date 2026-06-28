@@ -1,9 +1,9 @@
 import {
-  editorPlugin,
+  editorGameModule,
   gameide,
-  gameUIPlugin,
-  inputPlugin,
-  networkingPlugin,
+  gameUIGameModule,
+  inputGameModule,
+  networkingGameModule,
 } from "gameide";
 import invariant from "tiny-invariant";
 import exampleScene from "./scenes/example.scene";
@@ -11,21 +11,21 @@ import "./style.css";
 import { Editor } from "./gameide/editor/Editor";
 import { GameUI } from "./GameUI";
 import main from "./game";
-import { pixiPlugin } from "./gameide/plugins/pixiPlugin/index";
-import { planckPlugin } from "./gameide/plugins/planckPlugin/index";
+import { pixiGameModule } from "./gameide/gameModules/pixiGameModule/index";
+import { planckGameModule } from "./gameide/gameModules/planckGameModule/index";
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
 
-const game = await gameide({
+const gameContext = await gameide({
   rootElement,
   initialContext: {},
   initialScene: exampleScene,
-  plugins: [
-    editorPlugin(Editor),
-    gameUIPlugin(GameUI),
-    networkingPlugin(),
-    inputPlugin({
+  gameModules: [
+    editorGameModule(Editor),
+    gameUIGameModule(GameUI),
+    networkingGameModule(),
+    inputGameModule({
       axes: {
         Horizontal: {
           negative: ["KeyA", "KeyArrowLeft"],
@@ -43,11 +43,10 @@ const game = await gameide({
         LookCamera: ["Mouse0"],
       },
     }),
-    planckPlugin({}),
-    pixiPlugin({}),
+    planckGameModule({}),
+    pixiGameModule({}),
   ],
 });
 
-export const { gameContext } = game;
 export type RuntimeGameContext = typeof gameContext;
 main(gameContext);

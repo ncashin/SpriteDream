@@ -1,18 +1,18 @@
 export {
   gameide,
-  getGameContext,
-  type GameConfig,
+  type GameIDEOptions,
+  type BaseGameContext,
   type GameContext,
+  type GameLifecycle,
   type DisposeCallback,
-  type GameAPI,
 } from "./initialization.js";
-export { plugins, type ApplyPlugins, type Plugin } from "./plugin.js";
+export { type ReduceGameModules as ApplyGameModules, type GameModule } from "./gameModule.js";
+export { __runModeStarts } from "./gameloop.js";
 export {
   __beginHotModule,
   __endHotModule,
   __disposeHotModule,
   __runHotModuleReplay,
-  __runModeStarts,
   __hotModuleDefaultExport,
   __hotModuleLastArgsForScope,
-} from "./gameloop.js";
+} from "./gameloopHMR.js";

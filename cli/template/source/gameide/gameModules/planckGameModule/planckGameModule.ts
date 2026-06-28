@@ -5,9 +5,9 @@ import {
   getScene,
   onGameUpdate,
   peerIntegratesPhysicsForObject,
-  start,
+  onStart,
   type GameObject,
-  type Plugin,
+  type GameModule,
 } from "gameide";
 import {
   sceneBodyIsDynamic,
@@ -42,7 +42,7 @@ export type {
   PlanckContactPhase,
 } from "./planckContacts.js";
 
-export type PlanckPluginOptions = {
+export type PlanckGameModuleOptions = {
   pixelsPerMeter?: number;
   lengthUnitsPerMeter?: number;
   gravity?: { x: number; y: number };
@@ -50,14 +50,14 @@ export type PlanckPluginOptions = {
   simulatesDynamics?: (object: GameObject) => boolean;
 };
 
-type PlanckPluginNetworkingContext = {
+type PlanckGameModuleNetworkingContext = {
   networking?: { peerId: string };
   dispose: (fn: () => void) => void;
 };
 
-export type PlanckPluginAPI = {
+export type PlanckGameModuleAPI = {
   world: World;
-  /** Scene pixels per Planck meter; matches {@link PlanckPluginOptions.pixelsPerMeter} (default 30). */
+  /** Scene pixels per Planck meter; matches {@link PlanckGameModuleOptions.pixelsPerMeter} (default 30). */
   pixelsPerMeter: number;
   onCollision: (self: GameObject, handler: PlanckCollisionHandler) => () => void;
   onTrigger: (self: GameObject, handler: PlanckCollisionHandler) => () => void;
@@ -79,9 +79,9 @@ function defaultSimulatesDynamics(networking: { peerId: string } | undefined) {
   return (object: GameObject) => peerIntegratesPhysicsForObject(object, networking.peerId);
 }
 
-export function planckPlugin(
-  options: PlanckPluginOptions = {},
-): Plugin<PlanckPluginNetworkingContext, { planck: PlanckPluginAPI }> {
+export function planckGameModule(
+  options: PlanckGameModuleOptions = {},
+): GameModule<PlanckGameModuleNetworkingContext, { planck: PlanckGameModuleAPI }> {
   return (context) => {
     const simulatesDynamics =
       options.simulatesDynamics ?? defaultSimulatesDynamics(context.networking);
@@ -156,7 +156,7 @@ export function planckPlugin(
       };
     };
 
-    const api: PlanckPluginAPI = {
+    const api: PlanckGameModuleAPI = {
       world,
       pixelsPerMeter,
       onCollision,
@@ -187,7 +187,7 @@ export function planckPlugin(
     });
 
     let physicsGameUpdateRegistered = false;
-    start(() => {
+    onStart(() => {
       if (physicsGameUpdateRegistered) return;
       physicsGameUpdateRegistered = true;
       onGameUpdate((deltaTime) => {

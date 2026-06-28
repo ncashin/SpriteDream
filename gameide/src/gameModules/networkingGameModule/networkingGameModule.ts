@@ -2,7 +2,7 @@ import { connectWebSocketRoomTransport } from "../../room/webSocketRoomTransport
 import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { GameObject, Scene, SceneObject } from "../../scene/scene.js";
-import type { Plugin } from "../../lifecycle/plugin.js";
+import type { GameModule } from "../../lifecycle/gameModule.js";
 import { dispose } from "../../lifecycle/gameloop.js";
 import {
   isOwnedSceneObject,
@@ -19,12 +19,12 @@ export {
 } from "./distributedSimulation.js";
 export { ownerTrait };
 
-export type NetworkingPluginOptions = {
+export type NetworkingGameModuleOptions = {
   room?: string;
   url?: string;
 };
 
-export type NetworkingPluginRequiredContext = {
+export type NetworkingGameModuleRequiredContext = {
   rootElement: HTMLElement;
   scene: Scene;
   initialScene?: SceneObject;
@@ -41,9 +41,9 @@ export type NetworkingAPI = {
   ) => T & Record<typeof OWNER_ID, string>;
 };
 
-export const networkingPlugin = (
-  options: NetworkingPluginOptions = {},
-): Plugin<NetworkingPluginRequiredContext, { networking: NetworkingAPI }> =>
+export const networkingGameModule = (
+  options: NetworkingGameModuleOptions = {},
+): GameModule<NetworkingGameModuleRequiredContext, { networking: NetworkingAPI }> =>
   async (input) => {
     const room = options.room ?? "default";
 

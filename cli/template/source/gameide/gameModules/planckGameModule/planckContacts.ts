@@ -58,7 +58,7 @@ export function subscribePlanckWorldContacts(world: World, maps: PlanckContactMa
     try {
       handlerFn(other, collisionInfo);
     } catch (err) {
-      console.error("planckPlugin handler error", err);
+      console.error("planckGameModule handler error", err);
     }
   };
 
@@ -76,7 +76,7 @@ export function subscribePlanckWorldContacts(world: World, maps: PlanckContactMa
       try {
         handlerFn(other, collisionInfo);
       } catch (err) {
-        console.error("planckPlugin handler error", err);
+        console.error("planckGameModule handler error", err);
       }
     }
   };

@@ -10,9 +10,9 @@ import playerScene from "./scenes/player.scene";
 import "./style.css";
 import bouncyBallScene from "./scenes/bouncyBall.scene";
 import type { RuntimeGameContext } from "./index";
-import { collisionBodyTrait } from "./gameide/plugins/planckPlugin/index";
-import { spriteTrait } from "./gameide/plugins/pixiPlugin/index";
-import { transformTrait } from "./gameide/plugins/transform.js";
+import { collisionBodyTrait } from "./gameide/gameModules/planckGameModule/index";
+import { spriteTrait } from "./gameide/gameModules/pixiGameModule/index";
+import { transformTrait } from "./gameide/gameModules/transform.js";
 
 const BALL_GRAVITY_Y = -1500;
 

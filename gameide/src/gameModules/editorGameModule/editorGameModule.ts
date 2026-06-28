@@ -13,7 +13,7 @@ import {
   useSceneFileStore,
 } from "./sceneFile/sceneFileStore.js";
 
-export const editorPlugin =
+export const editorGameModule =
   (Editor: EditorWithGameViewReference) =>
   async (input: GameContext<object>) => {
     if (process.env.NODE_ENV !== "development") {

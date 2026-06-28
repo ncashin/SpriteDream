@@ -3,7 +3,7 @@ import { getScene, type GameObject } from "gameide";
 import {
   collisionBodyDisabled,
   isColliderNode,
-} from "../planckPlugin/planckBodies.js";
+} from "../planckGameModule/planckBodies.js";
 
 type ColliderDebugBinding = {
   root: Container;

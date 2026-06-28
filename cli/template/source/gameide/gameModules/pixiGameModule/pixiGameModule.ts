@@ -3,13 +3,13 @@ import {
   Container,
   type ApplicationOptions,
 } from "pixi.js";
-import type { PlanckPluginAPI } from "../planckPlugin/planckPlugin.js";
+import type { PlanckGameModuleAPI } from "../planckGameModule/planckGameModule.js";
 import {
   deselectObject,
   getEditorDebugUIEnabled,
   onEditorDebugUIChange,
   selectObject,
-  type Plugin,
+  type GameModule,
 } from "gameide";
 import { pickSceneObjectAtWorldPoint } from "./editorPick.js";
 import { pixiSprites } from "./sprite.js";
@@ -25,7 +25,7 @@ import {
   subscribeDevicePixelRatioChange,
 } from "./displayMetrics.js";
 
-export type PixiPluginOptions = {
+export type PixiGameModuleOptions = {
   initOptions?: Omit<Partial<ApplicationOptions>, "resizeTo">;
   enableEditorObjectPick?: boolean;
   /**
@@ -37,18 +37,18 @@ export type PixiPluginOptions = {
 
 export type Viewport = ViewportController;
 
-export type PixiPluginAPI = {
+export type PixiGameModuleAPI = {
   app: Application;
   world: Container;
   viewport: Viewport;
 };
 
-type PixiPluginContext = {
+type PixiGameModuleContext = {
   rootElement: HTMLElement;
   dispose: (fn: () => void) => void;
 };
 
-export type PixiPluginInputContext = PixiPluginContext & {
+export type PixiGameModuleInputContext = PixiGameModuleContext & {
   input: {
     buttons: {
       Click: { held: boolean; pressed: boolean; released: boolean };
@@ -58,12 +58,12 @@ export type PixiPluginInputContext = PixiPluginContext & {
       wheel: { x: number; y: number };
     };
   };
-  planck?: PlanckPluginAPI;
+  planck?: PlanckGameModuleAPI;
 };
 
-export function pixiPlugin(
-  options: PixiPluginOptions = {},
-): Plugin<PixiPluginInputContext, { pixi: PixiPluginAPI }> {
+export function pixiGameModule(
+  options: PixiGameModuleOptions = {},
+): GameModule<PixiGameModuleInputContext, { pixi: PixiGameModuleAPI }> {
   return async (context) => {
     const rootElement = context.rootElement;
     rootElement.style.position = "absolute";

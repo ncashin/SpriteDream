@@ -15,22 +15,24 @@ export type {
 } from "./scene/sceneChannel/sceneChannel.js";
 
 export {
-  start,
-  update,
+  onStart,
+  onUpdate,
   onGameStart,
   onGameUpdate,
   onEditorStart,
   onEditorUpdate,
   startGameloop,
   dispose,
+  __runModeStarts,
+} from "./lifecycle/gameloop.js";
+export {
   __beginHotModule,
   __endHotModule,
   __disposeHotModule,
   __runHotModuleReplay,
-  __runModeStarts,
   __hotModuleDefaultExport,
   __hotModuleLastArgsForScope,
-} from "./lifecycle/gameloop.js";
+} from "./lifecycle/gameloopHMR.js";
 export {
   curryScene,
   getScene,
@@ -60,37 +62,36 @@ export {
 } from "./trait/trait.js";
 export {
   gameide,
-  getGameContext,
-  plugins,
-  type ApplyPlugins,
-  type Plugin,
-  type GameConfig,
+  type ApplyGameModules,
+  type GameModule,
+  type GameIDEOptions,
+  type BaseGameContext,
   type GameContext,
+  type GameLifecycle,
   type DisposeCallback,
-  type GameAPI,
 } from "./lifecycle/index.js";
-export { editorPlugin } from "./plugins/editorPlugin/editorPlugin.js";
-export type { EditorWithGameViewReference } from "./plugins/editorPlugin/createEditorUI.js";
+export { editorGameModule } from "./gameModules/editorGameModule/editorGameModule.js";
+export type { EditorWithGameViewReference } from "./gameModules/editorGameModule/createEditorUI.js";
 export {
-  networkingPlugin,
+  networkingGameModule,
   OWNER_ID,
   ownerTrait,
   isOwnedSceneUpdate,
   isOwnedSceneObject,
   withOwnership,
-} from "./plugins/networkingPlugin/networkingPlugin.js";
-export { peerIntegratesPhysicsForObject } from "./plugins/networkingPlugin/distributedSimulation.js";
-export type { NetworkingAPI as NetworkingApi, NetworkingPluginOptions } from "./plugins/networkingPlugin/networkingPlugin.js";
-export { gameUIPlugin } from "./plugins/gameUIPlugin/gameUIPlugin.js";
-export { Game } from "./plugins/gameUIPlugin/Game.js";
-export { EditorRoot } from "./plugins/editorPlugin/EditorRoot.js";
-export { GameView } from "./plugins/editorPlugin/GameView.js";
+} from "./gameModules/networkingGameModule/networkingGameModule.js";
+export { peerIntegratesPhysicsForObject } from "./gameModules/networkingGameModule/distributedSimulation.js";
+export type { NetworkingAPI as NetworkingApi, NetworkingGameModuleOptions } from "./gameModules/networkingGameModule/networkingGameModule.js";
+export { gameUIGameModule } from "./gameModules/gameUIGameModule/gameUIGameModule.js";
+export { Game } from "./gameModules/gameUIGameModule/Game.js";
+export { EditorRoot } from "./gameModules/editorGameModule/EditorRoot.js";
+export { GameView } from "./gameModules/editorGameModule/GameView.js";
 export { useScene } from "./hooks/useScene.js";
-export { useSceneFile } from "./plugins/editorPlugin/sceneFile/useSceneFile.js";
+export { useSceneFile } from "./gameModules/editorGameModule/sceneFile/useSceneFile.js";
 export {
   useSceneFileStore,
   hydrateSceneFileStore,
-} from "./plugins/editorPlugin/sceneFile/sceneFileStore.js";
+} from "./gameModules/editorGameModule/sceneFile/sceneFileStore.js";
 export { useSelectedObject } from "./hooks/useSelectedObject.js";
 export { useTraits } from "./hooks/useTraits.js";
 export { useGameIDEMode } from "./hooks/useGameIDEMode.js";
@@ -108,15 +109,15 @@ export {
   setEditorDebugUIEnabled,
   toggleEditorDebugUI,
   onEditorDebugUIChange,
-} from "./plugins/editorPlugin/editorDebugUI.js";
+} from "./gameModules/editorGameModule/editorDebugUI.js";
 export { GameIDEMode, getMode, setMode, onModeChange } from "./lifecycle/mode.js";
 export { ASSET_BASE_URL } from "./assetBaseURL.js";
-export { inputPlugin } from "./plugins/inputPlugin/inputPlugin.js";
+export { inputGameModule } from "./gameModules/inputGameModule/inputGameModule.js";
 export type {
   InputBinding,
   AxisConfig,
   ButtonConfig,
   InputMouseHandling,
-  InputPluginRequiredContext,
-  InputPluginOptions,
-} from "./plugins/inputPlugin/inputPlugin.js";
+  InputGameModuleRequiredContext,
+  InputGameModuleOptions,
+} from "./gameModules/inputGameModule/inputGameModule.js";

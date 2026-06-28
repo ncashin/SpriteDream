@@ -1,16 +1,15 @@
 import {
   flushScheduledDisposes,
   startGameloop,
-  start,
-  update,
+  onStart,
+  onUpdate,
   onGameStart,
   onGameUpdate,
   onEditorStart,
   onEditorUpdate,
   dispose,
-  __suspendHotScopes,
-  __restoreHotScopes,
 } from "./gameloop.js";
+import { __suspendHotScopes, __restoreHotScopes } from "./gameloopHMR.js";
 import {
   setScene,
   getScene,
@@ -18,105 +17,99 @@ import {
   type Scene,
   type SceneObject,
 } from "../scene/scene.js";
-import { reducePlugins, type ApplyPlugins } from "./plugin.js";
+import { reduceGameModules, type GameModule, type ReduceGameModules } from "./gameModule.js";
 
 export type DisposeCallback = (callback: () => void) => void;
 
-export type GameContext<Initial extends object> = Initial & {
+export type GameLifecycle = {
+  readonly onStart: typeof onStart;
+  readonly onUpdate: typeof onUpdate;
+  readonly onGameStart: typeof onGameStart;
+  readonly onGameUpdate: typeof onGameUpdate;
+  readonly onEditorStart: typeof onEditorStart;
+  readonly onEditorUpdate: typeof onEditorUpdate;
+  readonly getScene: typeof getScene;
+  readonly getRawScene: typeof getRawScene;
+  readonly setScene: typeof setScene;
+};
+
+export type BaseGameContext = GameLifecycle & {
   rootElement: HTMLElement;
   initialScene?: SceneObject;
   scene: Scene;
   dispose: DisposeCallback;
 };
 
-type WithPlugins<Initial extends object, Plugins extends readonly unknown[]> = ApplyPlugins<
-  GameContext<Initial>,
-  Plugins
->;
+export type GameContext<
+  Initial extends object,
+  GameModules extends readonly unknown[],
+> = ReduceGameModules<Initial & BaseGameContext, GameModules>;
 
-export type GameConfig<Initial extends object, Plugins extends readonly unknown[]> = {
+export type GameIDEOptions<
+  Initial extends object,
+  GameModules extends readonly unknown[],
+> = {
   rootElement: HTMLElement;
   initialContext: Initial;
   initialScene?: SceneObject;
-  plugins?: Plugins;
+  gameModules?: GameModules;
 };
 
-let installedContext: unknown;
-
-export function getGameContext<Context extends object = object>(): Context {
-  if (installedContext === undefined) {
-    throw new Error("Game context was read before the game finished initializing.");
-  }
-  return installedContext as Context;
-}
-
-export type GameAPI<Context extends object = object> = {
-  readonly gameContext: Context;
-  readonly start: typeof start;
-  readonly update: typeof update;
-  readonly onGameStart: typeof onGameStart;
-  readonly onGameUpdate: typeof onGameUpdate;
-  readonly onEditorStart: typeof onEditorStart;
-  readonly onEditorUpdate: typeof onEditorUpdate;
-  readonly dispose: typeof dispose;
-  readonly getScene: typeof getScene;
-  readonly getRawScene: typeof getRawScene;
-  readonly setScene: typeof setScene;
-};
-
-type GameLifecycleAPI = Omit<GameAPI, "gameContext">;
-
-const gameLifecycleAPI: GameLifecycleAPI = {
-  start,
-  update,
+const gameLifecycle: GameLifecycle = {
+  onStart,
+  onUpdate,
   onGameStart,
   onGameUpdate,
   onEditorStart,
   onEditorUpdate,
-  dispose,
   getScene,
   getRawScene,
   setScene,
 };
 
-export async function gameide<Initial extends object, const Plugins extends readonly unknown[]>(
-  config: GameConfig<Initial, Plugins>,
-): Promise<GameAPI<WithPlugins<Initial, Plugins>>> {
-  await runGame(config);
-  return {
-    ...gameLifecycleAPI,
-    get gameContext() {
-      return getGameContext<WithPlugins<Initial, Plugins>>();
-    },
-  };
+export async function gameide<
+  Initial extends object,
+  const GameModules extends readonly unknown[],
+>(
+  config: GameIDEOptions<Initial, GameModules>,
+): Promise<GameContext<Initial, GameModules>> {
+  return runGame(config);
 }
 
-async function runGame<Initial extends object, const Plugins extends readonly unknown[]>(
-  options: GameConfig<Initial, Plugins>,
-): Promise<void> {
+async function runGame<
+  Initial extends object,
+  const GameModules extends readonly unknown[],
+>(
+  options: GameIDEOptions<Initial, GameModules>,
+): Promise<GameContext<Initial, GameModules>> {
   const { rootElement, initialContext, initialScene } = options;
-  const pluginList = (options.plugins ?? []);
+  const gameModuleList = options.gameModules ?? [];
 
-  installedContext = undefined;
   flushScheduledDisposes();
 
   if (initialScene !== undefined) {
     setScene(initialScene);
   }
 
-  const seed: GameContext<Initial> = {
+  const seed = {
     ...initialContext,
+    ...gameLifecycle,
     rootElement,
     dispose,
     initialScene,
     scene: getScene(),
   };
   const hotScopeSnapshot = __suspendHotScopes();
+  let context: GameContext<Initial, GameModules>;
   try {
-    installedContext = await reducePlugins(seed, pluginList);
+    context = (await reduceGameModules(
+      seed,
+      gameModuleList as readonly GameModule<any, any>[],
+    )) as GameContext<Initial, GameModules>;
   } finally {
     __restoreHotScopes(hotScopeSnapshot);
   }
 
   startGameloop();
+  return context;
 }

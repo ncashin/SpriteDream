@@ -3,7 +3,7 @@ import {
   getEditorDebugUIEnabled,
   onEditorDebugUIChange,
   toggleEditorDebugUI,
-} from "../plugins/editorPlugin/editorDebugUI.js";
+} from "../gameModules/editorGameModule/editorDebugUI.js";
 
 export function useEditorDebugUI(): {
   enabled: boolean;

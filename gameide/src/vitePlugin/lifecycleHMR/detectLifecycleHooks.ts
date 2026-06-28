@@ -1,8 +1,8 @@
 import ts from "typescript";
 
 export const lifecycleExports = new Set([
-  "start",
-  "update",
+  "onStart",
+  "onUpdate",
   "onGameStart",
   "onGameUpdate",
   "onEditorStart",

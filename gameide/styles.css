@@ -49,7 +49,7 @@ body {
   outline: none;
 }
 
-/* Input plugin sets tabindex on the game surface for keyboard capture; hide focus ring there and on Pixi canvas. */
+/* Input game module sets tabindex on the game surface for keyboard capture; hide focus ring there and on Pixi canvas. */
 #app [tabindex="0"]:focus,
 #app [tabindex="0"]:focus-visible,
 #app canvas:focus,

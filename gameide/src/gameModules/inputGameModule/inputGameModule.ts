@@ -1,6 +1,6 @@
-import { update } from "../../lifecycle/gameloop.js";
+import { onUpdate } from "../../lifecycle/gameloop.js";
 import { GameIDEMode, getMode } from "../../lifecycle/mode.js";
-import type { Plugin } from "../../lifecycle/plugin.js";
+import type { GameModule } from "../../lifecycle/gameModule.js";
 
 export type InputBinding =
   | `Key${string}`
@@ -16,8 +16,8 @@ export type ButtonConfig = InputBinding[];
 
 export type InputMouseHandling = "default" | "editor";
 
-export type InputPluginRequiredContext = { rootElement: HTMLElement };
-export type InputPluginOptions = {
+export type InputGameModuleRequiredContext = { rootElement: HTMLElement };
+export type InputGameModuleOptions = {
   axes: Record<string, AxisConfig>;
   buttons: Record<string, ButtonConfig>;
   target?: HTMLElement | Document;
@@ -30,12 +30,12 @@ export type InputPluginOptions = {
   mouseHandling?: InputMouseHandling;
 };
 
-type AxisKeys<Options extends InputPluginOptions> = keyof Options["axes"] &
+type AxisKeys<Options extends InputGameModuleOptions> = keyof Options["axes"] &
   string;
-type ButtonKeys<Options extends InputPluginOptions> = keyof Options["buttons"] &
+type ButtonKeys<Options extends InputGameModuleOptions> = keyof Options["buttons"] &
   string;
 
-type InputShape<Options extends InputPluginOptions> = {
+type InputShape<Options extends InputGameModuleOptions> = {
   axes: { [K in keyof Options["axes"] & string]: number };
   buttons: {
     [K in keyof Options["buttons"] & string]: {
@@ -56,9 +56,9 @@ function normalizeKey(code: string): InputBinding {
   return `Key${code}` as InputBinding;
 }
 
-export function inputPlugin<Options extends InputPluginOptions>(
+export function inputGameModule<Options extends InputGameModuleOptions>(
   options: Options,
-): Plugin<InputPluginRequiredContext, { input: InputShape<Options> }> {
+): GameModule<InputGameModuleRequiredContext, { input: InputShape<Options> }> {
   return (inputContext) => {
     const axesConfig = options.axes;
     const buttonsConfig = options.buttons;
@@ -254,7 +254,7 @@ export function inputPlugin<Options extends InputPluginOptions>(
       }
     });
 
-    update(() => {
+    onUpdate(() => {
       for (const axisKey of axisKeys) {
         axes[axisKey] = axisValue(axisKey);
       }
