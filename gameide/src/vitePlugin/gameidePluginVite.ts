@@ -14,15 +14,12 @@ import {
 } from "./virtualCatalog";
 import { attachFileEditorMiddleware } from "./fileEditor";
 import { loadSceneModule } from "./sceneVirtualModule";
-import { transformLifecycleHMR } from "./lifecycleHMR/transform";
-
 export { ASSET_BASE_URL } from "../assetBaseURL.js";
 export { SCENE_HMR_EVENT } from "../scene/sceneHMREvent.js";
 
 const VIRTUAL_MODULE_PREFIX = /^gameide:/;
 
 export function gameidePlugin(): Plugin {
-  let isServe = false;
   let projectRoot = process.cwd();
   let knownScenes: string[] = [];
 
@@ -53,7 +50,6 @@ export function gameidePlugin(): Plugin {
       };
     },
     configResolved(config) {
-      isServe = config.command === "serve";
       projectRoot = config.root;
     },
     resolveId(id) {
@@ -95,9 +91,6 @@ export function gameidePlugin(): Plugin {
     },
     load(id: string) {
       return loadCatalogModule(id, projectRoot) ?? loadSceneModule(id, projectRoot);
-    },
-    transform(code, id) {
-      return transformLifecycleHMR(code, id, isServe);
     },
   };
 }

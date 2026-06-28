@@ -3,13 +3,13 @@ import { createGameUI } from "./createGameUI.js";
 
 export const gameUIGameModule =
   (GameUI: ComponentType) =>
-  async (input: { rootElement: HTMLElement; dispose: (callback: () => void) => void }) => {
+  async (input: { rootElement: HTMLElement; onDispose: (callback: () => void) => void }) => {
     const mount = await createGameUI(
       input.rootElement,
       GameUI,
     );
 
-    input.dispose(() => {
+    input.onDispose(() => {
       mount.dispose();
     });
 

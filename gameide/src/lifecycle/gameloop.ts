@@ -1,188 +1,107 @@
 import { GameIDEMode, getMode, onModeChange } from "./mode.js";
-import {
-  __wireGameloopHMR,
-  currentHotScopeId,
-  shouldRunStartImmediately,
-} from "./gameloopHMR.js";
 
-type StartCallback = () => void;
-type UpdateCallback = (deltaTime: number) => void;
-type DisposeRegistration = () => void;
-
-type UpdateRegistration = {
-  callback: UpdateCallback;
-  scopeId?: string;
-};
-
-type StartRegistration = {
-  callback: StartCallback;
-  mode: GameIDEMode;
-  releaseModeWatcher: DisposeRegistration;
-  scopeId?: string;
-};
-
-const gameStarts: StartRegistration[] = [];
-const editorStarts: StartRegistration[] = [];
-const gameUpdates: UpdateRegistration[] = [];
-const editorUpdates: UpdateRegistration[] = [];
-const alwaysUpdates: UpdateRegistration[] = [];
-
-const scheduledDisposes: (() => void)[] = [];
-
-let frameId: number | undefined;
-
-export function dispose(fn: () => void): void {
-  scheduledDisposes.push(fn);
+function removeCallback<T>(list: T[], item: T) {
+  list.splice(list.indexOf(item), 1);
 }
 
-export function flushScheduledDisposes(): void {
-  while (scheduledDisposes.length > 0) {
-    const callback = scheduledDisposes.pop();
+// HANDLE START CALLBACKS
+type StartCallback = () => void;
+type Start = {
+  requiredMode?: GameIDEMode;
+  callback: StartCallback;
+};
+const starts: Start[] = [];
+
+function runStarts(entries: readonly Start[], mode: GameIDEMode): void {
+  entries.forEach(({ requiredMode, callback }) => {
+    if (requiredMode && requiredMode !== mode) return;
+    callback();
+  });
+}
+
+function registerStart(
+  requiredMode: GameIDEMode | undefined,
+  callback: StartCallback,
+): DisposeCallback {
+  const start: Start = { requiredMode, callback };
+  starts.push(start);
+  return () => removeCallback(starts, start);
+}
+
+export function onStart(callback: StartCallback): DisposeCallback {
+  return registerStart(undefined, callback);
+}
+export function onGameStart(callback: StartCallback): DisposeCallback {
+  return registerStart(GameIDEMode.Game, callback);
+}
+export function onEditorStart(callback: StartCallback): DisposeCallback {
+  return registerStart(GameIDEMode.Editor, callback);
+}
+
+// HANDLE UPDATE CALLBACKS
+type UpdateCallback = (deltaTime: number) => void;
+type Update = {
+  requiredMode?: GameIDEMode;
+  callback: UpdateCallback;
+};
+const updates: Update[] = [];
+
+function runUpdates(
+  entries: readonly Update[],
+  deltaTime: number,
+  mode: GameIDEMode,
+): void {
+  entries.forEach(({ requiredMode, callback }) => {
+    if (requiredMode && requiredMode !== mode) return;
+    callback(deltaTime);
+  });
+}
+
+function registerUpdate(
+  requiredMode: GameIDEMode | undefined,
+  callback: UpdateCallback,
+): DisposeCallback {
+  const update: Update = { requiredMode, callback };
+  updates.push(update);
+  return () => removeCallback(updates, update);
+}
+export function onUpdate(callback: UpdateCallback): DisposeCallback {
+  return registerUpdate(undefined, callback);
+}
+export function onGameUpdate(callback: UpdateCallback): DisposeCallback {
+  return registerUpdate(GameIDEMode.Game, callback);
+}
+export function onEditorUpdate(callback: UpdateCallback): DisposeCallback {
+  return registerUpdate(GameIDEMode.Editor, callback);
+}
+
+// HANDLE DISPOSE CALLBACKS
+export type DisposeCallback = () => void;
+const disposeCallbacks: DisposeCallback[] = [];
+
+export function onDispose(callback: () => void): void {
+  disposeCallbacks.push(callback);
+}
+
+export function flushDisposeCallbacks(): void {
+  while (disposeCallbacks.length > 0) {
+    const callback = disposeCallbacks.pop();
     callback?.();
   }
 }
 
-function runUpdates(
-  callbacks: readonly UpdateRegistration[],
-  deltaTime: number,
-): void {
-  for (const registration of callbacks) registration.callback(deltaTime);
-}
-
-function removeRegistration<T>(registrations: T[], registration: T): void {
-  const index = registrations.indexOf(registration);
-  if (index !== -1) registrations.splice(index, 1);
-}
-
-function removeFromEndWhere<T>(
-  registrations: T[],
-  predicate: (registration: T) => boolean,
-  onRemove?: (registration: T) => void,
-): number {
-  let removed = 0;
-  for (let index = registrations.length - 1; index >= 0; index -= 1) {
-    const registration = registrations[index];
-    if (!registration || !predicate(registration)) continue;
-    onRemove?.(registration);
-    registrations.splice(index, 1);
-    removed += 1;
-  }
-  return removed;
-}
-
-function registerUpdate(
-  registrations: UpdateRegistration[],
-  callback: UpdateCallback,
-): DisposeRegistration {
-  const registration: UpdateRegistration = {
-    callback,
-    scopeId: currentHotScopeId(),
-  };
-  registrations.push(registration);
-  return () => removeRegistration(registrations, registration);
-}
-
-function registerModeStart(
-  registrations: StartRegistration[],
-  mode: GameIDEMode,
-  callback: StartCallback,
-): DisposeRegistration {
-  const scopeId = currentHotScopeId();
-  const registration: StartRegistration = {
-    callback,
-    mode,
-    scopeId,
-    releaseModeWatcher: () => {},
-  };
-
-  registration.releaseModeWatcher = onModeChange((nextMode) => {
-    if (nextMode !== mode) return;
-    callback();
-  });
-
-  registrations.push(registration);
-
-  if (getMode() === mode && shouldRunStartImmediately()) {
-    callback();
-  }
-
-  return () => {
-    registration.releaseModeWatcher();
-    removeRegistration(registrations, registration);
-  };
-}
-
-function removeScopedRegistrations(scopeId: string): number {
-  const matchesScope = (registration: { scopeId?: string }) =>
-    registration.scopeId === scopeId;
-
-  let removed = 0;
-  for (const registrations of [alwaysUpdates, gameUpdates, editorUpdates]) {
-    removed += removeFromEndWhere(registrations, matchesScope);
-  }
-  for (const registrations of [gameStarts, editorStarts]) {
-    removed += removeFromEndWhere(registrations, matchesScope, (registration) => {
-      registration.releaseModeWatcher();
-    });
-  }
-  return removed;
-}
-
-__wireGameloopHMR(removeScopedRegistrations);
-
-export function __runModeStarts(mode: GameIDEMode): void {
-  const registrations = mode === GameIDEMode.Game ? gameStarts : editorStarts;
-  for (const registration of registrations) {
-    registration.callback();
-  }
-}
-
-export function onStart(callback: StartCallback): DisposeRegistration {
-  callback();
-  return () => {};
-}
-
-export function onUpdate(callback: UpdateCallback): DisposeRegistration {
-  return registerUpdate(alwaysUpdates, callback);
-}
-
-export function onGameStart(callback: StartCallback): DisposeRegistration {
-  return registerModeStart(gameStarts, GameIDEMode.Game, callback);
-}
-
-export function onGameUpdate(callback: UpdateCallback): DisposeRegistration {
-  return registerUpdate(gameUpdates, callback);
-}
-
-export function onEditorStart(callback: StartCallback): DisposeRegistration {
-  return registerModeStart(editorStarts, GameIDEMode.Editor, callback);
-}
-
-export function onEditorUpdate(callback: UpdateCallback): DisposeRegistration {
-  return registerUpdate(editorUpdates, callback);
-}
-
+let frameId: number | undefined;
 export function startGameloop(): void {
-  if (frameId !== undefined) return;
-  let lastTime = performance.now();
+  if (frameId) return;
+  runStarts(starts, getMode());
 
+  let lastTime = performance.now();
   function tick(now: number): void {
     frameId = requestAnimationFrame(tick);
     const deltaTime = (now - lastTime) / 1000;
     lastTime = now;
 
-    runUpdates(alwaysUpdates, deltaTime);
-
-    switch (getMode()) {
-      case GameIDEMode.Game:
-        runUpdates(gameUpdates, deltaTime);
-        break;
-      case GameIDEMode.Editor:
-        runUpdates(editorUpdates, deltaTime);
-        break;
-      default:
-        break;
-    }
+    runUpdates(updates, deltaTime, getMode());
   }
 
   frameId = requestAnimationFrame(tick);

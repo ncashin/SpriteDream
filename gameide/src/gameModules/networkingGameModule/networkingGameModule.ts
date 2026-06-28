@@ -3,7 +3,7 @@ import { createSceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { SceneChannel } from "../../scene/sceneChannel/sceneChannel.js";
 import type { GameObject, Scene, SceneObject } from "../../scene/scene.js";
 import type { GameModule } from "../../lifecycle/gameModule.js";
-import { dispose } from "../../lifecycle/gameloop.js";
+import { onDispose } from "../../lifecycle/gameloop.js";
 import {
   isOwnedSceneObject,
   withOwnership,
@@ -72,7 +72,7 @@ export const networkingGameModule = (
         withOwnership(obj, peerId),
     };
 
-    dispose(() => {
+    onDispose(() => {
       channel.dispose();
       disposeTransport();
     });

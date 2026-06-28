@@ -46,7 +46,7 @@ export const editorGameModule =
 
     const mount = await createEditorUI(input.rootElement, Editor);
 
-    input.dispose(() => {
+    input.onDispose(() => {
       releaseModeWatcher();
       releaseSceneFileHostState();
       releaseSceneFileStore();

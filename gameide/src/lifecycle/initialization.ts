@@ -1,5 +1,5 @@
 import {
-  flushScheduledDisposes,
+  flushDisposeCallbacks,
   startGameloop,
   onStart,
   onUpdate,
@@ -7,9 +7,8 @@ import {
   onGameUpdate,
   onEditorStart,
   onEditorUpdate,
-  dispose,
+  onDispose,
 } from "./gameloop.js";
-import { __suspendHotScopes, __restoreHotScopes } from "./gameloopHMR.js";
 import {
   setScene,
   getScene,
@@ -18,8 +17,6 @@ import {
   type SceneObject,
 } from "../scene/scene.js";
 import { reduceGameModules, type GameModule, type ReduceGameModules } from "./gameModule.js";
-
-export type DisposeCallback = (callback: () => void) => void;
 
 export type GameLifecycle = {
   readonly onStart: typeof onStart;
@@ -37,7 +34,7 @@ export type BaseGameContext = GameLifecycle & {
   rootElement: HTMLElement;
   initialScene?: SceneObject;
   scene: Scene;
-  dispose: DisposeCallback;
+  onDispose: typeof onDispose;
 };
 
 export type GameContext<
@@ -85,7 +82,7 @@ async function runGame<
   const { rootElement, initialContext, initialScene } = options;
   const gameModuleList = options.gameModules ?? [];
 
-  flushScheduledDisposes();
+  flushDisposeCallbacks();
 
   if (initialScene !== undefined) {
     setScene(initialScene);
@@ -95,20 +92,14 @@ async function runGame<
     ...initialContext,
     ...gameLifecycle,
     rootElement,
-    dispose,
+    onDispose,
     initialScene,
     scene: getScene(),
   };
-  const hotScopeSnapshot = __suspendHotScopes();
-  let context: GameContext<Initial, GameModules>;
-  try {
-    context = (await reduceGameModules(
-      seed,
-      gameModuleList as readonly GameModule<any, any>[],
-    )) as GameContext<Initial, GameModules>;
-  } finally {
-    __restoreHotScopes(hotScopeSnapshot);
-  }
+  const context = (await reduceGameModules(
+    seed,
+    gameModuleList as readonly GameModule<any, any>[],
+  )) as GameContext<Initial, GameModules>;
 
   startGameloop();
   return context;

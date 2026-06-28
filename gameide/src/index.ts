@@ -22,17 +22,9 @@ export {
   onEditorStart,
   onEditorUpdate,
   startGameloop,
-  dispose,
-  __runModeStarts,
+  onDispose,
+  type DisposeCallback,
 } from "./lifecycle/gameloop.js";
-export {
-  __beginHotModule,
-  __endHotModule,
-  __disposeHotModule,
-  __runHotModuleReplay,
-  __hotModuleDefaultExport,
-  __hotModuleLastArgsForScope,
-} from "./lifecycle/gameloopHMR.js";
 export {
   curryScene,
   getScene,
@@ -68,7 +60,6 @@ export {
   type BaseGameContext,
   type GameContext,
   type GameLifecycle,
-  type DisposeCallback,
 } from "./lifecycle/index.js";
 export { editorGameModule } from "./gameModules/editorGameModule/editorGameModule.js";
 export type { EditorWithGameViewReference } from "./gameModules/editorGameModule/createEditorUI.js";
