@@ -3,6 +3,6 @@ export {
   type GameIDEOptions,
   type BaseGameContext,
   type GameContext,
-  type GameLifecycle,
 } from "./initialization.js";
+export { type GameLifecycle } from "./gameloop.js";
 export { type ReduceGameModules as ApplyGameModules, type GameModule } from "./gameModule.js";

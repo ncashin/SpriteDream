@@ -8,13 +8,9 @@ export function useSceneFile() {
   const scenes = useSceneFileStore((state) => state.scenes);
   const dirty = useSceneFileStore((state) => state.dirty);
   const saving = useSceneFileStore((state) => state.saving);
-  const canUndo = useSceneFileStore((state) => state.canUndo);
-  const canRedo = useSceneFileStore((state) => state.canRedo);
   const setActiveScenePath = useSceneFileStore((state) => state.setActiveScenePath);
   const requestSave = useSceneFileStore((state) => state.requestSave);
   const createScene = useSceneFileStore((state) => state.createScene);
-  const undo = useSceneFileStore((state) => state.undo);
-  const redo = useSceneFileStore((state) => state.redo);
 
   const switchScene = useCallback(
     (relativePath: string) => {
@@ -43,12 +39,8 @@ export function useSceneFile() {
     isUntitled,
     dirty,
     saving,
-    canUndo,
-    canRedo,
     switchScene,
     createScene,
     save: requestSave,
-    undo,
-    redo,
   };
 }

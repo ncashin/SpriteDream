@@ -3,16 +3,18 @@ export enum GameIDEMode {
   Game = "game",
 }
 
-let currentMode: GameIDEMode =
-  process.env.NODE_ENV === "development"
-    ? GameIDEMode.Editor
-    : GameIDEMode.Game;
+let currentMode: GameIDEMode = import.meta.env.DEV
+  ? GameIDEMode.Editor
+  : GameIDEMode.Game;
 
 export function getMode(): GameIDEMode {
   return currentMode;
 }
 
-type ModeChangeListener = (mode: GameIDEMode, previousMode: GameIDEMode) => void;
+type ModeChangeListener = (
+  mode: GameIDEMode,
+  previousMode: GameIDEMode,
+) => void;
 const modeChangeListeners: ModeChangeListener[] = [];
 
 export function setMode(mode: GameIDEMode): GameIDEMode {
@@ -22,7 +24,6 @@ export function setMode(mode: GameIDEMode): GameIDEMode {
   for (const listener of modeChangeListeners) listener(currentMode, previous);
   return previous;
 }
-
 
 export function onModeChange(listener: ModeChangeListener): () => void {
   modeChangeListeners.push(listener);

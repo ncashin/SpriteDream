@@ -77,11 +77,13 @@ export { GameView } from "./gameModules/editorGameModule/GameView.js";
 export { useScene } from "./scene/sceneContext.js";
 export { useSceneObject } from "./hooks/useSceneObject.js";
 export { useSceneFile } from "./gameModules/editorGameModule/sceneFile/useSceneFile.js";
+export { useSceneHistory } from "./gameModules/editorGameModule/sceneFile/useSceneHistory.js";
 export {
   useSceneFileStore,
   hydrateSceneFileStore,
 } from "./gameModules/editorGameModule/sceneFile/sceneFileStore.js";
-export { useSelectedObject } from "./hooks/useSelectedObject.js";
+export { useSceneHistoryStore } from "./gameModules/editorGameModule/sceneFile/sceneHistoryStore.js";
+export { useSelectedSceneObject } from "./hooks/useSelectedSceneObject.js";
 export { useTraits } from "./hooks/useTraits.js";
 export { useGameIDEMode } from "./hooks/useGameIDEMode.js";
 export { useEditorDebugUI } from "./hooks/useEditorDebugUI.js";

@@ -29,8 +29,6 @@ export type GameIDEOptions<
   gameModules: GameModules;
 };
 
-export type { GameLifecycle } from "./gameloop.js";
-
 export async function gameide<
   Initial extends object,
   const GameModules extends readonly unknown[] = [],

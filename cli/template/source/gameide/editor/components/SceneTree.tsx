@@ -18,7 +18,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { useSceneObject, useSelectedObject, useTraits } from "gameide";
+import { useSceneObject, useSelectedSceneObject, useTraits } from "gameide";
 import { PropertyInput } from "./PropertyInput.js";
 import { Dropdown } from "./Dropdown.js";
 import { IconButton } from "./IconButton.js";
@@ -343,7 +343,7 @@ function TreeNode({
   showHiddenProperties?: boolean;
 }) {
   const { value, setValue, deleteValue, renameKey } = useSceneObject(path);
-  const { selectedPath } = useSelectedObject();
+  const { selectedPath } = useSelectedSceneObject();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [userCollapsed, setUserCollapsed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);

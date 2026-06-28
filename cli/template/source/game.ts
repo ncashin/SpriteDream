@@ -1,18 +1,11 @@
 import { z } from "zod";
-import {
-  defineTrait,
-  onGameStart,
-  ownerTrait,
-  onGameUpdate,
-  implementsTrait,
-} from "gameide";
+import { defineTrait, ownerTrait, implementsTrait, type GameModule } from "gameide";
 import playerScene from "./scenes/player.scene";
-import "./style.css";
 import bouncyBallScene from "./scenes/bouncyBall.scene";
-import type { RuntimeGameContext } from "./index";
 import { collisionBodyTrait } from "./gameide/gameModules/planckGameModule/index";
 import { spriteTrait } from "./gameide/gameModules/pixiGameModule/index";
 import { transformTrait } from "./gameide/gameModules/transform.js";
+import type { MainGameContext } from "./index.js";
 
 const BALL_GRAVITY_Y = -1500;
 
@@ -39,8 +32,9 @@ const ballTraits = implementsTrait([
   ownerTrait,
 ]);
 
-export default function main(gameContext: RuntimeGameContext): void {
-  const { input, networking, planck, scene } = gameContext;
+export const main: GameModule<MainGameContext> = (context) => {
+  const { input, networking, onGameStart, onGameUpdate, planck, scene } =
+    context;
 
   onGameStart(() => {
     const peerPlayer = scene.createObject(
@@ -77,4 +71,6 @@ export default function main(gameContext: RuntimeGameContext): void {
       ball.collisionBody.velocity.y += BALL_GRAVITY_Y * deltaTime;
     }
   });
-}
+
+  return context;
+};

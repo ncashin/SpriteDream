@@ -11,7 +11,8 @@ import {
   useGameIDEMode,
   useSceneObject,
   useSceneFile,
-  useSelectedObject,
+  useSceneHistory,
+  useSelectedSceneObject,
 } from "gameide";
 import { OverlayButton } from "./components/OverlayButton";
 import { RunButton } from "./components/RunButton";
@@ -25,11 +26,12 @@ export function Editor({
 }: {
   gameViewRef?: Ref<HTMLDivElement>;
 }) {
-  const { deleteValue } = useSceneObject(selectedPath ?? []);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { save, dirty, saving, undo, redo } = useSceneFile();
+  const { selectedPath } = useSelectedSceneObject();
+  const { deleteValue } = useSceneObject(selectedPath ?? []);
+  const { save, dirty, saving } = useSceneFile();
+  const { undo, redo } = useSceneHistory();
   const mode = useGameIDEMode();
-  const { selectedPath } = useSelectedObject();
   const canSave = mode === GameIDEMode.Editor && dirty && !saving;
   const { enabled: debugUIEnabled, toggle: toggleDebugUI } = useEditorDebugUI();
 

@@ -6,7 +6,7 @@ import {
   subscribeExternalSceneSnapshot,
 } from "../scene/sceneExternalStore.js";
 
-export function useSelectedObject(): {
+export function useSelectedSceneObject(): {
   selectedObject: GameObject | null;
   selectedPath: PropertyKey[] | null;
 } {
