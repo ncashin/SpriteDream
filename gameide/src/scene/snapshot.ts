@@ -1,12 +1,15 @@
-import { getRawScene, type SceneObject, setScene } from "./scene.js";
+import type { Scene, SceneObject } from "./scene.js";
 
-let sceneSnapshot: SceneObject | undefined = undefined;
+export function createSceneSnapshot(scene: Scene) {
+  let sceneSnapshot: SceneObject | undefined;
 
-export function saveSceneSnapshot() {
-  sceneSnapshot = structuredClone(getRawScene());
-}
-
-export function restoreSceneSnapshot() {
-  if (!sceneSnapshot) return;
-  setScene(sceneSnapshot);
+  return {
+    save() {
+      sceneSnapshot = structuredClone(scene.getRaw());
+    },
+    restore() {
+      if (!sceneSnapshot) return;
+      scene.replace(sceneSnapshot);
+    },
+  };
 }

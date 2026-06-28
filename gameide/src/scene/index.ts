@@ -11,9 +11,6 @@ export {
 export {
   createSceneProxy,
   curryScene,
-  getRawScene,
-  getScene,
-  setScene,
 } from "./scene.js";
 
 export {

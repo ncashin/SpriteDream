@@ -10,6 +10,7 @@ import {
   onEditorDebugUIChange,
   selectObject,
   type GameModule,
+  type Scene,
 } from "gameide";
 import { pickSceneObjectAtWorldPoint } from "./editorPick.js";
 import { pixiSprites } from "./sprite.js";
@@ -49,6 +50,7 @@ type PixiGameModuleContext = {
 };
 
 export type PixiGameModuleInputContext = PixiGameModuleContext & {
+  scene: Scene;
   input: {
     buttons: {
       Click: { held: boolean; pressed: boolean; released: boolean };
@@ -91,15 +93,17 @@ export function pixiGameModule(
     const input = context.input;
     const planck = context.planck;
 
+    const scene = context.scene;
+
     const {
       unsubscribe: unsubscribePixiSprites,
       spriteBindingsBySceneKey,
       reloadSvgTextures,
-    } = pixiSprites(world);
+    } = pixiSprites(world, scene);
 
     const colliderDebugAllowed = options.enableColliderDebug !== false;
     const colliderDebugController = colliderDebugAllowed
-      ? colliderDebug(world)
+      ? colliderDebug(world, scene)
       : null;
     colliderDebugController?.setEnabled(getEditorDebugUIEnabled());
     const unsubscribeColliderDebugSettings = colliderDebugController
@@ -110,6 +114,7 @@ export function pixiGameModule(
 
     const unsubscribeSelectionOverlay = selectionOverlay(
       world,
+      scene,
       spriteBindingsBySceneKey,
     ).unsubscribe;
 
@@ -129,18 +134,19 @@ export function pixiGameModule(
       onEditorClickWorld: pickEnabled
         ? (worldPoint) => {
             const picked = pickSceneObjectAtWorldPoint({
+              scene,
               sceneContainer: world,
               worldPoint,
               spriteBindingsBySceneKey,
               planckWorld: planck?.world,
               pixelsPerMeter: planck?.pixelsPerMeter ?? 30,
             });
-            if (picked) selectObject(picked);
+            if (picked) selectObject(scene, picked);
             else deselectObject();
           }
         : undefined,
     });
-    const transformGizmoOverlayController = transformGizmoOverlay(app.stage, {
+    const transformGizmoOverlayController = transformGizmoOverlay(app.stage, scene, {
       input,
       viewport,
       rootElement,

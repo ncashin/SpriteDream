@@ -1,6 +1,8 @@
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import type { ComponentType, Ref } from "react";
+import type { Scene } from "../../scene/scene.js";
+import { SceneProvider } from "../../scene/sceneContext.js";
 
 export type EditorWithGameViewReference = ComponentType<{
   gameViewRef?: Ref<HTMLDivElement>;
@@ -14,6 +16,7 @@ export type EditorUIMount = {
 export function createEditorUI(
   parentRoot: HTMLElement,
   Editor: EditorWithGameViewReference,
+  scene: Scene,
 ): Promise<EditorUIMount> {
   return new Promise((resolve) => {
     let settled = false;
@@ -31,7 +34,11 @@ export function createEditorUI(
     };
 
     flushSync(() => {
-      root.render(<Editor gameViewRef={gameViewRef} />);
+      root.render(
+        <SceneProvider scene={scene}>
+          <Editor gameViewRef={gameViewRef} />
+        </SceneProvider>,
+      );
     });
   });
 }

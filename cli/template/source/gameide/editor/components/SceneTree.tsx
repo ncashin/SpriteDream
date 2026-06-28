@@ -18,7 +18,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { useScene, useSelectedObject, useTraits } from "gameide";
+import { useSceneObject, useSelectedObject, useTraits } from "gameide";
 import { PropertyInput } from "./PropertyInput.js";
 import { Dropdown } from "./Dropdown.js";
 import { IconButton } from "./IconButton.js";
@@ -293,7 +293,7 @@ function AddToSceneDropdown({
   className?: string;
   onAdded?: () => void;
 }) {
-  const { addChild } = useScene(path);
+  const { addChild } = useSceneObject(path);
   const { traits, mergeTraitInto } = useTraits();
 
   return (
@@ -342,7 +342,7 @@ function TreeNode({
   searchQuery?: string;
   showHiddenProperties?: boolean;
 }) {
-  const { value, setValue, deleteValue, renameKey } = useScene(path);
+  const { value, setValue, deleteValue, renameKey } = useSceneObject(path);
   const { selectedPath } = useSelectedObject();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [userCollapsed, setUserCollapsed] = useState(false);
@@ -528,7 +528,7 @@ function TreeNode({
 }
 
 export function SceneTree({ className }: { className?: string }) {
-  const { value: root } = useScene([]);
+  const { value: root } = useSceneObject([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);

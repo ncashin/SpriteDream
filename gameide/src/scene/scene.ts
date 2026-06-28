@@ -217,16 +217,3 @@ export const curryScene = (rawScene: SceneObject) => {
 };
 
 export type Scene = ReturnType<typeof curryScene>;
-
-let rawScene = {};
-export const getRawScene = () => {
-  return rawScene;
-};
-
-let scene = curryScene(rawScene);
-export const getScene = () => {
-  return scene;
-};
-export const setScene = (newScene: SceneObject) => {
-  scene.replace(newScene);
-};

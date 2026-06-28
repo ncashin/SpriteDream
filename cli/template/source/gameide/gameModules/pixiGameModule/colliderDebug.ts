@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { getScene, type GameObject } from "gameide";
+import { type GameObject, type Scene } from "gameide";
 import {
   collisionBodyDisabled,
   isColliderNode,
@@ -98,10 +98,10 @@ export type ColliderDebugController = {
 
 export function colliderDebug(
   stage: Container,
+  scene: Scene,
   options: ColliderDebugOptions = {},
 ): ColliderDebugController {
   const zIndex = options.zIndex ?? 10_000;
-  const scene = getScene();
   const bindingsBySceneKey = new Map<PropertyKey, ColliderDebugBinding>();
   let enabled = true;
 

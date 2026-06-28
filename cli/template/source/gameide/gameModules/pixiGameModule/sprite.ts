@@ -2,9 +2,9 @@ import { Container, Sprite, Texture } from "pixi.js";
 import { z } from "zod";
 import {
   defineTrait,
-  getScene,
   implementsTrait,
   type GameObject,
+  type Scene,
 } from "gameide";
 import { isSVGAsset, loadGraphicTexture } from "./asset.js";
 import { transformSchema, transformTrait } from "../transform.js";
@@ -151,12 +151,11 @@ function spriteChangeNeedsTextureReload(
   );
 }
 
-export function pixiSprites(stage: Container): {
+export function pixiSprites(stage: Container, scene: Scene): {
   unsubscribe: () => void;
   spriteBindingsBySceneKey: Map<PropertyKey, SpritePixiBinding>;
   reloadSvgTextures: () => void;
 } {
-  const scene = getScene();
   const spriteBindingsBySceneKey = new Map<PropertyKey, SpritePixiBinding>();
   const qualifiesAsSpriteRenderable = implementsTrait([
     transformTrait,

@@ -1,5 +1,5 @@
 import type { BodyType, World } from "planck";
-import { getScene, type GameObject } from "gameide";
+import { type GameObject, type Scene } from "gameide";
 import {
   colliderSignature,
   createBodyForObject,
@@ -10,6 +10,7 @@ import {
 
 
 export function planckColliderBodies(args: {
+  scene: Scene;
   world: World;
   pixelsPerMeter: number;
   effectiveType: (object: GameObject) => BodyType;
@@ -17,7 +18,7 @@ export function planckColliderBodies(args: {
   unsubscribe: () => void;
   sceneKeyToPlanckRecord: Map<PropertyKey, PlanckRecord>;
 } {
-  const scene = getScene();
+  const { scene } = args;
   const sceneKeyToPlanckRecord = new Map<PropertyKey, PlanckRecord>();
 
   const reconcileSceneRootKey = (

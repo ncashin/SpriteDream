@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { getScene } from "../scene/scene.js";
+import { useScene } from "../scene/sceneContext.js";
 import { getValueAtPath } from "../scene/path.js";
 import { getTraitDefinitions, TraitDefinitionEntry } from "../trait/trait.js";
 
@@ -37,8 +37,8 @@ function mergeMissing(
   }
 }
 
-
 export function useTraits() {
+  const scene = useScene();
   const traits = useMemo(
     () =>
       getTraitDefinitions().map((definition: TraitDefinitionEntry, index: number) => ({
@@ -51,19 +51,23 @@ export function useTraits() {
     [],
   );
 
-  const mergeTraitInto = useCallback((objectPath: PropertyKey[], traitId: number) => {
-    const traitDefinition = traits.find((trait) => trait.id === traitId);
-    if (!traitDefinition) return;
+  const mergeTraitInto = useCallback(
+    (objectPath: PropertyKey[], traitId: number) => {
+      const traitDefinition = traits.find((trait) => trait.id === traitId);
+      if (!traitDefinition) return;
 
-    const sceneNode = getValueAtPath(
-      getScene().get() as Record<PropertyKey, unknown>,
-      objectPath,
-    );
-    if (!sceneNode || typeof sceneNode !== "object" || Array.isArray(sceneNode)) return;
+      const sceneNode = getValueAtPath(
+        scene.get() as Record<PropertyKey, unknown>,
+        objectPath,
+      );
+      if (!sceneNode || typeof sceneNode !== "object" || Array.isArray(sceneNode))
+        return;
 
-    const target = sceneNode as Record<string, unknown>;
-    mergeMissing(target, traitDefinition.defaults as Record<string, unknown>);
-  }, [traits]);
+      const target = sceneNode as Record<string, unknown>;
+      mergeMissing(target, traitDefinition.defaults as Record<string, unknown>);
+    },
+    [scene, traits],
+  );
 
   return { traits, mergeTraitInto };
 }

@@ -1,23 +1,10 @@
 import {
   flushDisposeCallbacks,
   startGameloop,
-  onStart,
-  onUpdate,
-  onGameStart,
-  onGameUpdate,
-  onEditorStart,
-  onEditorUpdate,
-  onDispose,
   gameLifecycle,
   GameLifecycle,
 } from "./gameloop.js";
-import {
-  setScene,
-  getScene,
-  getRawScene,
-  type Scene,
-  type SceneObject,
-} from "../scene/scene.js";
+import { curryScene, type Scene, type SceneObject } from "../scene/scene.js";
 import { reduceGameModules, type ReduceGameModules } from "./gameModule.js";
 
 export type BaseGameContext<Initial extends object = {}> = {
@@ -42,6 +29,8 @@ export type GameIDEOptions<
   gameModules: GameModules;
 };
 
+export type { GameLifecycle } from "./gameloop.js";
+
 export async function gameide<
   Initial extends object,
   const GameModules extends readonly unknown[] = [],
@@ -55,17 +44,14 @@ export async function gameide<
 > {
   flushDisposeCallbacks();
 
-  if (initialScene !== undefined) {
-    setScene(initialScene);
-  }
+  const scene = curryScene(initialScene ? structuredClone(initialScene) : {});
 
   const gameContextBase: BaseGameContext<Initial> = {
     rootElement,
+
     initialScene,
-    scene: getScene(),
-    getScene,
-    getRawScene,
-    setScene,
+    scene,
+
     ...gameLifecycle,
     ...initialContext,
   };

@@ -1,9 +1,9 @@
 import { Container, Graphics } from "pixi.js";
 import {
-  getScene,
   onEditorUpdate,
   selectedObject,
   type GameObject,
+  type Scene,
 } from "gameide";
 
 export type SpriteBindingLike = {
@@ -11,8 +11,11 @@ export type SpriteBindingLike = {
   innerSprite: { width: number; height: number };
 };
 
-function findTopLevelSceneKey(object: GameObject): PropertyKey | undefined {
-  const live = getScene().get() as Record<PropertyKey, unknown>;
+function findTopLevelSceneKey(
+  scene: Scene,
+  object: GameObject,
+): PropertyKey | undefined {
+  const live = scene.get() as Record<PropertyKey, unknown>;
   for (const key of Reflect.ownKeys(live)) {
     if (Reflect.get(live, key) === object) return key;
   }
@@ -91,11 +94,11 @@ export type SelectionOverlayOptions = {
  */
 export function selectionOverlay(
   stage: Container,
+  scene: Scene,
   spriteBindingsBySceneKey: Map<PropertyKey, SpriteBindingLike>,
   options: SelectionOverlayOptions = {},
 ): { unsubscribe: () => void } {
   const zIndex = options.zIndex ?? 10_001;
-  const scene = getScene();
 
   const root = new Container();
   root.label = "gameide:selection-overlay";
@@ -114,7 +117,7 @@ export function selectionOverlay(
       return;
     }
 
-    const key = findTopLevelSceneKey(sel);
+    const key = findTopLevelSceneKey(scene, sel);
     if (key === undefined) {
       root.visible = false;
       return;
@@ -158,7 +161,7 @@ export function selectionOverlay(
     if (anchoredRootKey === undefined) return;
     const sel = selectedObject;
     if (!sel) return;
-    if (findTopLevelSceneKey(sel) !== anchoredRootKey) return;
+    if (findTopLevelSceneKey(scene, sel) !== anchoredRootKey) return;
     sync();
   });
 

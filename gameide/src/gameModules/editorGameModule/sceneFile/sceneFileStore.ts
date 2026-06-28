@@ -203,7 +203,7 @@ function applySceneSnapshotFromHistory(nextScene: SceneObject): void {
   try {
     boundScene.replace(nextScene);
     currentSnapshot = sceneSnapshot(nextScene);
-    restoreSelectedObjectKey(selectedKey);
+    restoreSelectedObjectKey(boundScene, selectedKey);
   } finally {
     applyingHistoryNavigation = false;
   }

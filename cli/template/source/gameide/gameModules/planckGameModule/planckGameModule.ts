@@ -2,12 +2,12 @@ import { Settings, Vec2, type Body, World, type BodyType } from "planck";
 import {
   GameIDEMode,
   getMode,
-  getScene,
   onGameUpdate,
   peerIntegratesPhysicsForObject,
   onStart,
   type GameObject,
   type GameModule,
+  type Scene,
 } from "gameide";
 import {
   sceneBodyIsDynamic,
@@ -51,6 +51,7 @@ export type PlanckGameModuleOptions = {
 };
 
 type PlanckGameModuleNetworkingContext = {
+  scene: Scene;
   networking?: { peerId: string };
   dispose: (fn: () => void) => void;
 };
@@ -96,9 +97,9 @@ export function planckGameModule(
     const gravity = options.gravity ?? { x: 0, y: 0 };
     const world = new World({ gravity: new Vec2(gravity.x, gravity.y) });
 
-    const scene = getScene();
+    const scene = context.scene;
     const { unsubscribe: unsubscribeColliderBodiesSync, sceneKeyToPlanckRecord } =
-      planckColliderBodies({ world, pixelsPerMeter, effectiveType });
+      planckColliderBodies({ scene, world, pixelsPerMeter, effectiveType });
 
     const kinematicScenePosePrev = new WeakMap<
       GameObject,

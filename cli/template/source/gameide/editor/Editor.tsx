@@ -4,13 +4,12 @@ import {
   EditorRoot,
   GameIDEMode,
   GameView,
-  deleteValueAtPath,
   deselectObject,
   getMode,
-  getScene,
   onModeChange,
   useEditorDebugUI,
   useGameIDEMode,
+  useSceneObject,
   useSceneFile,
   useSelectedObject,
 } from "gameide";
@@ -26,6 +25,7 @@ export function Editor({
 }: {
   gameViewRef?: Ref<HTMLDivElement>;
 }) {
+  const { deleteValue } = useSceneObject(selectedPath ?? []);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { save, dirty, saving, undo, redo } = useSceneFile();
   const mode = useGameIDEMode();
@@ -54,7 +54,7 @@ export function Editor({
         selectedPath
       ) {
         event.preventDefault();
-        deleteValueAtPath(getScene().get(), selectedPath);
+        deleteValue();
         deselectObject();
         return;
       }
@@ -86,7 +86,7 @@ export function Editor({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [redo, save, undo, selectedPath]);
+  }, [deleteValue, redo, save, undo, selectedPath]);
 
   return (
     <EditorRoot>

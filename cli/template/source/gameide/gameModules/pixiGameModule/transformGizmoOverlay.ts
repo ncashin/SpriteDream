@@ -1,9 +1,9 @@
 import { Container, Graphics } from "pixi.js";
 import {
-  getScene,
   onEditorUpdate,
   selectedObject,
   type GameObject,
+  type Scene,
 } from "gameide";
 import {
   getTransformGizmoTool,
@@ -74,8 +74,11 @@ function finiteNumberOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function findTopLevelSceneKey(object: GameObject): PropertyKey | undefined {
-  const live = getScene().get() as Record<PropertyKey, unknown>;
+function findTopLevelSceneKey(
+  scene: Scene,
+  object: GameObject,
+): PropertyKey | undefined {
+  const live = scene.get() as Record<PropertyKey, unknown>;
   for (const key of Reflect.ownKeys(live)) {
     if (Reflect.get(live, key) === object) return key;
   }
@@ -659,11 +662,11 @@ function getRotateDragVisual(
 
 export function transformGizmoOverlay(
   screenStage: Container,
+  scene: Scene,
   options: TransformGizmoOverlayOptions,
 ): TransformGizmoOverlayController {
   const { input, viewport, rootElement } = options;
   const zIndex = options.zIndex ?? 10_002;
-  const scene = getScene();
   let dragState: DragState | null = null;
 
   const root = new Container();
@@ -679,7 +682,7 @@ export function transformGizmoOverlay(
   function sync(): void {
     gizmo.clear();
     const sel = selectedObject;
-    if (!sel || findTopLevelSceneKey(sel) === undefined) {
+    if (!sel || findTopLevelSceneKey(scene, sel) === undefined) {
       root.visible = false;
       return;
     }
@@ -744,7 +747,7 @@ export function transformGizmoOverlay(
     if (anchoredRootKey === undefined) return;
     const sel = selectedObject;
     if (!sel) return;
-    if (findTopLevelSceneKey(sel) !== anchoredRootKey) return;
+    if (findTopLevelSceneKey(scene, sel) !== anchoredRootKey) return;
     sync();
   });
   const unsubEditorFrame = onEditorUpdate(updateInteraction);

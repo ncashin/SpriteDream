@@ -2,7 +2,7 @@ import type { Container } from "pixi.js";
 import type { World } from "planck";
 import { Vec2 } from "planck";
 import { getBodyData } from "../planckGameModule/planckBodies.js";
-import { getScene, type GameObject } from "gameide";
+import { type GameObject, type Scene } from "gameide";
 
 export type SpriteBindingForPick = {
   root: Container;
@@ -10,11 +10,11 @@ export type SpriteBindingForPick = {
 };
 
 function pickSpriteObjectAtScenePoint(
+  scene: Scene,
   sceneContainer: Container,
   scenePoint: { x: number; y: number },
   spriteBindingsBySceneKey: Map<PropertyKey, SpriteBindingForPick>,
 ): GameObject | null {
-  const scene = getScene();
   const children = sceneContainer.children;
   for (let index = children.length - 1; index >= 0; index--) {
     const child = children[index];
@@ -66,6 +66,7 @@ function pickColliderObjectAtScenePoint(
 }
 
 export function pickSceneObjectAtWorldPoint(options: {
+  scene: Scene;
   sceneContainer: Container;
   worldPoint: { x: number; y: number };
   spriteBindingsBySceneKey: Map<PropertyKey, SpriteBindingForPick>;
@@ -73,6 +74,7 @@ export function pickSceneObjectAtWorldPoint(options: {
   pixelsPerMeter?: number;
 }): GameObject | null {
   const fromSprite = pickSpriteObjectAtScenePoint(
+    options.scene,
     options.sceneContainer,
     options.worldPoint,
     options.spriteBindingsBySceneKey,

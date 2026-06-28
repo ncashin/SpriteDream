@@ -3,8 +3,7 @@ import type { GameContext } from "../../lifecycle/initialization.js";
 import { createEditorUI } from "./createEditorUI.js";
 import type { EditorWithGameViewReference } from "./createEditorUI.js";
 import {
-  restoreSceneSnapshot,
-  saveSceneSnapshot,
+  createSceneSnapshot,
 } from "../../scene/snapshot.js";
 import {
   bindSceneFileStore,
@@ -30,13 +29,15 @@ export const editorGameModule =
 
     void useSceneFileStore.getState().loadScenes();
 
+    const sceneSnapshot = createSceneSnapshot(input.scene);
+
     const handleModeChange = (mode: GameIDEMode) => {
       switch (mode) {
         case GameIDEMode.Game:
-          saveSceneSnapshot();
+          sceneSnapshot.save();
           break;
         case GameIDEMode.Editor:
-          restoreSceneSnapshot();
+          sceneSnapshot.restore();
           break;
       }
     };
@@ -44,7 +45,7 @@ export const editorGameModule =
     handleModeChange(getMode());
     const releaseModeWatcher = onModeChange(handleModeChange);
 
-    const mount = await createEditorUI(input.rootElement, Editor);
+    const mount = await createEditorUI(input.rootElement, Editor, input.scene);
 
     input.onDispose(() => {
       releaseModeWatcher();

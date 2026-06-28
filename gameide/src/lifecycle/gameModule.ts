@@ -28,8 +28,10 @@ export async function reduceGameModules<
   let context: Context | ReduceGameModules<Context, GameModules> = initial;
   for (const module of modules) {
     if (isGameModule(module)) {
-      context = await module(context);
+      context = (await module(context)) as
+        | Context
+        | ReduceGameModules<Context, GameModules>;
     }
   }
-  return context;
+  return context as Readonly<ReduceGameModules<Context, GameModules>>;
 }
