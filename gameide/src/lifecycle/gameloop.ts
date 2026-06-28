@@ -90,19 +90,32 @@ export function flushDisposeCallbacks(): void {
   }
 }
 
-let frameId: number | undefined;
+let frameIdentifier: ReturnType<typeof requestAnimationFrame> | undefined;
 export function startGameloop(): void {
-  if (frameId) return;
+  if (frameIdentifier) return;
   runStarts(starts, getMode());
 
-  let lastTime = performance.now();
-  function tick(now: number): void {
-    frameId = requestAnimationFrame(tick);
-    const deltaTime = (now - lastTime) / 1000;
-    lastTime = now;
+  let lastFrameTime = performance.now();
+  function tick(currentFrameTime: number): void {
+    frameIdentifier = requestAnimationFrame(tick);
+    const deltaTime = (currentFrameTime - lastFrameTime) / 1000;
+    lastFrameTime = currentFrameTime;
 
     runUpdates(updates, deltaTime, getMode());
   }
 
-  frameId = requestAnimationFrame(tick);
+  frameIdentifier = requestAnimationFrame(tick);
 }
+
+
+export const gameLifecycle = {
+  onStart,
+  onUpdate,
+  onGameStart,
+  onGameUpdate,
+  onEditorStart,
+  onEditorUpdate,
+  onDispose,
+};
+
+export type GameLifecycle = typeof gameLifecycle;
