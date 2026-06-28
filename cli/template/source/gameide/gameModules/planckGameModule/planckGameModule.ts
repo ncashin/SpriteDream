@@ -53,7 +53,7 @@ export type PlanckGameModuleOptions = {
 type PlanckGameModuleNetworkingContext = {
   scene: Scene;
   networking?: { peerId: string };
-  dispose: (fn: () => void) => void;
+  onDispose: (fn: () => void) => void;
 };
 
 export type PlanckGameModuleAPI = {
@@ -173,7 +173,7 @@ export function planckGameModule(
       isDynamic: sceneBodyIsDynamic,
     };
 
-    context.dispose(() => {
+    context.onDispose(() => {
       unsubscribeColliderBodiesSync();
       unsubscribeContacts();
       world.off("remove-body", onRemoveBody);

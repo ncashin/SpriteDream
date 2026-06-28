@@ -480,12 +480,13 @@ function getPointerGizmoLocal(
 }
 
 function hitTestSelectedGizmo(
+  scene: Scene,
   input: PixiViewportInput,
   viewport: ViewportController,
   rootElement: HTMLElement,
 ): GizmoHandle | null {
   const sel = selectedObject;
-  if (!sel || findTopLevelSceneKey(sel) === undefined) return null;
+  if (!sel || findTopLevelSceneKey(scene, sel) === undefined) return null;
 
   const local = getPointerGizmoLocal(sel, input, viewport, rootElement);
   if (!local) return null;
@@ -719,7 +720,7 @@ export function transformGizmoOverlay(
 
     if (input.buttons.Click.pressed && input.mouse.position) {
       const sel = selectedObject;
-      const handle = hitTestSelectedGizmo(input, viewport, rootElement);
+      const handle = hitTestSelectedGizmo(scene, input, viewport, rootElement);
       if (sel && handle) {
         dragState = beginDrag(handle, sel, input, viewport);
       }
@@ -736,7 +737,7 @@ export function transformGizmoOverlay(
     if (dragState) return true;
     if (!input.mouse.position) return false;
     if (!input.buttons.Click.pressed && !input.buttons.Click.held) return false;
-    return hitTestSelectedGizmo(input, viewport, rootElement) !== null;
+    return hitTestSelectedGizmo(scene, input, viewport, rootElement) !== null;
   }
 
   sync();

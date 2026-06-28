@@ -21,18 +21,14 @@ import { Sidebar } from "./components/Sidebar";
 import { TransformGizmoBar } from "./components/TransformGizmoBar";
 import { SceneTree } from "./components/SceneTree";
 
-export function Editor({
-  gameViewRef,
-}: {
-  gameViewRef?: Ref<HTMLDivElement>;
-}) {
+export function Editor({ gameViewRef }: { gameViewRef?: Ref<HTMLDivElement> }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { selectedPath } = useSelectedSceneObject();
   const { deleteValue } = useSceneObject(selectedPath ?? []);
-  const { save, dirty, saving } = useSceneFile();
+  const { save, dirty } = useSceneFile();
   const { undo, redo } = useSceneHistory();
   const mode = useGameIDEMode();
-  const canSave = mode === GameIDEMode.Editor && dirty && !saving;
+  const canSave = mode === GameIDEMode.Editor && dirty;
   const { enabled: debugUIEnabled, toggle: toggleDebugUI } = useEditorDebugUI();
 
   useEffect(() => {
@@ -129,7 +125,9 @@ export function Editor({
             </div>
             <OverlayButton
               className="w-24 justify-center"
-              title={debugUIEnabled ? "Hide debug overlays" : "Show debug overlays"}
+              title={
+                debugUIEnabled ? "Hide debug overlays" : "Show debug overlays"
+              }
               aria-pressed={debugUIEnabled}
               aria-label="Debug UI"
               onClick={() => toggleDebugUI()}

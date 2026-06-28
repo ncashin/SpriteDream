@@ -59,11 +59,11 @@ export function gameidePlugin(): Plugin {
     },
     configureServer(server) {
       knownScenes = listProjectScenes(projectRoot);
+      attachFileEditorMiddleware(server, projectRoot, () => {
+        invalidateCatalogModules(server);
+        knownScenes = listProjectScenes(projectRoot);
+      });
       return () => {
-        attachFileEditorMiddleware(server, projectRoot, () => {
-          invalidateCatalogModules(server);
-          knownScenes = listProjectScenes(projectRoot);
-        });
         if (server.httpServer) {
           attachRoomWebSocket(server.httpServer);
         }

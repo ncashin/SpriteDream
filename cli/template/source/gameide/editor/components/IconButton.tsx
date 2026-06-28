@@ -12,7 +12,7 @@ export function IconButton({
     <button
       type="button"
       className={cn(
-        "flex shrink-0 items-center justify-center rounded border-0 bg-transparent p-0.5 outline-none",
+        "flex shrink-0 items-center justify-center rounded-none border-0 bg-transparent p-0.5 outline-none",
         "text-[var(--color-text)] cursor-pointer",
         "hover:bg-[var(--color-hover)] focus-visible:ring-1 focus-visible:ring-[var(--color-highlight)]",
         "disabled:cursor-default disabled:opacity-45",

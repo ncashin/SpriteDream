@@ -22,25 +22,43 @@ function listSceneDirectories(scenes: readonly string[]): string[] {
   return [...dirs].sort();
 }
 
+function normalizeSaveDirectory(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const dir = trimmed.replace(/^\/+/, "");
+  if (!dir || dir.includes("..")) return null;
+  return dir.endsWith("/") ? dir : `${dir}/`;
+}
+
 function promptSaveDirectory(scenes: readonly string[]): string | null {
   const dirs = listSceneDirectories(scenes);
   const defaultDir = dirs[0] ?? "source/scenes/";
 
-  if (dirs.length === 1) {
-    const saveHere = window.confirm(`Save scene to ${defaultDir}?`);
-    return saveHere ? defaultDir : null;
-  }
+  const listing =
+    dirs.length > 0
+      ? `\n\nExisting directories:\n${dirs.map((dir, index) => `${index + 1}. ${dir}`).join("\n")}\n\nEnter a directory path (or number from the list):`
+      : "\n\nEnter a directory path:";
 
-  const listing = dirs.map((dir, index) => `${index + 1}. ${dir}`).join("\n");
   const input = window.prompt(
-    `Choose a directory for this scene file:\n${listing}\n\nEnter directory path:`,
+    `Choose a directory for this scene file:${listing}`,
     defaultDir,
   );
   if (input === null) return null;
 
   const trimmed = input.trim();
   if (!trimmed) return null;
-  return trimmed.endsWith("/") ? trimmed : `${trimmed}/`;
+
+  const asNumber = Number(trimmed);
+  if (
+    Number.isInteger(asNumber) &&
+    asNumber >= 1 &&
+    asNumber <= dirs.length
+  ) {
+    return dirs[asNumber - 1] ?? null;
+  }
+
+  return normalizeSaveDirectory(trimmed);
 }
 
 export function pickUntitledSceneSavePath(

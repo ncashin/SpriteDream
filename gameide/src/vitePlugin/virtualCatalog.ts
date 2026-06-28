@@ -73,6 +73,13 @@ export function listProjectScenes(projectRoot: string): string[] {
     .sort((a, b) => a.localeCompare(b));
 }
 
+export function listProjectFiles(projectRoot: string): string[] {
+  const files = walkFiles(projectRoot, () => true);
+  return files
+    .map((file) => toPosixRelative(projectRoot, file))
+    .sort((a, b) => a.localeCompare(b));
+}
+
 export function createCatalogModuleCode(projectRoot: string): string {
   return `export default ${JSON.stringify({
     assets: listProjectAssets(projectRoot),

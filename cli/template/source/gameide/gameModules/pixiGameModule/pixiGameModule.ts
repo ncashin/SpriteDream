@@ -46,7 +46,7 @@ export type PixiGameModuleAPI = {
 
 type PixiGameModuleContext = {
   rootElement: HTMLElement;
-  dispose: (fn: () => void) => void;
+  onDispose: (fn: () => void) => void;
 };
 
 export type PixiGameModuleInputContext = PixiGameModuleContext & {
@@ -160,7 +160,7 @@ export function pixiGameModule(
       reloadSvgTextures();
     });
 
-    context.dispose(() => {
+    context.onDispose(() => {
       unsubscribeDevicePixelRatio();
       unsubscribeColliderDebugSettings?.();
       colliderDebugController?.unsubscribe();

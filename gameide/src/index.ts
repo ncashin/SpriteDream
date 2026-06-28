@@ -11,7 +11,6 @@ export type {
   CreateSceneChannelOptions,
   SceneChannel,
   SceneChannelMessage,
-  SceneEditorState,
 } from "./scene/sceneChannel/sceneChannel.js";
 
 export {
@@ -59,7 +58,7 @@ export {
   type GameLifecycle,
 } from "./lifecycle/index.js";
 export { editorGameModule } from "./gameModules/editorGameModule/editorGameModule.js";
-export type { EditorWithGameViewReference } from "./gameModules/editorGameModule/createEditorUI.js";
+export type { Editor } from "./gameModules/editorGameModule/createEditorUI.js";
 export {
   networkingGameModule,
   OWNER_ID,
@@ -80,7 +79,6 @@ export { useSceneFile } from "./gameModules/editorGameModule/sceneFile/useSceneF
 export { useSceneHistory } from "./gameModules/editorGameModule/sceneFile/useSceneHistory.js";
 export {
   useSceneFileStore,
-  hydrateSceneFileStore,
 } from "./gameModules/editorGameModule/sceneFile/sceneFileStore.js";
 export { useSceneHistoryStore } from "./gameModules/editorGameModule/sceneFile/sceneHistoryStore.js";
 export { useSelectedSceneObject } from "./hooks/useSelectedSceneObject.js";

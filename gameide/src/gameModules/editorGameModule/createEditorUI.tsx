@@ -4,7 +4,7 @@ import type { ComponentType, Ref } from "react";
 import type { Scene } from "../../scene/scene.js";
 import { SceneProvider } from "../../scene/sceneContext.js";
 
-export type EditorWithGameViewReference = ComponentType<{
+export type Editor = ComponentType<{
   gameViewRef?: Ref<HTMLDivElement>;
 }>;
 
@@ -15,7 +15,7 @@ export type EditorUIMount = {
 
 export function createEditorUI(
   parentRoot: HTMLElement,
-  Editor: EditorWithGameViewReference,
+  Editor: Editor,
   scene: Scene,
 ): Promise<EditorUIMount> {
   return new Promise((resolve) => {

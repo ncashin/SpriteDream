@@ -19,6 +19,17 @@ function runStarts(entries: readonly Start[], mode: GameIDEMode): void {
   });
 }
 
+function runModeStarts(entries: readonly Start[], mode: GameIDEMode): void {
+  entries.forEach(({ requiredMode, callback }) => {
+    if (!requiredMode || requiredMode !== mode) return;
+    callback();
+  });
+}
+
+onModeChange((mode) => {
+  runModeStarts(starts, mode);
+});
+
 function registerStart(
   requiredMode: GameIDEMode | undefined,
   callback: StartCallback,

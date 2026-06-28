@@ -32,6 +32,8 @@ const sceneRowClassName = cn(
   "hover:bg-[var(--color-hover)] focus-within:bg-[var(--color-hover)]",
 );
 
+const HEADER_ROW_COUNT = 2;
+
 function KeyInput({
   name,
   renameKey,
@@ -402,7 +404,7 @@ function TreeNode({
       <div
         className="sticky bg-[var(--color-bg)]"
         style={{
-          top: `calc(${depth + 1} * (1lh + 0.5rem))`,
+          top: `calc(${depth + HEADER_ROW_COUNT} * (1lh + 0.5rem))`,
           zIndex: 100 - depth,
         }}
       >
@@ -534,7 +536,7 @@ export function SceneTree({ className }: { className?: string }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showHiddenProperties, setShowHiddenProperties] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
-  const actionsVisible = addOpen || settingsOpen;
+  const actionsVisible = settingsOpen;
   return (
     <div
       className={cn(
@@ -587,23 +589,6 @@ export function SceneTree({ className }: { className?: string }) {
                 <X size={14} className="text-white" aria-hidden />
               </IconButton>
             ) : null}
-            <AddToSceneDropdown
-              path={[]}
-              open={addOpen}
-              onOpenChange={setAddOpen}
-            >
-              <IconButton
-                aria-label="Add to Scene"
-                aria-expanded={addOpen}
-                className={cn(
-                  addOpen &&
-                    "bg-[var(--color-hover)] hover:bg-[var(--color-hover)]",
-                )}
-                onClick={() => setAddOpen((open) => !open)}
-              >
-                <Plus size={14} className="text-white" aria-hidden />
-              </IconButton>
-            </AddToSceneDropdown>
             <SceneSettingsMenu
               open={settingsOpen}
               onOpenChange={setSettingsOpen}
@@ -624,6 +609,32 @@ export function SceneTree({ className }: { className?: string }) {
             </SceneSettingsMenu>
           </div>
         </div>
+        <AddToSceneDropdown
+          path={[]}
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          className="w-full"
+        >
+          <button
+            type="button"
+            aria-label="Add to Scene"
+            aria-expanded={addOpen}
+            className={cn(
+              sceneRowClassName,
+              "w-full cursor-pointer border-0 bg-transparent text-left",
+              addOpen && "bg-[var(--color-hover)]",
+            )}
+            onClick={() => setAddOpen((open) => !open)}
+          >
+            <span
+              className="relative flex size-3.5 shrink-0 items-center justify-center"
+              aria-hidden
+            >
+              <Plus size={14} className="text-white" />
+            </span>
+            Add To Scene
+          </button>
+        </AddToSceneDropdown>
       </div>
       {filterVisibleKeys(Object.keys(root ?? {}), showHiddenProperties).map(
         (key) => (

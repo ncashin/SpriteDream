@@ -1,33 +1,20 @@
 import { GameIDEMode, getMode, onModeChange } from "../../lifecycle/mode.js";
 import type { GameContext } from "../../lifecycle/initialization.js";
 import { createEditorUI } from "./createEditorUI.js";
-import type { EditorWithGameViewReference } from "./createEditorUI.js";
+import type { Editor } from "./createEditorUI.js";
 import {
   createSceneSnapshot,
 } from "../../scene/snapshot.js";
-import {
-  bindSceneFileStore,
-  hydrateSceneFileStore,
-  subscribeSceneFileHostState,
-  useSceneFileStore,
-} from "./sceneFile/sceneFileStore.js";
+import { initializeSceneFileStore } from "./sceneFile/sceneFileStore.js";
 
 export const editorGameModule =
-  (Editor: EditorWithGameViewReference) =>
+  (Editor: Editor) =>
   async (input: GameContext<object>) => {
     if (process.env.NODE_ENV !== "development") {
       return input;
     }
 
-    const persistedScenePath = await hydrateSceneFileStore();
-    const releaseSceneFileHostState = subscribeSceneFileHostState();
-
-    const releaseSceneFileStore = bindSceneFileStore(
-      input.scene,
-      persistedScenePath || undefined,
-    );
-
-    void useSceneFileStore.getState().loadScenes();
+    await initializeSceneFileStore(input.scene);
 
     const sceneSnapshot = createSceneSnapshot(input.scene);
 
@@ -49,8 +36,6 @@ export const editorGameModule =
 
     input.onDispose(() => {
       releaseModeWatcher();
-      releaseSceneFileHostState();
-      releaseSceneFileStore();
       mount.dispose();
     });
 
