@@ -29,6 +29,7 @@ export {
   SCENE_PATCH_DELETED,
   isScenePatchDeletion,
 } from "./scene/scene.js";
+export { augmentScene } from "./scene/sceneExtensions.js";
 export {
   selectedObject,
   selectObject,
@@ -42,6 +43,13 @@ export {
 } from "./scene/path.js";
 
 export type { Scene, SceneObject, GameObject, ScenePath } from "./scene/scene.js";
+export type {
+  BoundSceneObjectExtensions,
+  GameObjectWithExtensions,
+  SceneObjectExtensionHandler,
+  SceneObjectExtensionMap,
+  SceneWithExtensions,
+} from "./scene/sceneExtensions.js";
 export {
   defineTrait,
   implementsTrait,

@@ -13,6 +13,7 @@ export {
   type PlanckContactPhase,
   type PlanckGameModuleAPI,
   type PlanckGameModuleOptions,
+  type PlanckGameObjectExtensions,
 } from "./planckGameModule.js";
 export { boxColliderTrait, circleColliderTrait } from "./colliderComponents.js";
 export { collisionBodyTrait } from "./collisionBody.js";

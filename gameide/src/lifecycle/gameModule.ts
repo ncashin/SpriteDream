@@ -15,7 +15,7 @@ export type ReduceGameModules<
       ...infer RemainingModules extends readonly UnknownGameModule[],
     ]
     ? FirstModule extends GameModule<infer _Needs, infer Adds>
-      ? ReduceGameModules<Context & Adds, RemainingModules>
+      ? ReduceGameModules<Omit<Context, keyof Adds> & Adds, RemainingModules>
       : ReduceGameModules<Context, RemainingModules>
     : Context;
 

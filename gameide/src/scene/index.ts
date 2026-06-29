@@ -12,6 +12,16 @@ export {
   createSceneProxy,
   curryScene,
 } from "./scene.js";
+export {
+  augmentScene,
+} from "./sceneExtensions.js";
+export type {
+  BoundSceneObjectExtensions,
+  GameObjectWithExtensions,
+  SceneObjectExtensionHandler,
+  SceneObjectExtensionMap,
+  SceneWithExtensions,
+} from "./sceneExtensions.js";
 
 export {
   deleteValueAtPath,

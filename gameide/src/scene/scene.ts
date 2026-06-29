@@ -170,7 +170,7 @@ export const curryScene = (rawScene: SceneObject) => {
     return Object.values(scene).filter(queryFunction) as T[];
   };
 
-  /** Apply a partial scene update without replacing intermediate objects. */
+  /** Apply a partial scene update without replacing objects */
   const applyPatch = (patch: Partial<SceneObject>) => {
     const walk = (data: GameObject, path: PropertyKey[]) => {
       for (const key of Reflect.ownKeys(data)) {

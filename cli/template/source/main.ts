@@ -20,7 +20,7 @@ const playerTrait = defineTrait(
 );
 
 export default function main(context: MainGameContext) {
-  const { input, networking, onGameStart, onGameUpdate, planck, scene } =
+  const { input, networking, onGameStart, onGameUpdate, scene } =
     context;
 
   onGameStart(() => {
@@ -30,7 +30,8 @@ export default function main(context: MainGameContext) {
     );
 
     let floorSupportOverlaps = 0;
-    planck.onCollision(peerPlayer, (_other, collisionInfo) => {
+    peerPlayer.onCollision((_other, collisionInfo) => {
+      console.log("HIT")
       if (!collisionInfo.normal || collisionInfo.normal.y < 0.5) return;
       if (collisionInfo.phase === "enter") floorSupportOverlaps++;
       else floorSupportOverlaps = Math.max(0, floorSupportOverlaps - 1);

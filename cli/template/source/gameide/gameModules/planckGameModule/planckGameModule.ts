@@ -5,9 +5,12 @@ import {
   onGameUpdate,
   peerIntegratesPhysicsForObject,
   onStart,
+  augmentScene,
   type GameObject,
   type GameModule,
   type Scene,
+  type SceneObjectExtensionHandler,
+  type SceneWithExtensions,
 } from "gameide";
 import {
   sceneBodyIsDynamic,
@@ -56,12 +59,15 @@ type PlanckGameModuleNetworkingContext = {
   onDispose: (fn: () => void) => void;
 };
 
+export type PlanckGameObjectExtensions = {
+  onCollision: SceneObjectExtensionHandler<[PlanckCollisionHandler], () => void>;
+  onTrigger: SceneObjectExtensionHandler<[PlanckCollisionHandler], () => void>;
+};
+
 export type PlanckGameModuleAPI = {
   world: World;
   /** Scene pixels per Planck meter; matches {@link PlanckGameModuleOptions.pixelsPerMeter} (default 30). */
   pixelsPerMeter: number;
-  onCollision: (self: GameObject, handler: PlanckCollisionHandler) => () => void;
-  onTrigger: (self: GameObject, handler: PlanckCollisionHandler) => () => void;
   getRigidbody: (self: GameObject) => Rigidbody2D | null;
   getBody: (self: GameObject) => Body | null;
   getBodyType: (self: GameObject) => BodyType;
@@ -82,7 +88,13 @@ function defaultSimulatesDynamics(networking: { peerId: string } | undefined) {
 
 export default function planckGameModule(
   options: PlanckGameModuleOptions = {},
-): GameModule<PlanckGameModuleNetworkingContext, { planck: PlanckGameModuleAPI }> {
+): GameModule<
+  PlanckGameModuleNetworkingContext,
+  {
+    planck: PlanckGameModuleAPI;
+    scene: SceneWithExtensions<PlanckGameObjectExtensions>;
+  }
+> {
   return (context) => {
     const simulatesDynamics =
       options.simulatesDynamics ?? defaultSimulatesDynamics(context.networking);
@@ -160,8 +172,6 @@ export default function planckGameModule(
     const api: PlanckGameModuleAPI = {
       world,
       pixelsPerMeter,
-      onCollision,
-      onTrigger,
       getRigidbody: (self) => {
         const body = recordForObject(self)?.body;
         return body ? wrapRigidbody2D(body, pixelsPerMeter) : null;
@@ -172,6 +182,13 @@ export default function planckGameModule(
       isKinematic: sceneBodyIsKinematic,
       isDynamic: sceneBodyIsDynamic,
     };
+
+    const planckExtensions = {
+      onCollision,
+      onTrigger,
+    };
+
+    const augmentedScene = augmentScene(scene, planckExtensions);
 
     context.onDispose(() => {
       unsubscribeColliderBodiesSync();
@@ -208,6 +225,6 @@ export default function planckGameModule(
       });
     });
 
-    return { ...context, planck: api };
+    return { ...context, scene: augmentedScene, planck: api };
   };
 }
