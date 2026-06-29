@@ -4,6 +4,7 @@ import {
   gameUIGameModule,
   inputGameModule,
   networkingGameModule,
+  saveGameModule,
   type GameContext,
 } from "gameide";
 import invariant from "tiny-invariant";
@@ -43,6 +44,7 @@ const pluginGameModules = [
   }),
   planckGameModule({}),
   pixiGameModule({}),
+  saveGameModule({ highScore: 0 }),
 ] as const;
 
 export type MainGameContext = GameContext<

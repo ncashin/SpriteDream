@@ -124,3 +124,5 @@ export type {
   InputGameModuleRequiredContext,
   InputGameModuleOptions,
 } from "./gameModules/inputGameModule/inputGameModule.js";
+export { default as saveGameModule } from "./gameModules/saveGameModule/saveGameModule.js";
+export type { SaveGameAPI } from "./gameModules/saveGameModule/saveGameModule.js";
