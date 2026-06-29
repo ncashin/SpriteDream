@@ -63,7 +63,7 @@ export type PixiGameModuleInputContext = PixiGameModuleContext & {
   planck?: PlanckGameModuleAPI;
 };
 
-export function pixiGameModule(
+export default function pixiGameModule(
   options: PixiGameModuleOptions = {},
 ): GameModule<PixiGameModuleInputContext, { pixi: PixiGameModuleAPI }> {
   return async (context) => {

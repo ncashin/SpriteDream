@@ -4,7 +4,7 @@ import "./collisionBody.js";
 export {
   getEffectivePlanckBodyType,
   getSceneBodyType,
-  planckGameModule,
+  default as planckGameModule,
   sceneBodyIsDynamic,
   sceneBodyIsKinematic,
   sceneBodyIsStatic,

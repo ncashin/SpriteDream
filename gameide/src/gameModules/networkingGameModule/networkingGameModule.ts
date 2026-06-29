@@ -41,10 +41,10 @@ export type NetworkingAPI = {
   ) => T & Record<typeof OWNER_ID, string>;
 };
 
-export const networkingGameModule = (
+export default function networkingGameModule(
   options: NetworkingGameModuleOptions = {},
-): GameModule<NetworkingGameModuleRequiredContext, { networking: NetworkingAPI }> =>
-  async (input) => {
+): GameModule<NetworkingGameModuleRequiredContext, { networking: NetworkingAPI }> {
+  return async (input) => {
     const room = options.room ?? "default";
 
     const { transport, peerId, dispose: disposeTransport } =
@@ -82,3 +82,4 @@ export const networkingGameModule = (
       networking,
     };
   };
+}

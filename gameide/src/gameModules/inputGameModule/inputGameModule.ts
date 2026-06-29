@@ -56,7 +56,7 @@ function normalizeKey(code: string): InputBinding {
   return `Key${code}` as InputBinding;
 }
 
-export function inputGameModule<Options extends InputGameModuleOptions>(
+export default function inputGameModule<Options extends InputGameModuleOptions>(
   options: Options,
 ): GameModule<InputGameModuleRequiredContext, { input: InputShape<Options> }> {
   return (inputContext) => {

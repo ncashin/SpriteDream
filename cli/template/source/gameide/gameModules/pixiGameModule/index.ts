@@ -1,5 +1,5 @@
 export {
-  pixiGameModule,
+  default as pixiGameModule,
   type PixiGameModuleAPI,
   type PixiGameModuleInputContext,
   type PixiGameModuleOptions,

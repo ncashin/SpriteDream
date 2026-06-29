@@ -15,7 +15,7 @@ export type BaseGameContext<Initial extends object = {}> = {
   Initial;
 
 export type GameContext<
-  Initial extends object,
+  Initial extends object = {},
   GameModules extends readonly unknown[] = [],
 > = ReduceGameModules<BaseGameContext<Initial>, GameModules>;
 

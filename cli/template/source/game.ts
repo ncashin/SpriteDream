@@ -32,7 +32,7 @@ const ballTraits = implementsTrait([
   ownerTrait,
 ]);
 
-export const main: GameModule<MainGameContext> = (context) => {
+export default function main(context: MainGameContext) : ReturnType<GameModule<MainGameContext>> {
   const { input, networking, onGameStart, onGameUpdate, planck, scene } =
     context;
 

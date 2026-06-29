@@ -80,7 +80,7 @@ function defaultSimulatesDynamics(networking: { peerId: string } | undefined) {
   return (object: GameObject) => peerIntegratesPhysicsForObject(object, networking.peerId);
 }
 
-export function planckGameModule(
+export default function planckGameModule(
   options: PlanckGameModuleOptions = {},
 ): GameModule<PlanckGameModuleNetworkingContext, { planck: PlanckGameModuleAPI }> {
   return (context) => {

@@ -57,10 +57,10 @@ export {
   type GameContext,
   type GameLifecycle,
 } from "./lifecycle/index.js";
-export { editorGameModule } from "./gameModules/editorGameModule/editorGameModule.js";
+export { default as editorGameModule } from "./gameModules/editorGameModule/editorGameModule.js";
 export type { Editor } from "./gameModules/editorGameModule/createEditorUI.js";
 export {
-  networkingGameModule,
+  default as networkingGameModule,
   OWNER_ID,
   ownerTrait,
   isOwnedSceneUpdate,
@@ -69,7 +69,7 @@ export {
 } from "./gameModules/networkingGameModule/networkingGameModule.js";
 export { peerIntegratesPhysicsForObject } from "./gameModules/networkingGameModule/distributedSimulation.js";
 export type { NetworkingAPI as NetworkingApi, NetworkingGameModuleOptions } from "./gameModules/networkingGameModule/networkingGameModule.js";
-export { gameUIGameModule } from "./gameModules/gameUIGameModule/gameUIGameModule.js";
+export { default as gameUIGameModule } from "./gameModules/gameUIGameModule/gameUIGameModule.js";
 export { Game } from "./gameModules/gameUIGameModule/Game.js";
 export { EditorRoot } from "./gameModules/editorGameModule/EditorRoot.js";
 export { GameView } from "./gameModules/editorGameModule/GameView.js";
@@ -101,7 +101,7 @@ export {
 } from "./gameModules/editorGameModule/editorDebugUI.js";
 export { GameIDEMode, getMode, setMode, onModeChange } from "./lifecycle/mode.js";
 export { ASSET_BASE_URL } from "./assetBaseURL.js";
-export { inputGameModule } from "./gameModules/inputGameModule/inputGameModule.js";
+export { default as inputGameModule } from "./gameModules/inputGameModule/inputGameModule.js";
 export type {
   InputBinding,
   AxisConfig,

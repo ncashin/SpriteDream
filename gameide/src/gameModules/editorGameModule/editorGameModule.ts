@@ -7,9 +7,8 @@ import {
 } from "../../scene/snapshot.js";
 import { initializeSceneFileStore } from "./sceneFile/sceneFileStore.js";
 
-export const editorGameModule =
-  (Editor: Editor) =>
-  async (input: GameContext<object>) => {
+export default function editorGameModule(Editor: Editor) {
+  return async (input: GameContext) => {
     if (process.env.NODE_ENV !== "development") {
       return input;
     }
@@ -45,3 +44,4 @@ export const editorGameModule =
       rootElement: mount.gameViewRoot,
     };
   };
+}

@@ -1,9 +1,8 @@
 import type { ComponentType } from "react";
 import { createGameUI } from "./createGameUI.js";
 
-export const gameUIGameModule =
-  (GameUI: ComponentType) =>
-  async (input: { rootElement: HTMLElement; onDispose: (callback: () => void) => void }) => {
+export default function gameUIGameModule(GameUI: ComponentType) {
+  return async (input: { rootElement: HTMLElement; onDispose: (callback: () => void) => void }) => {
     const mount = await createGameUI(
       input.rootElement,
       GameUI,
@@ -18,4 +17,5 @@ export const gameUIGameModule =
       rootElement: mount.rootElement,
     };
   };
+}
 
