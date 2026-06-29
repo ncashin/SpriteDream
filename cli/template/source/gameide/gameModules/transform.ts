@@ -28,8 +28,4 @@ export const transformSchema = z.object({
     .default({ __icon: "scaling", x: 1, y: 1, z: 1 }),
 });
 
-export const transformTrait = defineTrait(transformSchema, {
-  name: "Transform",
-  description: "3D transform properties for scene objects.",
-  icon: "axis-3d",
-});
+export const transformTrait = defineTrait("Transform", transformSchema);

@@ -35,7 +35,7 @@ export type SceneWithExtensions<
   ) => GameObjectWithExtensions<T, E>;
   getObject: <T extends GameObject = GameObject>(
     key: PropertyKey,
-    typeGuard?: (obj: unknown) => obj is T,
+    typeGuard?: (object: unknown) => object is T,
   ) => GameObjectWithExtensions<T, E> | undefined;
   query: <T extends GameObject>(
     queryFunction: (gameObject: unknown) => gameObject is T,

@@ -54,14 +54,10 @@ export function isColliderNode(v: unknown): v is GameObject {
   return "boxCollider" in v || "circleCollider" in v;
 }
 
-const qualifiesBoxPhysicsBody = implementsTrait([
-  collisionBodyTrait,
-  boxColliderTrait,
-]);
-const qualifiesCirclePhysicsBody = implementsTrait([
-  collisionBodyTrait,
-  circleColliderTrait,
-]);
+const qualifiesBoxPhysicsBody = (v: unknown) =>
+  implementsTrait(v, [collisionBodyTrait, boxColliderTrait]);
+const qualifiesCirclePhysicsBody = (v: unknown) =>
+  implementsTrait(v, [collisionBodyTrait, circleColliderTrait]);
 
 /** Scene object has a registered collider shape and collision body for Planck. */
 export function qualifiesForPlanckBody(v: unknown): v is GameObject {

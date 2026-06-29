@@ -56,7 +56,7 @@ export type PlanckGameModuleOptions = {
 
 type PlanckGameModuleNetworkingContext = {
   scene: Scene;
-  networking?: { peerId: string };
+  networking?: { peerIdentifier: string };
   onDispose: (fn: () => void) => void;
 };
 
@@ -82,9 +82,9 @@ function positiveFiniteOrUndefined(value: unknown): number | undefined {
   return value;
 }
 
-function defaultSimulatesDynamics(networking: { peerId: string } | undefined) {
+function defaultSimulatesDynamics(networking: { peerIdentifier: string } | undefined) {
   if (!networking) return () => true;
-  return (object: GameObject) => peerIntegratesPhysicsForObject(object, networking.peerId);
+  return (object: GameObject) => peerIntegratesPhysicsForObject(object, networking.peerIdentifier);
 }
 
 export default function planckGameModule(

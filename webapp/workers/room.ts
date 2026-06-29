@@ -1,7 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 
 type RoomSocketAttachment = {
-  peerId: string;
+  peerIdentifier: string;
 };
 
 export class Room extends DurableObject {
@@ -26,14 +26,14 @@ export class Room extends DurableObject {
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
 
-    const peerId = this.allocatePeerId();
-    server.serializeAttachment({ peerId } satisfies RoomSocketAttachment);
+    const peerIdentifier = this.allocatePeerIdentifier();
+    server.serializeAttachment({ peerIdentifier } satisfies RoomSocketAttachment);
 
     server.send(
       JSON.stringify({
         type: "ready",
-        peerId,
-        peers: this.peerIds(),
+        peerIdentifier,
+        peers: this.peerIdentifiers(),
       }),
     );
 
@@ -67,18 +67,18 @@ export class Room extends DurableObject {
     this.broadcastPeers();
   }
 
-  private peerIds(): string[] {
+  private peerIdentifiers(): string[] {
     return this.ctx
       .getWebSockets()
       .filter((webSocket) => webSocket.readyState === WebSocket.OPEN)
-      .map((webSocket) => this.peerIdFor(webSocket))
-      .filter((peerId): peerId is string => peerId !== undefined);
+      .map((webSocket) => this.peerIdentifierFor(webSocket))
+      .filter((peerIdentifier): peerIdentifier is string => peerIdentifier !== undefined);
   }
 
   private broadcastPeers(except?: WebSocket) {
     const payload = JSON.stringify({
       type: "roomPeersUpdate",
-      peers: this.peerIds(),
+      peers: this.peerIdentifiers(),
     });
     for (const webSocket of this.ctx.getWebSockets()) {
       if (webSocket !== except && webSocket.readyState === WebSocket.OPEN) {
@@ -87,14 +87,14 @@ export class Room extends DurableObject {
     }
   }
 
-  private peerIdFor(webSocket: WebSocket): string | undefined {
+  private peerIdentifierFor(webSocket: WebSocket): string | undefined {
     const attachment = webSocket.deserializeAttachment();
     if (attachment == null || typeof attachment !== "object") return undefined;
-    const { peerId } = attachment as Record<string, unknown>;
-    return typeof peerId === "string" ? peerId : undefined;
+    const { peerIdentifier } = attachment as Record<string, unknown>;
+    return typeof peerIdentifier === "string" ? peerIdentifier : undefined;
   }
 
-  private allocatePeerId(): string {
+  private allocatePeerIdentifier(): string {
     const row = this.ctx.storage.sql
       .exec<{ peer_id: number }>(
         `

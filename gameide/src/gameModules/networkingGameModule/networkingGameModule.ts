@@ -31,7 +31,7 @@ export type NetworkingGameModuleRequiredContext = {
 };
 
 export type NetworkingAPI = {
-  peerId: string;
+  peerIdentifier: string;
   getPeers: () => string[];
   onPeersChange: (handler: (peers: string[]) => void) => () => void;
   channel: SceneChannel;
@@ -47,7 +47,7 @@ export default function networkingGameModule(
   return async (input) => {
     const room = options.room ?? "default";
 
-    const { transport, peerId, dispose: disposeTransport } =
+    const { transport, peerIdentifier, dispose: disposeTransport } =
       await connectWebSocketRoomTransport({ room, url: options.url });
 
     const shouldBootstrapScene = transport.getPeers().length === 1;
@@ -62,14 +62,14 @@ export default function networkingGameModule(
     });
 
     const networking: NetworkingAPI = {
-      peerId,
+      peerIdentifier,
       getPeers: () => transport.getPeers(),
       onPeersChange: (handler: (peers: string[]) => void) =>
         transport.onPeersChange(handler),
       channel,
-      isOwned: (obj: GameObject) => isOwnedSceneObject(obj, peerId),
+      isOwned: (obj: GameObject) => isOwnedSceneObject(obj, peerIdentifier),
       withOwnership: <T extends Record<string, unknown>>(obj: T) =>
-        withOwnership(obj, peerId),
+        withOwnership(obj, peerIdentifier),
     };
 
     onDispose(() => {

@@ -1,17 +1,10 @@
 import { z, type ZodTypeAny } from "zod";
-import { IconSlug } from "../lucide/lucideIconSlug";
 
-export type TraitMetadata = {
-  name?: string;
-  description?: string;
-  icon?: IconSlug;
+export type TraitDefinitionEntry<S extends ZodTypeAny = ZodTypeAny> = {
+  name: string;
+  schema: S;
+  defaults: Record<string, unknown>;
 };
-
-export type TraitDefinitionEntry<S extends ZodTypeAny = ZodTypeAny> =
-  TraitMetadata & {
-    schema: S;
-    defaults: Record<string, unknown>;
-  };
 
 const traitDefinitions: TraitDefinitionEntry[] = [];
 
@@ -20,13 +13,13 @@ export function getTraitDefinitions(): readonly TraitDefinitionEntry[] {
 }
 
 export const defineTrait = <S extends ZodTypeAny>(
+  name: string,
   schema: S,
-  metadata: TraitMetadata = {},
 ): TraitDefinitionEntry<S> => {
   const parsed = schema.safeParse({});
   const defaults = parsed.success ? (parsed.data as Record<string, unknown>) : {};
   const entry = {
-    ...metadata,
+    name,
     schema,
     defaults,
   } as TraitDefinitionEntry<S>;
@@ -77,13 +70,14 @@ function hasTraitKeys(value: object, schema: ZodTypeAny): boolean {
 
 export function implementsTrait<
   const T extends readonly TraitDefinitionEntry[],
->(traits: T): (value: unknown) => value is TraitIntersection<T> & object {
+>(
+  object: unknown,
+  traits: T,
+): object is TraitIntersection<T> & object {
+  if (typeof object !== "object" || object === null) return false;
   const schema = intersectTraitSchemas(traits);
-  return (value): value is TraitIntersection<T> & object => {
-    if (typeof value !== "object" || value === null) return false;
-    for (const trait of traits) {
-      if (!hasTraitKeys(value, trait.schema)) return false;
-    }
-    return schema.safeParse(value).success;
-  };
+  for (const trait of traits) {
+    if (!hasTraitKeys(object, trait.schema)) return false;
+  }
+  return schema.safeParse(object).success;
 }

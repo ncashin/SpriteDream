@@ -10,7 +10,7 @@ export type WebSocketRoomTransport = SceneChannelTransport & {
 
 export type ConnectWebSocketRoomResult = {
   transport: WebSocketRoomTransport;
-  peerId: string;
+  peerIdentifier: string;
   peers: string[];
   dispose(): void;
 };
@@ -84,18 +84,18 @@ export function connectWebSocketRoomTransport(options: {
 
       const raw = JSON.parse(String(event.data)) as {
         type: string;
-        peerId: unknown;
+        peerIdentifier: unknown;
         peers: unknown;
       };
       applyPeersFromServerMessage(raw, setPeersFromServer);
       if (raw.type === ROOM_PEERS_UPDATE) return;
       if (
         raw.type !== "ready" ||
-        typeof raw.peerId !== "string" ||
+        typeof raw.peerIdentifier !== "string" ||
         !Array.isArray(raw.peers) ||
         !raw.peers.every((id): id is string => typeof id === "string")
       ) {
-        fail(new Error("expected room ready message with peerId and peers"));
+        fail(new Error("expected room ready message with peerIdentifier and peers"));
         return;
       }
  
@@ -150,7 +150,7 @@ export function connectWebSocketRoomTransport(options: {
 
       settled = true;
       resolve({
-        peerId: raw.peerId,
+        peerIdentifier: raw.peerIdentifier,
         peers: [...currentPeers],
         transport,
         dispose: transport.dispose,

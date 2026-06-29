@@ -20,6 +20,7 @@ const collisionBodyDataSchema = z.object({
 });
 
 export const collisionBodyTrait = defineTrait(
+  "CollisionBody2D",
   z.object({
     collisionBody: collisionBodyDataSchema.default({
       __icon: "atom",
@@ -33,10 +34,4 @@ export const collisionBodyTrait = defineTrait(
       disabled: false,
     }),
   }),
-  {
-    name: "CollisionBody2D",
-    description:
-      "How this object participates in the physics step (static / kinematic / dynamic).",
-    icon: "atom",
-  },
 );

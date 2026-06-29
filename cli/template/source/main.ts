@@ -10,13 +10,13 @@ import type { MainGameContext } from "./gameContext.js";
 const BALL_GRAVITY_Y = -1500;
 
 const playerTrait = defineTrait(
+  "player",
   z.object({
     moveSpeed: z.number().default(260),
     jumpSpeed: z.number().default(650),
     gravity: z.number().default(-1500),
     grounded: z.boolean().default(false),
   }),
-  { name: "player" },
 );
 
 export default function main(context: MainGameContext) {
@@ -25,7 +25,7 @@ export default function main(context: MainGameContext) {
 
   onGameStart(() => {
     const peerPlayer = scene.createObject(
-      networking.peerId,
+      networking.peerIdentifier,
       networking.withOwnership(playerScene),
     );
 
@@ -40,13 +40,14 @@ export default function main(context: MainGameContext) {
 
   onGameUpdate((deltaTime) => {
     const player = scene.getObject(
-      networking.peerId,
-      implementsTrait([
-        playerTrait,
-        transformTrait,
-        spriteTrait,
-        collisionBodyTrait,
-      ]),
+      networking.peerIdentifier,
+      (object) =>
+        implementsTrait(object, [
+          playerTrait,
+          transformTrait,
+          spriteTrait,
+          collisionBodyTrait,
+        ]),
     );
 
     if (player) {
@@ -60,12 +61,13 @@ export default function main(context: MainGameContext) {
 
     const ball = scene.getObject(
       "bouncyBall",
-      implementsTrait([
-        transformTrait,
-        spriteTrait,
-        collisionBodyTrait,
-        ownerTrait,
-      ]),
+      (object) =>
+        implementsTrait(object, [
+          transformTrait,
+          spriteTrait,
+          collisionBodyTrait,
+          ownerTrait,
+        ]),
     );
 
     if (ball && networking.isOwned(ball)) {

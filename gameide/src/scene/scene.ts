@@ -153,7 +153,7 @@ export const curryScene = (rawScene: SceneObject) => {
 
   const getObject = <T extends GameObject = GameObject>(
     key: PropertyKey,
-    typeGuard?: (obj: unknown) => obj is T,
+    typeGuard?: (object: unknown) => object is T,
   ): T | undefined => {
     if (!typeGuard) {
       return scene[key] as T | undefined;

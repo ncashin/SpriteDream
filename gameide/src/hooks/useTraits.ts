@@ -43,9 +43,8 @@ export function useTraits() {
     () =>
       getTraitDefinitions().map((definition: TraitDefinitionEntry, index: number) => ({
         id: index,
-        label: definition.name ?? `Trait ${index + 1}`,
+        label: definition.name,
         schema: definition.schema,
-        icon: definition.icon,
         defaults: definition.defaults,
       })),
     [],

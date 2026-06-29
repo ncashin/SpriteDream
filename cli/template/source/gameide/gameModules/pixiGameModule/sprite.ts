@@ -18,6 +18,7 @@ const spriteDataSchema = z.object({
 });
 
 export const spriteTrait = defineTrait(
+  "Sprite",
   z.object({
     sprite: spriteDataSchema.default({
       __icon: "image",
@@ -27,11 +28,6 @@ export const spriteTrait = defineTrait(
       tint: "#ffffff",
     }),
   }),
-  {
-    name: "Sprite",
-    description: "2D textured sprite from the project assets folder.",
-    icon: "image",
-  },
 );
 
 export const spriteRenderableSchema = transformSchema.merge(spriteTrait.schema);
@@ -157,10 +153,8 @@ export function pixiSprites(stage: Container, scene: Scene): {
   reloadSvgTextures: () => void;
 } {
   const spriteBindingsBySceneKey = new Map<PropertyKey, SpritePixiBinding>();
-  const qualifiesAsSpriteRenderable = implementsTrait([
-    transformTrait,
-    spriteTrait,
-  ]);
+  const qualifiesAsSpriteRenderable = (object: unknown) =>
+    implementsTrait(object, [transformTrait, spriteTrait]);
 
   function removeSpriteBindingIfPresent(sceneRootKey: PropertyKey): void {
     const existingBinding = spriteBindingsBySceneKey.get(sceneRootKey);

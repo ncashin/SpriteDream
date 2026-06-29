@@ -14,6 +14,7 @@ const boxColliderDataSchema = z.object({
 });
 
 export const boxColliderTrait = defineTrait(
+  "BoxCollider2D",
   z.object({
     boxCollider: boxColliderDataSchema.default({
       __icon: "square",
@@ -22,12 +23,6 @@ export const boxColliderTrait = defineTrait(
       offset: { x: 0, y: 0 },
     }),
   }),
-
-  {
-    name: "BoxCollider2D",
-    description: "Axis-aligned rectangle used for contact tests.",
-    icon: "square",
-  },
 );
 
 const circleColliderDataSchema = z.object({
@@ -42,6 +37,7 @@ const circleColliderDataSchema = z.object({
 });
 
 export const circleColliderTrait = defineTrait(
+  "CircleCollider2D",
   z.object({
     circleCollider: circleColliderDataSchema.default({
       __icon: "circle",
@@ -49,9 +45,4 @@ export const circleColliderTrait = defineTrait(
       offset: { x: 0, y: 0 },
     }),
   }),
-  {
-    name: "CircleCollider2D",
-    description: "Circle used for contact tests.",
-    icon: "circle",
-  },
 );

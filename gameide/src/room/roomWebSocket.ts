@@ -5,7 +5,7 @@ import { WebSocketServer, WebSocket } from "ws";
 
 const ROOM_PATH = "/room";
 
-type RoomClient = WebSocket & { peerId: string; room: string };
+type RoomClient = WebSocket & { peerIdentifier: string; room: string };
 
 const rooms = new Map<string, Set<RoomClient>>();
 let nextPeer = 1;
@@ -24,10 +24,10 @@ function isRoomUpgrade(request: IncomingMessage): boolean {
   return getRoomName(request) !== "";
 }
 
-function peerIdsInRoom(room: string): string[] {
+function peerIdentifiersInRoom(room: string): string[] {
   const set = rooms.get(room);
   if (!set) return [];
-  return [...set].map((roomClient) => roomClient.peerId);
+  return [...set].map((roomClient) => roomClient.peerIdentifier);
 }
 
 function messageDataToUTF8(data: Buffer | ArrayBuffer | Buffer[]): string {
@@ -54,7 +54,7 @@ export function attachRoomWebSocket(httpServer: Server | Http2SecureServer): Web
     const room = getRoomName(req);
     const client = websocket as RoomClient;
     client.room = room;
-    client.peerId = `peer-${nextPeer++}`;
+    client.peerIdentifier = `peer-${nextPeer++}`;
 
     let set = rooms.get(room);
     if (!set) {
@@ -66,14 +66,14 @@ export function attachRoomWebSocket(httpServer: Server | Http2SecureServer): Web
     websocket.send(
       JSON.stringify({
         type: "ready",
-        peerId: client.peerId,
-        peers: peerIdsInRoom(room),
+        peerIdentifier: client.peerIdentifier,
+        peers: peerIdentifiersInRoom(room),
       }),
     );
 
     const peersPayload = JSON.stringify({
       type: "roomPeersUpdate",
-      peers: peerIdsInRoom(room),
+      peers: peerIdentifiersInRoom(room),
     });
     for (const other of set) {
       if (other !== client && other.readyState === WebSocket.OPEN) {
@@ -102,7 +102,7 @@ export function attachRoomWebSocket(httpServer: Server | Http2SecureServer): Web
       }
       const peersPayload = JSON.stringify({
         type: "roomPeersUpdate",
-        peers: peerIdsInRoom(room),
+        peers: peerIdentifiersInRoom(room),
       });
       for (const peer of roomClients) {
         if (peer.readyState === WebSocket.OPEN) {
