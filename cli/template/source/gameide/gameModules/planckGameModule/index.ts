@@ -10,6 +10,7 @@ export {
   sceneBodyIsStatic,
   type PlanckCollisionHandler,
   type PlanckCollisionInfo,
+  type PlanckContact,
   type PlanckContactPhase,
   type PlanckGameModuleAPI,
   type PlanckGameModuleOptions,

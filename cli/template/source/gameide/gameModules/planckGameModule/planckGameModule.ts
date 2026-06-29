@@ -42,6 +42,7 @@ export {
 export type {
   PlanckCollisionHandler,
   PlanckCollisionInfo,
+  PlanckContact,
   PlanckContactPhase,
 } from "./planckContacts.js";
 
@@ -120,14 +121,17 @@ export default function planckGameModule(
 
     const collisionHandlers = new Map<GameObject, PlanckCollisionHandler>();
     const triggerHandlers = new Map<GameObject, Set<PlanckCollisionHandler>>();
-    const unsubscribeContacts = subscribePlanckWorldContacts(world, {
-      collisionHandlers,
-      triggerHandlers,
-    });
+    const { unsubscribe: unsubscribeContacts, clearContactsForObject } =
+      subscribePlanckWorldContacts(world, {
+        collisionHandlers,
+        triggerHandlers,
+      });
 
     const onRemoveBody = (body: Body) => {
       const sceneKey = getBodySceneKey(body);
       if (sceneKey !== undefined) sceneKeyToPlanckRecord.delete(sceneKey);
+      const bodyData = getBodyData(body);
+      if (bodyData) clearContactsForObject(bodyData);
     };
     world.on("remove-body", onRemoveBody);
 

@@ -29,13 +29,10 @@ export default function main(context: MainGameContext) {
       networking.withOwnership(playerScene),
     );
 
-    let floorSupportOverlaps = 0;
     peerPlayer.onCollision((_other, collisionInfo) => {
-      console.log("HIT")
-      if (!collisionInfo.normal || collisionInfo.normal.y < 0.5) return;
-      if (collisionInfo.phase === "enter") floorSupportOverlaps++;
-      else floorSupportOverlaps = Math.max(0, floorSupportOverlaps - 1);
-      peerPlayer.grounded = floorSupportOverlaps > 0;
+      peerPlayer.grounded = collisionInfo.contacts.some(
+        (contact) => contact.normal && contact.normal.y >= 0.5,
+      );
     });
 
     scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));
