@@ -20,8 +20,7 @@ const playerTrait = defineTrait(
 );
 
 export default function main(context: MainGameContext) {
-  const { input, networking, onGameStart, onGameUpdate, scene } =
-    context;
+  const { input, networking, onGameStart, onGameUpdate, scene } = context;
 
   onGameStart(() => {
     let peerPlayer = scene.getObject(networking.peerIdentifier);
@@ -38,46 +37,42 @@ export default function main(context: MainGameContext) {
       );
     });
 
-    if (!scene.getObject("bouncyBall")) {
-      scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));
-    }
+    if (scene.getObject("bouncyBall")) return;
+    scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));
   });
 
   onGameUpdate((deltaTime) => {
-    const player = scene.getObject(
-      networking.peerIdentifier,
-      (object) =>
-        implementsTrait(object, [
-          playerTrait,
-          transformTrait,
-          spriteTrait,
-          collisionBodyTrait,
-        ]),
+    const player = scene.getObject(networking.peerIdentifier, (object) =>
+      implementsTrait(object, [
+        playerTrait,
+        transformTrait,
+        spriteTrait,
+        collisionBodyTrait,
+      ]),
     );
+    if (!player) return;
 
-    if (player) {
-      if (input.buttons.Jump.pressed && player.grounded) {
-        player.collisionBody.velocity.y = player.jumpSpeed;
-      }
-      player.collisionBody.velocity.x =
-        input.axes.Horizontal * player.moveSpeed;
-      player.collisionBody.velocity.y += player.gravity * deltaTime;
+    if (input.buttons.Jump.pressed && player.grounded) {
+      player.collisionBody.velocity.y = player.jumpSpeed;
     }
+    
+    player.collisionBody.velocity.x =
+      input.axes.Horizontal * player.moveSpeed;
+    player.collisionBody.velocity.y += player.gravity * deltaTime;
+  });
 
-    const ball = scene.getObject(
-      "bouncyBall",
-      (object) =>
-        implementsTrait(object, [
-          transformTrait,
-          spriteTrait,
-          collisionBodyTrait,
-          ownerTrait,
-        ]),
+  onGameUpdate((deltaTime) => {
+    const ball = scene.getObject("bouncyBall", (object) =>
+      implementsTrait(object, [
+        transformTrait,
+        spriteTrait,
+        collisionBodyTrait,
+        ownerTrait,
+      ]),
     );
+    if (!ball || !networking.isOwned(ball)) return;
 
-    if (ball && networking.isOwned(ball)) {
-      ball.collisionBody.velocity.y += BALL_GRAVITY_Y * deltaTime;
-    }
+    ball.collisionBody.velocity.y += BALL_GRAVITY_Y * deltaTime;
   });
 
   return context;
