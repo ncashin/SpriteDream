@@ -3,7 +3,11 @@ import type { SceneObject } from "../scene/scene.js";
 import { toPosixRelative } from "./virtualCatalog";
 
 function createSceneModuleCode(data: SceneObject): string {
-  return `const data = ${JSON.stringify(data)};\nexport default data;\n`;
+  return (
+    `const data = ${JSON.stringify(data)};\n` +
+    `export default data;\n` +
+    `if (import.meta.hot) import.meta.hot.accept();\n`
+  );
 }
 
 export function loadSceneModule(id: string, projectRoot: string): string | undefined {

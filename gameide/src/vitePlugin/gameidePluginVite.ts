@@ -73,9 +73,13 @@ export function gameidePlugin({
     },
     configureServer(server) {
       knownScenes = listProjectScenes(projectRoot);
-      attachFileEditorMiddleware(server, projectRoot, () => {
-        invalidateCatalogModules(server);
+      attachFileEditorMiddleware(server, projectRoot, (relativePath) => {
+        const isScene = relativePath.endsWith(".scene");
+        const wasKnownScene = isScene && knownScenes.includes(relativePath);
         knownScenes = listProjectScenes(projectRoot);
+        if (!isScene || !wasKnownScene) {
+          invalidateCatalogModules(server);
+        }
       });
       return () => {
         if (server.httpServer) {
@@ -83,25 +87,30 @@ export function gameidePlugin({
         }
       };
     },
-    handleHotUpdate({ file, server }) {
-      if (catalogFileAffects(projectRoot, file, knownScenes)) {
-        invalidateCatalogModules(server);
-      }
-      knownScenes = listProjectScenes(projectRoot);
+    hotUpdate: {
+      order: "post",
+      handler({ file, server }) {
+        if (file.endsWith(".scene")) {
+          try {
+            const data = JSON.parse(fs.readFileSync(file, "utf8")) as SceneObject;
+            server.ws.send({
+              type: "custom",
+              event: SCENE_HMR_EVENT,
+              data: {
+                path: toPosixRelative(projectRoot, file),
+                data,
+              },
+            });
+          } catch {}
+          knownScenes = listProjectScenes(projectRoot);
+          return [];
+        }
 
-      if (file.endsWith(".scene")) {
-        try {
-          const data = JSON.parse(fs.readFileSync(file, "utf8")) as SceneObject;
-          server.ws.send({
-            type: "custom",
-            event: SCENE_HMR_EVENT,
-            data: {
-              path: toPosixRelative(projectRoot, file),
-              data,
-            },
-          });
-        } catch {}
-      }
+        if (catalogFileAffects(projectRoot, file, knownScenes)) {
+          invalidateCatalogModules(server);
+        }
+        knownScenes = listProjectScenes(projectRoot);
+      },
     },
     load(id: string) {
       return loadCatalogModule(id, projectRoot) ?? loadSceneModule(id, projectRoot);

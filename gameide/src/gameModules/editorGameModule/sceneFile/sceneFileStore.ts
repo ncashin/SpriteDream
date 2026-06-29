@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { GameIDEMode, getMode, setMode } from "../../../lifecycle/mode.js";
-import type { Scene, SceneObject } from "../../../scene/scene.js";
+import {
+  diffScenePatch,
+  type Scene,
+  type SceneObject,
+} from "../../../scene/scene.js";
+import { SCENE_HMR_EVENT } from "../../../scene/sceneHMREvent.js";
 import { pickUntitledSceneSavePath } from "./pickSceneSavePath.js";
 
 const STORAGE_KEY = "gameide-scene-file";
@@ -9,6 +14,19 @@ const FILES_API = "/gameide/files";
 
 let editorScene: Scene | null = null;
 let savedSnapshot = "";
+let sceneHmrRegistered = false;
+
+function registerSceneHMR(): void {
+  if (!import.meta.hot || sceneHmrRegistered) return;
+  sceneHmrRegistered = true;
+
+  import.meta.hot.on(
+    SCENE_HMR_EVENT,
+    (payload: { path: string; data: SceneObject }) => {
+      applySceneHMR(payload.path, payload.data);
+    },
+  );
+}
 
 async function listScenePaths(): Promise<string[]> {
   try {
@@ -154,8 +172,21 @@ export const useSceneFileStore = create<SceneFileStore>()(
   ),
 );
 
+export function applySceneHMR(path: string, data: SceneObject): void {
+  const store = useSceneFileStore.getState();
+  if (store.isUntitled || store.activeScenePath !== path || !editorScene) return;
+
+  const patch = diffScenePatch(editorScene.getRaw(), data);
+  if (Reflect.ownKeys(patch).length === 0) return;
+
+  editorScene.applyPatch(patch);
+  savedSnapshot = JSON.stringify(data);
+  syncDirty();
+}
+
 export async function initializeSceneFileStore(scene: Scene): Promise<void> {
   editorScene = scene;
+  registerSceneHMR();
   await useSceneFileStore.persist.rehydrate();
 
   const scenePaths = await listScenePaths();
