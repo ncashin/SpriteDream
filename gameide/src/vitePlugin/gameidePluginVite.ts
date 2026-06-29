@@ -64,7 +64,7 @@ export function gameidePlugin({
     },
     transform(code, id) {
       if (!enableGameModuleHMR) return;
-      return transformGameModuleForHMR(code, id, isServe);
+      return transformGameModuleForHMR(code, isServe);
     },
     resolveId(id) {
       if (id === VIRTUAL_ASSETS_MODULE) {

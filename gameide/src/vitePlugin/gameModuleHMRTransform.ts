@@ -1,17 +1,8 @@
-import { createFilter } from "vite";
-
 const EXPORT_DEFAULT_NAMED_FUNCTION =
   /export\s+default\s+(async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/;
 
 const GAME_MODULE_INJECTED = /__gameide(?:Curried)?GameModule\s*\(/;
-const GAMEIDE_GAME_MODULE_COMMENT = /@gameide-game-module/;
 const CURRIED_RETURN = /:\s*GameModule\s*</;
-
-const DEFAULT_DIRECT_INCLUDE = ["**/game.ts"];
-const DEFAULT_CURRIED_INCLUDE = [
-  "**/*GameModule.ts",
-  "**/gameide/gameModules/**/*GameModule.ts",
-];
 
 type GameModuleHMRMode = "direct" | "curried";
 
@@ -26,24 +17,13 @@ function isCurriedGameModuleExport(code: string): boolean {
   );
 }
 
-function detectGameModuleHMRMode(
-  code: string,
-  id: string,
-  directFilter: ReturnType<typeof createFilter>,
-  curriedFilter: ReturnType<typeof createFilter>,
-): GameModuleHMRMode | null {
+function detectGameModuleHMRMode(code: string): GameModuleHMRMode | null {
   if (GAME_MODULE_INJECTED.test(code)) return null;
 
   const match = EXPORT_DEFAULT_NAMED_FUNCTION.exec(code);
   if (!match) return null;
 
-  const curried = isCurriedGameModuleExport(code);
-  if (GAMEIDE_GAME_MODULE_COMMENT.test(code)) {
-    return curried ? "curried" : "direct";
-  }
-  if (curried && (curriedFilter(id) || directFilter(id))) return "curried";
-  if (!curried && directFilter(id)) return "direct";
-  return null;
+  return isCurriedGameModuleExport(code) ? "curried" : "direct";
 }
 
 function insertImport(code: string, importLine: string): string {
@@ -110,17 +90,10 @@ function transformGameModuleSource(
   return transformed;
 }
 
-const directFilter = createFilter(DEFAULT_DIRECT_INCLUDE);
-const curriedFilter = createFilter(DEFAULT_CURRIED_INCLUDE);
-
-export function transformGameModuleForHMR(
-  code: string,
-  id: string,
-  isServe: boolean,
-) {
+export function transformGameModuleForHMR(code: string, isServe: boolean) {
   if (!isServe) return;
 
-  const mode = detectGameModuleHMRMode(code, id, directFilter, curriedFilter);
+  const mode = detectGameModuleHMRMode(code);
   if (!mode) return;
 
   const transformed = transformGameModuleSource(code, mode);

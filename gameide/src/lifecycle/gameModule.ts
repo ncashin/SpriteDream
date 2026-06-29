@@ -3,7 +3,7 @@ import type { DisposeCallback } from "./gameloop.js";
 export type GameModule<Context = unknown, Result = unknown> =
   (context: Context) => Result | Promise<Result>;
 
-export type UnknownGameModule = (context: unknown) => unknown | Promise<unknown>;
+export type UnknownGameModule = GameModule<any, any>;
 
 export type ReduceGameModules<
   Context,
@@ -44,15 +44,17 @@ function disposeGameModuleScope(disposers: DisposeCallback[]): void {
   }
 }
 
-const GAME_MODULE_ID: unique symbol = Symbol("gameide.gameModuleId");
+const GAME_MODULE_IDENTIFIER: unique symbol = Symbol(
+  "gameide.gameModuleIdentifier",
+);
 
 type TaggedGameModule = UnknownGameModule & {
-  [GAME_MODULE_ID]?: string;
+  [GAME_MODULE_IDENTIFIER]?: string;
 };
 
 type GameModuleHMRRecord = {
   module: UnknownGameModule;
-  moduleId?: string;
+  moduleIdentifier?: string;
   scopeDisposes: DisposeCallback[];
   contextAfter: unknown;
 };
@@ -64,61 +66,66 @@ type GameModuleHMRState = {
 
 let hmrState: GameModuleHMRState | null = null;
 
-function normalizeGameModuleId(id: string): string {
-  const url = new URL(id);
+function normalizeGameModuleIdentifier(identifier: string): string {
+  const url = new URL(identifier);
   url.search = "";
   url.hash = "";
   return url.href;
 }
 
-function gameModuleIdsMatch(
+function gameModuleIdentifiersMatch(
   left: string | undefined,
   right: string | undefined,
 ): boolean {
   if (left === undefined || right === undefined) return false;
-  return normalizeGameModuleId(left) === normalizeGameModuleId(right);
+  return (
+    normalizeGameModuleIdentifier(left) ===
+    normalizeGameModuleIdentifier(right)
+  );
 }
 
 export function gameModule<Context, Result>(
-  id: string,
+  identifier: string,
   module: GameModule<Context, Result>,
 ): GameModule<Context, Result> {
-  Object.defineProperty(module, GAME_MODULE_ID, {
-    value: normalizeGameModuleId(id),
+  Object.defineProperty(module, GAME_MODULE_IDENTIFIER, {
+    value: normalizeGameModuleIdentifier(identifier),
     writable: true,
     configurable: true,
   });
   return module;
 }
 
-const curriedGameModuleArgsById = new Map<string, unknown[]>();
+const curriedGameModuleArgsByIdentifier = new Map<string, unknown[]>();
 
 export function curriedGameModule<Args extends unknown[], Context, Result>(
-  id: string,
+  identifier: string,
   module: (...args: Args) => GameModule<Context, Result>,
 ): (...args: Args) => GameModule<Context, Result> {
-  const normalizedId = normalizeGameModuleId(id);
+  const normalizedIdentifier = normalizeGameModuleIdentifier(identifier);
   const wrapped = (...args: Args) => {
-    curriedGameModuleArgsById.set(normalizedId, args);
-    return gameModule(id, module(...args));
+    curriedGameModuleArgsByIdentifier.set(normalizedIdentifier, args);
+    return gameModule(identifier, module(...args));
   };
   return wrapped;
 }
 
 export async function rerunCurriedGameModule(
-  id: string,
+  identifier: string,
   module: (...args: unknown[]) => UnknownGameModule,
 ): Promise<void> {
-  const normalizedId = normalizeGameModuleId(id);
-  const args = curriedGameModuleArgsById.get(normalizedId);
+  const normalizedIdentifier = normalizeGameModuleIdentifier(identifier);
+  const args = curriedGameModuleArgsByIdentifier.get(normalizedIdentifier);
   if (!args) return;
 
-  const inner = gameModule(id, module(...args));
-  await rerunGameModule(id, inner);
+  const inner = gameModule(identifier, module(...args));
+  await rerunGameModule(identifier, inner);
 }
 
-function getGameModuleId(module: UnknownGameModule): string | undefined {
-  return (module as TaggedGameModule)[GAME_MODULE_ID];
+function getGameModuleIdentifier(
+  module: UnknownGameModule,
+): string | undefined {
+  return (module as TaggedGameModule)[GAME_MODULE_IDENTIFIER];
 }
 
 function isGameModule(value: unknown): value is UnknownGameModule {
@@ -141,7 +148,7 @@ export async function reduceGameModules<
     const scopeDisposes = exitGameModuleScope();
     records.push({
       module,
-      moduleId: getGameModuleId(module),
+      moduleIdentifier: getGameModuleIdentifier(module),
       scopeDisposes,
       contextAfter: context,
     });
@@ -178,7 +185,7 @@ export async function rerunReduceFrom(
     const scopeDisposes = exitGameModuleScope();
     records.push({
       module,
-      moduleId: getGameModuleId(module),
+      moduleIdentifier: getGameModuleIdentifier(module),
       scopeDisposes,
       contextAfter: context,
     });
@@ -186,16 +193,16 @@ export async function rerunReduceFrom(
 }
 
 export async function rerunGameModule(
-  id: string,
+  identifier: string,
   module: UnknownGameModule,
 ): Promise<void> {
   if (!hmrState) return;
 
-  const normalizedId = normalizeGameModuleId(id);
-  gameModule(id, module);
+  const normalizedIdentifier = normalizeGameModuleIdentifier(identifier);
+  gameModule(identifier, module);
 
   const fromIndex = hmrState.records.findIndex((record) =>
-    gameModuleIdsMatch(record.moduleId, normalizedId),
+    gameModuleIdentifiersMatch(record.moduleIdentifier, normalizedIdentifier),
   );
   if (fromIndex === -1) return;
 
