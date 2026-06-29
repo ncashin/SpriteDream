@@ -1,6 +1,8 @@
 import { GameIDEMode, getMode, onModeChange } from "./mode.js";
 import { isInGameModuleScope, trackGameModuleDispose } from "./gameModule.js";
 
+const automaticallyDispose = true;
+
 function removeCallback<T>(list: T[], item: T) {
   const index = list.indexOf(item);
   if (index === -1) return;
@@ -35,7 +37,9 @@ function registerStart(
 ): DisposeCallback {
   const start: Start = { requiredMode, callback };
   starts.push(start);
-  return () => removeCallback(starts, start);
+  const dispose = () => removeCallback(starts, start);
+  if (automaticallyDispose) onDispose(dispose);
+  return dispose;
 }
 
 export function onStart(callback: StartCallback): DisposeCallback {
@@ -73,7 +77,9 @@ function registerUpdate(
 ): DisposeCallback {
   const update: Update = { requiredMode, callback };
   updates.push(update);
-  return () => removeCallback(updates, update);
+  const dispose = () => removeCallback(updates, update);
+  if (automaticallyDispose) onDispose(dispose);
+  return dispose;
 }
 export function onUpdate(callback: UpdateCallback): DisposeCallback {
   return registerUpdate(undefined, callback);
