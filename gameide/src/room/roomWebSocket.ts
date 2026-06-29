@@ -19,6 +19,13 @@ function getRoomName(request: IncomingMessage): string {
   return room;
 }
 
+function getRequestedPeerIdentifier(request: IncomingMessage): string | undefined {
+  const host = request.headers.host ?? "localhost";
+  const url = new URL(request.url ?? "/", `http://${host}`);
+  const peerIdentifier = url.searchParams.get("peerIdentifier")?.trim();
+  return peerIdentifier && peerIdentifier.length > 0 ? peerIdentifier : undefined;
+}
+
 function isRoomUpgrade(request: IncomingMessage): boolean {
   if (request.headers.upgrade?.toLowerCase() !== "websocket") return false;
   return getRoomName(request) !== "";
@@ -28,6 +35,28 @@ function peerIdentifiersInRoom(room: string): string[] {
   const set = rooms.get(room);
   if (!set) return [];
   return [...set].map((roomClient) => roomClient.peerIdentifier);
+}
+
+function evictPeerIdentifier(room: string, peerIdentifier: string): void {
+  const set = rooms.get(room);
+  if (!set) return;
+  for (const client of set) {
+    if (client.peerIdentifier !== peerIdentifier) continue;
+    client.close(1000, "peer reconnected");
+  }
+}
+
+function resolvePeerIdentifier(room: string, requested?: string): string {
+  if (requested) {
+    evictPeerIdentifier(room, requested);
+    const match = /^peer-(\d+)$/.exec(requested);
+    if (match) {
+      const id = Number(match[1]);
+      if (Number.isFinite(id) && id >= nextPeer) nextPeer = id + 1;
+    }
+    return requested;
+  }
+  return `peer-${nextPeer++}`;
 }
 
 function messageDataToUTF8(data: Buffer | ArrayBuffer | Buffer[]): string {
@@ -54,7 +83,10 @@ export function attachRoomWebSocket(httpServer: Server | Http2SecureServer): Web
     const room = getRoomName(req);
     const client = websocket as RoomClient;
     client.room = room;
-    client.peerIdentifier = `peer-${nextPeer++}`;
+    client.peerIdentifier = resolvePeerIdentifier(
+      room,
+      getRequestedPeerIdentifier(req),
+    );
 
     let set = rooms.get(room);
     if (!set) {

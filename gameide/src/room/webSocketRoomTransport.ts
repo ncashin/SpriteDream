@@ -1,6 +1,28 @@
 import type { SceneChannelTransport } from "../scene/sceneChannel/sceneChannelTransport.js";
 
 const ROOM_PEERS_UPDATE = "roomPeersUpdate";
+const STICKY_PEER_STORAGE_PREFIX = "gameide:peerIdentifier:";
+
+function stickyPeerStorageKey(room: string): string {
+  return `${STICKY_PEER_STORAGE_PREFIX}${room}`;
+}
+
+function readStickyPeerIdentifier(room: string): string | undefined {
+  try {
+    const value = globalThis.sessionStorage?.getItem(stickyPeerStorageKey(room));
+    return value && value.length > 0 ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeStickyPeerIdentifier(room: string, peerIdentifier: string): void {
+  try {
+    globalThis.sessionStorage?.setItem(stickyPeerStorageKey(room), peerIdentifier);
+  } catch {
+    // ignore quota / private browsing
+  }
+}
 
 export type WebSocketRoomTransport = SceneChannelTransport & {
   dispose(): void;
@@ -15,17 +37,19 @@ export type ConnectWebSocketRoomResult = {
   dispose(): void;
 };
 
-function websocketURLForRoom(room: string): string {
+function websocketURLForRoom(room: string, peerIdentifier?: string): string {
   const location = globalThis.location as Location;
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
   const params = new URLSearchParams({ room });
+  if (peerIdentifier) params.set("peerIdentifier", peerIdentifier);
   return `${protocol}//${location.host}/room?${params.toString()}`;
 }
 
-function appendRoomToURL(url: string, room: string): string {
+function appendRoomToURL(url: string, room: string, peerIdentifier?: string): string {
   const base = globalThis.location?.origin ?? "http://localhost";
   const target = new URL(url, base);
   target.searchParams.set("room", room);
+  if (peerIdentifier) target.searchParams.set("peerIdentifier", peerIdentifier);
   return target.toString();
 }
 
@@ -42,14 +66,23 @@ function applyPeersFromServerMessage(
   setPeers(peers);
 }
 
+function peerIdentifierFromReadyMessage(
+  raw: Record<string, unknown>,
+): string | undefined {
+  if (typeof raw.peerIdentifier === "string") return raw.peerIdentifier;
+  if (typeof raw.peerId === "string") return raw.peerId;
+  return undefined;
+}
+
 export function connectWebSocketRoomTransport(options: {
   room: string;
   url?: string;
 }): Promise<ConnectWebSocketRoomResult> {
+  const stickyPeerIdentifier = readStickyPeerIdentifier(options.room);
   const url =
     options.url == null
-      ? websocketURLForRoom(options.room)
-      : appendRoomToURL(options.url, options.room);
+      ? websocketURLForRoom(options.room, stickyPeerIdentifier)
+      : appendRoomToURL(options.url, options.room, stickyPeerIdentifier);
   const websocket = new WebSocket(url);
 
   return new Promise((resolve, reject) => {
@@ -82,16 +115,16 @@ export function connectWebSocketRoomTransport(options: {
 
     websocket.addEventListener("message", function onFirst(event: MessageEvent) {
 
-      const raw = JSON.parse(String(event.data)) as {
+      const raw = JSON.parse(String(event.data)) as Record<string, unknown> & {
         type: string;
-        peerIdentifier: unknown;
         peers: unknown;
       };
       applyPeersFromServerMessage(raw, setPeersFromServer);
       if (raw.type === ROOM_PEERS_UPDATE) return;
+      const peerIdentifier = peerIdentifierFromReadyMessage(raw);
       if (
         raw.type !== "ready" ||
-        typeof raw.peerIdentifier !== "string" ||
+        peerIdentifier === undefined ||
         !Array.isArray(raw.peers) ||
         !raw.peers.every((id): id is string => typeof id === "string")
       ) {
@@ -148,9 +181,11 @@ export function connectWebSocketRoomTransport(options: {
         },
       };
 
+      writeStickyPeerIdentifier(options.room, peerIdentifier);
+
       settled = true;
       resolve({
-        peerIdentifier: raw.peerIdentifier,
+        peerIdentifier,
         peers: [...currentPeers],
         transport,
         dispose: transport.dispose,

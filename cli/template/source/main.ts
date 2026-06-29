@@ -24,10 +24,13 @@ export default function main(context: MainGameContext) {
     context;
 
   onGameStart(() => {
-    const peerPlayer = scene.createObject(
-      networking.peerIdentifier,
-      networking.withOwnership(playerScene),
-    );
+    let peerPlayer = scene.getObject(networking.peerIdentifier);
+    if (!peerPlayer) {
+      peerPlayer = scene.createObject(
+        networking.peerIdentifier,
+        networking.withOwnership(playerScene),
+      );
+    }
 
     peerPlayer.onCollision((_other, collisionInfo) => {
       peerPlayer.grounded = collisionInfo.contacts.some(
@@ -35,7 +38,9 @@ export default function main(context: MainGameContext) {
       );
     });
 
-    scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));
+    if (!scene.getObject("bouncyBall")) {
+      scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));
+    }
   });
 
   onGameUpdate((deltaTime) => {
@@ -55,7 +60,7 @@ export default function main(context: MainGameContext) {
         player.collisionBody.velocity.y = player.jumpSpeed;
       }
       player.collisionBody.velocity.x =
-        input.axes.Horizontal * player.moveSpeed * 300;
+        input.axes.Horizontal * player.moveSpeed;
       player.collisionBody.velocity.y += player.gravity * deltaTime;
     }
 

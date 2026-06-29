@@ -26,7 +26,10 @@ export class Room extends DurableObject {
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
 
-    const peerIdentifier = this.allocatePeerIdentifier();
+    const peerIdentifier = this.resolvePeerIdentifier(
+      new URL(request.url).searchParams.get("peerIdentifier")?.trim() || undefined,
+      server,
+    );
     server.serializeAttachment({ peerIdentifier } satisfies RoomSocketAttachment);
 
     server.send(
@@ -92,6 +95,44 @@ export class Room extends DurableObject {
     if (attachment == null || typeof attachment !== "object") return undefined;
     const { peerIdentifier } = attachment as Record<string, unknown>;
     return typeof peerIdentifier === "string" ? peerIdentifier : undefined;
+  }
+
+  private resolvePeerIdentifier(requested?: string, except?: WebSocket): string {
+    if (requested) {
+      this.evictPeerIdentifier(requested, except);
+      this.ensureNextPeerAbove(requested);
+      return requested;
+    }
+    return this.allocatePeerIdentifier();
+  }
+
+  private evictPeerIdentifier(peerIdentifier: string, except?: WebSocket): void {
+    for (const webSocket of this.ctx.getWebSockets()) {
+      if (webSocket === except) continue;
+      if (this.peerIdentifierFor(webSocket) !== peerIdentifier) continue;
+      try {
+        webSocket.close(1000, "peer reconnected");
+      } catch {
+        // ignore close failures on stale sockets
+      }
+    }
+  }
+
+  private ensureNextPeerAbove(peerIdentifier: string): void {
+    const match = /^p(\d+)$/.exec(peerIdentifier);
+    if (!match) return;
+    const id = Number(match[1]);
+    if (!Number.isFinite(id)) return;
+    const next = id + 1;
+    this.ctx.storage.sql.exec(
+      `
+        INSERT INTO room_state (id, next_peer)
+        VALUES (1, ?)
+        ON CONFLICT(id) DO UPDATE SET next_peer = MAX(next_peer, ?)
+      `,
+      next,
+      next,
+    );
   }
 
   private allocatePeerIdentifier(): string {
