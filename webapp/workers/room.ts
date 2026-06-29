@@ -99,8 +99,11 @@ export class Room extends DurableObject {
 
   private resolvePeerIdentifier(requested?: string, except?: WebSocket): string {
     if (requested) {
-      this.evictPeerIdentifier(requested, except);
-      this.ensureNextPeerAbove(requested);
+      if (this.peerIdentifiers().includes(requested)) {
+        this.evictPeerIdentifier(requested, except);
+      } else {
+        this.ensureNextPeerAbove(requested);
+      }
       return requested;
     }
     return this.allocatePeerIdentifier();

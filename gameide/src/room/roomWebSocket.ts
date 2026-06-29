@@ -34,26 +34,33 @@ function isRoomUpgrade(request: IncomingMessage): boolean {
 function peerIdentifiersInRoom(room: string): string[] {
   const set = rooms.get(room);
   if (!set) return [];
-  return [...set].map((roomClient) => roomClient.peerIdentifier);
+  return [...set]
+    .filter((roomClient) => roomClient.readyState === WebSocket.OPEN)
+    .map((roomClient) => roomClient.peerIdentifier);
 }
 
 function evictPeerIdentifier(room: string, peerIdentifier: string): void {
   const set = rooms.get(room);
   if (!set) return;
-  for (const client of set) {
+  for (const client of [...set]) {
     if (client.peerIdentifier !== peerIdentifier) continue;
+    set.delete(client);
     client.close(1000, "peer reconnected");
   }
 }
 
 function resolvePeerIdentifier(room: string, requested?: string): string {
-  if (requested) {
-    evictPeerIdentifier(room, requested);
+  const inUse = peerIdentifiersInRoom(room);
+  if (requested && !inUse.includes(requested)) {
     const match = /^peer-(\d+)$/.exec(requested);
     if (match) {
       const id = Number(match[1]);
       if (Number.isFinite(id) && id >= nextPeer) nextPeer = id + 1;
     }
+    return requested;
+  }
+  if (requested && inUse.includes(requested)) {
+    evictPeerIdentifier(room, requested);
     return requested;
   }
   return `peer-${nextPeer++}`;
