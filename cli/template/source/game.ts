@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { defineTrait, ownerTrait, implementsTrait, type GameModule } from "gameide";
+import {
+  defineTrait,
+  ownerTrait,
+  implementsTrait,
+  type GameModule,
+} from "gameide";
 import playerScene from "./scenes/player.scene";
 import bouncyBallScene from "./scenes/bouncyBall.scene";
 import { collisionBodyTrait } from "./gameide/gameModules/planckGameModule/index";
@@ -32,45 +37,61 @@ const ballTraits = implementsTrait([
   ownerTrait,
 ]);
 
-export default function main(context: MainGameContext) : ReturnType<GameModule<MainGameContext>> {
-  const { input, networking, onGameStart, onGameUpdate, planck, scene } =
-    context;
+export default function main(): GameModule<MainGameContext> {
+  return (context) => {
+    const {
+      input,
+      networking,
+      onGameStart,
+      onGameUpdate,
+      onDispose,
+      planck,
+      scene,
+    } = context;
 
-  onGameStart(() => {
-    const peerPlayer = scene.createObject(
-      networking.peerId,
-      networking.withOwnership(playerScene),
+    onDispose(
+      onGameStart(() => {
+        const peerPlayer = scene.createObject(
+          networking.peerId,
+          networking.withOwnership(playerScene),
+        );
+
+        let floorSupportOverlaps = 0;
+        planck.onCollision(peerPlayer, (_other, collisionInfo) => {
+          if (!collisionInfo.normal || collisionInfo.normal.y < 0.5) return;
+          if (collisionInfo.phase === "enter") floorSupportOverlaps++;
+          else floorSupportOverlaps = Math.max(0, floorSupportOverlaps - 1);
+          peerPlayer.grounded = floorSupportOverlaps > 0;
+        });
+
+        scene.createObject(
+          "bouncyBall",
+          networking.withOwnership(bouncyBallScene),
+        );
+      }),
     );
 
-    let floorSupportOverlaps = 0;
-    planck.onCollision(peerPlayer, (_other, collisionInfo) => {
-      if (!collisionInfo.normal || collisionInfo.normal.y < 0.5) return;
-      if (collisionInfo.phase === "enter") floorSupportOverlaps++;
-      else floorSupportOverlaps = Math.max(0, floorSupportOverlaps - 1);
-      peerPlayer.grounded = floorSupportOverlaps > 0;
-    });
+    onDispose(
+      onGameUpdate((deltaTime) => {
+        const player = scene.getObject(networking.peerId, playerTraits);
 
-    scene.createObject("bouncyBall", networking.withOwnership(bouncyBallScene));
-  });
+        if (player) {
+          if (input.buttons.Jump.pressed && player.grounded) {
+            player.collisionBody.velocity.y = player.jumpSpeed;
+          }
+          player.collisionBody.velocity.x =
+            input.axes.Horizontal * player.moveSpeed * 300;
+          player.collisionBody.velocity.y += player.gravity * deltaTime;
+        }
 
-  onGameUpdate((deltaTime) => {
-    const player = scene.getObject(networking.peerId, playerTraits);
+        const ball = scene.getObject("bouncyBall", ballTraits);
 
-    if (player) {
-      if (input.buttons.Jump.pressed && player.grounded) {
-        player.collisionBody.velocity.y = player.jumpSpeed;
-      }
-      player.collisionBody.velocity.x =
-        input.axes.Horizontal * player.moveSpeed;
-      player.collisionBody.velocity.y += player.gravity * deltaTime;
-    }
+        if (ball && networking.isOwned(ball)) {
+          ball.collisionBody.velocity.y += BALL_GRAVITY_Y * deltaTime;
+        }
+      }),
+    );
 
-    const ball = scene.getObject("bouncyBall", ballTraits);
-
-    if (ball && networking.isOwned(ball)) {
-      ball.collisionBody.velocity.y += BALL_GRAVITY_Y * deltaTime;
-    }
-  });
-
-  return context;
-};
+    return context;
+  };
+}

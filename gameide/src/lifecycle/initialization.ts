@@ -5,7 +5,11 @@ import {
   GameLifecycle,
 } from "./gameloop.js";
 import { curryScene, type Scene, type SceneObject } from "../scene/scene.js";
-import { reduceGameModules, type ReduceGameModules } from "./gameModule.js";
+import {
+  reduceGameModules,
+  type ReduceGameModules,
+  type UnknownGameModule,
+} from "./gameModule.js";
 
 export type BaseGameContext<Initial extends object = {}> = {
   rootElement: HTMLElement;
@@ -16,12 +20,12 @@ export type BaseGameContext<Initial extends object = {}> = {
 
 export type GameContext<
   Initial extends object = {},
-  GameModules extends readonly unknown[] = [],
+  GameModules extends readonly UnknownGameModule[] = [],
 > = ReduceGameModules<BaseGameContext<Initial>, GameModules>;
 
 export type GameIDEOptions<
   Initial extends object,
-  GameModules extends readonly unknown[] = [],
+  GameModules extends readonly UnknownGameModule[] = [],
 > = {
   rootElement: HTMLElement;
   initialContext: Initial;
@@ -31,7 +35,7 @@ export type GameIDEOptions<
 
 export async function gameide<
   Initial extends object,
-  const GameModules extends readonly unknown[] = [],
+  const GameModules extends readonly UnknownGameModule[] = [],
 >({
   rootElement,
   initialContext,

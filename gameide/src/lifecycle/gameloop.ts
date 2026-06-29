@@ -1,7 +1,10 @@
 import { GameIDEMode, getMode, onModeChange } from "./mode.js";
+import { isInGameModuleScope, trackGameModuleDispose } from "./gameModule.js";
 
 function removeCallback<T>(list: T[], item: T) {
-  list.splice(list.indexOf(item), 1);
+  const index = list.indexOf(item);
+  if (index === -1) return;
+  list.splice(index, 1);
 }
 
 // HANDLE START CALLBACKS
@@ -25,10 +28,6 @@ function runModeStarts(entries: readonly Start[], mode: GameIDEMode): void {
     callback();
   });
 }
-
-onModeChange((mode) => {
-  runModeStarts(starts, mode);
-});
 
 function registerStart(
   requiredMode: GameIDEMode | undefined,
@@ -91,6 +90,10 @@ export type DisposeCallback = () => void;
 const disposeCallbacks: DisposeCallback[] = [];
 
 export function onDispose(callback: () => void): void {
+  if (isInGameModuleScope()) {
+    trackGameModuleDispose(callback);
+    return;
+  }
   disposeCallbacks.push(callback);
 }
 
@@ -105,6 +108,9 @@ let frameIdentifier: ReturnType<typeof requestAnimationFrame> | undefined;
 export function startGameloop(): void {
   if (frameIdentifier) return;
   runStarts(starts, getMode());
+  onModeChange((mode) => {
+    runModeStarts(starts, mode);
+  });
 
   let lastFrameTime = performance.now();
   function tick(currentFrameTime: number): void {
@@ -117,7 +123,6 @@ export function startGameloop(): void {
 
   frameIdentifier = requestAnimationFrame(tick);
 }
-
 
 export const gameLifecycle = {
   onStart,

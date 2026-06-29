@@ -22,7 +22,7 @@
       "default": "./dist/gameide.es.js"
     },
     "./vite": {
-      "types": "./dist/gameidePluginVite.d.ts",
+      "types": "./dist/vitePlugin/gameidePluginVite.d.ts",
       "import": "./dist/vite.js",
       "default": "./dist/vite.js"
     },

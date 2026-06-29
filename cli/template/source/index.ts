@@ -11,7 +11,7 @@ import exampleScene from "./scenes/example.scene";
 import "./style.css";
 import { Editor } from "./gameide/editor/Editor";
 import { GameUI } from "./GameUI";
-import { main } from "./game";
+import main from "./game";
 import { pixiGameModule } from "./gameide/gameModules/pixiGameModule/index";
 import { planckGameModule } from "./gameide/gameModules/planckGameModule/index";
 
@@ -54,5 +54,5 @@ gameide({
   rootElement,
   initialContext: {},
   initialScene: exampleScene,
-  gameModules: [...pluginGameModules, main],
+  gameModules: [...pluginGameModules, main()],
 });

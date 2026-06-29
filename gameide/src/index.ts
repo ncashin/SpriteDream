@@ -50,6 +50,12 @@ export {
 } from "./trait/trait.js";
 export {
   gameide,
+  gameModule,
+  curriedGameModule,
+  rerunGameModule,
+  rerunCurriedGameModule,
+  rerunReduceFrom,
+  trackGameModuleDispose,
   type ApplyGameModules,
   type GameModule,
   type GameIDEOptions,

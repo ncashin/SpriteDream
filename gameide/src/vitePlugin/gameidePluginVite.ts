@@ -14,18 +14,27 @@ import {
 } from "./virtualCatalog";
 import { attachFileEditorMiddleware } from "./fileEditor";
 import { loadSceneModule } from "./sceneVirtualModule";
+import { transformGameModuleForHMR } from "./gameModuleHMRTransform";
 export { ASSET_BASE_URL } from "../assetBaseURL.js";
 export { SCENE_HMR_EVENT } from "../scene/sceneHMREvent.js";
 
 const VIRTUAL_MODULE_PREFIX = /^gameide:/;
 
-export function gameidePlugin(): Plugin {
+export type GameidePluginOptions = {
+  /** @default true */
+  enableGameModuleHMR?: boolean;
+};
+
+export function gameidePlugin({
+  enableGameModuleHMR = true,
+}: GameidePluginOptions = {}): Plugin {
   let projectRoot = process.cwd();
   let knownScenes: string[] = [];
+  let isServe = false;
 
   return {
     name: "gameide-plugin",
-    enforce: "post",
+    enforce: "post" as const,
     config() {
       return {
         build: {
@@ -51,6 +60,11 @@ export function gameidePlugin(): Plugin {
     },
     configResolved(config) {
       projectRoot = config.root;
+      isServe = config.command === "serve";
+    },
+    transform(code, id) {
+      if (!enableGameModuleHMR) return;
+      return transformGameModuleForHMR(code, id, isServe);
     },
     resolveId(id) {
       if (id === VIRTUAL_ASSETS_MODULE) {
