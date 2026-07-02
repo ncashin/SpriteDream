@@ -5,42 +5,42 @@ export type SceneObjectExtensionHandler<
   Return = unknown,
 > = (self: GameObject, ...args: Args) => Return;
 
-export type SceneObjectExtensionMap = Record<
-  string,
-  SceneObjectExtensionHandler<any, any>
->;
+type AnySceneObjectExtensionHandler = SceneObjectExtensionHandler<any, any>;
 
-export type BoundSceneObjectExtensions<
-  E extends SceneObjectExtensionMap,
-> = {
-  [K in keyof E]: E[K] extends SceneObjectExtensionHandler<
-    infer Args,
-    infer Return
-  >
+export type SceneObjectExtensionMap = Record<string, AnySceneObjectExtensionHandler>;
+
+type BoundSceneObjectExtension<Extension> =
+  Extension extends SceneObjectExtensionHandler<infer Args, infer Return>
     ? (...args: Args) => Return
     : never;
+
+export type BoundSceneObjectExtensions<Extensions extends SceneObjectExtensionMap> = {
+  [Key in keyof Extensions]: BoundSceneObjectExtension<Extensions[Key]>;
 };
 
 export type GameObjectWithExtensions<
   T extends GameObject,
-  E extends SceneObjectExtensionMap,
-> = T & BoundSceneObjectExtensions<E>;
+  Extensions extends SceneObjectExtensionMap,
+> = T & BoundSceneObjectExtensions<Extensions>;
 
-export type SceneWithExtensions<
-  E extends SceneObjectExtensionMap = SceneObjectExtensionMap,
-> = Omit<Scene, "createObject" | "getObject" | "query"> & {
+type SceneExtensionMethods<Extensions extends SceneObjectExtensionMap> = {
   createObject: <T extends GameObject = GameObject>(
     key: PropertyKey,
     gameObject: T,
-  ) => GameObjectWithExtensions<T, E>;
+  ) => GameObjectWithExtensions<T, Extensions>;
   getObject: <T extends GameObject = GameObject>(
     key: PropertyKey,
     typeGuard?: (object: unknown) => object is T,
-  ) => GameObjectWithExtensions<T, E> | undefined;
+  ) => GameObjectWithExtensions<T, Extensions> | undefined;
   query: <T extends GameObject>(
     queryFunction: (gameObject: unknown) => gameObject is T,
-  ) => GameObjectWithExtensions<T, E>[];
+  ) => GameObjectWithExtensions<T, Extensions>[];
 };
+
+export type SceneWithExtensions<
+  Extensions extends SceneObjectExtensionMap = SceneObjectExtensionMap,
+> = Omit<Scene, keyof SceneExtensionMethods<Extensions>> &
+  SceneExtensionMethods<Extensions>;
 
 const boundExtensionCache = new WeakMap<object, object>();
 

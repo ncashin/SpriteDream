@@ -1,5 +1,5 @@
 import { useSyncExternalStore, useCallback } from "react";
-import { useScene } from "../scene/sceneContext.js";
+import { useScene } from "../scene/SceneProvider.js";
 import type { ScenePath } from "../scene/scene.js";
 import {
   deleteValueAtPath,

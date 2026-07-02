@@ -87,7 +87,7 @@ export { default as gameUIGameModule } from "./gameModules/gameUIGameModule/game
 export { Game } from "./gameModules/gameUIGameModule/Game.js";
 export { EditorRoot } from "./gameModules/editorGameModule/EditorRoot.js";
 export { GameView } from "./gameModules/editorGameModule/GameView.js";
-export { useScene } from "./scene/sceneContext.js";
+export { useScene } from "./scene/SceneProvider.js";
 export { useSceneObject } from "./hooks/useSceneObject.js";
 export { useSceneFile } from "./gameModules/editorGameModule/sceneFile/useSceneFile.js";
 export { useSceneHistory } from "./gameModules/editorGameModule/sceneFile/useSceneHistory.js";

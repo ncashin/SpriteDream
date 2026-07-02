@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useScene } from "../scene/sceneContext.js";
+import { useScene } from "../scene/SceneProvider.js";
 import { getValueAtPath } from "../scene/path.js";
 import { getTraitDefinitions, TraitDefinitionEntry } from "../trait/trait.js";
 
