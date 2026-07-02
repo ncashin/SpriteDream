@@ -4,6 +4,7 @@ import {
   collisionBodyDisabled,
   isColliderNode,
 } from "../planckGameModule/planckBodies.js";
+import { readTransformPose } from "../transform.js";
 
 type ColliderDebugBinding = {
   root: Container;
@@ -11,10 +12,7 @@ type ColliderDebugBinding = {
 };
 
 function hasColliderTransform(object: GameObject): boolean {
-  return (
-    !!(object as { position?: unknown }).position &&
-    !!(object as { rotation?: unknown }).rotation
-  );
+  return "transform" in object || "position" in object;
 }
 
 function readTransformForDebug(object: GameObject): {
@@ -24,15 +22,19 @@ function readTransformForDebug(object: GameObject): {
   scaleX: number;
   scaleY: number;
 } {
-  const pos = (object as { position?: { x?: number; y?: number } }).position;
-  const rot = (object as { rotation?: { z?: number } }).rotation;
-  const scale = (object as { scale?: { x?: number; y?: number } }).scale;
+  const world = readTransformPose(object, "world");
+  const hasBoxCollider = "boxCollider" in object;
+  const hasCircleCollider = "circleCollider" in object;
+  const circleRadiusScale = Math.min(
+    Math.abs(world.scale.x),
+    Math.abs(world.scale.y),
+  );
   return {
-    x: pos?.x ?? 0,
-    y: pos?.y ?? 0,
-    rotationZ: rot?.z ?? 0,
-    scaleX: scale?.x ?? 1,
-    scaleY: scale?.y ?? 1,
+    x: world.position.x,
+    y: world.position.y,
+    rotationZ: world.rotation.z,
+    scaleX: hasCircleCollider && !hasBoxCollider ? circleRadiusScale : world.scale.x,
+    scaleY: hasCircleCollider && !hasBoxCollider ? circleRadiusScale : world.scale.y,
   };
 }
 

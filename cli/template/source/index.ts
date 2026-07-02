@@ -15,6 +15,7 @@ import { GameUI } from "./GameUI";
 import main from "./main";
 import { pixiGameModule } from "./gameide/gameModules/pixiGameModule/index";
 import { planckGameModule } from "./gameide/gameModules/planckGameModule/index";
+import { sceneHierarchyGameModule } from "./gameide/gameModules/sceneHierarchy";
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
@@ -42,6 +43,7 @@ const pluginGameModules = [
       LookCamera: ["Mouse0"],
     },
   }),
+  sceneHierarchyGameModule,
   planckGameModule({}),
   pixiGameModule({}),
   saveGameModule({ highScore: 0 }),

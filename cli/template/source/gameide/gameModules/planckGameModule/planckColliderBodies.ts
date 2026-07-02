@@ -4,7 +4,6 @@ import {
   colliderSignature,
   createBodyForObject,
   qualifiesForPlanckBody,
-  syncBodyTransformFromObject,
   type PlanckRecord,
 } from "./planckBodies.js";
 
@@ -23,7 +22,7 @@ export function planckColliderBodies(args: {
 
   const reconcileSceneRootKey = (
     sceneRootKey: PropertyKey,
-    mutationPathTrail: PropertyKey[] = [],
+    _mutationPathTrail: PropertyKey[] = [],
   ): void => {
     const maybeLiveNode = Reflect.get(scene.get(), sceneRootKey);
 
@@ -55,19 +54,8 @@ export function planckColliderBodies(args: {
       existingPlanckRecord?.signature === nextColliderSignatureValue &&
       existingPlanckRecord.body.getType() === effectiveBodyType
     ) {
-      const isRootReplace = mutationPathTrail.length <= 1;
-      const touchesPose = mutationPathTrail.some(
-        (segment) => segment === "position" || segment === "rotation" || segment === "scale",
-      );
-      const shouldSyncPoseFromScene =
-        effectiveBodyType !== "dynamic" || isRootReplace || touchesPose;
-      if (!shouldSyncPoseFromScene) return;
-
-      syncBodyTransformFromObject(
-        existingPlanckRecord.body,
-        sceneObject,
-        args.pixelsPerMeter,
-      );
+      // Keep this layer focused on body lifecycle only. Per-frame pose sync
+      // happens in the dedicated Planck scene sync module.
       return;
     }
 

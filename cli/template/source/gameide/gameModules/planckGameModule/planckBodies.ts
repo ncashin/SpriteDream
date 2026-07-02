@@ -2,6 +2,8 @@ import { type Body, type BodyType, type World, Vec2, Box, Circle } from "planck"
 import { implementsTrait, type GameObject } from "gameide";
 import { boxColliderTrait, circleColliderTrait } from "./colliderComponents.js";
 import { collisionBodyTrait } from "./collisionBody.js";
+import { getSceneBodyType } from "./planckBodyTypes.js";
+import { readTransformPose } from "../transform.js";
 
 export type PhysicsUserData = {
   object: GameObject;
@@ -12,6 +14,8 @@ export type PlanckRecord = {
   body: Body;
   signature: string;
 };
+
+type ColliderKind = "box" | "circle";
 
 function finiteNumberOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -24,15 +28,33 @@ function readTransform(object: GameObject): {
   scaleX: number;
   scaleY: number;
 } {
-  const position = (object as { position?: { x?: unknown; y?: unknown } }).position;
-  const rotation = (object as { rotation?: { z?: unknown } }).rotation;
-  const scale = (object as { scale?: { x?: unknown; y?: unknown } }).scale;
+  const world = readTransformPose(object, "world");
   return {
-    x: finiteNumberOr(position?.x, 0),
-    y: finiteNumberOr(position?.y, 0),
-    rotationZ: finiteNumberOr(rotation?.z, 0),
-    scaleX: finiteNumberOr(scale?.x, 1),
-    scaleY: finiteNumberOr(scale?.y, 1),
+    x: finiteNumberOr(world.position.x, 0),
+    y: finiteNumberOr(world.position.y, 0),
+    rotationZ: finiteNumberOr(world.rotation.z, 0),
+    scaleX: finiteNumberOr(world.scale.x, 1),
+    scaleY: finiteNumberOr(world.scale.y, 1),
+  };
+}
+
+function readPhysicsShapeTransform(
+  object: GameObject,
+  effectiveBodyType: BodyType,
+  colliderKind: ColliderKind,
+): ReturnType<typeof readTransform> {
+  const world = readTransform(object);
+  const sceneBodyType = getSceneBodyType(object);
+  if (colliderKind === "circle") return world;
+  if (sceneBodyType !== "dynamic" && effectiveBodyType !== "dynamic") {
+    return world;
+  }
+
+  const local = readTransformPose(object, "local");
+  return {
+    ...world,
+    scaleX: finiteNumberOr(local.scale.x, 1),
+    scaleY: finiteNumberOr(local.scale.y, 1),
   };
 }
 
@@ -120,13 +142,13 @@ export function colliderSignature(
   effectiveBodyType: BodyType,
 ): string {
   const bodyT = effectiveBodyType;
-  const transform = readTransform(object);
   const fixedRotation = effectiveFixedRotation(object, effectiveBodyType);
   const continuous = collisionContinuous(object);
   const { isTrigger: t, restitution: rest, friction: fr } = collisionMaterial(object);
   const dis = collisionBodyDisabled(object) ? 1 : 0;
   const b = (object as { boxCollider?: Record<string, unknown> }).boxCollider;
   if (b && typeof b === "object") {
+    const transform = readPhysicsShapeTransform(object, effectiveBodyType, "box");
     return JSON.stringify({
       k: "box",
       bodyT,
@@ -146,6 +168,7 @@ export function colliderSignature(
   }
   const c = (object as { circleCollider?: Record<string, unknown> }).circleCollider;
   if (c && typeof c === "object") {
+    const transform = readPhysicsShapeTransform(object, effectiveBodyType, "circle");
     return JSON.stringify({
       k: "circle",
       bodyT,
@@ -179,11 +202,17 @@ export function createBodyForObject(
   const signature = colliderSignature(object, effectiveBodyType);
   if (!signature) return null;
 
-  const transform = readTransform(object);
-  const scaleX = transform.scaleX;
-  const scaleY = transform.scaleY;
   const bodyT = effectiveBodyType;
   const fixedRotation = effectiveFixedRotation(object, effectiveBodyType);
+  const b = (object as { boxCollider?: Record<string, unknown> }).boxCollider;
+  const c = (object as { circleCollider?: Record<string, unknown> }).circleCollider;
+  const transform = readPhysicsShapeTransform(
+    object,
+    effectiveBodyType,
+    b && typeof b === "object" ? "box" : "circle",
+  );
+  const scaleX = transform.scaleX;
+  const scaleY = transform.scaleY;
 
   const body = world.createBody({
     type: bodyT,
@@ -196,7 +225,6 @@ export function createBodyForObject(
 
   const { isTrigger, restitution, friction } = collisionMaterial(object);
 
-  const b = (object as { boxCollider?: Record<string, unknown> }).boxCollider;
   if (b && typeof b === "object") {
     const w = (Math.max(1e-6, Number(b.width) || 0) * Math.abs(scaleX) / 2) * inv;
     const h = (Math.max(1e-6, Number(b.height) || 0) * Math.abs(scaleY) / 2) * inv;
@@ -212,9 +240,8 @@ export function createBodyForObject(
       opt,
     );
   } else {
-    const c = (object as { circleCollider?: Record<string, unknown> }).circleCollider;
     if (c && typeof c === "object") {
-      const radiusScale = Math.max(Math.abs(scaleX), Math.abs(scaleY));
+      const radiusScale = Math.min(Math.abs(scaleX), Math.abs(scaleY));
       const r = Math.max(1e-6, Number(c.radius) || 0) * radiusScale * inv;
       const off = (c.offset as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
       const opt = {

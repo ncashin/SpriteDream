@@ -192,10 +192,24 @@ export const curryScene = (rawScene: SceneObject) => {
 
   const replace = (data: SceneObject) => {
     const snapshot = structuredClone(data ?? {});
+    const changedKeys = new Set<PropertyKey>([
+      ...Reflect.ownKeys(rawScene),
+      ...Reflect.ownKeys(snapshot),
+    ]);
+
     for (const key of Reflect.ownKeys(rawScene)) {
-      Reflect.deleteProperty(scene, key);
+      Reflect.deleteProperty(rawScene, key);
     }
-    applyPatch(snapshot);
+    for (const key of Reflect.ownKeys(snapshot)) {
+      Reflect.set(rawScene, key, Reflect.get(snapshot, key));
+    }
+
+    invalidateExternalSceneSnapshot();
+    for (const key of changedKeys) {
+      listeners.forEach((listener) =>
+        listener(rawScene, [key], Reflect.get(rawScene, key)),
+      );
+    }
   };
 
   return {

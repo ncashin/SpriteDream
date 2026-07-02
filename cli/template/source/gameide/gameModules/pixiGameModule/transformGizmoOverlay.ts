@@ -5,6 +5,7 @@ import {
   type GameObject,
   type Scene,
 } from "gameide";
+import { ensureTransformSpace, readTransformPose } from "../transform.js";
 import {
   getTransformGizmoTool,
   subscribeTransformGizmoTool,
@@ -28,9 +29,18 @@ type TransformSnapshot = {
 };
 
 type MutableTransformObject = GameObject & {
-  position?: { __icon?: string; x?: number; y?: number; z?: number };
-  rotation?: { __icon?: string; x?: number; y?: number; z?: number };
-  scale?: { __icon?: string; x?: number; y?: number; z?: number };
+  transform?: {
+    local?: {
+      position?: { __icon?: string; x?: number; y?: number; z?: number };
+      rotation?: { __icon?: string; x?: number; y?: number; z?: number };
+      scale?: { __icon?: string; x?: number; y?: number; z?: number };
+    };
+    world?: {
+      position?: { __icon?: string; x?: number; y?: number; z?: number };
+      rotation?: { __icon?: string; x?: number; y?: number; z?: number };
+      scale?: { __icon?: string; x?: number; y?: number; z?: number };
+    };
+  };
 };
 
 type GizmoHandle =
@@ -86,44 +96,38 @@ function findTopLevelSceneKey(
 }
 
 function readTransform(object: GameObject): TransformSnapshot {
-  const transform = object as MutableTransformObject;
+  const transform = readTransformPose(object, "world");
   return {
-    positionX: finiteNumberOr(transform.position?.x, 0),
-    positionY: finiteNumberOr(transform.position?.y, 0),
-    rotationZ: finiteNumberOr(transform.rotation?.z, 0),
-    scaleX: finiteNumberOr(transform.scale?.x, 1),
-    scaleY: finiteNumberOr(transform.scale?.y, 1),
+    positionX: finiteNumberOr(transform.position.x, 0),
+    positionY: finiteNumberOr(transform.position.y, 0),
+    rotationZ: finiteNumberOr(transform.rotation.z, 0),
+    scaleX: finiteNumberOr(transform.scale.x, 1),
+    scaleY: finiteNumberOr(transform.scale.y, 1),
   };
 }
 
 function ensurePosition(
   object: GameObject,
-): NonNullable<MutableTransformObject["position"]> {
-  const transform = object as MutableTransformObject;
-  if (!transform.position || typeof transform.position !== "object") {
-    transform.position = { __icon: "move-3d", x: 0, y: 0, z: 0 };
-  }
-  return transform.position;
+): NonNullable<
+  NonNullable<NonNullable<MutableTransformObject["transform"]>["world"]>["position"]
+> {
+  return ensureTransformSpace(object, "world").position;
 }
 
 function ensureRotation(
   object: GameObject,
-): NonNullable<MutableTransformObject["rotation"]> {
-  const transform = object as MutableTransformObject;
-  if (!transform.rotation || typeof transform.rotation !== "object") {
-    transform.rotation = { __icon: "rotate-3d", x: 0, y: 0, z: 0 };
-  }
-  return transform.rotation;
+): NonNullable<
+  NonNullable<NonNullable<MutableTransformObject["transform"]>["world"]>["rotation"]
+> {
+  return ensureTransformSpace(object, "world").rotation;
 }
 
 function ensureScale(
   object: GameObject,
-): NonNullable<MutableTransformObject["scale"]> {
-  const transform = object as MutableTransformObject;
-  if (!transform.scale || typeof transform.scale !== "object") {
-    transform.scale = { __icon: "scaling", x: 1, y: 1, z: 1 };
-  }
-  return transform.scale;
+): NonNullable<
+  NonNullable<NonNullable<MutableTransformObject["transform"]>["world"]>["scale"]
+> {
+  return ensureTransformSpace(object, "world").scale;
 }
 
 function clientToCanvas(

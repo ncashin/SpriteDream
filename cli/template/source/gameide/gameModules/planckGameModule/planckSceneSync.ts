@@ -1,11 +1,13 @@
 import type { BodyType, Vec2 as Vec2T } from "planck";
 import { Vec2 } from "planck";
-import type { GameObject, Scene } from "gameide";
+import { type GameObject, type Scene } from "gameide";
 import {
   syncBodyTransformFromObject,
   type PlanckRecord,
 } from "./planckBodies.js";
 import { getSceneBodyType } from "./planckBodyTypes.js";
+import { readTransformPose } from "../transform.js";
+import { writeSceneObjectWorldTransform } from "../sceneHierarchy.js";
 
 type ScenePosition = { x: number; y: number };
 type SceneRotation = { x?: number; y?: number; z: number };
@@ -27,7 +29,7 @@ function finiteNumberOr(value: unknown, fallback: number): number {
 }
 
 function readScenePosition(sceneObject: GameObject): ScenePosition {
-  const position = (sceneObject as { position?: Partial<ScenePosition> }).position;
+  const position = readTransformPose(sceneObject, "world").position;
   return {
     x: finiteNumberOr(position?.x, 0),
     y: finiteNumberOr(position?.y, 0),
@@ -35,7 +37,7 @@ function readScenePosition(sceneObject: GameObject): ScenePosition {
 }
 
 function readSceneRotation(sceneObject: GameObject): SceneRotation {
-  const rotation = (sceneObject as { rotation?: Partial<SceneRotation> }).rotation;
+  const rotation = readTransformPose(sceneObject, "world").rotation;
   return {
     x: finiteNumberOr(rotation?.x, 0),
     y: finiteNumberOr(rotation?.y, 0),
@@ -45,6 +47,36 @@ function readSceneRotation(sceneObject: GameObject): SceneRotation {
 
 function readSceneAngleRadians(sceneObject: GameObject): number {
   return readSceneRotation(sceneObject).z;
+}
+
+function scenePoseDiffersFromBody(
+  sceneObject: GameObject,
+  planckRecord: PlanckRecord,
+  ctx: PlanckSceneSyncContext,
+): boolean {
+  const scenePosition = readScenePosition(sceneObject);
+  const sceneAngleRadians = readSceneAngleRadians(sceneObject);
+  const bodyPosition = planckRecord.body.getPosition();
+
+  return (
+    Math.abs(bodyPosition.x - scenePosition.x * ctx.invPpm) > 1e-6 ||
+    Math.abs(bodyPosition.y - scenePosition.y * ctx.invPpm) > 1e-6 ||
+    Math.abs(planckRecord.body.getAngle() - sceneAngleRadians) > 1e-6
+  );
+}
+
+function applyScenePoseToDynamicBody(
+  sceneObject: GameObject,
+  planckRecord: PlanckRecord,
+  ctx: PlanckSceneSyncContext,
+): void {
+  if (!scenePoseDiffersFromBody(sceneObject, planckRecord, ctx)) return;
+
+  const scenePosition = readScenePosition(sceneObject);
+  planckRecord.body.setTransform(
+    new Vec2(scenePosition.x * ctx.invPpm, scenePosition.y * ctx.invPpm),
+    readSceneAngleRadians(sceneObject),
+  );
 }
 
 function readCollisionBodyVelocity(sceneObject: GameObject): CollisionBodyVelocity {
@@ -69,18 +101,21 @@ function writeDynamicPhysicsResultsToScene(
   linearVelocity: Vec2T,
   angularVelocity: number,
 ): void {
-  const nextPosition = {
-    ...((sceneObject as { position?: Record<string, unknown> }).position ?? {}),
-    x: physicsPosition.x * ctx.pixelsPerMeter,
-    y: physicsPosition.y * ctx.pixelsPerMeter,
+  const world = readTransformPose(sceneObject, "world");
+  const nextPose = {
+    position: {
+      ...world.position,
+      x: physicsPosition.x * ctx.pixelsPerMeter,
+      y: physicsPosition.y * ctx.pixelsPerMeter,
+    },
+    rotation: {
+      ...world.rotation,
+      z: physicsAngleRadians,
+    },
+    scale: world.scale,
   };
-  (sceneObject as { position: ScenePosition }).position = nextPosition as ScenePosition;
 
-  const rotation = readSceneRotation(sceneObject);
-  (sceneObject as { rotation: SceneRotation }).rotation = {
-    ...rotation,
-    z: physicsAngleRadians,
-  };
+  writeSceneObjectWorldTransform(ctx.scene, sceneObject, nextPose);
 
   const collisionBody = (
     sceneObject as { collisionBody?: { velocity?: CollisionBodyVelocity } }
@@ -191,6 +226,9 @@ export const syncDynamicBodies = {
       if (ctx.effectiveType(sceneObjectLive) !== "dynamic") return;
       // Locally integrated dynamic bodies own pose during the step; only push
       // authored velocity from the scene (game input + prior physics results).
+      // If hierarchy/editor/networking changed the world pose since the last
+      // step, accept that authored pose before integrating velocity again.
+      applyScenePoseToDynamicBody(sceneObjectLive, planckRecord, ctx);
 
       const authoredVelocity = readCollisionBodyVelocity(sceneObjectLive);
       planckRecord.body.setLinearVelocity(

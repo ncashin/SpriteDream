@@ -5,6 +5,7 @@ import {
   type GameObject,
   type Scene,
 } from "gameide";
+import { readTransformPose } from "../transform.js";
 
 export type SpriteBindingLike = {
   root: Container;
@@ -29,15 +30,13 @@ function readTransformForOverlay(object: GameObject): {
   scaleX: number;
   scaleY: number;
 } {
-  const pos = (object as { position?: { x?: number; y?: number } }).position;
-  const rot = (object as { rotation?: { z?: number } }).rotation;
-  const scale = (object as { scale?: { x?: number; y?: number } }).scale;
+  const world = readTransformPose(object, "world");
   return {
-    x: pos?.x ?? 0,
-    y: pos?.y ?? 0,
-    rotationZ: rot?.z ?? 0,
-    scaleX: scale?.x ?? 1,
-    scaleY: scale?.y ?? 1,
+    x: world.position.x,
+    y: world.position.y,
+    rotationZ: world.rotation.z,
+    scaleX: world.scale.x,
+    scaleY: world.scale.y,
   };
 }
 

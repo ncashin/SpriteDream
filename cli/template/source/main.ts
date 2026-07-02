@@ -21,7 +21,7 @@ const playerTrait = defineTrait(
 
 export default function main(context: MainGameContext) {
   const { input, networking, onGameStart, onGameUpdate, scene } = context;
-
+  
   onGameStart(() => {
     let peerPlayer = scene.getObject(networking.peerIdentifier);
     if (!peerPlayer) {

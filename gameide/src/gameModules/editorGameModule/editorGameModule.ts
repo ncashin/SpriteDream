@@ -4,7 +4,7 @@ import { createEditorUI } from "./createEditorUI.js";
 import type { Editor } from "./createEditorUI.js";
 import {
   createSceneSnapshot,
-} from "../../scene/snapshot.js";
+} from "../../scene/sceneSnapshot.js";
 import { initializeSceneFileStore } from "./sceneFile/sceneFileStore.js";
 
 export default function editorGameModule(Editor: Editor) {

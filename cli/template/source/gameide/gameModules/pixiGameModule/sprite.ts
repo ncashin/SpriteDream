@@ -7,7 +7,11 @@ import {
   type Scene,
 } from "gameide";
 import { isSVGAsset, loadGraphicTexture } from "./asset.js";
-import { transformSchema, transformTrait } from "../transform.js";
+import {
+  readTransformPose,
+  transformSchema,
+  transformTrait,
+} from "../transform.js";
 
 const spriteDataSchema = z.object({
   __icon: z.literal("image"),
@@ -61,14 +65,15 @@ function syncWorldFromSceneObject(
   entity: SpriteRenderable,
 ) {
   if (!isBindingActive(binding)) return;
+  const world = readTransformPose(entity, "world");
   binding.root.position.set(
-    finiteNumberOr(entity.position?.x, 0),
-    finiteNumberOr(entity.position?.y, 0),
+    finiteNumberOr(world.position.x, 0),
+    finiteNumberOr(world.position.y, 0),
   );
-  binding.root.rotation = finiteNumberOr(entity.rotation?.z, 0);
+  binding.root.rotation = finiteNumberOr(world.rotation.z, 0);
   binding.root.scale.set(
-    finiteNumberOr(entity.scale?.x, 1),
-    -finiteNumberOr(entity.scale?.y, 1),
+    finiteNumberOr(world.scale.x, 1),
+    -finiteNumberOr(world.scale.y, 1),
   );
   binding.innerSprite.width = finiteNumberOr(entity.sprite?.width, 1);
   binding.innerSprite.height = finiteNumberOr(entity.sprite?.height, 1);

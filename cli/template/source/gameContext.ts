@@ -9,6 +9,7 @@ import { Editor } from "./gameide/editor/Editor";
 import { GameUI } from "./GameUI";
 import { pixiGameModule } from "./gameide/gameModules/pixiGameModule/index";
 import { planckGameModule } from "./gameide/gameModules/planckGameModule/index";
+import { sceneHierarchyGameModule } from "./gameide/gameModules/sceneHierarchy";
 
 export const initialContext = {};
 
@@ -34,6 +35,7 @@ export const pluginGameModules = [
       LookCamera: ["Mouse0"],
     },
   }),
+  sceneHierarchyGameModule,
   planckGameModule({}),
   pixiGameModule({}),
 ] as const;
