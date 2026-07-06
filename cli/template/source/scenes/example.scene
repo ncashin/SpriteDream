@@ -35,8 +35,8 @@
       "local": {
         "position": {
           "__icon": "move-3d",
-          "x": 10,
-          "y": -400,
+          "x": -6,
+          "y": -313,
           "z": 0
         },
         "rotation": {
@@ -55,8 +55,8 @@
       "world": {
         "position": {
           "__icon": "move-3d",
-          "x": 10,
-          "y": -400,
+          "x": -6,
+          "y": -313,
           "z": 0
         },
         "rotation": {
@@ -379,8 +379,8 @@
       "world": {
         "position": {
           "__icon": "move-3d",
-          "x": 10,
-          "y": -350,
+          "x": -6,
+          "y": -263,
           "z": 0
         },
         "rotation": {
@@ -397,6 +397,6 @@
         }
       }
     },
-    "__parent": "ground"
+    "parent": "ground"
   }
 }

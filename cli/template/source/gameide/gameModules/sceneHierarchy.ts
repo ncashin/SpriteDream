@@ -14,10 +14,10 @@ import {
   writeTransformPose,
 } from "./transform.js";
 
-export const sceneHierarchyTrait = defineTrait(
-  "SceneHierarchy",
+export const parentTrait = defineTrait(
+  "Parent",
   z.object({
-    __parent: z.string().default(""),
+    parent: z.string().default(""),
   }),
 );
 
@@ -42,7 +42,7 @@ function findSceneObjectKey(
 }
 
 function readParentKey(object: GameObject): PropertyKey | undefined {
-  const parent = (object as { __parent?: unknown }).__parent;
+  const parent = (object as { parent?: unknown }).parent;
   if (typeof parent !== "string" || parent.length === 0) return undefined;
   return parent;
 }
@@ -190,7 +190,7 @@ function syncStandaloneObject(
 function isHierarchyRelevantMutation(path: PropertyKey[]): boolean {
   if (path.length === 0) return false;
   if (path.length === 1) return true;
-  return path[1] === "__parent" || path[1] === "transform";
+  return path[1] === "parent" || path[1] === "transform";
 }
 
 function changedTransformSpace(path: PropertyKey[]): "local" | "world" | null {
@@ -232,7 +232,7 @@ export const sceneHierarchyGameModule = gameModule(
       const sceneRootKey = path[0];
       if (sceneRootKey === undefined) return;
       const preferredSpace =
-        path[1] === "__parent" ? "world" : changedTransformSpace(path) ?? undefined;
+        path[1] === "parent" ? "world" : changedTransformSpace(path) ?? undefined;
       syncSceneRoot(sceneRootKey, preferredSpace);
     });
     onDispose(unsubscribe);
