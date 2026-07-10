@@ -2,7 +2,7 @@ export type Scene = Record<string, unknown>;
 export type GameObject = Record<string, unknown>;
 
 export const curryScene = (sceneData: Scene) => {
-  let sceneObject = structuredClone(sceneData);
+  let object = structuredClone(sceneData);
 
   const listeners = new Set<() => void>();
 
@@ -19,23 +19,23 @@ export const curryScene = (sceneData: Scene) => {
   };
 
   const replace = (newSceneData: Scene) => {
-    sceneObject = structuredClone(newSceneData);
+    object = structuredClone(newSceneData);
     emit();
   };
 
   const query = <T>(
     queryFunction: (gameObject: unknown) => gameObject is T,
   ) => {
-    return Object.values(sceneObject).filter(queryFunction);
+    return Object.values(object).filter(queryFunction);
   };
 
   return {
-    // TODO: Remove this getter it's evil cleaner way to handle this
-    get sceneObject() {
-      return sceneObject;
-    },
+    object,
+
     subscribe,
     replace,
     query,
   };
 };
+
+export type SceneAPI = ReturnType<typeof curryScene>;

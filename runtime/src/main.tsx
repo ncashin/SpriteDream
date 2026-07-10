@@ -3,8 +3,8 @@ import "./style.css";
 import initialScene from "./scenes/example.scene?raw";
 import invariant from "tiny-invariant";
 import { createRoot } from "react-dom/client";
-import Editor from "./Editor";
-import SceneProvider from "./SceneProvider";
+import Editor from "./editor/Editor";
+import SceneProvider from "./editor/SceneProvider";
 import { flushSync } from "react-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 

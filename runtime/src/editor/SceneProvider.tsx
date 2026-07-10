@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import type { SceneAPI } from "./scene";
+import type { SceneAPI } from "../scene";
 
 export const SceneContext = createContext<SceneAPI | undefined>(undefined);
 
