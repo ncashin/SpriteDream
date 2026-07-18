@@ -15,7 +15,7 @@ import { GameUI } from "./GameUI";
 import main from "./main";
 import { pixiGameModule } from "./gameide/gameModules/pixiGameModule/index";
 import { planckGameModule } from "./gameide/gameModules/planckGameModule/index";
-import { sceneHierarchyGameModule } from "./gameide/gameModules/sceneHierarchy";
+import sceneHierarchyGameModule from "./gameide/gameModules/sceneHierarchy";
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
@@ -43,10 +43,10 @@ const pluginGameModules = [
       LookCamera: ["Mouse0"],
     },
   }),
-  sceneHierarchyGameModule,
+  sceneHierarchyGameModule(),
   planckGameModule({}),
   pixiGameModule({}),
-  saveGameModule({ highScore: 0 }),
+  saveGameModule({}),
 ] as const;
 
 export type MainGameContext = GameContext<

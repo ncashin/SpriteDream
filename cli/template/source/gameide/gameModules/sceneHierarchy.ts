@@ -201,9 +201,8 @@ function changedTransformSpace(path: PropertyKey[]): "local" | "world" | null {
   return null;
 }
 
-export const sceneHierarchyGameModule = gameModule(
-  import.meta.url,
-  <T extends { scene: Scene }>(context: T): T => {
+export default function sceneHierarchyGameModule<T extends { scene: Scene }>() {
+  return function(context: T): T {
     let isSyncing = false;
 
     function syncSceneRoot(sceneRootKey: PropertyKey, preferredSpace?: "local" | "world"): void {
@@ -238,5 +237,5 @@ export const sceneHierarchyGameModule = gameModule(
     onDispose(unsubscribe);
 
     return context;
-  },
-);
+  };
+}

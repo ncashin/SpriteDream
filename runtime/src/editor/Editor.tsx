@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import useFile from "./useFile";
 import useFiles from "./useFileList";
 import useSceneAPI from "./useSceneAPI";
+import { useHotkey } from "@tanstack/react-hotkeys";
 
 function SceneRow({
   entry,
@@ -48,19 +49,27 @@ export default function Editor() {
   const [sceneFilepath, setSceneFilepath] = useState<string | undefined>(
     undefined,
   );
+
   const [previousSceneFilepath, setPreviousSceneFilepath] =
     useState(sceneFilepath);
 
-  const { file, isFilePending } = useFile(sceneFilepath);
+  const { file, isFilePending, writeToFile } = useFile(sceneFilepath);
 
   if (!isFilePending && sceneFilepath !== previousSceneFilepath) {
     setPreviousSceneFilepath(sceneFilepath);
     sceneAPI.replace(file);
   }
 
-  const unsavedChanges = useMemo(() => {
-    !isFilePending && file !== JSON.stringify(scene);
-  }, [isFilePending, file, scene]);
+  useHotkey("Mod+S", (event) => {
+    const stringifiedScene = JSON.stringify(scene);
+    console.log(file);
+    const unsavedChanges = !isFilePending && file !== JSON.stringify(scene);
+
+    event.preventDefault();
+    if (unsavedChanges) {
+      writeToFile([stringifiedScene]);
+    }
+  });
 
   return (
     <div className="flex flex-row gap-32">
@@ -84,6 +93,7 @@ export default function Editor() {
 
         {Object.entries(scene).map(([key, value]) => (
           <SceneRow
+            key={key}
             entry={[key, value]}
             onBlur={(newKey) => {
               const existingValue = scene[key];
