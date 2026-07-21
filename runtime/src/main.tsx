@@ -1,12 +1,12 @@
-import { gameide } from "./initialization";
-import "./style.css";
-import initialScene from "./scenes/example.scene?raw";
-import invariant from "tiny-invariant";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
+import invariant from "tiny-invariant";
 import Editor from "./editor/Editor";
 import SceneProvider from "./editor/SceneProvider";
-import { flushSync } from "react-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { gameide } from "./initialization";
+import initialScene from "./scenes/example.scene?raw";
+import "./style.css";
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
@@ -22,6 +22,7 @@ gameide({
     const queryClient = new QueryClient();
 
     const editorRoot = createRoot(rootElement);
+
     flushSync(() =>
       editorRoot.render(
         <QueryClientProvider client={queryClient}>
@@ -33,10 +34,7 @@ gameide({
     );
 
     const newRootElement = rootElement.querySelector("#game-view");
-    invariant(
-      newRootElement,
-      "A <GameView /> Component Must Be Rendered In Editor",
-    );
+    invariant(newRootElement, "A <GameView /> Component Must Be Rendered In Editor");
 
     return { ...context, rootElement: newRootElement };
   })

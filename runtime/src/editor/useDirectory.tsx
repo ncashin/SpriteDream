@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 
-const fileListSchema = z.array(z.string());
+const directorySchema = z.array(z.string());
 
-export default function useFiles() {
-  const { data: files } = useQuery({
+export default function useDirectory() {
+  return useQuery({
     queryKey: ["files"],
     queryFn: async () => {
       const response = await fetch("/api/files");
@@ -15,7 +15,7 @@ export default function useFiles() {
 
       const json = await response.json();
 
-      const result = fileListSchema.safeParse(json);
+      const result = directorySchema.safeParse(json);
 
       if (!result.success) {
         throw new Error("Invalid API response");
@@ -24,6 +24,4 @@ export default function useFiles() {
       return result.data;
     },
   });
-
-  return files ?? [];
 }

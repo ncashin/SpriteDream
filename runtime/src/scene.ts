@@ -1,233 +1,139 @@
 export type Scene = Record<string, unknown>;
-export type GameObject = Record<string, unknown>;
 
 type Listener = () => void;
-
-type Dependency = {
-  target: object;
-  key: PropertyKey;
-};
-
-const objectIds = new WeakMap<object, number>();
-let nextObjectId = 0;
-
-const getObjectId = (object: object) => {
-  let id = objectIds.get(object);
-
-  if (!id) {
-    id = ++nextObjectId;
-    objectIds.set(object, id);
-  }
-
-  return id;
-};
+type Dependency = [object, PropertyKey];
+type SceneExtensions = Record<PropertyKey, unknown>;
 
 export const curryScene = (sceneData: Scene) => {
-  const object = structuredClone(sceneData);
+  const scene = structuredClone(sceneData);
 
-  const listeners = new Map<string, Set<Listener>>();
-  const proxyCache = new WeakMap<object, unknown>();
+  const proxyCache = new WeakMap<object, object>();
+  const listeners = new WeakMap<object, Map<PropertyKey, Set<Listener>>>();
+  const extensions: SceneExtensions = {};
 
-  let tracking: Dependency[] | null = null;
+  let trackedDependencies: Dependency[] | null = null;
 
-
-  const getKey = (
-    target: object,
-    key: PropertyKey,
-  ) => {
-    return `${getObjectId(target)}:${String(key)}`;
+  const track = (target: object, key: PropertyKey) => {
+    trackedDependencies?.push([target, key]);
   };
 
+  const emit = (target: object, key: PropertyKey) => {
+    listeners
+      .get(target)
+      ?.get(key)
+      ?.forEach((listener) => listener());
+  };
 
-  const track = (
-    target: object,
-    key: PropertyKey,
-  ) => {
-    if (!tracking) {
-      return;
+  const subscribe = (listener: Listener, dependencies: Dependency[]) => {
+    for (const [target, key] of dependencies) {
+      let objectListeners = listeners.get(target);
+
+      if (!objectListeners) {
+        objectListeners = new Map();
+        listeners.set(target, objectListeners);
+      }
+
+      let propertyListeners = objectListeners.get(key);
+
+      if (!propertyListeners) {
+        propertyListeners = new Set();
+        objectListeners.set(key, propertyListeners);
+      }
+
+      propertyListeners.add(listener);
     }
 
-    tracking.push({
-      target,
-      key,
-    });
+    return () => {
+      for (const [target, key] of dependencies) {
+        listeners.get(target)?.get(key)?.delete(listener);
+      }
+    };
   };
 
-
-  const emit = (
-    target: object,
-    key: PropertyKey,
-  ) => {
-    listeners
-      .get(getKey(target, key))
-      ?.forEach(listener => listener());
-  };
-
-
-  const createProxy = <T extends object>(
-    target: T,
-  ): T => {
+  const createProxy = <TObject extends object>(target: TObject): TObject => {
     const cached = proxyCache.get(target);
 
     if (cached) {
-      return cached as T;
+      return cached as TObject;
     }
-
 
     const proxy = new Proxy(target, {
       get(target, key, receiver) {
-        track(target, key);
-
-        const value = Reflect.get(
-          target,
-          key,
-          receiver,
-        );
-
-        if (
-          typeof value === "object" &&
-          value !== null
-        ) {
-          return createProxy(value);
+        if (key in extensions) {
+          return extensions[key];
         }
 
-        return value;
+        track(target, key);
+
+        const value = Reflect.get(target, key, receiver);
+
+        return value && typeof value === "object" ? createProxy(value) : value;
       },
 
-
       set(target, key, value, receiver) {
-        const previous = Reflect.get(
-          target,
-          key,
-          receiver,
-        );
-
-        if (Object.is(previous, value)) {
+        if (key in extensions) {
+          extensions[key] = value;
           return true;
         }
 
-        const result = Reflect.set(
-          target,
-          key,
-          value,
-          receiver,
-        );
+        const changed = !Object.is(Reflect.get(target, key, receiver), value);
 
-        emit(target, key);
+        const success = Reflect.set(target, key, value, receiver);
 
-        return result;
-      },
+        if (success && changed) {
+          emit(target, key);
+        }
 
-
-      deleteProperty(target, key) {
-        const result = Reflect.deleteProperty(
-          target,
-          key,
-        );
-
-        emit(target, key);
-
-        return result;
+        return success;
       },
     });
-
 
     proxyCache.set(target, proxy);
 
     return proxy;
   };
 
+  const sceneProxy = createProxy(scene);
 
-  const proxy = createProxy(object);
+  const select = <T>(selector: (scene: Scene) => T) => {
+    const dependencies: Dependency[] = [];
 
+    trackedDependencies = dependencies;
 
-  const subscribe = (
-    listener: Listener,
-    dependencies: Dependency[],
-  ) => {
-    for (const dependency of dependencies) {
-      const key = getKey(
-        dependency.target,
-        dependency.key,
-      );
+    try {
+      return {
+        value: selector(sceneProxy),
+        dependencies,
+      };
+    } finally {
+      trackedDependencies = null;
+    }
+  };
 
-      let set = listeners.get(key);
+  const query = <T>(predicate: (value: unknown) => value is T) =>
+    Object.values(sceneProxy).filter(predicate);
 
-      if (!set) {
-        set = new Set();
-        listeners.set(key, set);
-      }
-
-      set.add(listener);
+  const replace = (value: Scene) => {
+    for (const key of Object.keys(scene)) {
+      delete scene[key];
     }
 
-
-    return () => {
-      for (const dependency of dependencies) {
-        listeners
-          .get(
-            getKey(
-              dependency.target,
-              dependency.key,
-            ),
-          )
-          ?.delete(listener);
-      }
-    };
+    Object.assign(scene, value);
   };
 
+  const addExtensions = <TExtensions>(additions: TExtensions) => {
+    Object.assign(extensions, additions);
 
-  const select = <T>(
-    selector: (scene: Scene) => T,
-  ) => {
-    tracking = [];
-
-    const value = selector(proxy);
-
-    const dependencies = tracking;
-
-    tracking = null;
-
-    return {
-      value,
-      dependencies,
-    };
+    return sceneProxy as Scene & TExtensions;
   };
 
-
-  const replace = (
-    newSceneData: Scene,
-  ) => {
-    for (const key of Object.keys(object)) {
-      delete object[key];
-    }
-
-    Object.assign(
-      object,
-      structuredClone(newSceneData),
-    );
-  };
-
-
-  const query = <T>(
-    queryFunction: (
-      gameObject: unknown,
-    ) => gameObject is T,
-  ) => {
-    return Object.values(proxy).filter(queryFunction);
-  };
-
-
-  return {
-    object: proxy,
-
-    select,
+  return addExtensions({
     subscribe,
-
-    replace,
+    select,
     query,
-  };
+    replace,
+    addExtensions,
+  });
 };
-
 
 export type SceneAPI = ReturnType<typeof curryScene>;

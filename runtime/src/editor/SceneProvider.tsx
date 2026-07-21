@@ -10,7 +10,5 @@ export default function SceneProvider({
   scene: SceneAPI;
   children: React.ReactNode;
 }) {
-  return (
-    <SceneContext.Provider value={scene}>{children}</SceneContext.Provider>
-  );
+  return <SceneContext.Provider value={scene}>{children}</SceneContext.Provider>;
 }

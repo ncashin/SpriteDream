@@ -1,10 +1,9 @@
+import { useHotkey, type HotkeyCallback } from "@tanstack/react-hotkeys";
+import { useCallback, useMemo, useState } from "react";
 import GameView from "./GameView";
-import useScene from "./useScene";
-import { useMemo, useState } from "react";
+import useDirectory from "./useDirectory";
 import useFile from "./useFile";
-import useFiles from "./useFileList";
-import useSceneAPI from "./useSceneAPI";
-import { useHotkey } from "@tanstack/react-hotkeys";
+import useScene from "./useScene";
 
 function SceneRow({
   entry,
@@ -37,39 +36,42 @@ function SceneRow({
 }
 
 export default function Editor() {
-  const files = useFiles();
-  const sceneFiles = useMemo(
-    () => files.filter((fileName) => fileName.endsWith(".scene")),
-    [files],
-  );
-
-  const sceneAPI = useSceneAPI();
   const scene = useScene();
 
-  const [sceneFilepath, setSceneFilepath] = useState<string | undefined>(
-    undefined,
-  );
+  const [sceneFilepath, setSceneFilepath] = useState<string | undefined>(undefined);
+  const [previousSceneFilepath, setPreviousSceneFilepath] = useState(sceneFilepath);
 
-  const [previousSceneFilepath, setPreviousSceneFilepath] =
-    useState(sceneFilepath);
+  const directoryQuery = useDirectory();
+  const sceneFiles = useMemo(() => {
+    console.log(directoryQuery.data);
+    if (directoryQuery.isPending || !directoryQuery.data) return [];
 
-  const { file, isFilePending, writeToFile } = useFile(sceneFilepath);
+    const sceneFiles = directoryQuery.data.filter((fileName) => fileName.endsWith(".scene"));
 
-  if (!isFilePending && sceneFilepath !== previousSceneFilepath) {
+    if (!sceneFilepath && sceneFiles.length > 0) setSceneFilepath(sceneFiles[0]);
+  }, [sceneFilepath, directoryQuery.data, directoryQuery.isPending]);
+
+  const { fileQuery, writeMutation } = useFile(sceneFilepath);
+
+  if (!fileQuery.isPending && sceneFilepath !== previousSceneFilepath) {
     setPreviousSceneFilepath(sceneFilepath);
-    sceneAPI.replace(file);
+    scene.replace(fileQuery.data);
   }
 
-  useHotkey("Mod+S", (event) => {
-    const stringifiedScene = JSON.stringify(scene);
-    console.log(file);
-    const unsavedChanges = !isFilePending && file !== JSON.stringify(scene);
+  const handleSave = useCallback<HotkeyCallback>(
+    (event) => {
+      const stringifiedScene = JSON.stringify(scene);
 
-    event.preventDefault();
-    if (unsavedChanges) {
-      writeToFile([stringifiedScene]);
-    }
-  });
+      const unsavedChanges = !fileQuery.isPending && fileQuery.data !== JSON.stringify(scene);
+
+      event.preventDefault();
+      if (unsavedChanges) {
+        writeMutation.mutate([stringifiedScene]);
+      }
+    },
+    [scene, writeMutation, fileQuery.data, fileQuery.isPending],
+  );
+  useHotkey("Mod+S", handleSave);
 
   return (
     <div className="flex flex-row gap-32">
@@ -84,11 +86,12 @@ export default function Editor() {
           <option value="" disabled>
             Select a Scene
           </option>
-          {sceneFiles.map((sceneFile) => (
-            <option key={sceneFile} value={sceneFile}>
-              {sceneFile}
-            </option>
-          ))}
+          {sceneFiles &&
+            sceneFiles.map((sceneFile) => (
+              <option key={sceneFile} value={sceneFile}>
+                {sceneFile}
+              </option>
+            ))}
         </select>
 
         {Object.entries(scene).map(([key, value]) => (

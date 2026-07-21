@@ -3,12 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 export default function useFile(filepath: string | undefined) {
   const queryClient = useQueryClient();
 
-  const {
-    data: file,
-    isPending: isFilePending,
-    isFetching: isFileFetching,
-    error: fileError,
-  } = useQuery({
+  const fileQuery = useQuery({
     queryKey: ["file", filepath],
     queryFn: async () => {
       const response = await fetch(`/api/files/${filepath}`);
@@ -22,11 +17,7 @@ export default function useFile(filepath: string | undefined) {
     enabled: !!filepath,
   });
 
-  const {
-    mutate: writeToFile,
-    isPending: isWritePending,
-    error: writeError,
-  } = useMutation({
+  const writeMutation = useMutation({
     mutationKey: ["file", filepath],
     mutationFn: async (data: BlobPart[]) => {
       if (!filepath) return;
@@ -52,16 +43,7 @@ export default function useFile(filepath: string | undefined) {
   });
 
   return {
-    file,
-
-    // query state
-    isFilePending,
-    isFileFetching,
-    fileError,
-
-    // mutation state
-    writeToFile,
-    isWritePending,
-    writeError,
+    fileQuery,
+    writeMutation,
   };
 }
