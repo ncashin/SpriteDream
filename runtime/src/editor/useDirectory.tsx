@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { z } from "zod";
 
 const directorySchema = z.array(z.string());
 
 export default function useDirectory() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ["files"],
     queryFn: async () => {
       const response = await fetch("/api/files");

@@ -1,11 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 export default function useFile(filepath: string | undefined) {
   const queryClient = useQueryClient();
 
-  const fileQuery = useQuery({
-    queryKey: ["file", filepath],
+  const fileQuery = useSuspenseQuery({
+    queryKey: ["files", filepath],
     queryFn: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 second delay
+
       const response = await fetch(`/api/files/${filepath}`);
 
       if (!response.ok) {
@@ -14,11 +16,10 @@ export default function useFile(filepath: string | undefined) {
 
       return response.json();
     },
-    enabled: !!filepath,
   });
 
   const writeMutation = useMutation({
-    mutationKey: ["file", filepath],
+    mutationKey: ["files", filepath],
     mutationFn: async (data: BlobPart[]) => {
       if (!filepath) return;
       const file = new File(data, filepath);

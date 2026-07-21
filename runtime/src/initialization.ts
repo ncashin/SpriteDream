@@ -6,13 +6,40 @@ export type GameIDEOptions<AdditionalContext> = {
   additionalContext: AdditionalContext;
 };
 
-export const curryRun =
-  <Input extends object>(gameContext: Input) =>
-  <Output extends object>(gameModule: (context: Input) => Output) => {
-    const newContext = gameModule(gameContext);
+type ContextModule<Input extends object, Output extends object> = (
+  context: Input,
+) => Output | Promise<Output>;
 
-    return { gameContext: newContext, run: curryRun(newContext) };
+export type GameRunner<Context extends object> = {
+  run<Output extends object>(module: ContextModule<Context, Output>): GameRunner<Context & Output>;
+
+  execute(): Promise<Context>;
+};
+
+export const curryRun = <Context extends object>(
+  contextPromise: Promise<Context>,
+): GameRunner<Context> => {
+  return {
+    run<Output extends object>(
+      module: ContextModule<Context, Output>,
+    ): GameRunner<Context & Output> {
+      return curryRun(
+        contextPromise.then(async (context) => {
+          const output = await module(context);
+
+          return {
+            ...context,
+            ...output,
+          };
+        }),
+      );
+    },
+
+    execute(): Promise<Context> {
+      return contextPromise;
+    },
   };
+};
 
 export const gameide = <AdditionalContext>({
   rootElement,
@@ -21,11 +48,11 @@ export const gameide = <AdditionalContext>({
 }: GameIDEOptions<AdditionalContext>) => {
   const scene = curryScene(initialScene);
 
-  let gameContext = {
+  const initialContext = {
     rootElement,
     scene,
     ...additionalContext,
   };
 
-  return { gameContext, run: curryRun(gameContext) };
+  return curryRun(Promise.resolve(initialContext));
 };
