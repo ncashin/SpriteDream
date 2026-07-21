@@ -56,3 +56,9 @@ gameide({
     rootElement.textContent = "Game View Root Element";
     return context;
   });
+
+if (import.meta.hot) {
+  import.meta.hot.on("gameide:scene", ({ file }) => {
+    console.log("Scene HMR Event:", file);
+  });
+}

@@ -6,8 +6,6 @@ export default function useFile(filepath: string | undefined) {
   const fileQuery = useSuspenseQuery({
     queryKey: ["files", filepath],
     queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 second delay
-
       const response = await fetch(`/api/files/${filepath}`);
 
       if (!response.ok) {

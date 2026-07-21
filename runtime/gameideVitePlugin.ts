@@ -1,14 +1,14 @@
-import { type Plugin } from "vite";
 import { Hono } from "hono";
-import path from "node:path";
-import fs from "node:fs/promises";
 import { lookup } from "mime-types";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { type Plugin } from "vite";
 
 const app = new Hono();
 
 app.get("/api/files", async (context) => {
   const root = path.join(process.cwd());
-console.log(root)
+  console.log(root);
   try {
     const files: string[] = [];
 
@@ -78,6 +78,22 @@ app.post("/api/files/:path{.+}", async (context) => {
 
 export const gameidePlugin = (): Plugin => ({
   name: "gameide",
+
+  handleHotUpdate({ file, server }) {
+    if (!file.endsWith(".scene")) {
+      return;
+    }
+
+    server.ws.send({
+      type: "custom",
+      event: "gameide:scene",
+      data: {
+        file,
+      },
+    });
+
+    return [];
+  },
   configureServer(server) {
     server.middlewares.use(async (request, response, next) => {
       if (!request.url) {

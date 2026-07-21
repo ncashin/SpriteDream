@@ -43,7 +43,7 @@ function SceneRow({
               setStringifiedValue(event.target.value);
             }}
             onBlur={() => {
-              onValueChange(stringifiedKey);
+              onValueChange(stringifiedValue);
             }}
             style={{
               width: `${Math.max(stringifiedValue.length, 1)}ch`,
@@ -51,20 +51,19 @@ function SceneRow({
           />
         )}
       </div>
-      <div className="pl-2">
+      <div className="pl-2.5">
         {isObject &&
-          typeof value === "object" &&
-          Object.entries(value).map(([key, value]) => (
+          Object.entries(value).map(([childKey, childValue]) => (
             <SceneRow
-              key={key}
-              entry={[key, value]}
+              key={childKey}
+              entry={[childKey, childValue]}
               onKeyChange={(newKey) => {
-                const existingValue = value[key];
-                delete value[key];
+                const existingValue = childValue[childKey];
+                delete value[childKey];
                 value[newKey] = existingValue;
               }}
               onValueChange={(newValue) => {
-                value[key] = newValue;
+                value[childKey] = newValue;
               }}
             />
           ))}
@@ -94,6 +93,14 @@ export default function Editor() {
     setPreviousSceneFilepath(sceneFilepath);
     scene.replace(fileQuery.data);
   }
+
+  useHotkey("Mod+Z", (event) => {
+    event.preventDefault();
+  });
+
+  useHotkey("Mod+Shift+Z", (event) => {
+    event.preventDefault();
+  });
 
   const stringifiedScene = JSON.stringify(scene);
   const unsavedChanges = !fileQuery.isPending && fileQuery.data !== JSON.stringify(scene);
