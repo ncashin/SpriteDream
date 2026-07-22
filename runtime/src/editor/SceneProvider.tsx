@@ -1,14 +1,22 @@
-import { createContext } from "react";
-import type { SceneAPI } from "../scene";
+// SceneProvider.tsx
 
-export const SceneContext = createContext<SceneAPI | undefined>(undefined);
+import { createContext, useEffect, useMemo } from "react";
+import type { GameContext } from "../initialization";
+import { SceneStore } from "../sceneStore";
 
-export default function SceneProvider({
-  scene,
+export const SceneContext = createContext<SceneStore | undefined>(undefined);
+
+export default function GameIDEContextProvider({
+  gameContext,
   children,
 }: {
-  scene: SceneAPI;
+  gameContext: GameContext;
   children: React.ReactNode;
 }) {
-  return <SceneContext.Provider value={scene}>{children}</SceneContext.Provider>;
+  const { scene, onUpdate } = gameContext;
+  const store = useMemo(() => new SceneStore(scene), [scene]);
+
+  useEffect(() => onUpdate(() => store.tick()), [store, onUpdate]);
+
+  return <SceneContext.Provider value={store}>{children}</SceneContext.Provider>;
 }

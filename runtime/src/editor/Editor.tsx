@@ -1,76 +1,11 @@
 import { useHotkey, type HotkeyCallback } from "@tanstack/react-hotkeys";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { setScene } from "../scene";
 import GameView from "./GameView";
+import SceneRow from "./SceneRow";
 import useDirectory from "./useDirectory";
 import useFile from "./useFile";
 import useScene from "./useScene";
-
-function SceneRow({
-  entry,
-  onKeyChange,
-  onValueChange,
-}: {
-  entry: [PropertyKey, unknown];
-  onKeyChange: (arg0: string) => void;
-  onValueChange: (arg0: string) => void;
-}) {
-  const [key, value] = entry;
-  const [stringifiedKey, setStringifiedKey] = useState(String(key));
-  const [stringifiedValue, setStringifiedValue] = useState(String(key));
-
-  const isObject = !!value && typeof value === "object";
-
-  return (
-    <div className="flex flex-col pb-2">
-      <div className="flex flex-row">
-        <input
-          value={stringifiedKey}
-          onChange={(event) => {
-            setStringifiedKey(event.target.value);
-          }}
-          onBlur={() => {
-            onKeyChange(stringifiedKey);
-          }}
-          style={{
-            width: `${Math.max(stringifiedKey.length, 1)}ch`,
-          }}
-        />
-        <span>:</span>
-        {!isObject && (
-          <input
-            value={stringifiedValue}
-            onChange={(event) => {
-              setStringifiedValue(event.target.value);
-            }}
-            onBlur={() => {
-              onValueChange(stringifiedValue);
-            }}
-            style={{
-              width: `${Math.max(stringifiedValue.length, 1)}ch`,
-            }}
-          />
-        )}
-      </div>
-      <div className="pl-2.5">
-        {isObject &&
-          Object.entries(value).map(([childKey, childValue]) => (
-            <SceneRow
-              key={childKey}
-              entry={[childKey, childValue]}
-              onKeyChange={(newKey) => {
-                const existingValue = childValue[childKey];
-                delete value[childKey];
-                value[newKey] = existingValue;
-              }}
-              onValueChange={(newValue) => {
-                value[childKey] = newValue;
-              }}
-            />
-          ))}
-      </div>
-    </div>
-  );
-}
 
 export default function Editor() {
   const scene = useScene();
@@ -91,7 +26,7 @@ export default function Editor() {
 
   if (!fileQuery.isPending && deferredFilepath !== previousSceneFilepath) {
     setPreviousSceneFilepath(sceneFilepath);
-    scene.replace(fileQuery.data);
+    setScene(scene, fileQuery.data);
   }
 
   useHotkey("Mod+Z", (event) => {
@@ -103,15 +38,16 @@ export default function Editor() {
   });
 
   const stringifiedScene = JSON.stringify(scene);
-  const unsavedChanges = !fileQuery.isPending && fileQuery.data !== JSON.stringify(scene);
+  const unsavedChanges =
+    !fileQuery.isPending && !(JSON.stringify(fileQuery.data) === stringifiedScene);
+
   const handleSave = useCallback<HotkeyCallback>(
     (event) => {
       event.preventDefault();
-      if (unsavedChanges) {
-        writeMutation.mutate([stringifiedScene]);
-      }
+      if (!unsavedChanges) return;
+      writeMutation.mutate([stringifiedScene]);
     },
-    [writeMutation, unsavedChanges, stringifiedScene],
+    [writeMutation, stringifiedScene, unsavedChanges],
   );
   useHotkey("Mod+S", handleSave);
 
@@ -127,7 +63,7 @@ export default function Editor() {
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [unsavedChanges]);
+  }, [scene, unsavedChanges]);
 
   return (
     <div className="flex flex-row gap-32">

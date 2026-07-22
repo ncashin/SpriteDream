@@ -1,3 +1,4 @@
+import { curryLifecycle } from "./lifecycle";
 import { curryScene, type Scene } from "./scene";
 
 export type GameIDEOptions<AdditionalContext> = {
@@ -46,13 +47,18 @@ export const gameide = <AdditionalContext>({
   initialScene,
   additionalContext,
 }: GameIDEOptions<AdditionalContext>) => {
+  const lifecycle = curryLifecycle();
   const scene = curryScene(initialScene);
 
   const initialContext = {
     rootElement,
     scene,
+    ...lifecycle,
     ...additionalContext,
   };
 
-  return curryRun(Promise.resolve(initialContext));
+  lifecycle.start();
+  return { ...curryRun(Promise.resolve(initialContext)), gameContext: initialContext };
 };
+
+export type GameContext = ReturnType<typeof gameide>["gameContext"];

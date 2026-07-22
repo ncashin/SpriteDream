@@ -1,32 +1,15 @@
-import { useContext, useRef, useSyncExternalStore } from "react";
+import { useContext, useSyncExternalStore } from "react";
 import invariant from "tiny-invariant";
-import type { Scene, SceneAPI } from "../scene";
+import type { Scene } from "../scene";
 import { SceneContext } from "./SceneProvider";
 
-export default function useScene<T = SceneAPI>(selector?: (scene: Scene) => T) {
-  const scene = useContext(SceneContext);
+export default function useScene(): Scene;
+export default function useScene<T>(selector?: (scene: Scene) => T): T | Scene {
+  const store = useContext(SceneContext);
 
-  invariant(scene, "useScene must be used within SceneProvider");
+  invariant(store, "useScene must be used inside SceneProvider");
 
-  const selected = useRef(
-    selector
-      ? scene.select(selector)
-      : {
-          value: scene as T,
-          dependencies: [],
-        },
-  );
+  useSyncExternalStore(store.subscribe, store.getSnapshot);
 
-  return useSyncExternalStore(
-    (listener) =>
-      scene.subscribe(() => {
-        if (selector) {
-          selected.current = scene.select(selector);
-        }
-
-        listener();
-      }, selected.current.dependencies),
-
-    () => selected.current.value,
-  );
+  return selector ? selector(store.scene) : store.scene;
 }
