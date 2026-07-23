@@ -3,6 +3,14 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Suspense } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
+import {
+  BoxGeometry,
+  Mesh,
+  MeshBasicMaterial,
+  PerspectiveCamera,
+  Scene,
+  WebGLRenderer,
+} from "three";
 import invariant from "tiny-invariant";
 import Editor from "./editor/Editor";
 import GameViewReadyProvider from "./editor/GameViewReadyProvider";
@@ -67,14 +75,30 @@ gameide({
     return { ...context, rootElement: newRootElement };
   })
   .run((context) => {
-    const { rootElement, scene, onUpdate } = context;
-    rootElement.textContent = "Game View Root Element";
+    const { rootElement, scene: gameideScene, onUpdate } = context;
+
+    const threeScene = new Scene();
+
+    const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
+
+    const renderer = new WebGLRenderer();
+    renderer.setSize(rootElement.clientWidth, rootElement.clientHeight);
+    rootElement.appendChild(renderer.domElement);
+
+    renderer.render(threeScene, camera);
+
+    const geometry = new BoxGeometry();
+    const material = new MeshBasicMaterial({ color: 0x00ff00 });
+
+    const cube = new Mesh(geometry, material);
+    threeScene.add(cube);
 
     onUpdate(() => {
-      if (scene.rerenderTest === undefined || !(typeof scene.rerenderTest === "number")) {
-        scene.rerenderTest = 0;
-        return;
-      }
+      cube.rotation.x += 0.01;
+      cube.rotation.y += 0.01;
+
+      renderer.render(threeScene, camera);
     });
 
     return context;

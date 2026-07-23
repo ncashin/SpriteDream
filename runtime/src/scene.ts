@@ -21,10 +21,10 @@ export const patchScene = (scene: Scene, patch: Scene) => {
 
     if (
       !value ||
-      typeof value !== "object" ||
+      !(typeof value === "object") ||
       Array.isArray(value) ||
       !current ||
-      typeof current !== "object"
+      !(typeof current === "object")
     ) {
       scene[key] = value;
       continue;
@@ -33,5 +33,10 @@ export const patchScene = (scene: Scene, patch: Scene) => {
     patchScene(current, value);
   }
 };
+
+export const query =
+  <T>(predicate: (value: unknown) => value is T) =>
+  (scene: Scene) =>
+    Object.values(scene).filter(predicate);
 
 export type SceneAPI = ReturnType<typeof curryScene>;

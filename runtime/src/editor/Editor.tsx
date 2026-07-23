@@ -66,10 +66,10 @@ export default function Editor() {
   }, [scene, unsavedChanges]);
 
   return (
-    <div className="w-full h-full flex flex-row">
-      <div className="h-full px-2  pt-2 border-r-2">
+    <div className="w-full h-full flex flex-row text-sm">
+      <div className="h-full flex flex-col gap-2.5 px-2 pt-3.5 border-r-2 w-96 ">
         <select
-          className="p-0 m-0 box-border appearance-none px-1.5 py-0.5 hover:bg-slate-100"
+          className="p-0 m-0 box-border appearance-none px-1.5 py-0.5 font-semibold w-full hover:bg-slate-100"
           id="scene-file-select"
           value={deferredFilepath}
           onChange={(event) => {
@@ -87,20 +87,22 @@ export default function Editor() {
             ))}
         </select>
 
-        {Object.entries(scene).map(([key, value]) => (
-          <SceneRow
-            key={key}
-            entry={[key, value]}
-            onKeyChange={(newKey) => {
-              const existingValue = scene[key];
-              delete scene[key];
-              scene[newKey] = existingValue;
-            }}
-            onValueChange={(newValue) => {
-              scene[key] = newValue;
-            }}
-          />
-        ))}
+        <div className="flex flex-col">
+          {Object.entries(scene).map(([key, value]) => (
+            <SceneRow
+              key={key}
+              entry={[key, value]}
+              onKeyChange={(newKey) => {
+                const existingValue = scene[key];
+                delete scene[key];
+                scene[newKey] = existingValue;
+              }}
+              onValueChange={(newValue) => {
+                scene[key] = newValue;
+              }}
+            />
+          ))}
+        </div>
       </div>
       <GameView />
     </div>
