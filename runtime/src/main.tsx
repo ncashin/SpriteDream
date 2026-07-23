@@ -12,13 +12,16 @@ import {
   WebGLRenderer,
 } from "three";
 import invariant from "tiny-invariant";
+import { hasComponent } from "./component";
 import Editor from "./editor/Editor";
 import ReadyProvider from "./editor/ReadyProvider";
 import GameIDEContextProvider from "./editor/SceneProvider";
 import { gameide } from "./initialization";
-import { patchScene } from "./scene";
+import { patchScene, query } from "./scene";
 import initialScene from "./scenes/example.scene?raw";
 import "./style.css";
+import { MeshComponent, syncMeshComponent } from "./threePlugin/mesh";
+import { TransformComponent } from "./threePlugin/transform";
 
 const rootElement = document.getElementById("app");
 invariant(rootElement);
@@ -80,6 +83,29 @@ gameide({
 
     const renderer = new WebGLRenderer();
     rootElement.appendChild(renderer.domElement);
+
+    const meshMap = new Map<object, Mesh>();
+
+    const createMeshForGameObject = (gameObject: object) => {
+      const geometry = new BoxGeometry();
+      const material = new MeshBasicMaterial({ color: 0xff0000 });
+
+      const newMesh = new Mesh(geometry, material);
+      meshMap.set(gameObject, newMesh);
+      threeScene.add(newMesh);
+      return newMesh;
+    };
+
+    const meshQuery = query(
+      (object) => hasComponent(object, TransformComponent) && hasComponent(object, MeshComponent),
+    );
+
+    onUpdate(() => {
+      meshQuery(gameideScene).forEach((gameObject) => {
+        const mesh = meshMap.get(gameObject) ?? createMeshForGameObject(gameObject);
+        syncMeshComponent(gameObject, mesh);
+      });
+    });
 
     const resize = () => {
       const width = rootElement.clientWidth;

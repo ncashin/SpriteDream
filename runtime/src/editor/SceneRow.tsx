@@ -1,13 +1,9 @@
 import { cn } from "cnfast";
 import { Box, ChevronRight, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
-import z from "zod";
-import { addComponent, defineComponent } from "../component";
-
-const testComponent = defineComponent(
-  "Test Component",
-  z.object({ testProperty: z.string().default("DEFAULT ASSIGNED") }),
-);
+import { addComponent } from "../component";
+import { MeshComponent } from "../threePlugin/mesh";
+import { TransformComponent } from "../threePlugin/transform";
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
@@ -116,7 +112,8 @@ export default function SceneRow({
             className="size-4"
             onClick={() => {
               console.log("COMPONENT ADDITION TEST");
-              addComponent(value, testComponent, {});
+              addComponent(value, TransformComponent, {});
+              addComponent(value, MeshComponent, {});
             }}
           />
         )}
