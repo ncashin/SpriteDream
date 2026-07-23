@@ -1,4 +1,10 @@
+import { cn } from "cnfast";
+import { Box, ChevronRight } from "lucide-react";
 import { useState } from "react";
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
 
 function parseInputValue(input: string): unknown {
   const trimmed = input.trim();
@@ -34,16 +40,25 @@ export default function SceneRow({
   const [inputKey, setInputKey] = useState<string | undefined>(undefined);
   const [inputValue, setInputValue] = useState<string | undefined>(undefined);
 
-  const isObject = !!value && typeof value === "object";
-
   const displayKey = inputKey ?? String(key);
   const displayValue = inputValue ?? String(value);
 
+  const canBeExpanded = isObject(value) && Object.keys(value).length > 0;
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <div className="flex flex-col pb-2">
-      <div className="flex flex-row">
+    <div className="flex flex-col">
+      <button
+        className="flex flex-row items-center gap-1 rounded-md py-0.5 px-1.5 hover:bg-slate-100"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {isObject(value) && <Box className="size-4" />}
         <input
+          className={cn(isObject(value) && "flex-1")}
           value={displayKey}
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
           onFocus={() => {
             setInputKey(String(key));
           }}
@@ -51,7 +66,7 @@ export default function SceneRow({
             setInputKey(event.target.value);
           }}
           onBlur={() => {
-            if (inputKey !== undefined) {
+            if (inputKey !== undefined && inputKey !== key) {
               onKeyChange(inputKey);
             }
             setInputKey(undefined);
@@ -60,11 +75,13 @@ export default function SceneRow({
             width: `${Math.max(displayKey.length, 1)}ch`,
           }}
         />
+        {canBeExpanded && <ChevronRight className={cn("size-4", expanded && "rotate-90")} />}
 
-        {!isObject && (
+        {!isObject(value) && (
           <>
             <span>:</span>
             <input
+              className="flex-1"
               value={displayValue}
               onFocus={() => {
                 setInputValue(String(displayValue));
@@ -84,11 +101,11 @@ export default function SceneRow({
             />
           </>
         )}
-      </div>
+      </button>
 
-      <div className="pl-2.5">
-        {isObject &&
-          Object.entries(value).map(([childKey, childValue]) => (
+      {expanded && isObject(value) && (
+        <div className="pl-2.5">
+          {Object.entries(value).map(([childKey, childValue]) => (
             <SceneRow
               key={childKey}
               entry={[childKey, childValue]}
@@ -102,7 +119,8 @@ export default function SceneRow({
               }}
             />
           ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
