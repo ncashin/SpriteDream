@@ -49,7 +49,7 @@ export default function SceneRow({
   return (
     <div className="flex flex-col">
       <button
-        className="flex flex-row items-center gap-1 rounded-md py-0.5 px-1.5 hover:bg-slate-100"
+        className="flex flex-row items-center gap-1 px-1.5 py-0.5 hover:bg-slate-100"
         onClick={() => setExpanded(!expanded)}
       >
         {isObject(value) && <Box className="size-4" />}

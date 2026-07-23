@@ -66,10 +66,10 @@ export default function Editor() {
   }, [scene, unsavedChanges]);
 
   return (
-    <div className="flex flex-row gap-32">
-      <div>
+    <div className="w-full h-full flex flex-row">
+      <div className="h-full px-2  pt-2 border-r-2">
         <select
-          className="p-0 m-0 box-border appearance-none"
+          className="p-0 m-0 box-border appearance-none px-1.5 py-0.5 hover:bg-slate-100"
           id="scene-file-select"
           value={deferredFilepath}
           onChange={(event) => {
