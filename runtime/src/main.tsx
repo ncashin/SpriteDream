@@ -20,6 +20,7 @@ import { gameide } from "./initialization";
 import { patchScene, query } from "./scene";
 import initialScene from "./scenes/example.scene?raw";
 import "./style.css";
+import { createDebugCamera } from "./threePlugin/editorCamera";
 import { MeshComponent, syncMeshComponent } from "./threePlugin/mesh";
 import { TransformComponent } from "./threePlugin/transform";
 
@@ -74,15 +75,23 @@ gameide({
     return { ...context, rootElement: newRootElement, ready, markReady };
   })
   .run((context) => {
-    const { rootElement, scene: gameideScene, onUpdate } = context;
+    const { isEditor, rootElement, scene: gameideScene, onUpdate } = context;
 
     const threeScene = new Scene();
+    const renderer = new WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
+
+    rootElement.appendChild(renderer.domElement);
 
     const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 5;
 
-    const renderer = new WebGLRenderer();
-    rootElement.appendChild(renderer.domElement);
+    if (isEditor) {
+      const debugCamera = createDebugCamera(camera, renderer.domElement);
+      onUpdate(debugCamera.update);
+    }
 
     const meshMap = new Map<object, Mesh>();
 
@@ -111,12 +120,19 @@ gameide({
       const width = rootElement.clientWidth;
       const height = rootElement.clientHeight;
 
+      if (!width || !height) return;
+
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
 
       renderer.setSize(width, height, false);
+
+      renderer.render(threeScene, camera);
     };
-    window.addEventListener("resize", resize);
+
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(rootElement);
+
     resize();
 
     renderer.render(threeScene, camera);

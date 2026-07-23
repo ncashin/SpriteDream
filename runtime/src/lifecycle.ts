@@ -8,7 +8,7 @@ export const curryLifecycle = () => {
   const loop = (time: number) => {
     if (!running) return;
 
-    const deltaTime = time - lastTime;
+    const deltaTime = (time - lastTime) / 1000;
     lastTime = time;
 
     for (const listener of updateListeners) {

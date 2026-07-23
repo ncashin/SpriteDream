@@ -50,7 +50,11 @@ export const gameide = <AdditionalContext>({
   const lifecycle = curryLifecycle();
   const scene = curryScene(initialScene);
 
+  const isEditor = !!import.meta.hot;
+
   const initialContext = {
+    isEditor,
+
     rootElement,
     scene,
     ...lifecycle,
