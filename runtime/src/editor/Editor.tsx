@@ -69,6 +69,7 @@ export default function Editor() {
     <div className="flex flex-row gap-32">
       <div>
         <select
+          className="p-0 m-0 box-border appearance-none"
           id="scene-file-select"
           value={deferredFilepath}
           onChange={(event) => {

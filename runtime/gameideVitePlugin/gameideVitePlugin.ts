@@ -24,6 +24,7 @@ export const gameidePlugin = (): Plugin => ({
       event: "gameide:scene",
       data: {
         file,
+        content,
         patch,
       },
     });

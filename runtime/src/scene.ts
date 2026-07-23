@@ -30,7 +30,7 @@ export const patchScene = (scene: Scene, patch: Scene) => {
       continue;
     }
 
-    patchScene(current as Scene, value as Scene);
+    patchScene(current, value);
   }
 };
 

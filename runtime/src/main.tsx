@@ -8,6 +8,7 @@ import Editor from "./editor/Editor";
 import GameViewReadyProvider from "./editor/GameViewReadyProvider";
 import GameIDEContextProvider from "./editor/SceneProvider";
 import { gameide } from "./initialization";
+import { patchScene } from "./scene";
 import initialScene from "./scenes/example.scene?raw";
 import "./style.css";
 
@@ -20,7 +21,7 @@ gameide({
   additionalContext: {},
 })
   .run(async (context) => {
-    const { rootElement } = context;
+    const { rootElement, scene } = context;
 
     const queryClient = new QueryClient();
 
@@ -52,8 +53,14 @@ gameide({
     invariant(newRootElement, "A <GameView /> Component Must Be Rendered In Editor");
 
     if (import.meta.hot) {
-      import.meta.hot.on("gameide:scene", ({ file }) => {
-        console.log("Scene HMR Event:", file);
+      import.meta.hot.on("gameide:scene", ({ file, content, patch }) => {
+        const queryKey = ["files", file];
+        queryClient.setQueryData(queryKey, {
+          content,
+        });
+        queryClient.invalidateQueries({ queryKey });
+
+        patchScene(scene, patch);
       });
     }
 
@@ -68,7 +75,6 @@ gameide({
         scene.rerenderTest = 0;
         return;
       }
-      scene.rerenderTest = (scene.rerenderTest || 0) + 1;
     });
 
     return context;

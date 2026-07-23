@@ -93,12 +93,12 @@ export default function SceneRow({
               key={childKey}
               entry={[childKey, childValue]}
               onKeyChange={(newKey) => {
-                const existingValue = childValue[childKey];
-                delete childValue[childKey];
-                childValue[newKey] = existingValue;
+                const existingValue = value[childKey];
+                delete value[childKey];
+                value[newKey] = existingValue;
               }}
               onValueChange={(newValue) => {
-                childValue[childKey] = newValue;
+                value[childKey] = newValue;
               }}
             />
           ))}

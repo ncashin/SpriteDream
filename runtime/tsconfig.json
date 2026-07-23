@@ -23,5 +23,10 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "gameideVitePlugin.ts", "gameideVitePlugin.ts", "gameideVitePlugin.ts"]
+  "include": [
+    "src",
+    "gameideVitePlugin/gameideVitePlugin.ts",
+    "gameideVitePlugin/gameideVitePlugin.ts",
+    "gameideVitePlugin/gameideVitePlugin.ts"
+  ]
 }
