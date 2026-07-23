@@ -1,4 +1,4 @@
-export type Scene = Record<string, unknown>;
+export type Scene = Record<PropertyKey, unknown>;
 
 export const curryScene = (sceneData: Scene) => {
   const scene = structuredClone(sceneData);

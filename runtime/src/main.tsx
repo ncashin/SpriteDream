@@ -13,7 +13,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 import Editor from "./editor/Editor";
-import GameViewReadyProvider from "./editor/GameViewReadyProvider";
+import ReadyProvider from "./editor/ReadyProvider";
 import GameIDEContextProvider from "./editor/SceneProvider";
 import { gameide } from "./initialization";
 import { patchScene } from "./scene";
@@ -35,28 +35,24 @@ gameide({
 
     const editorRoot = createRoot(rootElement);
 
-    let markGameViewReady!: () => void;
-
-    const gameViewReady = new Promise<void>((resolve) => {
-      markGameViewReady = resolve;
-    });
+    const { promise: ready, resolve: markReady } = Promise.withResolvers<void>();
 
     flushSync(() =>
       editorRoot.render(
         <QueryClientProvider client={queryClient}>
           <GameIDEContextProvider gameContext={context}>
-            <GameViewReadyProvider onReady={markGameViewReady}>
+            <ReadyProvider onReady={markReady}>
               <Suspense fallback={<div>Loading...</div>}>
                 <Editor />
               </Suspense>
-            </GameViewReadyProvider>
+            </ReadyProvider>
           </GameIDEContextProvider>
           <ReactQueryDevtools initialIsOpen={false} />
         </QueryClientProvider>,
       ),
     );
 
-    await gameViewReady;
+    await ready;
     const newRootElement = rootElement.querySelector("#game-view");
     invariant(newRootElement, "A <GameView /> Component Must Be Rendered In Editor");
 
@@ -72,7 +68,7 @@ gameide({
       });
     }
 
-    return { ...context, rootElement: newRootElement };
+    return { ...context, rootElement: newRootElement, ready, markReady };
   })
   .run((context) => {
     const { rootElement, scene: gameideScene, onUpdate } = context;
@@ -83,8 +79,19 @@ gameide({
     camera.position.z = 5;
 
     const renderer = new WebGLRenderer();
-    renderer.setSize(rootElement.clientWidth, rootElement.clientHeight);
     rootElement.appendChild(renderer.domElement);
+
+    const resize = () => {
+      const width = rootElement.clientWidth;
+      const height = rootElement.clientHeight;
+
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(width, height, false);
+    };
+    window.addEventListener("resize", resize);
+    resize();
 
     renderer.render(threeScene, camera);
 

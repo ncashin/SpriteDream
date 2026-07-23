@@ -1,5 +1,5 @@
 import { cn } from "cnfast";
-import { Box, ChevronRight, PlusIcon } from "lucide-react";
+import { Box, ChevronRight, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import z from "zod";
 import { addComponent, defineComponent } from "../component";
@@ -34,10 +34,12 @@ function parseInputValue(input: string): unknown {
 }
 
 export default function SceneRow({
+  parent,
   entry,
   onKeyChange,
   onValueChange,
 }: {
+  parent: Record<PropertyKey, unknown>;
   entry: [PropertyKey, unknown];
   onKeyChange: (arg0: string) => void;
   onValueChange: (arg0: unknown) => void;
@@ -114,10 +116,16 @@ export default function SceneRow({
             className="size-4"
             onClick={() => {
               console.log("COMPONENT ADDITION TEST");
-              addComponent(value, testComponent, { testProperty: "HELLO WORLD" });
+              addComponent(value, testComponent, {});
             }}
           />
         )}
+        <Trash2Icon
+          className="size-4"
+          onClick={() => {
+            delete parent[key];
+          }}
+        />
       </button>
 
       {expanded && isObject(value) && (
@@ -125,6 +133,7 @@ export default function SceneRow({
           {Object.entries(value).map(([childKey, childValue]) => (
             <SceneRow
               key={childKey}
+              parent={value}
               entry={[childKey, childValue]}
               onKeyChange={(newKey) => {
                 const existingValue = value[childKey];

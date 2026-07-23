@@ -1,8 +1,8 @@
 import { useContext, useLayoutEffect } from "react";
-import { GameViewContext } from "./GameViewReadyProvider";
+import { ReadyContext } from "./ReadyProvider";
 
 export default function GameView() {
-  const gameViewReady = useContext(GameViewContext);
-  useLayoutEffect(gameViewReady);
+  const markReady = useContext(ReadyContext);
+  useLayoutEffect(markReady);
   return <div id="game-view" className="w-full h-full" />;
 }

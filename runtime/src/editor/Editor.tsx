@@ -91,6 +91,7 @@ export default function Editor() {
           {Object.entries(scene).map(([key, value]) => (
             <SceneRow
               key={key}
+              parent={scene}
               entry={[key, value]}
               onKeyChange={(newKey) => {
                 const existingValue = scene[key];
