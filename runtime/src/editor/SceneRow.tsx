@@ -85,25 +85,26 @@ export default function SceneRow({
         {!isObject(value) && (
           <>
             <span>:</span>
-            <input
-              className="flex-1"
-              value={displayValue}
-              onFocus={() => {
-                setInputValue(String(displayValue));
-              }}
-              onChange={(event) => {
-                setInputValue(event.target.value);
-              }}
-              onBlur={() => {
-                if (inputValue) {
-                  onValueChange(parseInputValue(inputValue));
-                }
-                setInputValue(undefined);
-              }}
-              style={{
-                width: `${Math.max(displayValue.length, 1)}ch`,
-              }}
-            />
+            <div className="flex-1">
+              <input
+                value={displayValue}
+                onFocus={() => {
+                  setInputValue(String(displayValue));
+                }}
+                onChange={(event) => {
+                  setInputValue(event.target.value);
+                }}
+                onBlur={() => {
+                  if (inputValue) {
+                    onValueChange(parseInputValue(inputValue));
+                  }
+                  setInputValue(undefined);
+                }}
+                style={{
+                  width: `${Math.max(displayValue.length, 1)}ch`,
+                }}
+              />
+            </div>
           </>
         )}
 
