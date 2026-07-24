@@ -54,57 +54,57 @@ export default function SceneRow({
   return (
     <div className="flex flex-col">
       <button
-        className="flex flex-row items-center gap-1 px-1.5 py-0.5 hover:bg-slate-100"
+        className="flex flex-row items-center gap-1 px-2 py-1 hover:bg-slate-100"
         onClick={() => setExpanded(!expanded)}
       >
         {isObject(value) && <Box className="size-4" />}
-        <input
-          className={cn(isObject(value) && "flex-1")}
-          value={displayKey}
-          onClick={(event) => {
-            event.stopPropagation();
-          }}
-          onFocus={() => {
-            setInputKey(String(key));
-          }}
-          onChange={(event) => {
-            setInputKey(event.target.value);
-          }}
-          onBlur={() => {
-            if (inputKey !== undefined && inputKey !== key) {
-              onKeyChange(inputKey);
-            }
-            setInputKey(undefined);
-          }}
-          style={{
-            width: `${Math.max(displayKey.length, 1)}ch`,
-          }}
-        />
+        <div className={cn(isObject(value) && "flex-1 flex flex-row items-start")}>
+          <input
+            value={displayKey}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+            onFocus={() => {
+              setInputKey(String(key));
+            }}
+            onChange={(event) => {
+              setInputKey(event.target.value);
+            }}
+            onBlur={() => {
+              if (inputKey !== undefined && inputKey !== key) {
+                onKeyChange(inputKey);
+              }
+              setInputKey(undefined);
+            }}
+            style={{
+              width: `${Math.max(displayKey.length, 1)}ch`,
+            }}
+          />
+        </div>
         {canBeExpanded && <ChevronRight className={cn("size-4", expanded && "rotate-90")} />}
 
         {!isObject(value) && (
           <>
             <span>:</span>
-            <div className="flex-1">
-              <input
-                value={displayValue}
-                onFocus={() => {
-                  setInputValue(String(displayValue));
-                }}
-                onChange={(event) => {
-                  setInputValue(event.target.value);
-                }}
-                onBlur={() => {
-                  if (inputValue) {
-                    onValueChange(parseInputValue(inputValue));
-                  }
-                  setInputValue(undefined);
-                }}
-                style={{
-                  width: `${Math.max(displayValue.length, 1)}ch`,
-                }}
-              />
-            </div>
+            <input
+              className="flex-1"
+              value={displayValue}
+              onFocus={() => {
+                setInputValue(String(displayValue));
+              }}
+              onChange={(event) => {
+                setInputValue(event.target.value);
+              }}
+              onBlur={() => {
+                if (inputValue) {
+                  onValueChange(parseInputValue(inputValue));
+                }
+                setInputValue(undefined);
+              }}
+              style={{
+                width: `${Math.max(displayValue.length, 1)}ch`,
+              }}
+            />
           </>
         )}
 
@@ -127,7 +127,7 @@ export default function SceneRow({
       </button>
 
       {expanded && isObject(value) && (
-        <div className="pl-2.5">
+        <div className="pl-2.5 flex flex-col">
           {Object.entries(value).map(([childKey, childValue]) => (
             <SceneRow
               key={childKey}
