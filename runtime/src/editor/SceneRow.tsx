@@ -5,8 +5,8 @@ import { addComponent } from "../component";
 import { MeshComponent } from "../threePlugin/mesh";
 import { TransformComponent } from "../threePlugin/transform";
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object";
+export function isObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object";
 }
 
 function parseInputValue(input: string): unknown {
@@ -54,7 +54,7 @@ export default function SceneRow({
   return (
     <div className="flex flex-col">
       <button
-        className="flex flex-row items-center gap-1 px-2 py-1 hover:bg-slate-100"
+        className="group flex flex-row items-center px-2 py-1 hover:bg-hover rounded-md"
         onClick={() => setExpanded(!expanded)}
       >
         {isObject(value) && <Box className="size-4" />}
@@ -81,11 +81,10 @@ export default function SceneRow({
             }}
           />
         </div>
-        {canBeExpanded && <ChevronRight className={cn("size-4", expanded && "rotate-90")} />}
 
         {!isObject(value) && (
           <>
-            <span>:</span>
+            <span className="w-min">:</span>
             <input
               className="flex-1"
               value={displayValue}
@@ -108,22 +107,30 @@ export default function SceneRow({
           </>
         )}
 
-        {isObject(value) && (
-          <PlusIcon
+        <div
+          className="flex flex-row items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {canBeExpanded && <ChevronRight className={cn("size-4", expanded && "rotate-90")} />}
+
+          {isObject(value) && (
+            <PlusIcon
+              className="size-4"
+              onClick={() => {
+                console.log("COMPONENT ADDITION TEST");
+                addComponent(value, TransformComponent, {});
+                addComponent(value, MeshComponent, {});
+              }}
+            />
+          )}
+
+          <Trash2Icon
             className="size-4"
             onClick={() => {
-              console.log("COMPONENT ADDITION TEST");
-              addComponent(value, TransformComponent, {});
-              addComponent(value, MeshComponent, {});
+              delete parent[key];
             }}
           />
-        )}
-        <Trash2Icon
-          className="size-4"
-          onClick={() => {
-            delete parent[key];
-          }}
-        />
+        </div>
       </button>
 
       {expanded && isObject(value) && (

@@ -1,5 +1,5 @@
 export type Scene = Record<PropertyKey, unknown>;
-
+export type GameObject = Record<PropertyKey, unknown>;
 export const curryScene = (sceneData: Scene) => {
   const scene = structuredClone(sceneData);
   return scene;
