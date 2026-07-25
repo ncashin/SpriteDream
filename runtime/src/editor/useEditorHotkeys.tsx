@@ -42,4 +42,12 @@ export default function useEditorHotkeys({
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [hasUnsavedChanges]);
+
+  const confirmFileChange = () => {
+    if (!hasUnsavedChanges) return true;
+
+    return window.confirm("You have unsaved changes. Are you sure you want to switch files?");
+  };
+
+  return { confirmFileChange };
 }

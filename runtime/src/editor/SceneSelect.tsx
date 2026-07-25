@@ -2,10 +2,12 @@ export const SceneSelect = ({
   deferredFilepath,
   sceneFiles,
   setSceneFilepath,
+  confirmFileChange,
 }: {
   deferredFilepath: string;
   sceneFiles: string[];
   setSceneFilepath: (filepath: string) => void;
+  confirmFileChange: () => void;
 }) => {
   return (
     <select
@@ -13,6 +15,7 @@ export const SceneSelect = ({
       id="scene-file-select"
       value={deferredFilepath}
       onChange={(event) => {
+        confirmFileChange();
         setSceneFilepath(event.target.value);
       }}
       required

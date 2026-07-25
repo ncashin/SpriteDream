@@ -32,7 +32,7 @@ export default function Editor() {
   const hasUnsavedChanges =
     !fileQuery.isPending && !(JSON.stringify(fileQuery.data) === JSON.stringify(scene));
 
-  useEditorHotkeys({
+  const { confirmFileChange } = useEditorHotkeys({
     onSave: () => {
       writeMutation.mutate([JSON.stringify(scene)]);
     },
@@ -86,7 +86,7 @@ export default function Editor() {
             {shownObject && (
               <div className="flex flex-col bg-background w-96 text-sm overflow-clip rounded-sm">
                 <div className="flex items-center px-2.5 py-1.5 bg-foreground">
-                  <h2 className="font-semibold">{String(shownObject.key)}</h2>
+                  <h2>{String(shownObject.key)}</h2>
                   <IconButton icon={X} onClick={deselectObjects} className="ml-auto" />
                 </div>
 
@@ -126,6 +126,7 @@ export default function Editor() {
               deferredFilepath={deferredFilepath}
               sceneFiles={sceneFiles}
               setSceneFilepath={setSceneFilepath}
+              confirmFileChange={confirmFileChange}
             />
           </div>
         </div>
