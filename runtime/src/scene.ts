@@ -1,3 +1,5 @@
+import { deselectObjects } from "./selectedObject";
+
 export type Scene = Record<PropertyKey, unknown>;
 export type GameObject = Record<PropertyKey, unknown>;
 export const curryScene = (sceneData: Scene) => {
@@ -13,6 +15,8 @@ export const setScene = (scene: Scene, newScene: Scene) => {
   });
 
   Object.assign(scene, clone);
+
+  deselectObjects();
 };
 
 export const patchScene = (scene: Scene, patch: Scene) => {

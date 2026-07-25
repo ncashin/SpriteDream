@@ -9,7 +9,7 @@ export const SceneSelect = ({
 }) => {
   return (
     <select
-      className="p-0 m-0 box-border appearance-none font-semibold w-full bg-yellow-50"
+      className="p-0 m-0 box-border appearance-none font-semibold"
       id="scene-file-select"
       value={deferredFilepath}
       onChange={(event) => {

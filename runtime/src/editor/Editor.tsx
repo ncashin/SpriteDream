@@ -1,10 +1,11 @@
 import { useHotkey, type HotkeyCallback } from "@tanstack/react-hotkeys";
-import { Box, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { setScene } from "../scene";
 import { deselectObjects, selectObject, useSelectedObjects } from "../selectedObject";
 import { Dropdown } from "./Dropdown";
 import GameView from "./GameView";
+import { IconButton } from "./IconButton";
 import SceneRow, { isObject } from "./SceneRow";
 import { SceneSelect } from "./SceneSelect";
 import useDirectory from "./useDirectory";
@@ -78,7 +79,7 @@ export default function Editor() {
             className="bg-background text-sm w-64 overflow-clip"
             buttonClassName="bg-foreground hover:bg-hover "
           >
-            <div className="flex flex-col border-t-2 border-border">
+            <div className="flex flex-col">
               {Object.entries(scene)
                 .filter(isObject)
                 .map(([key, value]) => (
@@ -97,13 +98,12 @@ export default function Editor() {
             </div>
           </Dropdown>
           {shownObject && (
-            <div className="flex flex-col bg-background rounded-md w-96 overflow-clip text-sm">
+            <div className="flex flex-col bg-background w-96 overflow-clip text-sm">
               <div className="flex items-center px-2.5 py-1.5 bg-foreground">
-                <Box className="size-4" />
-                <h2 className="ml-2 font-semibold">{shownObject.key}</h2>
-                <X className="ml-auto size-4 cursor-pointer" onClick={() => deselectObjects()} />
+                <h2 className="font-semibold">{shownObject.key}</h2>
+                <IconButton icon={X} onClick={deselectObjects} className="ml-auto" />
               </div>
-              <div className="px-1 pt-2.5 pb-1.5 border-t-2 border-border">
+              <div className="px-1 pt-1.5 pb-1.5">
                 {Object.entries(shownObject.object).map(([key, value]) => (
                   <SceneRow
                     key={key}
