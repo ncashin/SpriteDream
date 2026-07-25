@@ -1,9 +1,16 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
-export default function useFile(filepath: string | undefined) {
+type UseFileOptions = {
+  onFileLoad?: (arg0: { filepath: string; data: any }) => void;
+};
+
+export default function useFile(filepath: string | undefined, options?: UseFileOptions) {
   const queryClient = useQueryClient();
+  const [loadedFilepath, setLoadedFilepath] = useState<string | undefined>(filepath);
 
   const queryKey = ["files", filepath];
+
   const fileQuery = useSuspenseQuery({
     queryKey,
     queryFn: async () => {
@@ -16,6 +23,11 @@ export default function useFile(filepath: string | undefined) {
       return response.json();
     },
   });
+
+  if (filepath && !fileQuery.isPending && !fileQuery.isError && !(loadedFilepath === filepath)) {
+    setLoadedFilepath(filepath);
+    options?.onFileLoad?.({ filepath, data: fileQuery.data });
+  }
 
   const writeMutation = useMutation({
     mutationKey: queryKey,
@@ -52,8 +64,9 @@ export default function useFile(filepath: string | undefined) {
       return { previous };
     },
 
-    onError: (error, content, context) => {
+    onError: (_error, _content, context) => {
       if (!context?.previous) return;
+
       queryClient.setQueryData(queryKey, context.previous);
     },
 
