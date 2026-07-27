@@ -9,9 +9,9 @@ import {
   Popover,
 } from "react-aria-components";
 import { addComponent, useComponents } from "../component";
-import type { GameObject } from "../scene";
+import type { SerializableObject } from "../scene";
 
-export default function AddComponent({ object }: { object: GameObject }) {
+export default function AddComponent({ object }: { object: SerializableObject }) {
   const components = useComponents();
   const [isOpen, setIsOpen] = useState(false);
 

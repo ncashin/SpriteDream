@@ -1,9 +1,9 @@
 import { curryLifecycle } from "./lifecycle";
-import { curryScene, type Scene } from "./scene";
+import { curryScene, type SerializableObject } from "./scene";
 
 export type GameIDEOptions<AdditionalContext> = {
   rootElement: Element;
-  initialScene: Scene;
+  initialScene: SerializableObject;
   additionalContext: AdditionalContext;
 };
 

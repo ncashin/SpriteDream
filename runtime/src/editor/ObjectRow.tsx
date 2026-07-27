@@ -2,31 +2,29 @@ import { cn } from "cnfast";
 import { Box, ChevronRight, PlusIcon, Trash2Icon } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { addComponent } from "../component";
+import { isSerializableObject, type Serializable, type SerializableObject } from "../scene";
 import { MeshComponent } from "../threePlugin/mesh";
 import { TransformComponent } from "../threePlugin/transform";
 import { IconButton } from "./IconButton";
 
-export function isObject(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === "object";
-}
-
-function parseInputValue(input: string): unknown {
+function parseInputValue(input: string): Serializable {
   const trimmed = input.trim();
 
   if (trimmed === "true") return true;
   if (trimmed === "false") return false;
   if (trimmed === "null") return null;
-  if (trimmed === "undefined") return undefined;
 
   if (trimmed !== "" && !Number.isNaN(Number(trimmed))) {
     return Number(trimmed);
   }
 
   try {
-    return JSON.parse(trimmed);
-  } catch {}
+    const parsed = JSON.parse(trimmed);
 
-  return input;
+    return parsed;
+  } catch {
+    return input;
+  }
 }
 
 function useAutoSizeInput(value: string) {
@@ -55,16 +53,16 @@ function focusInputCenter(input: HTMLInputElement | null) {
   });
 }
 
-export default function SceneRow({
+export default function ObjectRow({
   parent,
   entry,
   onKeyChange,
   onValueChange,
 }: {
-  parent: Record<PropertyKey, unknown>;
-  entry: [PropertyKey, unknown];
+  parent: SerializableObject;
+  entry: [string, Serializable];
   onKeyChange: (arg0: string) => void;
-  onValueChange: (arg0: unknown) => void;
+  onValueChange: (arg0: Serializable) => void;
 }) {
   const [key, value] = entry;
 
@@ -79,7 +77,7 @@ export default function SceneRow({
 
   const [expanded, setExpanded] = useState(false);
 
-  const canBeExpanded = isObject(value) && Object.keys(value).length > 0;
+  const canBeExpanded = isSerializableObject(value) && Object.keys(value).length > 0;
 
   function editKey() {
     const current = String(key);
@@ -138,7 +136,7 @@ export default function SceneRow({
     event.preventDefault();
     event.stopPropagation();
 
-    if (isObject(value)) {
+    if (isSerializableObject(value)) {
       editKey();
     } else {
       editValue();
@@ -152,9 +150,9 @@ export default function SceneRow({
         onClick={() => setExpanded(!expanded)}
         onKeyDown={handleEnter}
       >
-        {isObject(value) && <Box className="size-4" />}
+        {isSerializableObject(value) && <Box className="size-4" />}
 
-        <div className={cn(isObject(value) && "pl-1 flex-1 flex flex-row items-start")}>
+        <div className={cn(isSerializableObject(value) && "pl-1 flex-1 flex flex-row items-start")}>
           <input
             ref={keyInputRef}
             value={displayKey}
@@ -170,7 +168,7 @@ export default function SceneRow({
           />
         </div>
 
-        {!isObject(value) && (
+        {!isSerializableObject(value) && (
           <>
             <span className="w-min">:</span>
 
@@ -203,7 +201,7 @@ export default function SceneRow({
             />
           )}
 
-          {isObject(value) && (
+          {isSerializableObject(value) && (
             <IconButton
               icon={PlusIcon}
               onClick={() => {
@@ -222,10 +220,10 @@ export default function SceneRow({
         </div>
       </button>
 
-      {expanded && isObject(value) && (
+      {expanded && isSerializableObject(value) && (
         <div className="pl-3 flex flex-col">
           {Object.entries(value).map(([childKey, childValue]) => (
-            <SceneRow
+            <ObjectRow
               key={childKey}
               parent={value}
               entry={[childKey, childValue]}

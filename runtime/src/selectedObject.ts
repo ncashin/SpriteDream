@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from "react";
-import type { GameObject } from "./scene";
+import type { SerializableObject } from "./scene";
 
 type SelectedObject = {
-  key: PropertyKey;
-  object: GameObject;
+  key: string;
+  object: SerializableObject;
 };
 
 let selectedObjects: SelectedObject[] = [];
@@ -24,12 +24,12 @@ export const subscribeToSelectedObjects = (listener: () => void) => {
 
 export const getSelectedObjects = () => selectedObjects;
 
-export const selectObject = (key: PropertyKey, object: GameObject) => {
+export const selectObject = (key: string, object: SerializableObject) => {
   selectedObjects = [...selectedObjects, { key, object }];
   emit();
 };
 
-export const deselectObject = (object: GameObject) => {
+export const deselectObject = (object: SerializableObject) => {
   selectedObjects = selectedObjects.filter((selected) => !(selected.object === object));
 
   emit();

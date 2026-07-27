@@ -1,10 +1,10 @@
 import { useContext, useSyncExternalStore } from "react";
 import invariant from "tiny-invariant";
-import type { Scene } from "../scene";
+import type { SerializableObject } from "../scene";
 import { SceneContext } from "./SceneProvider";
 
-export default function useScene(): Scene;
-export default function useScene<T>(selector?: (scene: Scene) => T): T | Scene {
+export default function useScene(): SerializableObject;
+export default function useScene<T>(selector?: (scene: SerializableObject) => T): T | SerializableObject {
   const store = useContext(SceneContext);
 
   invariant(store, "useScene must be used inside SceneProvider");

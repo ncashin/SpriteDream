@@ -1,10 +1,10 @@
 // TopLevelObjects.tsx
 
 import { PlusIcon, Trash2 } from "lucide-react";
+import { isSerializableObject } from "../scene";
 import { deselectObjects, selectObject } from "../selectedObject";
 import { Dropdown } from "./Dropdown";
 import { IconButton } from "./IconButton";
-import { isObject } from "./SceneRow";
 import useScene from "./useScene";
 
 export default function TopLevelObjects() {
@@ -27,13 +27,13 @@ export default function TopLevelObjects() {
         </button>
 
         {Object.entries(scene)
-          .filter(isObject)
+          .filter(isSerializableObject)
           .map(([key, value]) => (
             <div key={key} className="group flex items-center hover:bg-hover">
               <button
                 className="flex-1 text-left px-2 py-1"
                 onClick={() => {
-                  if (!isObject(value)) return;
+                  if (!isSerializableObject(value)) return;
 
                   deselectObjects();
                   selectObject(key, value);

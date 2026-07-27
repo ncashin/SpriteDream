@@ -1,14 +1,16 @@
 import { deselectObjects } from "./selectedObject";
 
-export type Scene = Record<PropertyKey, unknown>;
+export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
 
-export type GameObject = Record<PropertyKey, unknown>;
-export const curryScene = (sceneData: Scene) => {
+export type Serializable = Primitive | SerializableObject | Serializable[];
+export type SerializableObject = { [key: string]: Serializable };
+
+export const curryScene = (sceneData: SerializableObject) => {
   const scene = structuredClone(sceneData);
   return scene;
 };
 
-export const setScene = (scene: Scene, newScene: Scene) => {
+export const setScene = (scene: SerializableObject, newScene: SerializableObject) => {
   const clone = structuredClone(newScene);
 
   Object.keys(scene).forEach((key) => {
@@ -20,17 +22,14 @@ export const setScene = (scene: Scene, newScene: Scene) => {
   deselectObjects();
 };
 
-export const patchScene = (scene: Scene, patch: Scene) => {
+export const isSerializableObject = (value: Serializable): value is SerializableObject =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+export const patchScene = (scene: SerializableObject, patch: SerializableObject) => {
   for (const [key, value] of Object.entries(structuredClone(patch))) {
     const current = scene[key];
 
-    if (
-      !value ||
-      !(typeof value === "object") ||
-      Array.isArray(value) ||
-      !current ||
-      !(typeof current === "object")
-    ) {
+    if (!isSerializableObject(value) || !isSerializableObject(current)) {
       scene[key] = value;
       continue;
     }
@@ -39,31 +38,27 @@ export const patchScene = (scene: Scene, patch: Scene) => {
   }
 };
 
-export const diffScene = (oldScene: Scene, newScene: Scene): Scene => {
-  const patch: Scene = {};
+export const diffScene = (
+  oldScene: SerializableObject,
+  newScene: SerializableObject,
+): SerializableObject => {
+  const patch: SerializableObject = {};
 
   for (const [key, value] of Object.entries(newScene)) {
     const oldValue = oldScene[key];
 
-    if (
-      value &&
-      typeof value === "object" &&
-      !Array.isArray(value) &&
-      oldValue &&
-      typeof oldValue === "object" &&
-      !Array.isArray(oldValue)
-    ) {
-      const nested = diffScene(oldValue as Scene, value as Scene);
-
-      if (Object.keys(nested).length) {
-        patch[key] = nested;
+    if (!isSerializableObject(value) || !isSerializableObject(oldValue)) {
+      if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
+        patch[key] = value;
       }
 
       continue;
     }
 
-    if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
-      patch[key] = value;
+    const nested = diffScene(oldValue, value);
+
+    if (Object.keys(nested).length) {
+      patch[key] = nested;
     }
   }
 
@@ -71,8 +66,8 @@ export const diffScene = (oldScene: Scene, newScene: Scene): Scene => {
 };
 
 export const query =
-  <T>(predicate: (value: unknown) => value is T) =>
-  (scene: Scene) =>
+  <T extends Serializable>(predicate: (value: Serializable) => value is T) =>
+  (scene: SerializableObject): T[] =>
     Object.values(scene).filter(predicate);
 
 export type SceneAPI = ReturnType<typeof curryScene>;

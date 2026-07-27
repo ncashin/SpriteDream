@@ -4,7 +4,7 @@ import { Trash2, X } from "lucide-react";
 import { deselectObject, useSelectedObjects } from "../selectedObject";
 import AddComponent from "./AddComponent";
 import { IconButton } from "./IconButton";
-import SceneRow from "./SceneRow";
+import ObjectRow from "./ObjectRow";
 import useScene from "./useScene";
 
 export default function SelectedObject() {
@@ -36,7 +36,7 @@ export default function SelectedObject() {
         <AddComponent object={object} />
 
         {Object.entries(object).map(([childKey, childValue]) => (
-          <SceneRow
+          <ObjectRow
             key={childKey}
             parent={object}
             entry={[childKey, childValue]}

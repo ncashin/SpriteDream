@@ -1,12 +1,12 @@
-import type { Scene } from "./scene";
+import type { SerializableObject } from "./scene";
 
 export class SceneStore {
-  readonly scene: Scene;
+  readonly scene: SerializableObject;
 
   private version = 0;
   private listeners = new Set<() => void>();
 
-  constructor(scene: Scene) {
+  constructor(scene: SerializableObject) {
     this.scene = scene;
   }
 
