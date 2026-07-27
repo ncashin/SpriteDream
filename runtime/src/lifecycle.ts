@@ -2,7 +2,7 @@ export const curryLifecycle = () => {
   const updateListeners = new Set<(deltaTime: number) => void>();
 
   let running = false;
-  let frameIdentifier = 0;
+  let frameIdentifier: number;
   let lastTime = performance.now();
 
   const loop = (time: number) => {
@@ -36,6 +36,7 @@ export const curryLifecycle = () => {
     },
 
     stop() {
+      if (!frameIdentifier) return;
       running = false;
       cancelAnimationFrame(frameIdentifier);
     },

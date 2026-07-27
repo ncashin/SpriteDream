@@ -30,7 +30,12 @@ export default function AddComponent({ object }: { object: GameObject }) {
           <ListBox
             aria-label="Components"
             selectionMode="single"
-            onSelectionChange={({ currentKey }) => {
+            onSelectionChange={(keys) => {
+              if (keys === "all") return;
+
+              const currentKey = [...keys][0];
+              if (!currentKey) return;
+
               const component = components.find((component) => component.name === currentKey);
               if (!component) return;
 
