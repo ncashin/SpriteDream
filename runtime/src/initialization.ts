@@ -1,5 +1,6 @@
 import { curryLifecycle } from "./lifecycle";
 import { curryScene, type SerializableObject } from "./scene";
+import { createSelectedObjectsStore } from "./selectedObjectsStore";
 
 export type GameIDEOptions<AdditionalContext> = {
   rootElement: Element;
@@ -48,7 +49,13 @@ export const gameide = <AdditionalContext>({
   additionalContext,
 }: GameIDEOptions<AdditionalContext>) => {
   const lifecycle = curryLifecycle();
-  const scene = curryScene(initialScene);
+
+  const selectedObjectsStore = createSelectedObjectsStore();
+  const sceneAPI = curryScene(initialScene, {
+    onSetScene: () => {
+      selectedObjectsStore.deselectObjects();
+    },
+  });
 
   const isEditor = !!import.meta.hot;
 
@@ -56,7 +63,10 @@ export const gameide = <AdditionalContext>({
     isEditor,
 
     rootElement,
-    scene,
+
+    selectedObjectsStore,
+    ...sceneAPI,
+
     ...lifecycle,
     ...additionalContext,
   };

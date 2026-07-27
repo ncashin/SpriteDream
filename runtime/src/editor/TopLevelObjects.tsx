@@ -1,14 +1,13 @@
-// TopLevelObjects.tsx
-
 import { PlusIcon, Trash2 } from "lucide-react";
 import { isSerializableObject } from "../scene";
-import { deselectObjects, selectObject } from "../selectedObject";
 import { Dropdown } from "./Dropdown";
 import { IconButton } from "./IconButton";
 import useScene from "./useScene";
+import useSelectedObjects from "./useSelectedObjects";
 
 export default function TopLevelObjects() {
   const scene = useScene();
+  const { selectObject, deselectObjects } = useSelectedObjects();
 
   return (
     <Dropdown

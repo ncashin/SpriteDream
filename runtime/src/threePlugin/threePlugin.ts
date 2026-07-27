@@ -6,7 +6,7 @@ import {
     Scene,
     WebGLRenderer,
 } from "three";
-import { hasComponent } from "../component";
+import { hasComponent } from "../components";
 import type { GameContext } from "../initialization";
 import { query } from "../scene";
 import { createDebugCamera } from "./editorCamera";

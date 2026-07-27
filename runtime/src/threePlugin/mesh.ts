@@ -1,6 +1,6 @@
 import type { Mesh } from "three";
 import { z } from "zod";
-import { defineComponent, type ComponentType } from "../component";
+import { defineComponent, type ComponentType } from "../components";
 import type { TransformComponent } from "./transform";
 
 export const MeshComponent = defineComponent(

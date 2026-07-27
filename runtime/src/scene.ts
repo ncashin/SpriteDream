@@ -1,14 +1,9 @@
-import { deselectObjects } from "./selectedObject";
+import { createSceneStore } from "./sceneStore";
 
 export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
 
 export type Serializable = Primitive | SerializableObject | Serializable[];
 export type SerializableObject = { [key: string]: Serializable };
-
-export const curryScene = (sceneData: SerializableObject) => {
-  const scene = structuredClone(sceneData);
-  return scene;
-};
 
 export const setScene = (scene: SerializableObject, newScene: SerializableObject) => {
   const clone = structuredClone(newScene);
@@ -18,8 +13,6 @@ export const setScene = (scene: SerializableObject, newScene: SerializableObject
   });
 
   Object.assign(scene, clone);
-
-  deselectObjects();
 };
 
 export const isSerializableObject = (value: Serializable): value is SerializableObject =>
@@ -69,5 +62,37 @@ export const query =
   <T extends Serializable>(predicate: (value: Serializable) => value is T) =>
   (scene: SerializableObject): T[] =>
     Object.values(scene).filter(predicate);
+
+export type CurrySceneOptions = {
+  onSetScene?: (scene: SerializableObject) => void;
+};
+
+export const curryScene = (sceneData: SerializableObject, { onSetScene }: CurrySceneOptions) => {
+  const scene = structuredClone(sceneData);
+  const sceneStore = createSceneStore(scene);
+
+  return {
+    scene,
+    sceneStore,
+
+    setScene: (newScene: SerializableObject) => {
+      setScene(scene, newScene);
+      onSetScene?.(scene);
+    },
+
+    patchScene: (patch: SerializableObject) => {
+      patchScene(scene, patch);
+    },
+
+    diffScene: (newScene: SerializableObject) => {
+      return diffScene(scene, newScene);
+    },
+
+    query:
+      <TValue extends Serializable>(predicate: (value: Serializable) => value is TValue) =>
+      (): TValue[] =>
+        Object.values(scene).filter(predicate),
+  };
+};
 
 export type SceneAPI = ReturnType<typeof curryScene>;

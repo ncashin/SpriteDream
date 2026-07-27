@@ -1,6 +1,4 @@
 import { useSyncExternalStore } from "react";
-import { getSelectedObjects, subscribeToSelectedObjects } from "../selectedObject";
+import { getComponents, subscribeToComponents } from "../components";
 
-export const useSelectedObjects = () => {
-  return useSyncExternalStore(subscribeToSelectedObjects, getSelectedObjects);
-};
+export const useComponents = () => useSyncExternalStore(subscribeToComponents, getComponents);

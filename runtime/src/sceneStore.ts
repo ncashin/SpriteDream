@@ -1,30 +1,32 @@
 import type { SerializableObject } from "./scene";
 
-export class SceneStore {
-  readonly scene: SerializableObject;
+export type SceneStore = ReturnType<typeof createSceneStore>;
 
-  private version = 0;
-  private listeners = new Set<() => void>();
+export function createSceneStore(scene: SerializableObject) {
+  let version = 0;
+  const listeners = new Set<() => void>();
 
-  constructor(scene: SerializableObject) {
-    this.scene = scene;
-  }
+  return {
+    scene,
 
-  subscribe = (listener: () => void) => {
-    this.listeners.add(listener);
+    subscribe(listener: () => void) {
+      listeners.add(listener);
 
-    return () => {
-      this.listeners.delete(listener);
-    };
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+
+    getSnapshot() {
+      return version;
+    },
+
+    tick() {
+      version++;
+
+      for (const listener of listeners) {
+        listener();
+      }
+    },
   };
-
-  getSnapshot = () => this.version;
-
-  tick() {
-    this.version++;
-
-    for (const listener of this.listeners) {
-      listener();
-    }
-  }
 }

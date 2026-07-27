@@ -1,16 +1,14 @@
-// SelectedObject.tsx
-
 import { Trash2, X } from "lucide-react";
-import { deselectObject, useSelectedObjects } from "../selectedObject";
 import AddComponent from "./AddComponent";
 import { IconButton } from "./IconButton";
 import ObjectRow from "./ObjectRow";
 import useScene from "./useScene";
+import useSelectedObjects from "./useSelectedObjects";
 
 export default function SelectedObject() {
   const scene = useScene();
 
-  const selectedObjects = useSelectedObjects();
+  const { selectedObjects, deselectObject } = useSelectedObjects();
   const shownObject = selectedObjects.length > 0 ? selectedObjects[0] : undefined;
 
   if (!shownObject) return;

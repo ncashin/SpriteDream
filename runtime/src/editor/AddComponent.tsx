@@ -8,7 +8,7 @@ import {
   ListBoxItem,
   Popover,
 } from "react-aria-components";
-import { addComponent, useComponents } from "../component";
+import { addComponent, useComponents } from "../components";
 import type { SerializableObject } from "../scene";
 
 export default function AddComponent({ object }: { object: SerializableObject }) {

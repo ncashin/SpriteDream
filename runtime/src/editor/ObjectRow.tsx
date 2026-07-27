@@ -1,7 +1,7 @@
 import { cn } from "cnfast";
 import { Box, ChevronRight, PlusIcon, Trash2Icon } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
-import { addComponent } from "../component";
+import { addComponent } from "../components";
 import { isSerializableObject, type Serializable, type SerializableObject } from "../scene";
 import { MeshComponent } from "../threePlugin/mesh";
 import { TransformComponent } from "../threePlugin/transform";

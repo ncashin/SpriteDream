@@ -1,6 +1,12 @@
 import { useSyncExternalStore } from "react";
-import { getSelectedObjects, subscribeToSelectedObjects } from "../selectedObject";
+import useGameContext from "./useGameContext";
 
-export const useSelectedObjects = () => {
-  return useSyncExternalStore(subscribeToSelectedObjects, getSelectedObjects);
-};
+export default function useSelectedObjects() {
+  const { selectedObjectsStore } = useGameContext();
+  const selectedObjects = useSyncExternalStore(
+    selectedObjectsStore.subscribe,
+    selectedObjectsStore.getSnapshot,
+  );
+
+  return { ...selectedObjectsStore, selectedObjects };
+}
