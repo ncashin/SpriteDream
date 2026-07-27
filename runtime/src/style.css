@@ -9,6 +9,21 @@
   --color-border: #505050;
 }
 
+.overlay {
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding-left: 0.5rem;
+  padding-right: 0.25rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
 .row {
   display: flex;
   flex-direction: row;

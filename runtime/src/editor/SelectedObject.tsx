@@ -17,9 +17,9 @@ export default function SelectedObject() {
   const objectEntries = Object.entries(object);
 
   return (
-    <div className="flex flex-col bg-background w-96 text-sm overflow-clip rounded-sm">
-      <div className="flex items-center justify-between px-2.5 py-1.5 bg-foreground">
-        <h2>{String(key)}</h2>
+    <div className="flex flex-col w-96 text-sm rounded-sm overflow-clip bg-background">
+      <div className="header bg-foreground">
+        <h2 className="py-0.5">{String(key)}</h2>
         <div className="flex flex-row">
           <IconButton
             icon={Trash2}

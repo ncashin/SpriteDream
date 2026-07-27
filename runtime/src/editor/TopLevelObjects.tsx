@@ -13,7 +13,7 @@ export default function TopLevelObjects() {
 
   return (
     <Dropdown
-      className="bg-background text-sm w-64 overflow-clip rounded-sm"
+      className="bg-background text-sm rounded-sm w-64 overflow-clip "
       buttonClassName="bg-foreground hover:bg-hover"
     >
       <div className="flex flex-col border-t border-border">

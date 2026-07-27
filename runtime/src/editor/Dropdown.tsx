@@ -12,13 +12,7 @@ export const Dropdown = ({
 
   return (
     <div className={className}>
-      <button
-        className={cn(
-          "w-full flex flex-row justify-between items-center pl-2 pr-1 py-1",
-          buttonClassName,
-        )}
-        onClick={() => setExpanded(!expanded)}
-      >
+      <button className={cn("header", buttonClassName)} onClick={() => setExpanded(!expanded)}>
         Game Objects
         <IconButton
           icon={ChevronRight}
