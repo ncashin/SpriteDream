@@ -1,7 +1,10 @@
 import fs from "node:fs/promises";
+import type { Scene } from "three";
 import { type Plugin } from "vite";
+import { diffScene } from "../scene";
 import { app } from "./honoApp";
-import { diffScene, sceneCache } from "./sceneHMR";
+
+const sceneCache = new Map<string, Scene>();
 
 export const gameidePlugin = (): Plugin => ({
   name: "gameide",
