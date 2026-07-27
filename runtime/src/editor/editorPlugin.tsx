@@ -9,7 +9,7 @@ import type { GameContext } from "../initialization";
 import { patchScene } from "../scene";
 import Editor from "./Editor";
 import GameContextProvider from "./GameContextProvider";
-import ReadyProvider from "./ReadyProvider";
+import GameViewProvider from "./GameViewProvider";
 
 export const editorPlugin = () => async (context: GameContext) => {
   const { rootElement, scene } = context;
@@ -24,11 +24,11 @@ export const editorPlugin = () => async (context: GameContext) => {
     editorRoot.render(
       <QueryClientProvider client={queryClient}>
         <GameContextProvider gameContext={context}>
-          <ReadyProvider onReady={markReady}>
+          <GameViewProvider onReady={markReady}>
             <Suspense fallback={<div>Loading...</div>}>
               <Editor />
             </Suspense>
-          </ReadyProvider>
+          </GameViewProvider>
         </GameContextProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>,
