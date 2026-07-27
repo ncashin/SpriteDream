@@ -1,4 +1,4 @@
-import { MinusIcon, PlusIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import {
   Button,
@@ -17,16 +17,10 @@ export default function AddComponent({ object }: { object: SerializableObject })
 
   return (
     <DialogTrigger isOpen={isOpen} onOpenChange={setIsOpen}>
-      <div className="flex flex-row">
-        <Button className="row items-center flex-1 bg-foreground justify-center">
-          <PlusIcon className="icon-size" />
-          Add Component
-        </Button>
-        <Button className="border-border border-l flex-1 row h-full items-center justify-center bg-foreground">
-          <MinusIcon className="icon-size" />
-          Remove Component
-        </Button>
-      </div>
+      <Button className="w-full row items-center bg-foreground">
+        <PlusIcon className="icon-size" />
+        Add Component
+      </Button>
 
       <Popover style={{ width: "var(--trigger-width)" }}>
         <Dialog className="bg-yellow-50 w-full">
