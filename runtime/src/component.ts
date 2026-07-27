@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { z } from "zod";
 
 type ObjectSchema = z.ZodObject<z.ZodRawShape>;
@@ -8,7 +9,26 @@ export interface ComponentDefinition<Schema extends ObjectSchema = ObjectSchema>
   defaults: Partial<z.input<Schema>>;
 }
 
-export const definedComponents: ComponentDefinition[] = [];
+let components: ComponentDefinition[] = [];
+
+const listeners = new Set<() => void>();
+
+const emit = () => {
+  listeners.forEach((listener) => listener());
+};
+
+export const subscribeToComponents = (listener: () => void) => {
+  listeners.add(listener);
+
+  return () => {
+    listeners.delete(listener);
+  };
+};
+
+export const getComponents = () => components;
+
+export const useComponents = () =>
+  useSyncExternalStore(subscribeToComponents, getComponents, getComponents);
 
 export function defineComponent<const Name extends string, Schema extends ObjectSchema>(
   name: Name,
@@ -21,7 +41,8 @@ export function defineComponent<const Name extends string, Schema extends Object
     defaults,
   } satisfies ComponentDefinition<Schema>;
 
-  definedComponents.push(component);
+  components = [...components, component];
+  emit();
 
   return component;
 }

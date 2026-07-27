@@ -1,7 +1,8 @@
 // SelectedObject.tsx
 
-import { PlusIcon, Trash2, X } from "lucide-react";
-import { deselectObjects, useSelectedObjects } from "../selectedObject";
+import { Trash2, X } from "lucide-react";
+import { deselectObject, useSelectedObjects } from "../selectedObject";
+import AddComponent from "./AddComponent";
 import { IconButton } from "./IconButton";
 import SceneRow from "./SceneRow";
 import useScene from "./useScene";
@@ -13,47 +14,39 @@ export default function SelectedObject() {
   const shownObject = selectedObjects.length > 0 ? selectedObjects[0] : undefined;
 
   if (!shownObject) return;
+  const { key, object } = shownObject;
 
   return (
     <div className="flex flex-col bg-background w-96 text-sm overflow-clip rounded-sm">
       <div className="flex items-center justify-between px-2.5 py-1.5 bg-foreground">
-        <h2>{String(shownObject.key)}</h2>
+        <h2>{String(key)}</h2>
         <div className="flex flex-row">
           <IconButton
             icon={Trash2}
-            className="ml-auto"
             onClick={() => {
-              delete scene[shownObject.key];
-              deselectObjects();
+              deselectObject(object);
+              delete scene[key];
             }}
           />
-          <IconButton icon={X} onClick={deselectObjects} className="ml-auto" />
+          <IconButton icon={X} onClick={() => deselectObject(object)} />
         </div>
       </div>
 
       <div className="px-1 pt-1.5 pb-1.5 border-t-2 border-border">
-        <button
-          onClick={() => {
-            scene.newObject = {};
-          }}
-          className="flex flex-row w-full py-1 pl-1.5 hover:bg-hover items-center"
-        >
-          <PlusIcon className="size-4" />
-          Add to Object...
-        </button>
+        <AddComponent object={object} />
 
-        {Object.entries(shownObject.object).map(([key, value]) => (
+        {Object.entries(object).map(([childKey, childValue]) => (
           <SceneRow
-            key={key}
-            parent={scene}
-            entry={[key, value]}
+            key={childKey}
+            parent={object}
+            entry={[childKey, childValue]}
             onKeyChange={(newKey) => {
-              const existingValue = shownObject.object[key];
-              delete shownObject.object[key];
+              const existingValue = shownObject.object[childKey];
+              delete shownObject.object[childKey];
               shownObject.object[newKey] = existingValue;
             }}
             onValueChange={(newValue) => {
-              shownObject.object[key] = newValue;
+              shownObject.object[childKey] = newValue;
             }}
           />
         ))}

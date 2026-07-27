@@ -29,6 +29,11 @@ export const selectObject = (key: PropertyKey, object: GameObject) => {
   emit();
 };
 
+export const deselectObject = (object: GameObject) => {
+  selectedObjects = selectedObjects.filter((selected) => !(selected.object === object));
+
+  emit();
+};
 export const deselectObjects = () => {
   selectedObjects = [];
   emit();
