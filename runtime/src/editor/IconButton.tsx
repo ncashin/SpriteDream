@@ -13,7 +13,7 @@ export function IconButton({ icon: Icon, onClick, className }: IconButtonProps) 
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex p-0.5 hover:bg-hover-light items-center justify-center  transition-colorsfocus:outline-none",
+        "inline-flex p-0.5 cursor-pointer hover:bg-hover-light items-center justify-center  transition-colorsfocus:outline-none",
         className,
       )}
     >

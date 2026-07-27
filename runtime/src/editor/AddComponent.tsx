@@ -8,6 +8,7 @@ import {
   ListBoxItem,
   Popover,
 } from "react-aria-components";
+
 import { addComponent, useComponents } from "../components";
 import type { SerializableObject } from "../scene";
 
@@ -16,24 +17,25 @@ export default function AddComponent({ object }: { object: SerializableObject })
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <DialogTrigger isOpen={isOpen} onOpenChange={setIsOpen}>
-      <Button className="w-full row items-center bg-foreground">
+    <DialogTrigger isOpen={isOpen} onOpenChange={() => setIsOpen((open) => !open)}>
+      <Button className="w-full row items-center">
         <PlusIcon className="icon-size" />
         Add Component
       </Button>
 
-      <Popover style={{ width: "var(--trigger-width)" }}>
-        <Dialog className="bg-yellow-50 w-full">
+      <Popover placement="bottom" className="-mt-1.5 w-(--trigger-width)">
+        <Dialog className="overlay w-full text-white text-sm bg-background border border-border">
           <ListBox
-            aria-label="Components"
+            aria-label="Add components"
             selectionMode="single"
             onSelectionChange={(keys) => {
               if (keys === "all") return;
 
-              const currentKey = [...keys][0];
-              if (!currentKey) return;
+              const key = [...keys][0];
+              if (!key) return;
 
-              const component = components.find((component) => component.name === currentKey);
+              const component = components.find((component) => component.name === key);
+
               if (!component) return;
 
               addComponent(object, component);
@@ -44,7 +46,7 @@ export default function AddComponent({ object }: { object: SerializableObject })
               <ListBoxItem
                 key={component.name}
                 id={component.name}
-                className="px-2 py-1 rounded hover:bg-hover cursor-pointer"
+                className="row hover:bg-hover cursor-pointer"
               >
                 {component.name}
               </ListBoxItem>
