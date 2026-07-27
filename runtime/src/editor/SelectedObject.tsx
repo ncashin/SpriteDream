@@ -32,11 +32,11 @@ export default function SelectedObject() {
         </div>
       </div>
 
-      <div className="border-t-2 border-border">
+      <div className="border-t border-border">
         <AddComponent object={object} />
 
         {objectEntries.length > 0 && (
-          <div className="border-t-2 border-border">
+          <div className="border-t border-border">
             {objectEntries.map(([childKey, childValue]) => (
               <ObjectRow
                 key={childKey}

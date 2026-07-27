@@ -16,12 +16,12 @@ export default function TopLevelObjects() {
       className="bg-background text-sm w-64 overflow-clip rounded-sm"
       buttonClassName="bg-foreground hover:bg-hover"
     >
-      <div className="flex flex-col">
+      <div className="flex flex-col border-t border-border">
         <button
           onClick={() => {
             scene.newObject = {};
           }}
-          className="row items-center border-t border-border"
+          className="row items-center"
         >
           <PlusIcon className="icon-size" />
           New Object

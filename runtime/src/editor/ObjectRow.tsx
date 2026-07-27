@@ -146,9 +146,8 @@ export default function ObjectRow({
   return (
     <div className="flex flex-col">
       <button className="group row" onClick={() => setExpanded(!expanded)} onKeyDown={handleEnter}>
-        {isSerializableObject(value) && <Box className="size-4" />}
-
-        <div className={cn(isSerializableObject(value) && "pl-1 flex-1 flex flex-row items-start")}>
+        <div className={cn(isSerializableObject(value) && "flex-1 flex flex-row items-center")}>
+          {isSerializableObject(value) && <Box className="icon-size mr-1" />}
           <input
             ref={keyInputRef}
             value={displayKey}
@@ -162,27 +161,24 @@ export default function ObjectRow({
             onKeyDown={(event) => handleInputKeyDown(event, commitKey)}
             onBlur={finishKeyEdit}
           />
+          {!isSerializableObject(value) && <span className="w-min">:</span>}
         </div>
 
         {!isSerializableObject(value) && (
-          <>
-            <span className="w-min">:</span>
-
-            <input
-              ref={valueInputRef}
-              className="text-emerald-200 flex-1"
-              value={displayValue}
-              onClick={(event) => event.stopPropagation()}
-              onFocus={() => {
-                setInputValue(String(value));
-              }}
-              onChange={(event) => {
-                setInputValue(event.target.value);
-              }}
-              onKeyDown={(event) => handleInputKeyDown(event, commitValue)}
-              onBlur={finishValueEdit}
-            />
-          </>
+          <input
+            ref={valueInputRef}
+            className="text-emerald-200 flex-1"
+            value={displayValue}
+            onClick={(event) => event.stopPropagation()}
+            onFocus={() => {
+              setInputValue(String(value));
+            }}
+            onChange={(event) => {
+              setInputValue(event.target.value);
+            }}
+            onKeyDown={(event) => handleInputKeyDown(event, commitValue)}
+            onBlur={finishValueEdit}
+          />
         )}
 
         <div

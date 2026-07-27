@@ -17,8 +17,8 @@ export default function AddComponent({ object }: { object: SerializableObject })
 
   return (
     <DialogTrigger isOpen={isOpen} onOpenChange={setIsOpen}>
-      <Button aria-label="Add Component" className="row w-full hover:bg-hover items-center">
-        <PlusIcon className="size-4" />
+      <Button className="w-full row items-center">
+        <PlusIcon className="icon-size" />
         Add to Object...
       </Button>
 
