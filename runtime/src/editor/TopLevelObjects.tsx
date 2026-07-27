@@ -9,6 +9,8 @@ export default function TopLevelObjects() {
   const scene = useScene();
   const { selectObject, deselectObjects } = useSelectedObjects();
 
+  const sceneEntries = Object.entries(scene).filter(isSerializableObject);
+
   return (
     <Dropdown
       className="bg-background text-sm w-64 overflow-clip rounded-sm"
@@ -19,38 +21,40 @@ export default function TopLevelObjects() {
           onClick={() => {
             scene.newObject = {};
           }}
-          className="flex flex-row py-1 pl-1.5 hover:bg-hover items-center border-t-2 border-b-2 border-border"
+          className="row items-center border-t border-border"
         >
-          <PlusIcon className="size-4" />
+          <PlusIcon className="icon-size" />
           New Object
         </button>
 
-        {Object.entries(scene)
-          .filter(isSerializableObject)
-          .map(([key, value]) => (
-            <div key={key} className="group flex items-center hover:bg-hover">
-              <button
-                className="flex-1 text-left px-2 py-1"
-                onClick={() => {
-                  if (!isSerializableObject(value)) return;
+        {sceneEntries.length > 0 && (
+          <div className="border-t border-border">
+            {sceneEntries.map(([key, value]) => (
+              <div key={key} className="group flex flex-row items-center hover:bg-hover pr-1">
+                <button
+                  className="flex-1 text-left px-2 py-1"
+                  onClick={() => {
+                    if (!isSerializableObject(value)) return;
 
-                  deselectObjects();
-                  selectObject(key, value);
-                }}
-              >
-                {key}
-              </button>
+                    deselectObjects();
+                    selectObject(key, value);
+                  }}
+                >
+                  {key}
+                </button>
 
-              <IconButton
-                icon={Trash2}
-                className="mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => {
-                  delete scene[key];
-                  deselectObjects();
-                }}
-              />
-            </div>
-          ))}
+                <IconButton
+                  icon={Trash2}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => {
+                    delete scene[key];
+                    deselectObjects();
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </Dropdown>
   );

@@ -145,11 +145,7 @@ export default function ObjectRow({
 
   return (
     <div className="flex flex-col">
-      <button
-        className="group flex flex-row items-center px-1.5 py-1 hover:bg-hover"
-        onClick={() => setExpanded(!expanded)}
-        onKeyDown={handleEnter}
-      >
+      <button className="group row" onClick={() => setExpanded(!expanded)} onKeyDown={handleEnter}>
         {isSerializableObject(value) && <Box className="size-4" />}
 
         <div className={cn(isSerializableObject(value) && "pl-1 flex-1 flex flex-row items-start")}>

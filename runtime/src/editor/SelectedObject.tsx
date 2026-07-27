@@ -14,6 +14,8 @@ export default function SelectedObject() {
   if (!shownObject) return;
   const { key, object } = shownObject;
 
+  const objectEntries = Object.entries(object);
+
   return (
     <div className="flex flex-col bg-background w-96 text-sm overflow-clip rounded-sm">
       <div className="flex items-center justify-between px-2.5 py-1.5 bg-foreground">
@@ -30,24 +32,28 @@ export default function SelectedObject() {
         </div>
       </div>
 
-      <div className="px-1 pt-1.5 pb-1.5 border-t-2 border-border">
+      <div className="border-t-2 border-border">
         <AddComponent object={object} />
 
-        {Object.entries(object).map(([childKey, childValue]) => (
-          <ObjectRow
-            key={childKey}
-            parent={object}
-            entry={[childKey, childValue]}
-            onKeyChange={(newKey) => {
-              const existingValue = shownObject.object[childKey];
-              delete shownObject.object[childKey];
-              shownObject.object[newKey] = existingValue;
-            }}
-            onValueChange={(newValue) => {
-              shownObject.object[childKey] = newValue;
-            }}
-          />
-        ))}
+        {objectEntries.length > 0 && (
+          <div className="border-t-2 border-border">
+            {objectEntries.map(([childKey, childValue]) => (
+              <ObjectRow
+                key={childKey}
+                parent={object}
+                entry={[childKey, childValue]}
+                onKeyChange={(newKey) => {
+                  const existingValue = shownObject.object[childKey];
+                  delete shownObject.object[childKey];
+                  shownObject.object[newKey] = existingValue;
+                }}
+                onValueChange={(newValue) => {
+                  shownObject.object[childKey] = newValue;
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

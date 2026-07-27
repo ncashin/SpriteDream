@@ -16,7 +16,7 @@ export const setScene = (scene: SerializableObject, newScene: SerializableObject
 };
 
 export const isSerializableObject = (value: Serializable): value is SerializableObject =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+  !!value && typeof value === "object";
 
 export const patchScene = (scene: SerializableObject, patch: SerializableObject) => {
   for (const [key, value] of Object.entries(structuredClone(patch))) {
