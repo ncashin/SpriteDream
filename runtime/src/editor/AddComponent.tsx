@@ -23,7 +23,7 @@ export default function AddComponent({ object }: { object: SerializableObject })
         Add Component
       </Button>
 
-      <Popover placement="bottom" className="-mt-1.5 w-(--trigger-width)">
+      <Popover placement="bottom" className="-mt-1 w-(--trigger-width)">
         <Dialog className="overlay w-full text-white text-sm bg-background border border-border">
           <ListBox
             aria-label="Add components"

@@ -34,6 +34,7 @@
     "lucide-react": "^1.25.0",
     "mime-types": "^3.0.2",
     "mimetypes": "^0.1.1",
+    "pixi.js": "^8.19.0",
     "react": "^19.2.7",
     "react-aria": "^3.50.0",
     "react-aria-components": "^1.19.0",

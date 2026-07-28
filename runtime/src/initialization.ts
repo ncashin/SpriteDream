@@ -3,7 +3,7 @@ import { curryScene, type SerializableObject } from "./scene";
 import { createSelectedObjectsStore } from "./selectedObjectsStore";
 
 export type GameIDEOptions<AdditionalContext> = {
-  rootElement: Element;
+  rootElement: HTMLElement;
   initialScene: SerializableObject;
   additionalContext: AdditionalContext;
 };
