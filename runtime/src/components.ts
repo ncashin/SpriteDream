@@ -70,4 +70,9 @@ export function hasComponent<Schema extends ObjectSchema>(
   return component.schema.safeParse(object).success;
 }
 
-export type ComponentType<T extends ComponentDefinition> = z.output<T["schema"]>;
+export type ComponentType<T extends readonly ComponentDefinition[]> = T extends readonly [
+  infer Head extends ComponentDefinition,
+  ...infer Tail extends ComponentDefinition[],
+]
+  ? z.output<Head["schema"]> & ComponentType<Tail>
+  : unknown;

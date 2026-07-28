@@ -1,1 +1,1 @@
-{"dfdcaasdasdasdbd":{"test":1,"visible":true,"geometry":"asdasd","material":"asdasd","position":{"x":2,"y":0,"z":0},"rotation":{"x":0,"y":0,"z":0},"scale":{"x":1,"y":1,"z":1}},"dssdsd":{"visible":true,"geometry":"a","material":"a","position":{"x":0,"y":3,"z":0},"rotation":{"x":0,"y":0,"z":0},"scale":{"x":1,"y":1,"z":1}}}
+{"newObject":{"sprite":"/default.png","tint":"#ffffff","position":{"x":600,"y":600,"z":0},"rotation":{"x":0,"y":0,"z":0},"scale":{"x":1,"y":1,"z":1},"resolution":{"width":64,"height":64}}}

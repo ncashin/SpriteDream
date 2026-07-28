@@ -5,21 +5,21 @@ export const curryLifecycle = () => {
   let frameIdentifier: number;
   let lastTime = performance.now();
 
-  const loop = (time: number) => {
+  const loop = async (time: number) => {
     if (!running) return;
 
     const deltaTime = (time - lastTime) / 1000;
     lastTime = time;
 
     for (const listener of updateListeners) {
-      listener(deltaTime);
+      await listener(deltaTime);
     }
 
     frameIdentifier = requestAnimationFrame(loop);
   };
 
   return {
-    onUpdate(listener: (deltaTime: number) => void) {
+    onUpdate(listener: (deltaTime: number) => void | Promise<void>) {
       updateListeners.add(listener);
 
       return () => {
