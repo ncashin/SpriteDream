@@ -1,4 +1,4 @@
-import { Application, Assets, Sprite } from "pixi.js";
+import { Assets, Container, Sprite } from "pixi.js";
 import z from "zod";
 import { defineComponent, hasComponent, type ComponentType } from "../components";
 import type { GameContext } from "../initialization";
@@ -18,7 +18,7 @@ export type SpriteObject = ComponentType<[typeof TransformComponent, typeof Spri
 
 const spriteMap = new Map<SpriteObject, Sprite>();
 
-export const handleSprites = async (gameContext: GameContext, app: Application) => {
+export const handleSprites = async (gameContext: GameContext, container: Container) => {
   const { query, onUpdate } = gameContext;
 
   const spriteQuery = query(
@@ -31,7 +31,7 @@ export const handleSprites = async (gameContext: GameContext, app: Application) 
     newSprite.anchor.set(0.5);
 
     spriteMap.set(gameObject, newSprite);
-    app.stage.addChild(newSprite);
+    container.addChild(newSprite);
 
     return newSprite;
   };
@@ -39,26 +39,26 @@ export const handleSprites = async (gameContext: GameContext, app: Application) 
   onUpdate(async () => {
     const foundObjects = new Set<SpriteObject>();
 
-    spriteQuery().forEach(async (gameObject) => {
+    for (const gameObject of spriteQuery()) {
       foundObjects.add(gameObject);
 
       const pixiSprite = spriteMap.get(gameObject) ?? (await createSpriteForGameObject(gameObject));
 
       const { position, rotation, scale, tint, resolution } = gameObject;
-      pixiSprite.position.set(position.x, position.y);
+      pixiSprite.position.set(-position.x, position.y);
       pixiSprite.rotation = rotation.z ?? 0;
       pixiSprite.scale.set(scale.x, scale.y);
 
-      pixiSprite.width = resolution.width;
-      pixiSprite.height = resolution.height;
+      pixiSprite.width = resolution.width * Math.abs(scale.x);
+      pixiSprite.height = resolution.height * Math.abs(scale.y);
 
       pixiSprite.tint = tint;
-    });
+    }
 
     for (const [gameObject, sprite] of spriteMap) {
       if (foundObjects.has(gameObject)) continue;
 
-      app.stage.removeChild(sprite);
+      container.removeChild(sprite);
       sprite.destroy();
 
       spriteMap.delete(gameObject);
