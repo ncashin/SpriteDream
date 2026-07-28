@@ -1,10 +1,11 @@
+import type { Key } from "@react-types/shared";
 import { cn } from "cnfast";
 import { Box, ChevronRight, PlusIcon, Trash2Icon } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
-import { addComponent } from "../components";
+import { Collection, Tree, TreeItem, TreeItemContent } from "react-aria-components";
+
 import { isSerializableObject, type Serializable, type SerializableObject } from "../scene";
-import { MeshComponent } from "../threePlugin/mesh";
-import { TransformComponent } from "../threePlugin/transform";
+
 import { IconButton } from "./IconButton";
 
 function parseInputValue(input: string): Serializable {
@@ -19,9 +20,7 @@ function parseInputValue(input: string): Serializable {
   }
 
   try {
-    const parsed = JSON.parse(trimmed);
-
-    return parsed;
+    return JSON.parse(trimmed);
   } catch {
     return input;
   }
@@ -53,14 +52,18 @@ function focusInputCenter(input: HTMLInputElement | null) {
   });
 }
 
-export default function ObjectRow({
+export function ObjectRow({
+  id,
   parent,
   entry,
+  expandedKeys,
   onKeyChange,
   onValueChange,
 }: {
+  id: string;
   parent: SerializableObject;
   entry: [string, Serializable];
+  expandedKeys: Set<Key>;
   onKeyChange: (arg0: string) => void;
   onValueChange: (arg0: Serializable) => void;
 }) {
@@ -75,9 +78,7 @@ export default function ObjectRow({
   const keyInputRef = useAutoSizeInput(displayKey);
   const valueInputRef = useRef<HTMLInputElement>(null);
 
-  const [expanded, setExpanded] = useState(false);
-
-  const canBeExpanded = isSerializableObject(value) && Object.keys(value).length > 0;
+  const expanded = expandedKeys.has(id);
 
   function editKey() {
     const current = String(key);
@@ -138,100 +139,142 @@ export default function ObjectRow({
 
     if (isSerializableObject(value)) {
       editKey();
-    } else {
-      editValue();
+      return;
     }
+
+    editValue();
   }
 
-  return (
-    <div className="flex flex-col">
-      <button className="group row" onClick={() => setExpanded(!expanded)} onKeyDown={handleEnter}>
-        <div className={cn(isSerializableObject(value) && "flex-1 flex flex-row items-center")}>
-          {isSerializableObject(value) && <Box className="icon-size mr-1" />}
-          <input
-            ref={keyInputRef}
-            value={displayKey}
-            onClick={(event) => event.stopPropagation()}
-            onFocus={() => {
-              setInputKey(String(key));
-            }}
-            onChange={(event) => {
-              setInputKey(event.target.value);
-            }}
-            onKeyDown={(event) => handleInputKeyDown(event, commitKey)}
-            onBlur={finishKeyEdit}
-          />
-          {!isSerializableObject(value) && <span className="w-min">:</span>}
-        </div>
+  const entries = isSerializableObject(value) ? Object.entries(value) : [];
+  const canBeExpanded = entries.length > 0;
 
-        {!isSerializableObject(value) && (
-          <input
-            ref={valueInputRef}
-            className="text-emerald-200 flex-1"
-            value={displayValue}
-            onClick={(event) => event.stopPropagation()}
-            onFocus={() => {
-              setInputValue(String(value));
+  return (
+    <TreeItem id={id} textValue={key} hasChildItems={canBeExpanded} className="flex flex-col">
+      <TreeItemContent>
+        {({ hasChildItems }) => (
+          <div
+            className="group pl-[--spacing(calc((var(--tree-item-level)-1)*3))]"
+            onKeyDown={handleEnter}
+          >
+            <div className=" row">
+              <div className={cn(hasChildItems && "flex-1 flex flex-row items-center")}>
+                {hasChildItems && <Box className="icon-size mr-1" />}
+
+                <input
+                  ref={keyInputRef}
+                  value={displayKey}
+                  onClick={(event) => event.stopPropagation()}
+                  onFocus={() => {
+                    setInputKey(String(key));
+                  }}
+                  onChange={(event) => {
+                    setInputKey(event.target.value);
+                  }}
+                  onKeyDown={(event) => handleInputKeyDown(event, commitKey)}
+                  onBlur={finishKeyEdit}
+                />
+
+                {!hasChildItems && <span className="w-min">:</span>}
+              </div>
+
+              {!isSerializableObject(value) && (
+                <input
+                  ref={valueInputRef}
+                  className="text-emerald-200 flex-1"
+                  value={displayValue}
+                  onClick={(event) => event.stopPropagation()}
+                  onFocus={() => {
+                    setInputValue(String(value));
+                  }}
+                  onChange={(event) => {
+                    setInputValue(event.target.value);
+                  }}
+                  onKeyDown={(event) => handleInputKeyDown(event, commitValue)}
+                  onBlur={finishValueEdit}
+                />
+              )}
+
+              <div
+                className="flex flex-row items-center opacity-0 transition-opacity group-hover:opacity-100"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {canBeExpanded && (
+                  <IconButton
+                    icon={ChevronRight}
+                    slot="chevron"
+                    className={cn(expanded && "rotate-90")}
+                  />
+                )}
+
+                {isSerializableObject(value) && <IconButton icon={PlusIcon} onClick={() => {}} />}
+
+                <IconButton
+                  icon={Trash2Icon}
+                  onClick={() => {
+                    delete parent[key];
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </TreeItemContent>
+
+      <Collection items={entries}>
+        {([childKey, childValue]) => (
+          <ObjectRow
+            key={childKey}
+            id={`${id}.${childKey}`}
+            parent={value}
+            entry={[childKey, childValue]}
+            expandedKeys={expandedKeys}
+            onKeyChange={(newKey) => {
+              const existingValue = value[childKey];
+
+              delete value[childKey];
+              value[newKey] = existingValue;
             }}
-            onChange={(event) => {
-              setInputValue(event.target.value);
+            onValueChange={(newValue) => {
+              value[childKey] = newValue;
             }}
-            onKeyDown={(event) => handleInputKeyDown(event, commitValue)}
-            onBlur={finishValueEdit}
           />
         )}
+      </Collection>
+    </TreeItem>
+  );
+}
 
-        <div
-          className="flex flex-row items-center opacity-0 transition-opacity group-hover:opacity-100"
-          onClick={(event) => event.stopPropagation()}
-        >
-          {canBeExpanded && (
-            <IconButton
-              icon={ChevronRight}
-              className={cn(expanded && "rotate-90")}
-              onClick={() => setExpanded(!expanded)}
-            />
-          )}
+export default function ObjectTree({ object }: { object: SerializableObject }) {
+  const entries = Object.entries(object);
 
-          {isSerializableObject(value) && (
-            <IconButton
-              icon={PlusIcon}
-              onClick={() => {
-                addComponent(value, TransformComponent, {});
-                addComponent(value, MeshComponent, {});
-              }}
-            />
-          )}
+  const [expandedKeys, setExpandedKeys] = useState<Set<Key>>(new Set());
 
-          <IconButton
-            icon={Trash2Icon}
-            onClick={() => {
-              delete parent[key];
+  return (
+    <Tree
+      aria-label="Selected Object Viewer"
+      expandedKeys={expandedKeys}
+      onExpandedChange={setExpandedKeys}
+    >
+      <Collection items={entries}>
+        {([childKey, childValue]) => (
+          <ObjectRow
+            key={childKey}
+            id={childKey}
+            parent={object}
+            entry={[childKey, childValue]}
+            expandedKeys={expandedKeys}
+            onKeyChange={(newKey) => {
+              const existingValue = object[childKey];
+
+              delete object[childKey];
+              object[newKey] = existingValue;
+            }}
+            onValueChange={(newValue) => {
+              object[childKey] = newValue;
             }}
           />
-        </div>
-      </button>
-
-      {expanded && isSerializableObject(value) && (
-        <div className="pl-3 flex flex-col">
-          {Object.entries(value).map(([childKey, childValue]) => (
-            <ObjectRow
-              key={childKey}
-              parent={value}
-              entry={[childKey, childValue]}
-              onKeyChange={(newKey) => {
-                const existingValue = value[childKey];
-
-                delete value[childKey];
-                value[newKey] = existingValue;
-              }}
-              onValueChange={(newValue) => {
-                value[childKey] = newValue;
-              }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+        )}
+      </Collection>
+    </Tree>
   );
 }

@@ -1,7 +1,7 @@
 import { Trash2, X } from "lucide-react";
 import AddComponent from "./AddComponent";
 import { IconButton } from "./IconButton";
-import ObjectRow from "./ObjectRow";
+import ObjectTree from "./ObjectRow";
 import useScene from "./useScene";
 import useSelectedObjects from "./useSelectedObjects";
 
@@ -37,21 +37,7 @@ export default function SelectedObject() {
 
         {objectEntries.length > 0 && (
           <div>
-            {objectEntries.map(([childKey, childValue]) => (
-              <ObjectRow
-                key={childKey}
-                parent={object}
-                entry={[childKey, childValue]}
-                onKeyChange={(newKey) => {
-                  const existingValue = shownObject.object[childKey];
-                  delete shownObject.object[childKey];
-                  shownObject.object[newKey] = existingValue;
-                }}
-                onValueChange={(newValue) => {
-                  shownObject.object[childKey] = newValue;
-                }}
-              />
-            ))}
+            <ObjectTree object={scene} />
           </div>
         )}
       </div>

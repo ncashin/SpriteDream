@@ -2,7 +2,7 @@ import { Assets, Container, Sprite } from "pixi.js";
 import z from "zod";
 import { defineComponent, hasComponent, type ComponentType } from "../components";
 import type { GameContext } from "../initialization";
-import { TransformComponent } from "../threePlugin/transform";
+import { TransformComponent } from "../transform";
 
 export const SpriteComponent = defineComponent(
   "sprite",
