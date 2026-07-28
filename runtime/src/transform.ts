@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineComponent } from "../components";
+import { defineComponent } from "./components";
 
 export const TransformComponent = defineComponent(
   "transform",
