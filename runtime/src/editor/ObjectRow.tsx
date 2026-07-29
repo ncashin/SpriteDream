@@ -26,124 +26,98 @@ function parseInputValue(input: string): Serializable {
   }
 }
 
-function useAutoSizeInput(value: string) {
-  const ref = useRef<HTMLInputElement>(null);
+export type AutoSizeInputProperties = {
+  value: string;
+  onCommit: (value: string) => void;
+} & React.InputHTMLAttributes<HTMLInputElement>;
+
+function AutoSizeInput({ value, onCommit, ...props }: AutoSizeInputProperties) {
+  const [draft, setDraft] = useState(value);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const editingRef = useRef(false);
 
   useLayoutEffect(() => {
-    const input = ref.current;
+    const input = inputRef.current;
+    const measure = measureRef.current;
 
+    if (!input || !measure) return;
+
+    input.style.width = `${measure.offsetWidth}px`;
+  }, [draft]);
+
+  function focusCenter() {
+    const input = inputRef.current;
     if (!input) return;
 
-    input.style.width = "0px";
-    input.style.width = `${input.scrollWidth}px`;
-  }, [value]);
+    input.focus();
+  }
 
-  return ref;
-}
+  function startEdit() {
+    editingRef.current = true;
+    setDraft(value);
 
-function focusInputCenter(input: HTMLInputElement | null) {
-  if (!input) return;
+    requestAnimationFrame(focusCenter);
+  }
 
-  input.focus();
+  function commit() {
+    editingRef.current = false;
 
-  requestAnimationFrame(() => {
-    const position = Math.floor(input.value.length / 2);
-    input.setSelectionRange(position, position);
-  });
+    if (draft !== value) {
+      onCommit(draft);
+    }
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") {
+      event.stopPropagation();
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    commit();
+    inputRef.current?.blur();
+  }
+
+  return (
+    <>
+      <span
+        ref={measureRef}
+        className="absolute invisible whitespace-pre font-inherit text-inherit tracking-inherit"
+      >
+        {draft || " "}
+      </span>
+
+      <input
+        {...props}
+        ref={inputRef}
+        value={draft}
+        onFocus={startEdit}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={commit}
+      />
+    </>
+  );
 }
 
 export function ObjectRow({
   id,
   parent,
   entry,
-  expandedKeys,
   onKeyChange,
   onValueChange,
 }: {
   id: string;
   parent: SerializableObject;
   entry: [string, Serializable];
-  expandedKeys: Set<Key>;
   onKeyChange: (arg0: string) => void;
   onValueChange: (arg0: Serializable) => void;
 }) {
   const [key, value] = entry;
-
-  const [inputKey, setInputKey] = useState<string>();
-  const [inputValue, setInputValue] = useState<string>();
-
-  const displayKey = inputKey ?? String(key);
-  const displayValue = inputValue ?? String(value);
-
-  const keyInputRef = useAutoSizeInput(displayKey);
-  const valueInputRef = useRef<HTMLInputElement>(null);
-
-  const expanded = expandedKeys.has(id);
-
-  function editKey() {
-    const current = String(key);
-
-    setInputKey(current);
-
-    requestAnimationFrame(() => {
-      focusInputCenter(keyInputRef.current);
-    });
-  }
-
-  function editValue() {
-    const current = String(value);
-
-    setInputValue(current);
-
-    requestAnimationFrame(() => {
-      focusInputCenter(valueInputRef.current);
-    });
-  }
-
-  function commitKey() {
-    if (inputKey !== undefined && inputKey !== String(key)) {
-      onKeyChange(inputKey);
-    }
-  }
-
-  function commitValue() {
-    if (inputValue !== undefined) {
-      onValueChange(parseInputValue(inputValue));
-    }
-  }
-
-  function finishKeyEdit() {
-    commitKey();
-    setInputKey(undefined);
-  }
-
-  function finishValueEdit() {
-    commitValue();
-    setInputValue(undefined);
-  }
-
-  function handleInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>, commit: () => void) {
-    if (event.key !== "Enter") return;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    commit();
-  }
-
-  function handleEnter(event: React.KeyboardEvent) {
-    if (event.key !== "Enter") return;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (isSerializableObject(value)) {
-      editKey();
-      return;
-    }
-
-    editValue();
-  }
 
   const entries = isSerializableObject(value) ? Object.entries(value) : [];
   const canBeExpanded = entries.length > 0;
@@ -151,46 +125,22 @@ export function ObjectRow({
   return (
     <TreeItem id={id} textValue={key} hasChildItems={canBeExpanded} className="flex flex-col">
       <TreeItemContent>
-        {({ hasChildItems }) => (
-          <div
-            className="group pl-[--spacing(calc((var(--tree-item-level)-1)*3))]"
-            onKeyDown={handleEnter}
-          >
-            <div className=" row">
+        {({ hasChildItems, isExpanded }) => (
+          <div className="group pl-[--spacing(calc((var(--tree-item-level)-1)*3))]">
+            <div className="row">
               <div className={cn(hasChildItems && "flex-1 flex flex-row items-center")}>
                 {hasChildItems && <Box className="icon-size mr-1" />}
 
-                <input
-                  ref={keyInputRef}
-                  value={displayKey}
-                  onClick={(event) => event.stopPropagation()}
-                  onFocus={() => {
-                    setInputKey(String(key));
-                  }}
-                  onChange={(event) => {
-                    setInputKey(event.target.value);
-                  }}
-                  onKeyDown={(event) => handleInputKeyDown(event, commitKey)}
-                  onBlur={finishKeyEdit}
-                />
+                <AutoSizeInput value={key} onCommit={onKeyChange} />
 
                 {!hasChildItems && <span className="w-min">:</span>}
               </div>
 
               {!isSerializableObject(value) && (
-                <input
-                  ref={valueInputRef}
-                  className="text-emerald-200 flex-1"
-                  value={displayValue}
-                  onClick={(event) => event.stopPropagation()}
-                  onFocus={() => {
-                    setInputValue(String(value));
-                  }}
-                  onChange={(event) => {
-                    setInputValue(event.target.value);
-                  }}
-                  onKeyDown={(event) => handleInputKeyDown(event, commitValue)}
-                  onBlur={finishValueEdit}
+                <AutoSizeInput
+                  className="flex-1 text-emerald-200"
+                  value={String(value)}
+                  onCommit={onValueChange}
                 />
               )}
 
@@ -202,7 +152,7 @@ export function ObjectRow({
                   <IconButton
                     icon={ChevronRight}
                     slot="chevron"
-                    className={cn(expanded && "rotate-90")}
+                    className={cn(isExpanded && "rotate-90")}
                   />
                 )}
 
@@ -227,15 +177,15 @@ export function ObjectRow({
             id={`${id}.${childKey}`}
             parent={value}
             entry={[childKey, childValue]}
-            expandedKeys={expandedKeys}
             onKeyChange={(newKey) => {
+              console.log(newKey);
               const existingValue = value[childKey];
 
               delete value[childKey];
               value[newKey] = existingValue;
             }}
             onValueChange={(newValue) => {
-              value[childKey] = newValue;
+              value[childKey] = parseInputValue(String(newValue));
             }}
           />
         )}
@@ -262,7 +212,6 @@ export default function ObjectTree({ object }: { object: SerializableObject }) {
             id={childKey}
             parent={object}
             entry={[childKey, childValue]}
-            expandedKeys={expandedKeys}
             onKeyChange={(newKey) => {
               const existingValue = object[childKey];
 

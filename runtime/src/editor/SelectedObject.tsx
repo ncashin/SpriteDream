@@ -14,8 +14,6 @@ export default function SelectedObject() {
   if (!shownObject) return;
   const { key, object } = shownObject;
 
-  const objectEntries = Object.entries(object);
-
   return (
     <div className="flex flex-col w-96 text-sm rounded-sm overflow-clip bg-background">
       <div className="header bg-foreground">
@@ -35,11 +33,7 @@ export default function SelectedObject() {
       <div className="border-t border-border overlay">
         <AddComponent object={object} />
 
-        {objectEntries.length > 0 && (
-          <div>
-            <ObjectTree object={scene} />
-          </div>
-        )}
+        <ObjectTree object={object} />
       </div>
     </div>
   );
