@@ -2,11 +2,19 @@ import type { Key } from "@react-types/shared";
 import { cn } from "cnfast";
 import { Box, ChevronRight, PlusIcon, Trash2Icon } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
-import { Collection, Tree, TreeItem, TreeItemContent } from "react-aria-components";
+import {
+  Collection,
+  DropIndicator,
+  Tree,
+  TreeItem,
+  TreeItemContent,
+  useDragAndDrop,
+} from "react-aria-components";
 
 import { isSerializableObject, type Serializable, type SerializableObject } from "../scene";
 
 import { IconButton } from "./IconButton";
+import { reorderObjectKeys } from "./reorderHelper";
 
 function parseInputValue(input: string): Serializable {
   const trimmed = input.trim();
@@ -199,11 +207,51 @@ export default function ObjectTree({ object }: { object: SerializableObject }) {
 
   const [expandedKeys, setExpandedKeys] = useState<Set<Key>>(new Set());
 
+  const { dragAndDropHooks } = useDragAndDrop({
+    getItems(keys) {
+      return [...keys].map((key) => ({
+        "text/plain": String(key),
+      }));
+    },
+
+    renderDropIndicator(target) {
+      return (
+        <DropIndicator
+          target={target}
+          className={({ isDropTarget }) =>
+            cn("h-0.5 bg-blue-500 rounded-full", isDropTarget && "opacity-100")
+          }
+        />
+      );
+    },
+
+    async onMove(event) {
+      const targetKey = String(event.target.key);
+
+      for (const key of event.keys) {
+        const draggedKey = String(key);
+
+        if (draggedKey === targetKey) continue;
+
+        console.log(object);
+
+        reorderObjectKeys(
+          object,
+          draggedKey,
+          targetKey,
+          event.target.dropPosition === "after" ? "after" : "before",
+        );
+        console.log(object);
+      }
+    },
+  });
+
   return (
     <Tree
       aria-label="Selected Object Viewer"
       expandedKeys={expandedKeys}
       onExpandedChange={setExpandedKeys}
+      dragAndDropHooks={dragAndDropHooks}
     >
       <Collection items={entries}>
         {([childKey, childValue]) => (

@@ -1,7 +1,7 @@
 import { Trash2, X } from "lucide-react";
 import AddComponent from "./AddComponent";
 import { IconButton } from "./IconButton";
-import ObjectTree from "./ObjectRow";
+import ObjectTree from "./ObjectTree";
 import useScene from "./useScene";
 import useSelectedObjects from "./useSelectedObjects";
 

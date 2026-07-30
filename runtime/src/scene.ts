@@ -58,10 +58,23 @@ export const diffScene = (
   return patch;
 };
 
-export const query =
-  <T extends Serializable>(predicate: (value: Serializable) => value is T) =>
+export const mapScene =
+  <T>(mapper: (key: string, value: Serializable) => T | undefined) =>
   (scene: SerializableObject): T[] =>
-    Object.values(scene).filter(predicate);
+    Object.entries(scene).flatMap(([key, value]) => {
+      const result = mapper(key, value);
+      return result ? [result] : [];
+    });
+
+export const queryScene =
+  <T extends Serializable>(predicate: (key: string, value: Serializable) => value is T) =>
+  (scene: SerializableObject): [string, T][] =>
+    Object.entries(scene).flatMap(([key, value]) => (predicate(key, value) ? [[key, value]] : []));
+
+export const find =
+  <T extends Serializable>(predicate: (value: Serializable) => value is T) =>
+  (scene: SerializableObject): string | undefined =>
+    Object.keys(scene).find((key) => predicate(scene[key]));
 
 export type CurrySceneOptions = {
   onSetScene?: (scene: SerializableObject) => void;
@@ -88,7 +101,7 @@ export const curryScene = (sceneData: SerializableObject, { onSetScene }: CurryS
       return diffScene(scene, newScene);
     },
 
-    query:
+    queryScene:
       <TValue extends Serializable>(predicate: (value: Serializable) => value is TValue) =>
       (): TValue[] =>
         Object.values(scene).filter(predicate),

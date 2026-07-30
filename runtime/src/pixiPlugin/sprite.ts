@@ -19,7 +19,7 @@ export type SpriteObject = ComponentType<[typeof TransformComponent, typeof Spri
 const spriteMap = new Map<SpriteObject, Sprite>();
 
 export const handleSprites = async (gameContext: GameContext, container: Container) => {
-  const { query, onUpdate } = gameContext;
+  const { queryScene: query, onUpdate } = gameContext;
 
   const spriteQuery = query(
     (object) => hasComponent(object, TransformComponent) && hasComponent(object, SpriteComponent),
