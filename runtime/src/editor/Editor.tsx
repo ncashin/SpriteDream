@@ -1,4 +1,6 @@
+import { PlayIcon, Settings } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
+import { Button } from "react-aria-components";
 import { setScene } from "../scene";
 import GameView from "./GameView";
 import { SceneSelect } from "./SceneSelect";
@@ -41,20 +43,33 @@ export default function Editor() {
 
   return (
     <>
-      <div className="absolute inset-x-0 top-0 p-2 text-white pointer-events-none">
-        <div className="relative flex items-start">
-          <div className="flex flex-col gap-4 pointer-events-auto">
+      <div className="text-sm absolute inset-x-0 top-0 p-2 text-white pointer-events-none z-50">
+        <div className="grid grid-cols-3 items-start">
+          {/* Left */}
+          <div className="justify-self-start flex flex-col gap-4 pointer-events-auto">
             <TopLevelObjects />
             <SelectedObject />
           </div>
 
-          <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+          {/* Center */}
+          <div className="justify-self-center pointer-events-auto">
             <SceneSelect
               deferredFilepath={deferredFilepath}
               sceneFiles={sceneFiles}
               setSceneFilepath={setSceneFilepath}
               confirmFileChange={confirmFileChange}
             />
+          </div>
+
+          {/* Right */}
+          <div className="justify-self-end flex flex-row gap-2 pointer-events-auto">
+            <Button className="header gap-1">
+              Settings <Settings className="icon-size" />
+            </Button>
+
+            <Button className="header gap-1">
+              Run <PlayIcon className="icon-size" />
+            </Button>
           </div>
         </div>
       </div>

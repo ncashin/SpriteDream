@@ -1,1 +1,1 @@
-{"testObject": {}, "newObject":{"sprite":"/default.png","tint":"#ffffff","position":{"x":0,"y":0,"z":0},"rotation":{"x":0,"y":0,"z":32},"scale":{"x":1,"y":1,"z":1},"resolution":{"width":64,"height":64}}}
+{"testObject":{},"newObject":{"position":{"x":0,"y":0,"z":0},"rotation":{"x":0,"y":0,"z":32},"scale":{"x":1,"y":1,"z":1},"sprite":"/default.png","tint":"#ffffff","resolution":{"width":64,"height":64}}}

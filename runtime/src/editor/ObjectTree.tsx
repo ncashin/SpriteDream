@@ -202,6 +202,40 @@ export function ObjectRow({
   );
 }
 
+function getLastPathPart(path: string) {
+  return path.split(".").pop();
+}
+
+function getValue(root: SerializableObject, path: string): Serializable | undefined {
+  const parts = path.split(".");
+
+  let current: Serializable = root;
+
+  for (const part of parts) {
+    if (!isSerializableObject(current)) return undefined;
+
+    current = current[part];
+  }
+
+  return current;
+}
+
+function getParentObject(root: SerializableObject, path: string): SerializableObject | undefined {
+  const parts = path.split(".");
+
+  parts.pop();
+
+  let current: Serializable = root;
+
+  for (const part of parts) {
+    if (!isSerializableObject(current)) return undefined;
+
+    current = current[part];
+  }
+
+  return isSerializableObject(current) ? current : undefined;
+}
+
 export default function ObjectTree({ object }: { object: SerializableObject }) {
   const entries = Object.entries(object);
 
@@ -226,22 +260,60 @@ export default function ObjectTree({ object }: { object: SerializableObject }) {
     },
 
     async onMove(event) {
-      const targetKey = String(event.target.key);
+      const targetPath = String(event.target.key);
 
       for (const key of event.keys) {
-        const draggedKey = String(key);
+        const draggedPath = String(key);
 
-        if (draggedKey === targetKey) continue;
+        if (draggedPath === targetPath) continue;
 
-        console.log(object);
+        const draggedParent = getParentObject(object, draggedPath);
+        const targetParent = getParentObject(object, targetPath);
+
+        const draggedKey = draggedPath.split(".").pop()!;
+        const targetKey = targetPath.split(".").pop()!;
+
+        if (!draggedParent || !targetParent) continue;
+
+        // Move into object
+        if (event.target.dropPosition === "on") {
+          const targetObject = getValue(object, targetPath);
+
+          if (!isSerializableObject(targetObject)) continue;
+
+          targetObject[draggedKey] = draggedParent[draggedKey];
+          delete draggedParent[draggedKey];
+
+          return;
+        }
+
+        // Same parent: just reorder
+        if (draggedParent === targetParent) {
+          reorderObjectKeys(
+            draggedParent,
+            draggedKey,
+            targetKey,
+            event.target.dropPosition === "after" ? "after" : "before",
+          );
+
+          return;
+        }
+
+        // Different parent: remove and insert into new parent
+        const value = draggedParent[draggedKey];
+
+        delete draggedParent[draggedKey];
+
+        targetParent[draggedKey] = value;
 
         reorderObjectKeys(
-          object,
+          targetParent,
           draggedKey,
           targetKey,
           event.target.dropPosition === "after" ? "after" : "before",
         );
-        console.log(object);
+
+        return;
       }
     },
   });
