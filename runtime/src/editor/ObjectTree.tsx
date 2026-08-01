@@ -179,25 +179,27 @@ export function ObjectRow({
         )}
       </TreeItemContent>
 
-      <Collection items={entries}>
-        {([childKey, childValue]) => (
-          <ObjectRow
-            key={childKey}
-            id={`${id}.${childKey}`}
-            parent={value}
-            entry={[childKey, childValue]}
-            onKeyChange={(newKey) => {
-              const existingValue = value[childKey];
+      {isSerializableObject(value) && (
+        <Collection items={entries}>
+          {([childKey, childValue]) => (
+            <ObjectRow
+              key={childKey}
+              id={`${id}.${childKey}`}
+              parent={value}
+              entry={[childKey, childValue]}
+              onKeyChange={(newKey) => {
+                const existingValue = value[childKey];
 
-              delete value[childKey];
-              value[newKey] = existingValue;
-            }}
-            onValueChange={(newValue) => {
-              value[childKey] = parseInputValue(String(newValue));
-            }}
-          />
-        )}
-      </Collection>
+                delete value[childKey];
+                value[newKey] = existingValue;
+              }}
+              onValueChange={(newValue) => {
+                value[childKey] = parseInputValue(String(newValue));
+              }}
+            />
+          )}
+        </Collection>
+      )}
     </TreeItem>
   );
 }

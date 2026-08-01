@@ -95,15 +95,6 @@ export default function TopLevelObjects() {
       }));
     },
 
-    renderDragPreview(items) {
-      return (
-        <div className="drag-preview">
-          {items[0]["text/plain"]}
-          <span className="badge">{items.length}</span>
-        </div>
-      );
-    },
-
     renderDropIndicator(target) {
       return (
         <DropIndicator
@@ -114,39 +105,8 @@ export default function TopLevelObjects() {
         />
       );
     },
-    async onItemDrop(event) {
-      const targetKey = String(event.target.key);
 
-      for (const item of event.items) {
-        if (item.kind !== "text") continue;
-        const draggedKey = await item.getText("text/plain");
-
-        if (!draggedKey || draggedKey === targetKey) continue;
-
-        const dragged = scene[draggedKey];
-
-        if (!isSerializableObject(dragged)) continue;
-
-        setParent(dragged, targetKey);
-      }
-    },
-
-    async onInsert(event) {
-      for (const item of event.items) {
-        if (item.kind !== "text") continue;
-
-        const draggedKey = await item.getText("text/plain");
-
-        if (!draggedKey) continue;
-
-        const dragged = scene[draggedKey];
-
-        if (!isSerializableObject(dragged)) continue;
-
-        delete dragged.parent;
-      }
-    },
-    async onMove(event) {
+    onMove(event) {
       const targetKey = String(event.target.key);
 
       for (const key of event.keys) {
@@ -158,37 +118,26 @@ export default function TopLevelObjects() {
 
         if (!isSerializableObject(dragged)) continue;
 
-        if (event.target.dropPosition !== "on") {
-          const reordered = reorderObjectKeys(
-            scene,
-            draggedKey,
-            targetKey,
-            event.target.dropPosition,
-          );
-
-          Object.keys(scene).forEach((key) => delete scene[key]);
-          Object.assign(scene, reordered);
-
-          return;
+        if (event.target.dropPosition === "on") {
+          setParent(dragged, targetKey);
+          continue;
         }
 
-        setParent(dragged, targetKey);
+        reorderObjectKeys(scene, draggedKey, targetKey, event.target.dropPosition);
       }
     },
 
-    async onRootDrop(event) {
+    onRootDrop(event) {
       for (const item of event.items) {
         if (item.kind !== "text") continue;
 
-        const draggedKey = await item.getText("text/plain");
+        item.getText("text/plain").then((key) => {
+          const dragged = scene[key];
 
-        if (!draggedKey) continue;
-
-        const dragged = scene[draggedKey];
-
-        if (!isSerializableObject(dragged)) continue;
-
-        removeParent(dragged);
+          if (isSerializableObject(dragged)) {
+            removeParent(dragged);
+          }
+        });
       }
     },
   });
