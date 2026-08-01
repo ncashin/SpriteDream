@@ -57,31 +57,3 @@ export const buildTree = (scene: SerializableObject) => {
     }, {}) && roots
   );
 };
-
-/*
-function buildTree(scene: Record<string, any>) {
-  const nodes = new Map<string, ObjectNode>();
-
-  for (const [key, value] of Object.entries(scene)) {
-    if (!isSerializableObject(value)) continue;
-
-    nodes.set(key, {
-      key,
-      object: value,
-      children: [],
-    });
-  }
-
-  const roots: ObjectNode[] = [];
-
-  for (const node of nodes.values()) {
-    if (typeof node.object.parent === "string" && nodes.has(node.object.parent)) {
-      nodes.get(node.object.parent)!.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-
-  return roots;
-}
-*/

@@ -125,14 +125,16 @@ export default function TopLevelObjects() {
         <DropIndicator
           target={target}
           className={({ isDropTarget }) =>
-            cn("h-0.5 bg-blue-500 rounded-full", isDropTarget && "opacity-100")
+            cn("h-1 bg-select transition-opacity", isDropTarget ? "opacity-100" : "opacity-0")
           }
         />
       );
     },
 
     onMove(event) {
-      const targetKey = String(event.target.key);
+      const targetKey = String(event.target.key ?? "");
+
+      if (!targetKey) return;
 
       for (const key of event.keys) {
         const draggedKey = String(key);
@@ -140,12 +142,20 @@ export default function TopLevelObjects() {
         if (draggedKey === targetKey) continue;
 
         const dragged = scene[draggedKey];
+        const target = scene[targetKey];
 
         if (!isSerializableObject(dragged)) continue;
+        if (!isSerializableObject(target)) continue;
 
         if (event.target.dropPosition === "on") {
           setParent(dragged, targetKey);
           continue;
+        }
+
+        if (target.parent) {
+          setParent(dragged, target.parent);
+        } else {
+          removeParent(dragged);
         }
 
         reorderObjectKeys(scene, draggedKey, targetKey, event.target.dropPosition);
@@ -171,10 +181,12 @@ export default function TopLevelObjects() {
     if (!newKey || newKey === oldKey || scene[newKey]) return;
 
     deselectObjects();
+
     scene[newKey] = scene[oldKey];
     delete scene[oldKey];
 
     if (!isSerializableObject(scene[newKey])) return;
+
     selectObject(newKey, scene[newKey]);
   };
 
@@ -185,7 +197,7 @@ export default function TopLevelObjects() {
 
   return (
     <Dropdown
-      className="bg-background text-sm rounded-sm w-64 overflow-clip"
+      className="bg-background text-sm rounded-sm w-64"
       buttonClassName="bg-foreground hover:bg-hover"
     >
       <div className="flex flex-col border-t border-border px-1 py-1.5">

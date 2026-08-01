@@ -2,7 +2,7 @@ import { hasComponent } from "./components";
 import type { GameContext } from "./initialization";
 import { TransformComponent } from "./transform";
 
-export const main = async (context: GameContext) => {
+export const gameplay = () => async (context: GameContext) => {
   const { scene, onUpdate } = context;
 
   onUpdate(() => {
@@ -11,19 +11,12 @@ export const main = async (context: GameContext) => {
     if (!hasComponent(playerObject, TransformComponent)) {
       return;
     }
-
-    const time = performance.now() / 1000;
-
-    const radius = 200;
-
-    playerObject.position.x = Math.cos(time) * radius;
-    playerObject.position.y = Math.sin(time) * radius;
   });
 
   if (import.meta.hot) {
     import.meta.hot.accept((newModule) => {
-      if (!newModule?.main) return;
-      context.__run.rerun(newModule.main);
+      if (!newModule?.gameplay) return;
+      context.__run.rerun(newModule.gameplay());
     });
   }
 
