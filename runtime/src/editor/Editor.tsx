@@ -63,12 +63,12 @@ export default function Editor() {
           </div>
 
           <div className="justify-self-end flex flex-row gap-2 pointer-events-auto">
-            <Button className="header gap-1">
+            <Button className="header gap-1 rounded-md font-light">
               Settings <Settings className="icon-size" />
             </Button>
 
             <Button
-              className="header gap-1"
+              className="header gap-1  rounded-md font-light"
               onClick={() => {
                 gameContext.__run.rerunAfter({ ...gameContext, isEditor: false });
               }}

@@ -1,4 +1,4 @@
-import cn from "cnfast";
+import { cn } from "cnfast";
 import { ChevronRight, PlusIcon, Trash2 } from "lucide-react";
 import {
   Button,
@@ -14,20 +14,24 @@ import { buildTree, removeParent, setParent } from "../parent";
 import { isSerializableObject, type SerializableObject } from "../scene";
 import { Dropdown } from "./Dropdown";
 import { IconButton } from "./IconButton";
-import { reorderObjectKeys } from "./reorderHelper";
+import AutoSizeInput from "./tree/AutoSizeInput";
+import { reorderObjectKeys } from "./tree/objectHelpers";
 import useScene from "./useScene";
 import useSelectedObjects from "./useSelectedObjects";
 
 function ObjectRow({
   node,
+  onRename,
   onDelete,
 }: {
   node: SerializableObject;
+  onRename: (newKey: string) => void;
   onDelete: (key: string) => void;
 }) {
   const { selectedObjects, selectObject, deselectObjects } = useSelectedObjects();
 
   const hasChildren = node.children.length > 0;
+  const selected = selectedObjects.some(({ object }) => object === node.object);
 
   return (
     <TreeItem
@@ -39,24 +43,27 @@ function ObjectRow({
       <TreeItemContent>
         {({ hasChildItems, isExpanded }) => (
           <div className="pl-[--spacing(calc((var(--tree-item-level)-1)*3))]">
-            <div
-              className={cn(
-                "group row",
-                selectedObjects.some(({ object }) => object === node.object) && "bg-select",
-              )}
-            >
+            <div className={cn("group row", selected && "bg-select")}>
               <Button slot="drag" />
-              <Button
-                className="flex-1 flex items-center text-left"
+
+              <div
+                className="flex-1"
                 onClick={() => {
                   deselectObjects();
                   selectObject(node.key, node.object);
                 }}
               >
-                {node.key}
-              </Button>
+                <AutoSizeInput
+                  value={node.key}
+                  onCommit={(value) => onRename(String(value))}
+                  onClick={(event) => event.stopPropagation()}
+                />
+              </div>
 
-              <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div
+                className="flex items-center opacity-0 transition-opacity group-hover:opacity-100"
+                onClick={(event) => event.stopPropagation()}
+              >
                 {hasChildItems && (
                   <IconButton
                     icon={ChevronRight}
@@ -64,27 +71,45 @@ function ObjectRow({
                     className={cn(isExpanded && "rotate-90")}
                   />
                 )}
-                <IconButton
-                  icon={Trash2}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => onDelete(node.key)}
-                />
+
+                <IconButton icon={Trash2} onClick={() => onDelete(node.key)} />
               </div>
             </div>
           </div>
         )}
       </TreeItemContent>
 
-      <Collection items={node.children}>
-        {(child) => <ObjectRow key={child.key} node={child} onDelete={onDelete} />}
-      </Collection>
+      <RowCollection nodes={node.children} onRename={onRename} onDelete={onDelete} />
     </TreeItem>
+  );
+}
+
+function RowCollection({
+  nodes,
+  onRename,
+  onDelete,
+}: {
+  nodes: SerializableObject[];
+  onRename: (oldKey: string, newKey: string) => void;
+  onDelete: (key: string) => void;
+}) {
+  return (
+    <Collection items={nodes}>
+      {(node) => (
+        <ObjectRow
+          key={node.key}
+          node={node}
+          onRename={(newKey) => onRename(node.key, newKey)}
+          onDelete={onDelete}
+        />
+      )}
+    </Collection>
   );
 }
 
 export default function TopLevelObjects() {
   const scene = useScene();
-  const { deselectObjects } = useSelectedObjects();
+  const { deselectObjects, selectObject } = useSelectedObjects();
 
   const roots = buildTree(scene);
 
@@ -142,6 +167,22 @@ export default function TopLevelObjects() {
     },
   });
 
+  const renameObject = (oldKey: string, newKey: string) => {
+    if (!newKey || newKey === oldKey || scene[newKey]) return;
+
+    deselectObjects();
+    scene[newKey] = scene[oldKey];
+    delete scene[oldKey];
+
+    if (!isSerializableObject(scene[newKey])) return;
+    selectObject(newKey, scene[newKey]);
+  };
+
+  const deleteObject = (key: string) => {
+    delete scene[key];
+    deselectObjects();
+  };
+
   return (
     <Dropdown
       className="bg-background text-sm rounded-sm w-64 overflow-clip"
@@ -159,18 +200,7 @@ export default function TopLevelObjects() {
         </button>
 
         <Tree aria-label="Scene Objects" dragAndDropHooks={dragAndDropHooks}>
-          <Collection items={roots}>
-            {(node) => (
-              <ObjectRow
-                key={node.key}
-                node={node}
-                onDelete={(key) => {
-                  delete scene[key];
-                  deselectObjects();
-                }}
-              />
-            )}
-          </Collection>
+          <RowCollection nodes={roots} onRename={renameObject} onDelete={deleteObject} />
         </Tree>
       </div>
     </Dropdown>
