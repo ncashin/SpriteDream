@@ -66,10 +66,14 @@ export const mapScene =
       return result ? [result] : [];
     });
 
-export const queryScene =
-  <T extends Serializable>(predicate: (key: string, value: Serializable) => value is T) =>
-  (scene: SerializableObject): [string, T][] =>
-    Object.entries(scene).flatMap(([key, value]) => (predicate(key, value) ? [[key, value]] : []));
+export const query =
+  <T extends Serializable>(
+    scene: SerializableObject,
+    predicate: (key: string, value: Serializable) => value is T,
+  ): [string, T][] =>
+    Object.entries(scene).flatMap(([key, value]) =>
+      predicate(key, value) ? [[key, value]] : [],
+    );
 
 export const find =
   <T extends Serializable>(predicate: (value: Serializable) => value is T) =>
@@ -80,7 +84,10 @@ export type CurrySceneOptions = {
   onSetScene?: (scene: SerializableObject) => void;
 };
 
-export const curryScene = (sceneData: SerializableObject, { onSetScene }: CurrySceneOptions) => {
+export const curryScene = (
+  sceneData: SerializableObject,
+  { onSetScene }: CurrySceneOptions,
+) => {
   const scene = structuredClone(sceneData);
   const sceneStore = createSceneStore(scene);
 
@@ -102,9 +109,10 @@ export const curryScene = (sceneData: SerializableObject, { onSetScene }: CurryS
     },
 
     queryScene:
-      <TValue extends Serializable>(predicate: (value: Serializable) => value is TValue) =>
-      (): TValue[] =>
-        Object.values(scene).filter(predicate),
+      <TValue extends Serializable>(
+        predicate: (key: string, value: Serializable) => value is TValue,
+      ) =>
+        query(scene, predicate),
   };
 };
 

@@ -1,5 +1,6 @@
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useEffect } from "react";
+import useSelectedObjects from "./useSelectedObjects";
 
 export default function useEditorHotkeys({
   onSave,
@@ -12,6 +13,14 @@ export default function useEditorHotkeys({
   onRedo: () => void;
   hasUnsavedChanges: boolean;
 }) {
+  const {deselectObjects}  = useSelectedObjects();
+  useHotkey("Escape", (event) => {
+    deselectObjects();
+    event.preventDefault();
+    onRedo();
+  });
+
+
   useHotkey("Mod+Z", (event) => {
     event.preventDefault();
     onUndo();

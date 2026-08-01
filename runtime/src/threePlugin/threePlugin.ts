@@ -8,7 +8,7 @@ import {
 } from "three";
 import { hasComponent } from "../components";
 import type { GameContext } from "../initialization";
-import { queryScene } from "../scene";
+import { query } from "../scene";
 import { createDebugCamera } from "./editorCamera";
 import { MeshComponent, syncMeshComponent } from "./mesh";
 import { TransformComponent } from "./transform";
@@ -44,7 +44,7 @@ export const threePlugin = () => (context: GameContext) => {
     return newMesh;
   };
 
-  const meshQuery = queryScene(
+  const meshQuery = query(
     (object) => hasComponent(object, TransformComponent) && hasComponent(object, MeshComponent),
   );
 

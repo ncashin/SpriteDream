@@ -4,6 +4,7 @@ export type SelectedObject = {
   key: string;
   object: SerializableObject;
 };
+
 export type SelectedObjectsStore = ReturnType<typeof createSelectedObjectsStore>;
 
 export function createSelectedObjectsStore() {
@@ -24,13 +25,23 @@ export function createSelectedObjectsStore() {
 
   const getSnapshot = () => selectedObjects;
 
+  const isSelected = (key: string) => {
+    return selectedObjects.some((selected) => selected.key === key);
+  };
+
   const selectObject = (key: string, object: SerializableObject) => {
-    selectedObjects = [...selectedObjects, { key, object }];
-    emit();
+    console.log("HIT");
+
+    if (!isSelected(key)) {
+      selectedObjects = [...selectedObjects, { key, object }];
+      emit();
+    }
   };
 
   const deselectObject = (object: SerializableObject) => {
-    selectedObjects = selectedObjects.filter((selected) => selected.object !== object);
+    selectedObjects = selectedObjects.filter(
+      (selected) => selected.object !== object
+    );
 
     emit();
   };
@@ -46,5 +57,6 @@ export function createSelectedObjectsStore() {
     selectObject,
     deselectObject,
     deselectObjects,
+    isSelected,
   };
 }
