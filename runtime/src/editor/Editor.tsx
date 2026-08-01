@@ -48,13 +48,11 @@ export default function Editor() {
     <>
       <div className="text-sm absolute inset-x-0 top-0 p-2 text-white pointer-events-none z-50">
         <div className="grid grid-cols-3 items-start">
-          {/* Left */}
           <div className="justify-self-start flex flex-col gap-4 pointer-events-auto">
             <TopLevelObjects />
             <SelectedObject />
           </div>
 
-          {/* Center */}
           <div className="justify-self-center pointer-events-auto">
             <SceneSelect
               deferredFilepath={deferredFilepath}
@@ -64,7 +62,6 @@ export default function Editor() {
             />
           </div>
 
-          {/* Right */}
           <div className="justify-self-end flex flex-row gap-2 pointer-events-auto">
             <Button className="header gap-1">
               Settings <Settings className="icon-size" />

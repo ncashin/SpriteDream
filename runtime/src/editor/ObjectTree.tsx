@@ -3,6 +3,7 @@ import { cn } from "cnfast";
 import { Box, ChevronRight, PlusIcon, Trash2Icon } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import {
+  Button,
   Collection,
   DropIndicator,
   Tree,
@@ -41,10 +42,12 @@ export type AutoSizeInputProperties = {
 
 function AutoSizeInput({ value, onCommit, ...props }: AutoSizeInputProperties) {
   const [draft, setDraft] = useState(value);
+  const [editing, setEditing] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
-  const editingRef = useRef(false);
+
+  const displayValue = editing ? draft : value;
 
   useLayoutEffect(() => {
     const input = inputRef.current;
@@ -53,28 +56,25 @@ function AutoSizeInput({ value, onCommit, ...props }: AutoSizeInputProperties) {
     if (!input || !measure) return;
 
     input.style.width = `${measure.offsetWidth}px`;
-  }, [draft]);
+  }, [displayValue]);
 
   function focusCenter() {
-    const input = inputRef.current;
-    if (!input) return;
-
-    input.focus();
+    inputRef.current?.focus();
   }
 
   function startEdit() {
-    editingRef.current = true;
+    setEditing(true);
     setDraft(value);
 
     requestAnimationFrame(focusCenter);
   }
 
   function commit() {
-    editingRef.current = false;
-
     if (draft !== value) {
       onCommit(draft);
     }
+
+    setEditing(false);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -96,13 +96,13 @@ function AutoSizeInput({ value, onCommit, ...props }: AutoSizeInputProperties) {
         ref={measureRef}
         className="absolute invisible whitespace-pre font-inherit text-inherit tracking-inherit"
       >
-        {draft || " "}
+        {displayValue || " "}
       </span>
 
       <input
         {...props}
         ref={inputRef}
-        value={draft}
+        value={displayValue}
         onFocus={startEdit}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={handleKeyDown}
@@ -136,6 +136,7 @@ export function ObjectRow({
         {({ hasChildItems, isExpanded }) => (
           <div className="group pl-[--spacing(calc((var(--tree-item-level)-1)*3))]">
             <div className="row">
+              <Button slot="drag" />
               <div className={cn(hasChildItems && "flex-1 flex flex-row items-center")}>
                 {hasChildItems && <Box className="icon-size mr-1" />}
 
@@ -199,10 +200,6 @@ export function ObjectRow({
       </Collection>
     </TreeItem>
   );
-}
-
-function getLastPathPart(path: string) {
-  return path.split(".").pop();
 }
 
 function getValue(root: SerializableObject, path: string): Serializable | undefined {
@@ -286,7 +283,7 @@ export default function ObjectTree({ object }: { object: SerializableObject }) {
           return;
         }
 
-        // Same parent: just reorder
+        // Same parent just reorder
         if (draggedParent === targetParent) {
           reorderObjectKeys(
             draggedParent,
@@ -298,7 +295,7 @@ export default function ObjectTree({ object }: { object: SerializableObject }) {
           return;
         }
 
-        // Different parent: remove and insert into new parent
+        // Different parent remove and insert into new parent
         const value = draggedParent[draggedKey];
 
         delete draggedParent[draggedKey];
@@ -327,7 +324,7 @@ export default function ObjectTree({ object }: { object: SerializableObject }) {
       <Collection items={entries}>
         {([childKey, childValue]) => (
           <ObjectRow
-            key={childKey}
+            key={`${childKey}`}
             id={childKey}
             parent={object}
             entry={[childKey, childValue]}

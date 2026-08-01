@@ -45,6 +45,7 @@ function ObjectRow({
                 selectedObjects.some(({ object }) => object === node.object) && "bg-select",
               )}
             >
+              <Button slot="drag" />
               <Button
                 className="flex-1 flex items-center text-left"
                 onClick={() => {

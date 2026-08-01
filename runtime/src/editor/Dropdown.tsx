@@ -1,7 +1,6 @@
 import cn from "cnfast";
 import { ChevronRight } from "lucide-react";
 import { useState, type PropsWithChildren } from "react";
-import { IconButton } from "./IconButton";
 
 export const Dropdown = ({
   className,
@@ -12,13 +11,13 @@ export const Dropdown = ({
 
   return (
     <div className={className}>
-      <button className={cn("header", buttonClassName)} onClick={() => setExpanded(!expanded)}>
-        Game Objects
-        <IconButton
-          icon={ChevronRight}
-          onClick={() => setExpanded(!expanded)}
-          className={cn(expanded && "rotate-90")}
-        />
+      <button
+        className={cn("header", buttonClassName)}
+        onClick={() => setExpanded((prev) => !prev)}
+        aria-expanded={expanded}
+      >
+        <span>Game Objects</span>
+        <ChevronRight className={cn("icon-size", expanded && "rotate-90")} />
       </button>
       {expanded && children}
     </div>
