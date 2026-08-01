@@ -186,7 +186,6 @@ export function ObjectRow({
             parent={value}
             entry={[childKey, childValue]}
             onKeyChange={(newKey) => {
-              console.log(newKey);
               const existingValue = value[childKey];
 
               delete value[childKey];

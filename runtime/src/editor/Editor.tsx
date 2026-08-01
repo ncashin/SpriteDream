@@ -9,10 +9,13 @@ import TopLevelObjects from "./TopLevelObjects";
 import useDirectory from "./useDirectory";
 import useEditorHotkeys from "./useEditorHotkeys";
 import useFile from "./useFile";
+import useGameContext from "./useGameContext";
 import useScene from "./useScene";
 
 export default function Editor() {
   const scene = useScene();
+
+  const gameContext = useGameContext();
 
   const directoryQuery = useDirectory();
   const sceneFiles = useMemo(() => {
@@ -67,7 +70,12 @@ export default function Editor() {
               Settings <Settings className="icon-size" />
             </Button>
 
-            <Button className="header gap-1">
+            <Button
+              className="header gap-1"
+              onClick={() => {
+                gameContext.__run.rerunAfter({ ...gameContext, isEditor: false });
+              }}
+            >
               Run <PlayIcon className="icon-size" />
             </Button>
           </div>

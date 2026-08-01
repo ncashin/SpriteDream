@@ -1,5 +1,6 @@
 import invariant from "tiny-invariant";
 import { editorPlugin } from "./editor/editorPlugin";
+import { main } from "./gamingPlugin";
 import { gameide } from "./initialization";
 import { pixiPlugin } from "./pixiPlugin/pixiPlugin";
 import initialScene from "./scenes/example.scene?raw";
@@ -14,4 +15,5 @@ gameide({
   additionalContext: {},
 })
   .run(editorPlugin())
-  .run(pixiPlugin());
+  .run(pixiPlugin({}))
+  .run(main);

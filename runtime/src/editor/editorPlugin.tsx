@@ -12,7 +12,7 @@ import GameContextProvider from "./GameContextProvider";
 import GameViewProvider from "./GameViewProvider";
 
 export const editorPlugin = () => async (context: GameContext) => {
-  const { rootElement, scene } = context;
+  const { rootElement, scene, onDispose } = context;
 
   const queryClient = new QueryClient();
 
@@ -39,6 +39,11 @@ export const editorPlugin = () => async (context: GameContext) => {
   const newRootElement = rootElement.querySelector("#game-view");
   invariant(newRootElement, "A <GameView /> Component Must Be Rendered In Editor");
 
+  onDispose(() => {
+    editorRoot.unmount();
+    queryClient.clear();
+  });
+
   if (import.meta.hot) {
     import.meta.hot.on("gameide:scene", ({ file, content, patch }) => {
       const queryKey = ["files", file];
@@ -48,6 +53,10 @@ export const editorPlugin = () => async (context: GameContext) => {
       queryClient.invalidateQueries({ queryKey });
 
       patchScene(scene, patch);
+    });
+
+    import.meta.hot.accept(() => {
+      context.__run.rerun();
     });
   }
 

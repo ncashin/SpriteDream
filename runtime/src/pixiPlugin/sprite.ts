@@ -16,12 +16,12 @@ export const SpriteComponent = defineComponent(
 
 export type SpriteObject = ComponentType<[typeof TransformComponent, typeof SpriteComponent]>;
 
-const spriteMap = new Map<SpriteObject, Sprite>();
-
 export const handleSprites = async (gameContext: GameContext, container: Container) => {
-  const { queryScene: query, onUpdate } = gameContext;
+  const { queryScene, onUpdate } = gameContext;
 
-  const spriteQuery = query(
+  const spriteMap = new Map<SpriteObject, Sprite>();
+
+  const spriteQuery = queryScene(
     (object) => hasComponent(object, TransformComponent) && hasComponent(object, SpriteComponent),
   );
 
@@ -42,7 +42,10 @@ export const handleSprites = async (gameContext: GameContext, container: Contain
     for (const gameObject of spriteQuery()) {
       foundObjects.add(gameObject);
 
-      const pixiSprite = spriteMap.get(gameObject) ?? (await createSpriteForGameObject(gameObject));
+      let pixiSprite = spriteMap.get(gameObject);
+      if (!pixiSprite || pixiSprite.destroyed) {
+        pixiSprite = await createSpriteForGameObject(gameObject);
+      }
 
       const { position, rotation, scale, tint, resolution } = gameObject;
       pixiSprite.position.set(-position.x, position.y);
