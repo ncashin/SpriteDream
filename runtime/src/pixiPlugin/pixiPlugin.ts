@@ -1,5 +1,6 @@
 import { Application } from "pixi.js";
 import type { GameContext } from "../initialization";
+import { handleParentHierarchy } from "./handleParentHierarchy";
 import { handleSelectedObjects } from "./selectedObject";
 import { handleSprites } from "./sprite";
 import { handleViewport } from "./viewport";
@@ -20,8 +21,9 @@ export const pixiPlugin = (options: {}) => async (context: GameContext) => {
   rootElement.append(app.canvas);
 
   const { viewport, viewportContainer } = handleViewport(context, app);
-  handleSelectedObjects(context, viewport, viewportContainer);
-  handleSprites(context, viewportContainer);
+  const hierarchy = handleParentHierarchy(context, viewportContainer);
+  handleSelectedObjects(context, hierarchy);
+  handleSprites(context, hierarchy);
 
   app.stage.on("pointerdown", () => {
     selectedObjectsStore.deselectObjects();

@@ -1,8 +1,9 @@
-import { Assets, Container, Sprite } from "pixi.js";
+import { Assets, Sprite } from "pixi.js";
 import z from "zod";
 import { defineComponent, hasComponent, type ComponentType } from "../components";
 import type { GameContext } from "../initialization";
 import { TransformComponent } from "../transform";
+import type { ParentHierarchy } from "./handleParentHierarchy";
 
 export const SpriteComponent = defineComponent(
   "sprite",
@@ -20,7 +21,7 @@ export const SpriteComponent = defineComponent(
 
 export type SpriteObject = ComponentType<[typeof TransformComponent, typeof SpriteComponent]>;
 
-export const handleSprites = async (gameContext: GameContext, container: Container) => {
+export const handleSprites = async (gameContext: GameContext, hierarchy: ParentHierarchy) => {
   const { isEditor, queryScene, onUpdate, selectedObjectsStore } = gameContext;
 
   const spriteMap = new Map<SpriteObject, Sprite>();
@@ -31,7 +32,7 @@ export const handleSprites = async (gameContext: GameContext, container: Contain
     newSprite.anchor.set(0.5);
 
     spriteMap.set(gameObject, newSprite);
-    container.addChild(newSprite);
+    hierarchy.getContainer(key).addChild(newSprite);
 
     if (isEditor) {
       newSprite.eventMode = "static";
@@ -60,21 +61,17 @@ export const handleSprites = async (gameContext: GameContext, container: Contain
       const pixiSprite =
         spriteMap.get(gameObject) ?? (await createSpriteForGameObject(key, gameObject));
 
-      const { position, rotation, scale, tint, resolution } = gameObject;
-      pixiSprite.position.set(-position.x, position.y);
-      pixiSprite.rotation = rotation.z ?? 0;
-      pixiSprite.scale.set(scale.x, scale.y);
+      const { tint, resolution } = gameObject;
 
-      pixiSprite.width = resolution.width * Math.abs(scale.x);
-      pixiSprite.height = resolution.height * Math.abs(scale.y);
-
+      pixiSprite.width = resolution.width;
+      pixiSprite.height = resolution.height;
       pixiSprite.tint = tint;
     }
 
     for (const [gameObject, sprite] of spriteMap) {
       if (foundObjects.has(gameObject)) continue;
 
-      container.removeChild(sprite);
+      sprite.parent?.removeChild(sprite);
       sprite.destroy();
 
       spriteMap.delete(gameObject);

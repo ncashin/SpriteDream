@@ -1,17 +1,48 @@
-import { Container, FederatedPointerEvent, Graphics, Rectangle } from "pixi.js";
+import { Container, FederatedPointerEvent, Graphics, Point, Rectangle } from "pixi.js";
 
 import { hasComponent } from "../components";
 import type { GameContext } from "../initialization";
+import { ParentComponent } from "../parent";
+import { isSerializableObject } from "../scene";
 import { TransformComponent } from "../transform";
-import { SpriteComponent } from "./sprite";
-import type { Viewport } from "./viewport";
+import type { ParentHierarchy } from "./handleParentHierarchy";
+import { SpriteComponent, type SpriteObject } from "./sprite";
 
-export const handleSelectedObjects = (
-  gameContext: GameContext,
-  viewport: Viewport,
-  stage: Container,
-) => {
-  const { onUpdate, selectedObjectsStore } = gameContext;
+const getGizmoScale = (gizmoParent: Container, hasParent: boolean): Point => {
+  if (!hasParent) {
+    return new Point(1, 1);
+  }
+
+  return new Point(
+    gizmoParent.scale.x === 0 ? 1 : 1 / Math.abs(gizmoParent.scale.x),
+    gizmoParent.scale.y === 0 ? 1 : 1 / Math.abs(gizmoParent.scale.y),
+  );
+};
+
+const hasSceneParent = (object: SpriteObject, scene: GameContext["scene"]): boolean => {
+  if (!hasComponent(object, ParentComponent)) return false;
+
+  const parentKey = object.parent;
+  if (!parentKey || parentKey === "undefined") return false;
+
+  return isSerializableObject(scene[parentKey]);
+};
+
+const getArrowAxisInGlobalSpace = (gizmoLayer: Container, axis: "x" | "y"): Point => {
+  const origin = gizmoLayer.getGlobalPosition(new Point());
+  const tip = gizmoLayer.toGlobal(axis === "x" ? new Point(-100, 0) : new Point(0, 100));
+  const direction = new Point(tip.x - origin.x, tip.y - origin.y);
+  const length = Math.hypot(direction.x, direction.y);
+
+  if (length === 0) {
+    return axis === "x" ? new Point(1, 0) : new Point(0, 1);
+  }
+
+  return new Point(direction.x / length, direction.y / length);
+};
+
+export const handleSelectedObjects = (gameContext: GameContext, hierarchy: ParentHierarchy) => {
+  const { onUpdate, selectedObjectsStore, scene } = gameContext;
 
   const gizmoLayer = new Container();
 
@@ -61,8 +92,8 @@ export const handleSelectedObjects = (
   yGizmo.eventMode = "static";
   areaGizmo.eventMode = "static";
 
-  xGizmo.cursor = "ew-resize";
-  yGizmo.cursor = "ns-resize";
+  xGizmo.cursor = "pointer";
+  yGizmo.cursor = "pointer";
   areaGizmo.cursor = "move";
 
   xGizmo.hitArea = new Rectangle(-140, -20, 140, 40);
@@ -80,8 +111,6 @@ export const handleSelectedObjects = (
   gizmoLayer.addChild(yGizmo);
   gizmoLayer.addChild(areaGizmo);
 
-  stage.addChild(gizmoLayer);
-
   const dragState = {
     active: false,
 
@@ -92,46 +121,99 @@ export const handleSelectedObjects = (
 
     startObjectX: 0,
     startObjectY: 0,
+
+    startWorldX: 0,
+    startWorldY: 0,
   };
 
-  const getSelectedObject = () => {
-    const object = selectedObjectsStore.getSnapshot()[0]?.object;
+  const getSelected = (): { key: string; object: SpriteObject } | undefined => {
+    const selected = selectedObjectsStore.getSnapshot()[0];
 
     if (
-      !object ||
-      !hasComponent(object, TransformComponent) ||
-      !hasComponent(object, SpriteComponent)
+      !selected?.object ||
+      !hasComponent(selected.object, TransformComponent) ||
+      !hasComponent(selected.object, SpriteComponent)
     ) {
       return undefined;
     }
 
-    return object;
+    return { key: selected.key, object: selected.object };
+  };
+
+  const parentDeltaFromScreen = (
+    gizmoParent: Container,
+    screenDeltaX: number,
+    screenDeltaY: number,
+  ): Point => {
+    const localOrigin = gizmoParent.toLocal(new Point(0, 0));
+    const localDeltaEnd = gizmoParent.toLocal(new Point(screenDeltaX, screenDeltaY));
+
+    return new Point(localDeltaEnd.x - localOrigin.x, localDeltaEnd.y - localOrigin.y);
+  };
+
+  const applyAxisDrag = (
+    container: Container,
+    gizmoLayer: Container,
+    object: SpriteObject,
+    axis: "x" | "y",
+    screenDeltaX: number,
+    screenDeltaY: number,
+  ) => {
+    const parent = container.parent;
+
+    if (!parent) return;
+
+    const arrowAxis = getArrowAxisInGlobalSpace(gizmoLayer, axis);
+    const travel = screenDeltaX * arrowAxis.x + screenDeltaY * arrowAxis.y;
+    const targetWorld = new Point(
+      dragState.startWorldX + travel * arrowAxis.x,
+      dragState.startWorldY + travel * arrowAxis.y,
+    );
+    const targetLocal = parent.toLocal(targetWorld);
+
+    object.position.x = -targetLocal.x;
+    object.position.y = targetLocal.y;
+  };
+
+  const applyDragDelta = (
+    container: Container,
+    gizmoLayer: Container,
+    object: SpriteObject,
+    screenDeltaX: number,
+    screenDeltaY: number,
+  ) => {
+    const gizmoParent = gizmoLayer.parent;
+
+    if (!gizmoParent) return;
+
+    if (dragState.axis === "x") {
+      applyAxisDrag(container, gizmoLayer, object, "x", screenDeltaX, screenDeltaY);
+      return;
+    }
+
+    if (dragState.axis === "y") {
+      applyAxisDrag(container, gizmoLayer, object, "y", screenDeltaX, screenDeltaY);
+      return;
+    }
+
+    const parentDelta = parentDeltaFromScreen(gizmoParent, screenDeltaX, screenDeltaY);
+
+    object.position.x = dragState.startObjectX - parentDelta.x;
+    object.position.y = dragState.startObjectY + parentDelta.y;
   };
 
   const onDrag = (event: PointerEvent) => {
     if (!dragState.active) return;
 
-    const selected = getSelectedObject();
+    const selected = getSelected();
 
     if (!selected) return;
 
-    const deltaX = (event.clientX - dragState.startMouseX) / viewport.zoom;
+    const container = hierarchy.getContainer(selected.key);
+    const screenDeltaX = event.clientX - dragState.startMouseX;
+    const screenDeltaY = event.clientY - dragState.startMouseY;
 
-    const deltaY = (event.clientY - dragState.startMouseY) / viewport.zoom;
-
-    if (dragState.axis === "x") {
-      selected.position.x = dragState.startObjectX + deltaX;
-    }
-
-    if (dragState.axis === "y") {
-      selected.position.y = dragState.startObjectY - deltaY;
-    }
-
-    if (dragState.axis === "both") {
-      selected.position.x = dragState.startObjectX + deltaX;
-
-      selected.position.y = dragState.startObjectY - deltaY;
-    }
+    applyDragDelta(container, gizmoLayer, selected.object, screenDeltaX, screenDeltaY);
   };
 
   const stopDragging = () => {
@@ -146,9 +228,12 @@ export const handleSelectedObjects = (
   const startDragging = (axis: "x" | "y" | "both") => (event: FederatedPointerEvent) => {
     event.stopPropagation();
 
-    const selected = getSelectedObject();
+    const selected = getSelected();
 
     if (!selected) return;
+
+    const container = hierarchy.getContainer(selected.key);
+    const world = container.getGlobalPosition(new Point());
 
     dragState.active = true;
     dragState.axis = axis;
@@ -156,9 +241,10 @@ export const handleSelectedObjects = (
     dragState.startMouseX = event.client.x;
     dragState.startMouseY = event.client.y;
 
-    dragState.startObjectX = selected.position.x;
-
-    dragState.startObjectY = selected.position.y;
+    dragState.startObjectX = selected.object.position.x;
+    dragState.startObjectY = selected.object.position.y;
+    dragState.startWorldX = world.x;
+    dragState.startWorldY = world.y;
 
     window.addEventListener("pointermove", onDrag);
 
@@ -172,20 +258,39 @@ export const handleSelectedObjects = (
   areaGizmo.on("pointerdown", startDragging("both"));
 
   onUpdate(() => {
-    const selected = getSelectedObject();
+    const selected = getSelected();
 
     if (!selected) {
+      gizmoLayer.visible = false;
+      gizmoLayer.parent?.removeChild(gizmoLayer);
+      return;
+    }
+
+    const container = hierarchy.getContainer(selected.key);
+    const gizmoParent = container.parent;
+
+    if (!gizmoParent) {
       gizmoLayer.visible = false;
       return;
     }
 
-    gizmoLayer.visible = true;
+    if (gizmoLayer.parent !== gizmoParent) {
+      gizmoLayer.parent?.removeChild(gizmoLayer);
+      gizmoParent.addChild(gizmoLayer);
+    }
 
-    gizmoLayer.position.set(-selected.position.x, selected.position.y);
+    gizmoLayer.visible = true;
+    gizmoLayer.position.set(container.position.x, container.position.y);
+    gizmoLayer.rotation = container.rotation;
+
+    const counterScale = getGizmoScale(gizmoParent, hasSceneParent(selected.object, scene));
+    gizmoLayer.scale.set(counterScale.x, counterScale.y);
   });
 
   gameContext.onDispose(() => {
     stopDragging();
+
+    gizmoLayer.parent?.removeChild(gizmoLayer);
 
     gizmoLayer.destroy({
       children: true,

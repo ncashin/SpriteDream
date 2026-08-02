@@ -9,6 +9,7 @@ export type Viewport = {
 
 export const handleViewport = (context: GameContext, app: Application) => {
   const viewportContainer = new Container();
+  viewportContainer.sortableChildren = true;
 
   const viewport: Viewport = {
     x: 0,
