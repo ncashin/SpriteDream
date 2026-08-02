@@ -7,10 +7,7 @@ export type Viewport = {
   zoom: number;
 };
 
-export const handleViewport = (
-  context: GameContext,
-  app: Application,
-) => {
+export const handleViewport = (context: GameContext, app: Application) => {
   const viewportContainer = new Container();
 
   const viewport: Viewport = {
@@ -80,26 +77,19 @@ export const handleViewport = (
 
     const oldZoom = viewport.zoom;
 
-    const newZoom = Math.min(
-      5,
-      Math.max(0.1, oldZoom * (1 - event.deltaY * 0.005)),
-    );
+    const newZoom = Math.min(5, Math.max(0.1, oldZoom * (1 - event.deltaY * 0.005)));
 
     if (newZoom === oldZoom) return;
 
-    const worldX =
-      viewport.x + (pointerX - app.screen.width / 2) / oldZoom;
+    const worldX = viewport.x + (pointerX - app.screen.width / 2) / oldZoom;
 
-    const worldY =
-      viewport.y + (pointerY - app.screen.height / 2) / oldZoom;
+    const worldY = viewport.y + (pointerY - app.screen.height / 2) / oldZoom;
 
     viewport.zoom = newZoom;
 
-    viewport.x =
-      worldX - (pointerX - app.screen.width / 2) / newZoom;
+    viewport.x = worldX - (pointerX - app.screen.width / 2) / newZoom;
 
-    viewport.y =
-      worldY - (pointerY - app.screen.height / 2) / newZoom;
+    viewport.y = worldY - (pointerY - app.screen.height / 2) / newZoom;
   };
 
   app.canvas.addEventListener("wheel", onWheel, {

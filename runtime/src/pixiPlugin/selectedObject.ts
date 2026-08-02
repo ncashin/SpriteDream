@@ -1,37 +1,101 @@
 import { Container, FederatedPointerEvent, Graphics, Rectangle } from "pixi.js";
+
 import { hasComponent } from "../components";
 import type { GameContext } from "../initialization";
 import { TransformComponent } from "../transform";
 import { SpriteComponent } from "./sprite";
+import type { Viewport } from "./viewport";
 
 export const handleSelectedObjects = (
   gameContext: GameContext,
+  viewport: Viewport,
   stage: Container,
 ) => {
   const { onUpdate, selectedObjectsStore } = gameContext;
 
   const gizmoLayer = new Container();
+
   gizmoLayer.zIndex = 9999;
   gizmoLayer.sortableChildren = true;
 
-  const gizmo = new Graphics();
+  const xGizmo = new Graphics();
+  const yGizmo = new Graphics();
+  const areaGizmo = new Graphics();
 
-  gizmo.eventMode = "static";
-  gizmo.cursor = "pointer";
-  gizmo.hitArea = new Rectangle(-50, -20, 100, 160);
+  const width = 5;
+  const areaSize = 30;
 
-  gizmoLayer.addChild(gizmo);
+  // Draw X gizmo
+  xGizmo
+    .moveTo(width / 2, -width / 2)
+    .lineTo(-100, -width / 2)
+    .lineTo(-100, width / 2)
+    .lineTo(0, width / 2)
+    .closePath()
+    .fill(0xff3333);
+
+  xGizmo.moveTo(-100, -10).lineTo(-120, 0).lineTo(-100, 10).closePath().fill(0xff3333);
+
+  // Draw Y gizmo
+  yGizmo
+    .moveTo(-width / 2, width / 2)
+    .lineTo(-width / 2, 100)
+    .lineTo(width / 2, 100)
+    .lineTo(width / 2, -width / 2)
+    .closePath()
+    .fill(0x33ff66);
+
+  yGizmo.moveTo(-10, 100).lineTo(0, 120).lineTo(10, 100).closePath().fill(0x33ff66);
+
+  // Draw area gizmo
+  areaGizmo
+    .moveTo(-width / 2, width / 2)
+    .lineTo(-width / 2 - areaSize, width / 2)
+    .lineTo(-width / 2 - areaSize, width / 2 + areaSize)
+    .lineTo(-width / 2, width / 2 + areaSize)
+    .closePath()
+    .fill(0xaa33ff);
+
+  // Interaction setup
+  xGizmo.eventMode = "static";
+  yGizmo.eventMode = "static";
+  areaGizmo.eventMode = "static";
+
+  xGizmo.cursor = "ew-resize";
+  yGizmo.cursor = "ns-resize";
+  areaGizmo.cursor = "move";
+
+  xGizmo.hitArea = new Rectangle(-140, -20, 140, 40);
+
+  yGizmo.hitArea = new Rectangle(-20, 0, 40, 140);
+
+  areaGizmo.hitArea = new Rectangle(-width / 2 - areaSize, width / 2, areaSize, areaSize);
+
+  // Put area on top
+  xGizmo.zIndex = 0;
+  yGizmo.zIndex = 0;
+  areaGizmo.zIndex = 10;
+
+  gizmoLayer.addChild(xGizmo);
+  gizmoLayer.addChild(yGizmo);
+  gizmoLayer.addChild(areaGizmo);
+
   stage.addChild(gizmoLayer);
 
   const dragState = {
     active: false,
-    startY: 0,
+
+    axis: null as "x" | "y" | "both" | null,
+
+    startMouseX: 0,
+    startMouseY: 0,
+
+    startObjectX: 0,
     startObjectY: 0,
   };
 
   const getSelectedObject = () => {
-    const selectedEntry = selectedObjectsStore.getSnapshot()[0];
-    const object = selectedEntry?.object;
+    const object = selectedObjectsStore.getSnapshot()[0]?.object;
 
     if (
       !object ||
@@ -48,24 +112,38 @@ export const handleSelectedObjects = (
     if (!dragState.active) return;
 
     const selected = getSelectedObject();
+
     if (!selected) return;
 
+    const deltaX = (event.clientX - dragState.startMouseX) / viewport.zoom;
 
-    const deltaY = event.clientY - dragState.startY;
+    const deltaY = (event.clientY - dragState.startMouseY) / viewport.zoom;
 
-    selected.position.y = dragState.startObjectY - deltaY;
+    if (dragState.axis === "x") {
+      selected.position.x = dragState.startObjectX + deltaX;
+    }
+
+    if (dragState.axis === "y") {
+      selected.position.y = dragState.startObjectY - deltaY;
+    }
+
+    if (dragState.axis === "both") {
+      selected.position.x = dragState.startObjectX + deltaX;
+
+      selected.position.y = dragState.startObjectY - deltaY;
+    }
   };
 
   const stopDragging = () => {
-    if (!dragState.active) return;
-
     dragState.active = false;
+    dragState.axis = null;
 
     window.removeEventListener("pointermove", onDrag);
+
     window.removeEventListener("pointerup", stopDragging);
   };
 
-  const startDragging = (event: FederatedPointerEvent) => {
+  const startDragging = (axis: "x" | "y" | "both") => (event: FederatedPointerEvent) => {
     event.stopPropagation();
 
     const selected = getSelectedObject();
@@ -73,40 +151,37 @@ export const handleSelectedObjects = (
     if (!selected) return;
 
     dragState.active = true;
-    dragState.startY = event.client.y;
+    dragState.axis = axis;
+
+    dragState.startMouseX = event.client.x;
+    dragState.startMouseY = event.client.y;
+
+    dragState.startObjectX = selected.position.x;
+
     dragState.startObjectY = selected.position.y;
 
     window.addEventListener("pointermove", onDrag);
+
     window.addEventListener("pointerup", stopDragging);
   };
 
-  gizmo.on("pointerdown", startDragging);
+  xGizmo.on("pointerdown", startDragging("x"));
 
-  gizmo
-    .moveTo(0, 0)
-    .lineTo(0, 100)
-    .stroke({ color: 0x00ff00, width: 5 });
+  yGizmo.on("pointerdown", startDragging("y"));
 
-  gizmo
-    .moveTo(-10, 100)
-    .lineTo(10, 100)
-    .lineTo(0, 120)
-    .lineTo(-10, 100)
-    .fill(0x00ff00);
+  areaGizmo.on("pointerdown", startDragging("both"));
 
   onUpdate(() => {
     const selected = getSelectedObject();
 
     if (!selected) {
-      gizmo.visible = false;
+      gizmoLayer.visible = false;
       return;
     }
 
-    gizmo.visible = true;
+    gizmoLayer.visible = true;
 
-    const { position } = selected;
-
-    gizmo.position.set(-position.x, position.y);
+    gizmoLayer.position.set(-selected.position.x, selected.position.y);
   });
 
   gameContext.onDispose(() => {

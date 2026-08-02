@@ -7,7 +7,7 @@ import { handleViewport } from "./viewport";
 export type Viewport = { x: number; y: number; zoom: number };
 
 export const pixiPlugin = (options: {}) => async (context: GameContext) => {
-  const { rootElement, onDispose } = context;
+  const { rootElement, onDispose, selectedObjectsStore } = context;
 
   const app = new Application();
 
@@ -20,9 +20,12 @@ export const pixiPlugin = (options: {}) => async (context: GameContext) => {
   rootElement.append(app.canvas);
 
   const { viewport, viewportContainer } = handleViewport(context, app);
-  handleSelectedObjects(context, viewportContainer)
+  handleSelectedObjects(context, viewport, viewportContainer);
   handleSprites(context, viewportContainer);
 
+  app.stage.on("pointerdown", () => {
+    selectedObjectsStore.deselectObjects();
+  });
 
   onDispose(() => {
     if (app.canvas.parentElement === rootElement) {

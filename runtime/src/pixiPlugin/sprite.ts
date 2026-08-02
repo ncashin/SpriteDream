@@ -1,10 +1,6 @@
 import { Assets, Container, Sprite } from "pixi.js";
 import z from "zod";
-import {
-  defineComponent,
-  hasComponent,
-  type ComponentType,
-} from "../components";
+import { defineComponent, hasComponent, type ComponentType } from "../components";
 import type { GameContext } from "../initialization";
 import { TransformComponent } from "../transform";
 
@@ -22,22 +18,14 @@ export const SpriteComponent = defineComponent(
   },
 );
 
-export type SpriteObject = ComponentType<
-  [typeof TransformComponent, typeof SpriteComponent]
->;
+export type SpriteObject = ComponentType<[typeof TransformComponent, typeof SpriteComponent]>;
 
-export const handleSprites = async (
-  gameContext: GameContext,
-  container: Container,
-) => {
+export const handleSprites = async (gameContext: GameContext, container: Container) => {
   const { isEditor, queryScene, onUpdate, selectedObjectsStore } = gameContext;
 
   const spriteMap = new Map<SpriteObject, Sprite>();
 
-  const createSpriteForGameObject = async (
-    key: string,
-    gameObject: SpriteObject,
-  ) => {
+  const createSpriteForGameObject = async (key: string, gameObject: SpriteObject) => {
     const texture = await Assets.load(gameObject.sprite);
     const newSprite = new Sprite(texture);
     newSprite.anchor.set(0.5);
@@ -47,7 +35,11 @@ export const handleSprites = async (
 
     if (isEditor) {
       newSprite.eventMode = "static";
-      newSprite.on("pointerdown", () => {
+      newSprite.cursor = "pointer";
+
+      newSprite.on("pointerdown", (event) => {
+        event.stopPropagation();
+
         selectedObjectsStore.deselectObjects();
         selectedObjectsStore.selectObject(key, gameObject);
       });
@@ -60,15 +52,13 @@ export const handleSprites = async (
 
     const sprites = queryScene(
       (_, object) =>
-        hasComponent(object, TransformComponent) &&
-        hasComponent(object, SpriteComponent),
+        hasComponent(object, TransformComponent) && hasComponent(object, SpriteComponent),
     );
     for (const [key, gameObject] of sprites) {
       foundObjects.add(gameObject);
 
       const pixiSprite =
-        spriteMap.get(gameObject) ??
-        (await createSpriteForGameObject(key, gameObject));
+        spriteMap.get(gameObject) ?? (await createSpriteForGameObject(key, gameObject));
 
       const { position, rotation, scale, tint, resolution } = gameObject;
       pixiSprite.position.set(-position.x, position.y);
