@@ -8,117 +8,86 @@ export type GameIDEOptions<AdditionalContext> = {
   additionalContext: AdditionalContext;
 };
 
-type ContextModule<Input extends RunnableContext, Output extends object> = (
-  context: Input,
+type PluginModule<Context extends RunnableContext, Output extends object> = (
+  context: Context & { __run: RunInfo },
 ) => Output | Promise<Output>;
 
-type RunInfo = {
+export type RunInfo = {
   id: number;
   scope: string;
-  rerun: (module?: ContextModule<any, any>) => Promise<void>;
-  rerunAfter: (context: Partial<RunnableContext>) => Promise<void>;
+  rerun: (module?: PluginModule<any, any>) => Promise<void>;
+  rerunAfter: (patch: object) => Promise<void>;
 };
 
 type RunnableContext = LifecycleAPI & {
   __run?: RunInfo;
 };
 
-type PipelineStep = {
-  id: number;
-  module: ContextModule<any, any>;
+type Plugin = PluginModule<any, any>;
+
+async function runPipeline(
+  steps: Plugin[],
+  fromIndex: number,
+  context: RunnableContext,
+  patch?: object,
+): Promise<RunnableContext> {
+  let ctx = patch ? { ...context, ...patch } : context;
+
+  for (let i = steps.length - 1; i >= fromIndex; i--) {
+    await ctx.cleanupCallbacksByScope(`run:${i}`);
+  }
+
+  for (let i = fromIndex; i < steps.length; i++) {
+    const scope = `run:${i}`;
+    const contextBeforeStep = ctx;
+
+    const __run: RunInfo = {
+      id: i,
+      scope,
+      rerun: async (module) => {
+        if (module) steps[i] = module;
+        await runPipeline(steps, i, contextBeforeStep);
+      },
+      rerunAfter: async (p) => {
+        await runPipeline(steps, i + 1, contextBeforeStep, p);
+      },
+    };
+
+    ctx.setScope(scope);
+
+    const output = await steps[i]({ ...ctx, __run });
+    ctx = { ...ctx, __run, ...output };
+  }
+
+  return ctx;
+}
+
+export type GameRunner<Context extends RunnableContext = RunnableContext> = {
+  run<Output extends object>(
+    module: PluginModule<Context, Output>,
+  ): GameRunner<Context & Output>;
+  execute: () => Promise<Context>;
 };
 
-export type GameRunner<Context extends RunnableContext> = {
-  run<Output extends object>(module: ContextModule<Context, Output>): GameRunner<Context & Output>;
+function createRunner<Context extends RunnableContext>(
+  initialContext: Context,
+): GameRunner<Context> {
+  const steps: Plugin[] = [];
+  let contextPromise: Promise<RunnableContext> = Promise.resolve(initialContext);
 
-  execute(): Promise<Context>;
-};
-
-export const curryRun = <Context extends RunnableContext>(
-  contextPromise: Promise<Context>,
-  steps: PipelineStep[] = [],
-): GameRunner<Context> => {
   return {
-    run<Output extends object>(
-      module: ContextModule<Context, Output>,
-    ): GameRunner<Context & Output> {
-      const step: PipelineStep = {
-        id: steps.length,
-        module,
-      };
-
-      const nextSteps = [...steps, step];
-
-      return curryRun(
-        contextPromise.then(async (context) => {
-          const runPipeline = async (startIndex: number, initialContext: RunnableContext) => {
-            let nextContext = initialContext;
-
-            for (
-              let cleanupStepIndex = nextSteps.length - 1;
-              cleanupStepIndex >= startIndex;
-              cleanupStepIndex--
-            ) {
-              await nextContext.cleanupCallbacksByScope(`run:${cleanupStepIndex}`);
-            }
-
-            for (
-              let replayStepIndex = startIndex;
-              replayStepIndex < nextSteps.length;
-              replayStepIndex++
-            ) {
-              const replayStep = nextSteps[replayStepIndex];
-
-              const rerun = async (updatedModule?: ContextModule<any, any>) => {
-                if (updatedModule) {
-                  replayStep.module = updatedModule;
-                }
-
-                await runPipeline(replayStepIndex, nextContext);
-              };
-
-              const rerunAfter = async (updatedContext: Partial<RunnableContext>) => {
-                await runPipeline(replayStepIndex + 1, {
-                  ...nextContext,
-                  ...updatedContext,
-                });
-              };
-
-              const runInfo: RunInfo = {
-                id: replayStepIndex,
-                scope: `run:${replayStepIndex}`,
-                rerun,
-                rerunAfter,
-              };
-
-              nextContext.setScope(runInfo.scope);
-
-              const output = await replayStep.module({
-                ...nextContext,
-                __run: runInfo,
-              });
-
-              nextContext = {
-                ...nextContext,
-                __run: runInfo,
-                ...output,
-              };
-            }
-
-            return nextContext;
-          };
-
-          return runPipeline(step.id, context);
-        }),
-        nextSteps,
-      );
+    run<Output extends object>(module: PluginModule<Context, Output>) {
+      const fromIndex = steps.length;
+      steps.push(module);
+      contextPromise = contextPromise.then((ctx) => runPipeline(steps, fromIndex, ctx));
+      return this as GameRunner<Context & Output>;
     },
 
     execute() {
-      return contextPromise;
+      return contextPromise as Promise<Context>;
     },
   };
-};
+}
 
 export const gameide = <AdditionalContext>({
   rootElement,
@@ -151,9 +120,11 @@ export const gameide = <AdditionalContext>({
   lifecycle.start();
 
   return {
-    ...curryRun(Promise.resolve(initialContext)),
+    ...createRunner(initialContext),
     gameContext: initialContext,
   };
 };
 
-export type GameContext = ReturnType<typeof gameide>["gameContext"];
+export type GameContext = ReturnType<typeof gameide>["gameContext"] & {
+  __run?: RunInfo;
+};

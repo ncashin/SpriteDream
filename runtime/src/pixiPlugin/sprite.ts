@@ -61,8 +61,13 @@ export const handleSprites = async (gameContext: GameContext, hierarchy: ParentH
       const pixiSprite =
         spriteMap.get(gameObject) ?? (await createSpriteForGameObject(key, gameObject));
 
-      const { tint, resolution } = gameObject;
+      const { sprite, tint, resolution } = gameObject;
 
+      try {
+        pixiSprite.texture = await Assets.load(sprite);
+      } catch {}
+
+      pixiSprite.scale.set(1, -1);
       pixiSprite.width = resolution.width;
       pixiSprite.height = resolution.height;
       pixiSprite.tint = tint;

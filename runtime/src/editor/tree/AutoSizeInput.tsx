@@ -20,6 +20,13 @@ function parseInputValue(input: string): Serializable {
   }
 }
 
+function isHexColor(value: string): boolean {
+  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(value.trim());
+}
+function isBooleanString(value: string): boolean {
+  return value === "true" || value === "false";
+}
+
 export type AutoSizeInputProperties = {
   value: string;
   onCommit: (value: Serializable) => void;
@@ -93,6 +100,25 @@ export default function AutoSizeInput({ value, onCommit, ...props }: AutoSizeInp
         onKeyDown={handleKeyDown}
         onBlur={commit}
       />
+
+      {isHexColor(displayValue) && (
+        <input
+          type="color"
+          className="icon-size"
+          value={displayValue}
+          onChange={(event) => onCommit?.(event.target.value)}
+          aria-label="Edit Color"
+        />
+      )}
+      {isBooleanString(displayValue) && (
+        <input
+          type="checkbox"
+          className="icon-size"
+          checked={displayValue === "true"}
+          onChange={(event) => onCommit(event.target.checked)}
+          aria-label="Toggle value"
+        />
+      )}
     </>
   );
 }
