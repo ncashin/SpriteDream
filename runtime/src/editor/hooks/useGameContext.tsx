@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import invariant from "tiny-invariant";
-import { ReactGameContext } from "./GameContextProvider";
+import { ReactGameContext } from "../GameContextProvider";
 
 export default function useGameContext() {
   const gameContext = useContext(ReactGameContext);

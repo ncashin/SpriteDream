@@ -1,8 +1,8 @@
 import { Assets, Sprite } from "pixi.js";
 import z from "zod";
-import { defineComponent, hasComponent, type ComponentType } from "../components";
-import type { GameContext } from "../initialization";
-import { TransformComponent } from "../transform";
+import { defineComponent, hasComponent, type ComponentType } from "../tomove/components";
+import type { GameContext } from "../tomove/initialization";
+import { TransformComponent } from "../tomove/transform";
 import type { ParentHierarchy } from "./handleParentHierarchy";
 
 export const SpriteComponent = defineComponent(

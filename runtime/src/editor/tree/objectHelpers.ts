@@ -1,4 +1,8 @@
-import { isSerializableObject, type Serializable, type SerializableObject } from "../../scene";
+import {
+  isSerializableObject,
+  type Serializable,
+  type SerializableObject,
+} from "../../tomove/scene";
 
 export const reorderObjectKeys = (
   object: Record<string, unknown>,

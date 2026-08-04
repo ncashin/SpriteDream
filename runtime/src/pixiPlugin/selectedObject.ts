@@ -1,10 +1,10 @@
 import { Container, FederatedPointerEvent, Graphics, Point, Rectangle } from "pixi.js";
 
-import { hasComponent } from "../components";
-import type { GameContext } from "../initialization";
-import { ParentComponent } from "../parent";
-import { isSerializableObject } from "../scene";
-import { TransformComponent } from "../transform";
+import { hasComponent } from "../tomove/components";
+import type { GameContext } from "../tomove/initialization";
+import { ParentComponent } from "../tomove/parent";
+import { isSerializableObject } from "../tomove/scene";
+import { TransformComponent } from "../tomove/transform";
 import type { ParentHierarchy } from "./handleParentHierarchy";
 import { SpriteComponent, type SpriteObject } from "./sprite";
 
@@ -285,15 +285,5 @@ export const handleSelectedObjects = (gameContext: GameContext, hierarchy: Paren
 
     const counterScale = getGizmoScale(gizmoParent, hasSceneParent(selected.object, scene));
     gizmoLayer.scale.set(counterScale.x, counterScale.y);
-  });
-
-  gameContext.onDispose(() => {
-    stopDragging();
-
-    gizmoLayer.parent?.removeChild(gizmoLayer);
-
-    gizmoLayer.destroy({
-      children: true,
-    });
   });
 };

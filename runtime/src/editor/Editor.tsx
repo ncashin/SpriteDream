@@ -1,16 +1,16 @@
-import { PlayIcon, Settings } from "lucide-react";
+import { PlayIcon, Settings, SquareStopIcon } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
 import { Button } from "react-aria-components";
-import { setScene } from "../scene";
+import { setScene } from "../tomove/scene";
 import GameView from "./GameView";
 import { SceneSelect } from "./SceneSelect";
 import SelectedObject from "./SelectedObject";
 import TopLevelObjects from "./TopLevelObjects";
-import useDirectory from "./useDirectory";
-import useEditorHotkeys from "./useEditorHotkeys";
-import useFile from "./useFile";
-import useGameContext from "./useGameContext";
-import useScene from "./useScene";
+import useDirectory from "./hooks/useDirectory";
+import useEditorHotkeys from "./hooks/useEditorHotkeys";
+import useFile from "./hooks/useFile";
+import useGameContext from "./hooks/useGameContext";
+import useScene from "./hooks/useScene";
 
 export default function Editor() {
   const scene = useScene();
@@ -44,6 +44,8 @@ export default function Editor() {
     hasUnsavedChanges,
   });
 
+  const [isRunning, setIsRunning] = useState(!gameContext.isEditor);
+
   return (
     <>
       <div className="text-sm absolute inset-x-0 top-0 p-2 text-white pointer-events-none z-50">
@@ -70,10 +72,19 @@ export default function Editor() {
             <Button
               className="header gap-1 font-light"
               onClick={() => {
-                gameContext.__run.rerunAfter({ ...gameContext, isEditor: false });
+                setIsRunning(!isRunning);
               }}
             >
-              Run <PlayIcon className="icon-size" />
+              {!isRunning && (
+                <>
+                  Run <PlayIcon className="icon-size" />
+                </>
+              )}
+              {isRunning && (
+                <>
+                  Stop <SquareStopIcon className="icon-size" />
+                </>
+              )}
             </Button>
           </div>
         </div>

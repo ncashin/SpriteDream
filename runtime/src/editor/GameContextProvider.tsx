@@ -1,7 +1,5 @@
-// SceneProvider.tsx
-
 import { createContext, useEffect } from "react";
-import type { GameContext } from "../initialization";
+import type { GameContext } from "../tomove/initialization";
 
 export const ReactGameContext = createContext<GameContext | undefined>(undefined);
 

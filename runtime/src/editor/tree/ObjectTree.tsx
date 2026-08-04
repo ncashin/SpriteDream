@@ -10,7 +10,11 @@ import {
   useDragAndDrop,
 } from "react-aria-components";
 
-import { isSerializableObject, type Serializable, type SerializableObject } from "../../scene";
+import {
+  isSerializableObject,
+  type Serializable,
+  type SerializableObject,
+} from "../../tomove/scene";
 
 import { IconButton } from "../IconButton";
 import AutoSizeInput from "./AutoSizeInput";

@@ -1,9 +1,9 @@
 import { Trash2, X } from "lucide-react";
 import AddComponent from "./AddComponent";
+import useScene from "./hooks/useScene";
+import useSelectedObjects from "./hooks/useSelectedObjects";
 import { IconButton } from "./IconButton";
 import ObjectTree from "./tree/ObjectTree";
-import useScene from "./useScene";
-import useSelectedObjects from "./useSelectedObjects";
 
 export default function SelectedObject() {
   const scene = useScene();

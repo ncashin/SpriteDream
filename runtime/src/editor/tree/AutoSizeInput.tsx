@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
-import { type Serializable } from "../../scene";
+import { type Serializable } from "../../tomove/scene";
 
 function parseInputValue(input: string): Serializable {
   const trimmed = input.trim();

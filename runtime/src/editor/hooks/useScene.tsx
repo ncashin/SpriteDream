@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
-import type { SerializableObject } from "../scene";
-import useGameContext from "./hooks/useGameContext";
+import type { SerializableObject } from "../../tomove/scene";
+import useGameContext from "./useGameContext";
 
 export default function useScene(): SerializableObject {
   const { sceneStore } = useGameContext();

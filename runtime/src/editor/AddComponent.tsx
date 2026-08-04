@@ -11,8 +11,8 @@ import {
 } from "react-aria-components";
 
 import { PlusIcon, SearchIcon } from "lucide-react";
-import { addComponent, useComponents } from "../components";
-import type { SerializableObject } from "../scene";
+import { addComponent, useComponents } from "../tomove/components";
+import type { SerializableObject } from "../tomove/scene";
 
 export default function AddComponent({ object }: { object: SerializableObject }) {
   const components = useComponents();

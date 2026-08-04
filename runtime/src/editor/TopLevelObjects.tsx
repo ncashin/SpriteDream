@@ -9,14 +9,14 @@ import {
   useDragAndDrop,
 } from "react-aria-components";
 
-import { buildTree, removeParent, setParent } from "../parent";
-import { isSerializableObject, type SerializableObject } from "../scene";
+import { buildTree, removeParent, setParent } from "../tomove/parent";
+import { isSerializableObject, type SerializableObject } from "../tomove/scene";
 import { Dropdown } from "./Dropdown";
+import useScene from "./hooks/useScene";
+import useSelectedObjects from "./hooks/useSelectedObjects";
 import { IconButton } from "./IconButton";
 import AutoSizeInput from "./tree/AutoSizeInput";
 import { reorderObjectKeys } from "./tree/objectHelpers";
-import useScene from "./useScene";
-import useSelectedObjects from "./useSelectedObjects";
 
 function ObjectRow({
   node,

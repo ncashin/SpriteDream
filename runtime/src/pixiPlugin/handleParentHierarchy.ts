@@ -1,10 +1,10 @@
 import { Container } from "pixi.js";
 
-import { hasComponent } from "../components";
-import type { GameContext } from "../initialization";
-import { ParentComponent } from "../parent";
-import { isSerializableObject, type SerializableObject } from "../scene";
-import { TransformComponent } from "../transform";
+import { hasComponent } from "../tomove/components";
+import type { GameContext } from "../tomove/initialization";
+import { ParentComponent } from "../tomove/parent";
+import { isSerializableObject, type SerializableObject } from "../tomove/scene";
+import { TransformComponent } from "../tomove/transform";
 
 const getParentKey = (
   object: SerializableObject,
@@ -27,7 +27,7 @@ export const handleParentHierarchy = (
   gameContext: GameContext,
   root: Container,
 ): ParentHierarchy => {
-  const { scene, onUpdate, onDispose } = gameContext;
+  const { scene, onUpdate } = gameContext;
   const containerMap = new Map<string, Container>();
 
   const getContainer = (key: string) => {
@@ -78,14 +78,6 @@ export const handleParentHierarchy = (
       container.destroy({ children: false });
       containerMap.delete(key);
     }
-  });
-
-  onDispose(() => {
-    for (const container of containerMap.values()) {
-      container.destroy({ children: false });
-    }
-
-    containerMap.clear();
   });
 
   return { getContainer };

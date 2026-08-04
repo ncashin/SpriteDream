@@ -1,5 +1,5 @@
 import { Container, type Application, type FederatedPointerEvent } from "pixi.js";
-import type { GameContext } from "../initialization";
+import type { GameContext } from "../tomove/initialization";
 
 export type Viewport = {
   x: number;
@@ -8,6 +8,7 @@ export type Viewport = {
 };
 
 export const handleViewport = (context: GameContext, app: Application) => {
+  const { onUpdate, isEditor } = context;
   const viewportContainer = new Container();
   viewportContainer.sortableChildren = true;
 
@@ -27,7 +28,14 @@ export const handleViewport = (context: GameContext, app: Application) => {
     );
   };
 
-  context.onUpdate(updateViewport);
+  onUpdate(updateViewport);
+
+  if (!isEditor) {
+    return {
+      viewport,
+      viewportContainer,
+    };
+  }
 
   app.stage.eventMode = "static";
   app.stage.hitArea = app.screen;
@@ -64,9 +72,6 @@ export const handleViewport = (context: GameContext, app: Application) => {
     isDragging = false;
 
     app.canvas.style.cursor = "default";
-    requestAnimationFrame(() => {
-      app.canvas.style.cursor = "default";
-    });
   };
 
   app.stage.on("pointerdown", onPointerDown);
@@ -101,15 +106,6 @@ export const handleViewport = (context: GameContext, app: Application) => {
 
   app.canvas.addEventListener("wheel", onWheel, {
     passive: false,
-  });
-
-  context.onDispose(() => {
-    app.stage.off("pointerdown", onPointerDown);
-    app.stage.off("pointermove", onPointerMove);
-    app.stage.off("pointerup", stopDragging);
-    app.stage.off("pointerupoutside", stopDragging);
-
-    app.canvas.removeEventListener("wheel", onWheel);
   });
 
   return {

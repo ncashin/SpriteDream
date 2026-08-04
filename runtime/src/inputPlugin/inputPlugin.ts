@@ -1,4 +1,4 @@
-import type { GameContext } from "../initialization";
+import type { GameContext } from "../tomove/initialization";
 
 type Buttons = Record<string, readonly string[]>;
 
