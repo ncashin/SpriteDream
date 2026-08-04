@@ -140,9 +140,7 @@ export default function ObjectTree({ object }: { object: SerializableObject }) {
       return (
         <DropIndicator
           target={target}
-          className={({ isDropTarget }) =>
-            cn("h-0.5 bg-blue-500 rounded-full", isDropTarget && "opacity-100")
-          }
+          className={({ isDropTarget }) => cn("h-0.5 bg-blue-500", isDropTarget && "opacity-100")}
         />
       );
     },

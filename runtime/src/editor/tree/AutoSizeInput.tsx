@@ -34,12 +34,11 @@ export type AutoSizeInputProperties = {
 
 export default function AutoSizeInput({ value, onCommit, ...props }: AutoSizeInputProperties) {
   const [draft, setDraft] = useState(value);
-  const [editing, setEditing] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
 
-  const displayValue = editing ? draft : value;
+  const displayValue = draft ?? value;
 
   useLayoutEffect(() => {
     const input = inputRef.current;
@@ -55,7 +54,6 @@ export default function AutoSizeInput({ value, onCommit, ...props }: AutoSizeInp
   }
 
   function startEdit() {
-    setEditing(true);
     setDraft(value);
 
     requestAnimationFrame(focusCenter);
@@ -65,8 +63,6 @@ export default function AutoSizeInput({ value, onCommit, ...props }: AutoSizeInp
     if (draft !== value) {
       onCommit(parseInputValue(draft));
     }
-
-    setEditing(false);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {

@@ -1,7 +1,6 @@
 import { cn } from "cnfast";
 import { ChevronRight, PlusIcon, Trash2 } from "lucide-react";
 import {
-  Button,
   Collection,
   DropIndicator,
   Tree,
@@ -28,7 +27,7 @@ function ObjectRow({
   onRename: (newKey: string) => void;
   onDelete: (key: string) => void;
 }) {
-  const { selectedObjects, selectObject, deselectObjects } = useSelectedObjects();
+  const { selectedObjects } = useSelectedObjects();
 
   const hasChildren = node.children.length > 0;
   const selected = selectedObjects.some(({ object }) => object === node.object);
@@ -44,15 +43,7 @@ function ObjectRow({
         {({ hasChildItems, isExpanded }) => (
           <div className="pl-[--spacing(calc((var(--tree-item-level)-1)*3))]">
             <div className={cn("group row", selected && "bg-select")}>
-              <Button slot="drag" />
-
-              <div
-                className="flex-1"
-                onClick={() => {
-                  deselectObjects();
-                  selectObject(node.key, node.object);
-                }}
-              >
+              <div className="flex-1">
                 <AutoSizeInput
                   value={node.key}
                   onCommit={(value) => onRename(String(value))}
@@ -196,10 +187,7 @@ export default function TopLevelObjects() {
   };
 
   return (
-    <Dropdown
-      className="bg-background text-sm rounded-sm w-64"
-      buttonClassName="bg-foreground hover:bg-hover"
-    >
+    <Dropdown className="bg-background text-sm w-64" buttonClassName="bg-foreground hover:bg-hover">
       <div className="flex flex-col border-t border-border px-1 py-1.5">
         <button
           className="row items-center"
@@ -211,9 +199,27 @@ export default function TopLevelObjects() {
           New Object
         </button>
 
-        <Tree aria-label="Scene Objects" dragAndDropHooks={dragAndDropHooks}>
-          <RowCollection nodes={roots} onRename={renameObject} onDelete={deleteObject} />
-        </Tree>
+        <div data-tree>
+          <Tree
+            aria-label="Scene Objects"
+            selectionMode="single"
+            dragAndDropHooks={dragAndDropHooks}
+            onSelectionChange={(keys) => {
+              const key = [...keys][0];
+
+              if (!key) return;
+
+              const object = scene[String(key)];
+
+              if (isSerializableObject(object)) {
+                deselectObjects();
+                selectObject(String(key), object);
+              }
+            }}
+          >
+            <RowCollection nodes={roots} onRename={renameObject} onDelete={deleteObject} />
+          </Tree>
+        </div>
       </div>
     </Dropdown>
   );

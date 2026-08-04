@@ -7,7 +7,7 @@ export const Dropdown = ({
   buttonClassName,
   children,
 }: PropsWithChildren<{ className: string; buttonClassName?: string }>) => {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   return (
     <div className={className}>

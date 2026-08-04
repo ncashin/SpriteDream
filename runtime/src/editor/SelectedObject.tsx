@@ -15,7 +15,7 @@ export default function SelectedObject() {
   const { key, object } = shownObject;
 
   return (
-    <div className="flex flex-col w-96 text-sm rounded-sm overflow-clip bg-background">
+    <div className="flex flex-col w-96 text-sm overflow-clip bg-background">
       <div className="header bg-foreground">
         <h2 className="py-0.5">{String(key)}</h2>
         <div className="flex flex-row">
