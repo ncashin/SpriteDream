@@ -1,6 +1,7 @@
 import { cn } from "cnfast";
 import { ChevronRight, PlusIcon, Trash2 } from "lucide-react";
 import {
+  Button,
   Collection,
   DropIndicator,
   Tree,
@@ -43,6 +44,7 @@ function ObjectRow({
         {({ hasChildItems, isExpanded }) => (
           <div className="pl-[--spacing(calc((var(--tree-item-level)-1)*3))]">
             <div className={cn("group row", selected && "bg-select")}>
+              <Button slot="drag" />
               <div className="flex-1">
                 <AutoSizeInput
                   value={node.key}
@@ -99,7 +101,7 @@ function RowCollection({
 }
 
 export default function TopLevelObjects() {
-  const scene = useScene();
+  const { scene } = useScene();
   const { deselectObjects, selectObject } = useSelectedObjects();
 
   const roots = buildTree(scene);

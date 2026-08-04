@@ -1,9 +1,17 @@
-import { useSyncExternalStore } from "react";
 import type { SerializableObject } from "../../tomove/scene";
-import useGameContext from "./useGameContext";
+import useEditorStore from "./useEditorStore";
 
-export default function useScene(): SerializableObject {
-  const { sceneStore } = useGameContext();
-  useSyncExternalStore(sceneStore.subscribe, sceneStore.getSnapshot);
-  return sceneStore.scene;
+export default function useScene() {
+  const { value: scene, setState } = useEditorStore((state) => state.scene);
+
+  const setScene = (newScene: SerializableObject) => {
+    setState((state) => {
+      console.log(newScene);
+      return { ...state, scene: newScene };
+    });
+  };
+
+  console.log(scene);
+
+  return { scene, setScene };
 }

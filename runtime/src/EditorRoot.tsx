@@ -1,24 +1,26 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Suspense } from "react";
+import { createEditorStore } from "./createEditorStore";
 import Editor from "./editor/Editor";
-import GameContextProvider from "./editor/GameContextProvider";
+import EditorStoreProvider from "./editor/EditorStoreProvider";
 import type { GameContext } from "./tomove/initialization";
 
 export type EditorRootOptions = {
   gameContext: GameContext;
 };
 
-export default function EditorRoot({ gameContext }: EditorRootOptions) {
+export default function EditorRoot() {
   const queryClient = new QueryClient();
 
+  const editorStore = createEditorStore();
   return (
     <QueryClientProvider client={queryClient}>
-      <GameContextProvider gameContext={gameContext}>
+      <EditorStoreProvider editorStore={editorStore}>
         <Suspense fallback={<div>Loading...</div>}>
           <Editor />
         </Suspense>
-      </GameContextProvider>
+      </EditorStoreProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

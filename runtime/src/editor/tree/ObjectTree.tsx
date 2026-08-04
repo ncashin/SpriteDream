@@ -20,119 +20,13 @@ import { IconButton } from "../IconButton";
 import AutoSizeInput from "./AutoSizeInput";
 import { getParent, getValue, reorderObjectKeys } from "./objectHelpers";
 
-export function ObjectRow({
-  id,
-  parent,
-  entry,
-  onKeyChange,
-  onValueChange,
+export default function ObjectTree({
+  object,
+  setObject,
 }: {
-  id: string;
-  parent: SerializableObject;
-  entry: [string, Serializable];
-  onKeyChange: (arg0: Serializable) => void;
-  onValueChange: (arg0: Serializable) => void;
+  object: SerializableObject;
+  setObject: (object: SerializableObject) => void;
 }) {
-  const [key, value] = entry;
-
-  const entries = isSerializableObject(value) ? Object.entries(value) : [];
-  const canBeExpanded = entries.length > 0;
-
-  return (
-    <TreeItem id={id} textValue={key} hasChildItems={canBeExpanded} className="flex flex-col">
-      <TreeItemContent>
-        {({ hasChildItems, isExpanded }) => (
-          <div className="group pl-[--spacing(calc((var(--tree-item-level)-1)*3))]">
-            <div className="row">
-              <Button slot="drag" />
-              <div className={cn(hasChildItems && "flex-1 flex flex-row items-center")}>
-                {hasChildItems && <Box className="icon-size mr-1" />}
-
-                <AutoSizeInput value={key} onCommit={onKeyChange} />
-
-                {!hasChildItems && <span className="w-min">:</span>}
-              </div>
-
-              {!isSerializableObject(value) && (
-                <AutoSizeInput
-                  className="flex-1 text-emerald-200"
-                  value={String(value)}
-                  onCommit={onValueChange}
-                />
-              )}
-
-              <div
-                className="flex flex-row items-center opacity-0 transition-opacity group-hover:opacity-100"
-                onClick={(event) => event.stopPropagation()}
-              >
-                {canBeExpanded && (
-                  <IconButton
-                    icon={ChevronRight}
-                    slot="chevron"
-                    className={cn(isExpanded && "rotate-90")}
-                  />
-                )}
-
-                {isSerializableObject(value) && <IconButton icon={PlusIcon} onClick={() => {}} />}
-
-                <IconButton
-                  icon={Trash2Icon}
-                  onClick={() => {
-                    delete parent[key];
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-      </TreeItemContent>
-
-      <RowCollection id={id} parent={value} entries={entries} />
-    </TreeItem>
-  );
-}
-
-export function RowCollection({
-  id,
-  parent,
-  entries,
-}: {
-  id?: string;
-  parent: Serializable;
-  entries: [string, Serializable][];
-}) {
-  if (!isSerializableObject(parent)) return;
-  return (
-    <Collection items={entries}>
-      {([childKey, childValue]) => {
-        const idChild = !id ? childKey : `${id}.${childKey}`;
-
-        return (
-          <ObjectRow
-            key={childKey}
-            id={idChild}
-            parent={parent}
-            entry={[childKey, childValue]}
-            onKeyChange={(newKey) => {
-              const keyString = String(newKey);
-              const existingValue = parent[childKey];
-
-              delete parent[childKey];
-              parent[keyString] = existingValue;
-            }}
-            onValueChange={(newValue) => {
-              parent[childKey] = newValue;
-            }}
-          />
-        );
-      }}
-    </Collection>
-  );
-}
-
-export default function ObjectTree({ object }: { object: SerializableObject }) {
-  const entries = Object.entries(object);
-
   const { dragAndDropHooks } = useDragAndDrop({
     getItems(keys) {
       return [...keys].map((key) => ({
@@ -150,6 +44,8 @@ export default function ObjectTree({ object }: { object: SerializableObject }) {
     },
 
     async onMove(event) {
+      const next = structuredClone(object);
+
       const targetPath = String(event.target.key);
 
       for (const key of event.keys) {
@@ -157,27 +53,28 @@ export default function ObjectTree({ object }: { object: SerializableObject }) {
 
         if (draggedPath === targetPath) continue;
 
-        const draggedParent = getParent(object, draggedPath);
-        const targetParent = getParent(object, targetPath);
+        const draggedParent = getParent(next, draggedPath);
+        const targetParent = getParent(next, targetPath);
 
         const draggedKey = draggedPath.split(".").pop()!;
         const targetKey = targetPath.split(".").pop()!;
 
         if (!draggedParent || !targetParent) continue;
 
-        // Move into object
+        // Drop inside object
         if (event.target.dropPosition === "on") {
-          const targetObject = getValue(object, targetPath);
+          const targetObject = getValue(next, targetPath);
 
           if (!isSerializableObject(targetObject)) continue;
 
           targetObject[draggedKey] = draggedParent[draggedKey];
+
           delete draggedParent[draggedKey];
 
-          return;
+          break;
         }
 
-        // Same parent just reorder
+        // Same parent reorder
         if (draggedParent === targetParent) {
           reorderObjectKeys(
             draggedParent,
@@ -186,10 +83,10 @@ export default function ObjectTree({ object }: { object: SerializableObject }) {
             event.target.dropPosition === "after" ? "after" : "before",
           );
 
-          return;
+          break;
         }
 
-        // Different parent remove and insert into new parent
+        // Move between parents
         const value = draggedParent[draggedKey];
 
         delete draggedParent[draggedKey];
@@ -203,14 +100,168 @@ export default function ObjectTree({ object }: { object: SerializableObject }) {
           event.target.dropPosition === "after" ? "after" : "before",
         );
 
-        return;
+        break;
       }
+
+      setObject(next);
     },
   });
 
   return (
-    <Tree aria-label="Selected Object Viewer" dragAndDropHooks={dragAndDropHooks}>
-      <RowCollection parent={object} entries={entries} />
+    <Tree aria-label="Object Viewer" dragAndDropHooks={dragAndDropHooks}>
+      <RowCollection path="" object={object} setObject={setObject} />
     </Tree>
+  );
+}
+
+function RowCollection({
+  path,
+  object,
+  setObject,
+}: {
+  path: string;
+  object: SerializableObject;
+  setObject: (object: SerializableObject) => void;
+}) {
+  return (
+    <Collection items={Object.entries(object)}>
+      {([key, value]) => {
+        const childPath = path ? `${path}.${key}` : key;
+
+        return (
+          <ObjectRow
+            key={childPath}
+            path={childPath}
+            object={object}
+            setObject={setObject}
+            entry={[key, value]}
+          />
+        );
+      }}
+    </Collection>
+  );
+}
+
+function ObjectRow({
+  path,
+  object,
+  setObject,
+  entry,
+}: {
+  path: string;
+  object: SerializableObject;
+  setObject: (object: SerializableObject) => void;
+  entry: [string, Serializable];
+}) {
+  const [key, value] = entry;
+
+  const children = isSerializableObject(value) ? Object.entries(value) : [];
+
+  return (
+    <TreeItem
+      id={path}
+      textValue={key}
+      hasChildItems={children.length > 0}
+      className="flex flex-col"
+    >
+      <TreeItemContent>
+        {({ hasChildItems, isExpanded }) => (
+          <div className="group pl-[--spacing(calc((var(--tree-item-level)-1)*3))]">
+            <div className="row flex flex-row items-center">
+              <Button slot="drag" />
+              <div className={cn(hasChildItems && "flex-1 flex flex-row items-center")}>
+                {hasChildItems && <Box className="icon-size mr-1" />}
+
+                <AutoSizeInput
+                  value={key}
+                  onCommit={(newKey) => {
+                    const next = structuredClone(object);
+
+                    const newKeyString = String(newKey);
+
+                    next[newKeyString] = next[key];
+
+                    delete next[key];
+
+                    setObject(next);
+                  }}
+                />
+
+                {!hasChildItems && <span className="w-min">:</span>}
+              </div>
+
+              {!isSerializableObject(value) && (
+                <AutoSizeInput
+                  className="flex-1 text-emerald-200"
+                  value={String(value)}
+                  onCommit={(newValue) => {
+                    const next = structuredClone(object);
+
+                    next[key] = newValue;
+
+                    setObject(next);
+                  }}
+                />
+              )}
+
+              <div
+                className="flex flex-row items-center opacity-0 transition-opacity group-hover:opacity-100"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {hasChildItems && (
+                  <IconButton
+                    icon={ChevronRight}
+                    slot="chevron"
+                    className={cn(isExpanded && "rotate-90")}
+                  />
+                )}
+
+                {isSerializableObject(value) && (
+                  <IconButton
+                    icon={PlusIcon}
+                    onClick={() => {
+                      const next = structuredClone(object);
+
+                      const child = next[key];
+
+                      if (!isSerializableObject(child)) return;
+
+                      child.newKey = "";
+
+                      setObject(next);
+                    }}
+                  />
+                )}
+
+                <IconButton
+                  icon={Trash2Icon}
+                  onClick={() => {
+                    const next = structuredClone(object);
+
+                    delete next[key];
+
+                    setObject(next);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </TreeItemContent>
+
+      {isSerializableObject(value) && (
+        <RowCollection
+          path={path}
+          object={value}
+          setObject={(child) => {
+            const next = structuredClone(object);
+
+            next[key] = child;
+
+            setObject(next);
+          }}
+        />
+      )}
+    </TreeItem>
   );
 }

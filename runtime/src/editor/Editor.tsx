@@ -1,7 +1,7 @@
 import { PlayIcon, Settings, SquareStopIcon } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
 import { Button } from "react-aria-components";
-import { setScene } from "../tomove/scene";
+import { Mode } from "../createEditorStore";
 import GameView from "./GameView";
 import { SceneSelect } from "./SceneSelect";
 import SelectedObject from "./SelectedObject";
@@ -9,13 +9,12 @@ import TopLevelObjects from "./TopLevelObjects";
 import useDirectory from "./hooks/useDirectory";
 import useEditorHotkeys from "./hooks/useEditorHotkeys";
 import useFile from "./hooks/useFile";
-import useGameContext from "./hooks/useGameContext";
+import useMode from "./hooks/useMode";
 import useScene from "./hooks/useScene";
 
 export default function Editor() {
-  const scene = useScene();
-
-  const gameContext = useGameContext();
+  const { scene, setScene } = useScene();
+  const { mode, setMode } = useMode();
 
   const directoryQuery = useDirectory();
   const sceneFiles = useMemo(() => {
@@ -27,7 +26,7 @@ export default function Editor() {
 
   const { fileQuery, writeMutation } = useFile(deferredFilepath, {
     onFileLoad: ({ data }) => {
-      setScene(scene, data);
+      setScene(data);
     },
   });
 
@@ -43,8 +42,6 @@ export default function Editor() {
 
     hasUnsavedChanges,
   });
-
-  const [isRunning, setIsRunning] = useState(!gameContext.isEditor);
 
   return (
     <>
@@ -69,23 +66,17 @@ export default function Editor() {
               Settings <Settings className="icon-size" />
             </Button>
 
-            <Button
-              className="header gap-1 font-light"
-              onClick={() => {
-                setIsRunning(!isRunning);
-              }}
-            >
-              {!isRunning && (
-                <>
-                  Run <PlayIcon className="icon-size" />
-                </>
-              )}
-              {isRunning && (
-                <>
-                  Stop <SquareStopIcon className="icon-size" />
-                </>
-              )}
-            </Button>
+            {mode === Mode.Editor && (
+              <Button className="header gap-1 font-light" onClick={() => setMode(Mode.Game)}>
+                Run <PlayIcon className="icon-size" />
+              </Button>
+            )}
+
+            {mode === Mode.Game && (
+              <Button className="header gap-1 font-light" onClick={() => setMode(Mode.Editor)}>
+                Stop <SquareStopIcon className="icon-size" />
+              </Button>
+            )}
           </div>
         </div>
       </div>

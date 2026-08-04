@@ -7,7 +7,7 @@ type UseFileOptions = {
 
 export default function useFile(filepath: string | undefined, options?: UseFileOptions) {
   const queryClient = useQueryClient();
-  const [loadedFilepath, setLoadedFilepath] = useState<string | undefined>(filepath);
+  const [loadedFilepath, setLoadedFilepath] = useState<string | undefined>(undefined);
 
   const queryKey = ["files", filepath];
 
