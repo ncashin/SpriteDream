@@ -30,8 +30,6 @@ export function createSelectedObjectsStore() {
   };
 
   const selectObject = (key: string, object: SerializableObject) => {
-    console.log("HIT");
-
     if (!isSelected(key)) {
       selectedObjects = [...selectedObjects, { key, object }];
       emit();
@@ -39,9 +37,7 @@ export function createSelectedObjectsStore() {
   };
 
   const deselectObject = (object: SerializableObject) => {
-    selectedObjects = selectedObjects.filter(
-      (selected) => selected.object !== object
-    );
+    selectedObjects = selectedObjects.filter((selected) => selected.object !== object);
 
     emit();
   };

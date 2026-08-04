@@ -37,11 +37,12 @@ export const handleViewport = (context: GameContext, app: Application) => {
 
   const onPointerDown = (event: FederatedPointerEvent) => {
     isDragging = true;
-
     lastPointer = {
       x: event.global.x,
       y: event.global.y,
     };
+
+    app.canvas.style.cursor = "grabbing";
   };
 
   const onPointerMove = (event: FederatedPointerEvent) => {
@@ -61,6 +62,11 @@ export const handleViewport = (context: GameContext, app: Application) => {
 
   const stopDragging = () => {
     isDragging = false;
+
+    app.canvas.style.cursor = "default";
+    requestAnimationFrame(() => {
+      app.canvas.style.cursor = "default";
+    });
   };
 
   app.stage.on("pointerdown", onPointerDown);
