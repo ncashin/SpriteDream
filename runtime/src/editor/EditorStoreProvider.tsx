@@ -1,13 +1,14 @@
 import { createContext } from "react";
-import { createEditorStore } from "../createEditorStore";
+import { createEditorStore, type EditorStore } from "../createEditorStore";
 
-export const EditorStoreContext = createContext(createEditorStore());
+const editorStoreDefault = await createEditorStore({});
+export const EditorStoreContext = createContext(editorStoreDefault);
 
 export default function EditorStoreProvider({
   editorStore,
   children,
 }: {
-  editorStore: ReturnType<typeof createEditorStore>;
+  editorStore: EditorStore;
   children: React.ReactNode;
 }) {
   return <EditorStoreContext.Provider value={editorStore}>{children}</EditorStoreContext.Provider>;

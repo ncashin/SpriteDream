@@ -1,5 +1,3 @@
-import { createSceneStore } from "./sceneStore";
-
 export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
 
 export type Serializable = Primitive | SerializableObject | Serializable[];
@@ -16,9 +14,9 @@ export const setScene = (scene: SerializableObject, newScene: SerializableObject
 };
 
 export const isSerializableObject = (value: Serializable): value is SerializableObject =>
-  !!value && typeof value === "object";
+  value !== null && typeof value === "object" && !Array.isArray(value);
 
-export const patchScene = (scene: SerializableObject, patch: SerializableObject) => {
+export const patchObject = (scene: SerializableObject, patch: SerializableObject) => {
   for (const [key, value] of Object.entries(structuredClone(patch))) {
     const current = scene[key];
 
@@ -27,11 +25,13 @@ export const patchScene = (scene: SerializableObject, patch: SerializableObject)
       continue;
     }
 
-    patchScene(current, value);
+    patchObject(current, value);
   }
+
+  return scene;
 };
 
-export const diffScene = (
+export const diffObject = (
   oldScene: SerializableObject,
   newScene: SerializableObject,
 ): SerializableObject => {
@@ -48,7 +48,7 @@ export const diffScene = (
       continue;
     }
 
-    const nested = diffScene(oldValue, value);
+    const nested = diffObject(oldValue, value);
 
     if (Object.keys(nested).length) {
       patch[key] = nested;
@@ -81,13 +81,9 @@ export type CurrySceneOptions = {
   onSetScene?: (scene: SerializableObject) => void;
 };
 
-export const curryScene = (sceneData: SerializableObject, { onSetScene }: CurrySceneOptions) => {
-  const scene = structuredClone(sceneData);
-  const sceneStore = createSceneStore(scene);
-
+export const curryScene = (scene: SerializableObject, { onSetScene }: CurrySceneOptions) => {
   return {
     scene,
-    sceneStore,
 
     setScene: (newScene: SerializableObject) => {
       setScene(scene, newScene);
@@ -95,11 +91,11 @@ export const curryScene = (sceneData: SerializableObject, { onSetScene }: CurryS
     },
 
     patchScene: (patch: SerializableObject) => {
-      patchScene(scene, patch);
+      patchObject(scene, patch);
     },
 
     diffScene: (newScene: SerializableObject) => {
-      return diffScene(scene, newScene);
+      return diffObject(scene, newScene);
     },
 
     queryScene: <TValue extends Serializable>(

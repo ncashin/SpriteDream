@@ -1,10 +1,10 @@
 import { Trash2, X } from "lucide-react";
+import { getValueAtPath } from "../tomove/objectHelpers";
 import { isSerializableObject } from "../tomove/scene";
 import AddComponent from "./AddComponent";
 import useScene from "./hooks/useScene";
 import useSelectedObjects from "./hooks/useSelectedObjects";
 import { IconButton } from "./IconButton";
-import { getValue } from "./tree/objectHelpers";
 import ObjectTree from "./tree/ObjectTree";
 
 export default function SelectedObject() {
@@ -14,7 +14,7 @@ export default function SelectedObject() {
   const [key] = selectedObjects;
   if (!key) return;
 
-  const object = getValue(scene, key);
+  const object = getValueAtPath(scene, key);
 
   if (!isSerializableObject(object)) return null;
 
@@ -32,7 +32,7 @@ export default function SelectedObject() {
               const parts = String(key).split(".");
               const objectKey = parts.pop()!;
 
-              const parent = parts.length ? getValue(nextScene, parts.join(".")) : nextScene;
+              const parent = parts.length ? getValueAtPath(nextScene, parts.join(".")) : nextScene;
 
               if (isSerializableObject(parent)) {
                 delete parent[objectKey];
@@ -58,7 +58,7 @@ export default function SelectedObject() {
             const parts = String(key).split(".");
             const objectKey = parts.pop()!;
 
-            const parent = parts.length ? getValue(nextScene, parts.join(".")) : nextScene;
+            const parent = parts.length ? getValueAtPath(nextScene, parts.join(".")) : nextScene;
 
             if (isSerializableObject(parent)) {
               parent[objectKey] = newObject;

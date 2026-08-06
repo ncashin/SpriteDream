@@ -1,6 +1,8 @@
+import { createEditorStore, Mode } from "../createEditorStore";
+import { createIFrameTransport } from "../createIFrameTransport";
 import { curryLifecycle } from "./lifecycle";
 import { curryScene, type SerializableObject } from "./scene";
-import { createSelectedObjectsStore } from "./selectedObjectsStore";
+import { currySelectedObjects } from "./selectedObjects";
 
 type PluginModule<Context, Output extends object> = (context: Context) => Output | Promise<Output>;
 
@@ -57,30 +59,43 @@ export const gameide = <AdditionalContext>({
   initialScene,
   additionalContext,
 }: GameIDEOptions<AdditionalContext>) => {
-  const lifecycle = curryLifecycle();
+  const contextPromise = (async () => {
+    const lifecycle = curryLifecycle();
 
-  const selectedObjectsStore = createSelectedObjectsStore();
+    const transport = createIFrameTransport(window.parent, {
+      targetOrigin: window.location.origin,
+    });
 
-  const sceneAPI = curryScene(initialScene, {
-    onSetScene: () => {
-      selectedObjectsStore.deselectObjects();
-    },
-  });
+    const editorStore = await createEditorStore({
+      transport,
+      awaitInitialization: true,
+    });
 
-  const initialContext = {
-    isEditor: !!import.meta.hot,
-    rootElement,
+    const sceneAPI = curryScene(editorStore.state.scene, {
+      onSetScene: () => {},
+    });
+    const selectedObjectsAPI = currySelectedObjects(editorStore.state.selectedObjects);
 
-    selectedObjectsStore,
-    ...sceneAPI,
+    const initialContext = {
+      isEditor: editorStore.state.mode === Mode.Editor,
+      rootElement,
 
-    ...lifecycle,
-    ...additionalContext,
-  };
+      ...sceneAPI,
+      ...selectedObjectsAPI,
 
-  lifecycle.start();
+      ...lifecycle,
+      ...additionalContext,
+    };
 
-  return createRunner(Promise.resolve(initialContext));
+    lifecycle.onUpdate(() => {
+      editorStore.emit();
+    });
+    lifecycle.start();
+
+    return initialContext;
+  })();
+
+  return createRunner(contextPromise);
 };
 
 export type GameContext =

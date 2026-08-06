@@ -1,8 +1,8 @@
 import { useContext, useSyncExternalStore } from "react";
-import type { EditorStore } from "../../createEditorStore";
+import type { EditorStoreState } from "../../editorStoreSchema";
 import { EditorStoreContext } from "../EditorStoreProvider";
 
-export default function useEditorStore<T>(select: (state: EditorStore) => T) {
+export default function useEditorStore<T>(select: (state: EditorStoreState) => T) {
   const { subscribe, getSnapshot, setState } = useContext(EditorStoreContext);
 
   const value = useSyncExternalStore(subscribe(select), () => select(getSnapshot()));

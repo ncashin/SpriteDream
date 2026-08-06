@@ -1,7 +1,8 @@
 import { Container, FederatedPointerEvent, Graphics, Point, Rectangle } from "pixi.js";
 
 import { hasComponent } from "../tomove/components";
-import type { GameContext } from "../tomove/initialization";
+import type { GameContext } from "../tomove/gameide";
+import { getValueAtPath } from "../tomove/objectHelpers";
 import { ParentComponent } from "../tomove/parent";
 import { isSerializableObject } from "../tomove/scene";
 import { TransformComponent } from "../tomove/transform";
@@ -42,7 +43,7 @@ const getArrowAxisInGlobalSpace = (gizmoLayer: Container, axis: "x" | "y"): Poin
 };
 
 export const handleSelectedObjects = (gameContext: GameContext, hierarchy: ParentHierarchy) => {
-  const { onUpdate, selectedObjectsStore, scene } = gameContext;
+  const { onUpdate, scene, selectedObjects } = gameContext;
 
   const gizmoLayer = new Container();
 
@@ -127,7 +128,8 @@ export const handleSelectedObjects = (gameContext: GameContext, hierarchy: Paren
   };
 
   const getSelected = (): { key: string; object: SpriteObject } | undefined => {
-    const selected = selectedObjectsStore.getSnapshot()[0];
+    if (!selectedObjects[0]) return;
+    const selected = { key: selectedObjects[0], object: getValueAtPath(scene, selectedObjects[0]) };
 
     if (
       !selected?.object ||

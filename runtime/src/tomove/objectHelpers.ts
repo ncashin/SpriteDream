@@ -1,8 +1,4 @@
-import {
-  isSerializableObject,
-  type Serializable,
-  type SerializableObject,
-} from "../../tomove/scene";
+import { isSerializableObject, type Serializable, type SerializableObject } from "./scene";
 
 export const reorderObjectKeys = (
   object: Record<string, unknown>,
@@ -30,7 +26,7 @@ export const reorderObjectKeys = (
 
 export type Path = string;
 
-export function getValue(root: SerializableObject, path: Path): Serializable | undefined {
+export function getValueAtPath(root: SerializableObject, path: Path): Serializable | undefined {
   let current: Serializable = root;
 
   for (const part of path.split(".")) {
@@ -46,7 +42,7 @@ export function getParent(root: SerializableObject, path: Path): SerializableObj
 
   if (parentPath === "") return root;
 
-  const parent = getValue(root, parentPath);
+  const parent = getValueAtPath(root, parentPath);
   return isSerializableObject(parent) ? parent : undefined;
 }
 

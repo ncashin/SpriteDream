@@ -1,5 +1,5 @@
 import { Application } from "pixi.js";
-import type { GameContext } from "../tomove/initialization";
+import type { GameContext } from "../tomove/gameide";
 import { handleParentHierarchy } from "./handleParentHierarchy";
 import { handleSelectedObjects } from "./selectedObject";
 import { handleSprites } from "./sprite";
@@ -8,7 +8,7 @@ import { handleViewport } from "./viewport";
 export type Viewport = { x: number; y: number; zoom: number };
 
 export const pixiPlugin = (_options: {}) => async (context: GameContext) => {
-  const { rootElement, selectedObjectsStore } = context;
+  const { rootElement, deselectObjects } = context;
 
   const app = new Application();
 
@@ -19,7 +19,7 @@ export const pixiPlugin = (_options: {}) => async (context: GameContext) => {
   });
 
   app.stage.on("pointerdown", () => {
-    selectedObjectsStore.deselectObjects();
+    deselectObjects();
   });
 
   rootElement.append(app.canvas);

@@ -1,7 +1,7 @@
 import { Container } from "pixi.js";
 
 import { hasComponent } from "../tomove/components";
-import type { GameContext } from "../tomove/initialization";
+import type { GameContext } from "../tomove/gameide";
 import { ParentComponent } from "../tomove/parent";
 import { isSerializableObject, type SerializableObject } from "../tomove/scene";
 import { TransformComponent } from "../tomove/transform";

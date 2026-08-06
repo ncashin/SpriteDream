@@ -16,9 +16,9 @@ import {
   type SerializableObject,
 } from "../../tomove/scene";
 
+import { getParent, getValueAtPath, reorderObjectKeys } from "../../tomove/objectHelpers";
 import { IconButton } from "../IconButton";
 import AutoSizeInput from "./AutoSizeInput";
-import { getParent, getValue, reorderObjectKeys } from "./objectHelpers";
 
 export default function ObjectTree({
   object,
@@ -63,7 +63,7 @@ export default function ObjectTree({
 
         // Drop inside object
         if (event.target.dropPosition === "on") {
-          const targetObject = getValue(next, targetPath);
+          const targetObject = getValueAtPath(next, targetPath);
 
           if (!isSerializableObject(targetObject)) continue;
 
@@ -170,7 +170,7 @@ function ObjectRow({
             <div className="row flex flex-row items-center">
               <Button slot="drag" />
               <div className={cn(hasChildItems && "flex-1 flex flex-row items-center")}>
-                {hasChildItems && <Box className="icon-size mr-1" />}
+                {hasChildItems && <Box className="icon-size " />}
 
                 <AutoSizeInput
                   value={key}

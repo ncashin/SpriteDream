@@ -1,5 +1,5 @@
 import { Container, type Application, type FederatedPointerEvent } from "pixi.js";
-import type { GameContext } from "../tomove/initialization";
+import type { GameContext } from "../tomove/gameide";
 
 export type Viewport = {
   x: number;

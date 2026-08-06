@@ -1,7 +1,7 @@
 import { Assets, Sprite } from "pixi.js";
 import z from "zod";
 import { defineComponent, hasComponent, type ComponentType } from "../tomove/components";
-import type { GameContext } from "../tomove/initialization";
+import type { GameContext } from "../tomove/gameide";
 import { TransformComponent } from "../tomove/transform";
 import type { ParentHierarchy } from "./handleParentHierarchy";
 
@@ -22,7 +22,7 @@ export const SpriteComponent = defineComponent(
 export type SpriteObject = ComponentType<[typeof TransformComponent, typeof SpriteComponent]>;
 
 export const handleSprites = async (gameContext: GameContext, hierarchy: ParentHierarchy) => {
-  const { isEditor, queryScene, onUpdate, selectedObjectsStore } = gameContext;
+  const { isEditor, queryScene, onUpdate, deselectObjects, selectObject } = gameContext;
 
   const spriteMap = new Map<SpriteObject, Sprite>();
 
@@ -41,8 +41,8 @@ export const handleSprites = async (gameContext: GameContext, hierarchy: ParentH
       newSprite.on("pointerdown", (event) => {
         event.stopPropagation();
 
-        selectedObjectsStore.deselectObjects();
-        selectedObjectsStore.selectObject(key, gameObject);
+        deselectObjects();
+        selectObject(key);
       });
     }
     return newSprite;

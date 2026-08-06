@@ -3,7 +3,7 @@ import { inputPlugin } from "./inputPlugin/inputPlugin";
 import { pixiPlugin } from "./pixiPlugin/pixiPlugin";
 import initialScene from "./scenes/example.scene?raw";
 import { hasComponent } from "./tomove/components";
-import { gameide } from "./tomove/initialization";
+import { gameide } from "./tomove/gameide";
 import { TransformComponent } from "./tomove/transform";
 
 console.log("GAME");

@@ -10,6 +10,7 @@ import {
   useDragAndDrop,
 } from "react-aria-components";
 
+import { reorderObjectKeys } from "../tomove/objectHelpers";
 import { buildTree, removeParent, setParent } from "../tomove/parent";
 import { isSerializableObject, type SerializableObject } from "../tomove/scene";
 import { Dropdown } from "./Dropdown";
@@ -17,7 +18,6 @@ import useScene from "./hooks/useScene";
 import useSelectedObjects from "./hooks/useSelectedObjects";
 import { IconButton } from "./IconButton";
 import AutoSizeInput from "./tree/AutoSizeInput";
-import { reorderObjectKeys } from "./tree/objectHelpers";
 
 function ObjectRow({
   node,
