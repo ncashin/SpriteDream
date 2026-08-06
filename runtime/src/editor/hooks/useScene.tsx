@@ -10,8 +10,6 @@ export default function useScene() {
       return { ...state, scene: newScene };
     });
   };
-
-  console.log(scene);
-
+  
   return { scene, setScene };
 }

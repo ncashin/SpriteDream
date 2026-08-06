@@ -9,15 +9,19 @@ export default function useSelectedObjects() {
   };
 
   const selectObject = (key: Path) => {
-    if (!isSelected(key)) {
-      setState((state) => ({ ...state, selectedObjects: [...selectedObjects, key] }));
-    }
+    setState((state) => {
+      if (state.selectedObjects.length === 1 && state.selectedObjects[0] === key) {
+        return state;
+      }
+
+      return { ...state, selectedObjects: [key] };
+    });
   };
 
   const deselectObject = (key: Path) => {
     setState((state) => ({
       ...state,
-      selectedObjects: selectedObjects.filter((selected) => selected !== key),
+      selectedObjects: state.selectedObjects.filter((selected) => selected !== key),
     }));
   };
 

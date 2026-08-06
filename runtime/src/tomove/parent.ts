@@ -19,7 +19,7 @@ export const removeParent = (child: SerializableObject) => {
   delete child.parent;
 };
 
-type ObjectNode = {
+export type ObjectNode = {
   key: string;
   object: SerializableObject;
   children: ObjectNode[];

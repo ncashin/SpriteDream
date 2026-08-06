@@ -168,8 +168,10 @@ function ObjectRow({
         {({ hasChildItems, isExpanded }) => (
           <div className="group pl-[--spacing(calc((var(--tree-item-level)-1)*3))]">
             <div className="row flex flex-row items-center">
-              <Button slot="drag" />
-              <div className={cn(hasChildItems && "flex-1 flex flex-row items-center")}>
+              <Button slot="drag" className="absolute w-0 h-0 p-0 m-0 opacity-0 pointer-events-none" tabIndex={-1} aria-hidden />
+         
+         
+              <div className={cn(hasChildItems && "flex-1 flex flex-row gap-1 items-center")}>
                 {hasChildItems && <Box className="icon-size " />}
 
                 <AutoSizeInput

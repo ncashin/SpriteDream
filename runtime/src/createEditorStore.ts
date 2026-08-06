@@ -30,7 +30,7 @@ export const createEditorStore = async ({
   transport,
   awaitInitialization,
 }: EditorStoreOptions) => {
-  let state: EditorStoreState = {
+  const state: EditorStoreState = {
     selectedObjects: [],
     scene: {},
     mode: Mode.Editor,
@@ -39,10 +39,13 @@ export const createEditorStore = async ({
 
   const listeners = new Set<Listener>();
 
-  const getSnapshot = () => state;
+  let snapshot = structuredClone(state);
+  const getSnapshot = () => snapshot;
 
-  let previousState = structuredClone(state);
+  let previousState = snapshot;
   const emit = () => {
+    snapshot = structuredClone(state);
+
     listeners.forEach((listener) => {
       listener();
     });
@@ -53,15 +56,15 @@ export const createEditorStore = async ({
       type: "editorStorePatch",
       patch: statePatch,
     });
-    previousState = structuredClone(state);
+    previousState = snapshot;
   };
 
   const subscribe = <TReturn>(selector: (state: EditorStoreState) => TReturn) => {
     return (listener: Listener) => {
-      let previousValue = selector(state);
+      let previousValue = selector(snapshot);
 
       const handleChange = () => {
-        const nextValue = selector(state);
+        const nextValue = selector(snapshot);
 
         if (!Object.is(previousValue, nextValue)) {
           previousValue = nextValue;
@@ -95,7 +98,7 @@ export const createEditorStore = async ({
       const unsubscribe = transport.onMessage((message) => {
         switch (message.type) {
           case "editorStoreState":
-            state = message.state;
+            patchObject(state, diffObject(state, message.state));
             unsubscribe();
             resolve();
             emit();
@@ -103,7 +106,6 @@ export const createEditorStore = async ({
 
           case "editorStorePatch":
             patchObject(state, message.patch);
-            console.log(message.patch);
             emit();
             break;
 

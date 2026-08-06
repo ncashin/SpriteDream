@@ -11,8 +11,8 @@ import {
 } from "react-aria-components";
 
 import { reorderObjectKeys } from "../tomove/objectHelpers";
-import { buildTree, removeParent, setParent } from "../tomove/parent";
-import { isSerializableObject, type SerializableObject } from "../tomove/scene";
+import { buildTree, removeParent, setParent, type ObjectNode } from "../tomove/parent";
+import { isSerializableObject } from "../tomove/scene";
 import { Dropdown } from "./Dropdown";
 import useScene from "./hooks/useScene";
 import useSelectedObjects from "./hooks/useSelectedObjects";
@@ -24,14 +24,14 @@ function ObjectRow({
   onRename,
   onDelete,
 }: {
-  node: SerializableObject;
+  node: ObjectNode;
   onRename: (newKey: string) => void;
   onDelete: (key: string) => void;
 }) {
-  const { selectedObjects } = useSelectedObjects();
+  const { isSelected } = useSelectedObjects();
 
   const hasChildren = node.children.length > 0;
-  const selected = selectedObjects.some(({ object }) => object === node.object);
+  const selected = isSelected(node.key);
 
   return (
     <TreeItem
@@ -82,7 +82,7 @@ function RowCollection({
   onRename,
   onDelete,
 }: {
-  nodes: SerializableObject[];
+  nodes: ObjectNode[];
   onRename: (oldKey: string, newKey: string) => void;
   onDelete: (key: string) => void;
 }) {
@@ -102,7 +102,7 @@ function RowCollection({
 
 export default function TopLevelObjects() {
   const { scene } = useScene();
-  const { deselectObjects, selectObject } = useSelectedObjects();
+  const { selectedObjects, deselectObjects, selectObject } = useSelectedObjects();
 
   const roots = buildTree(scene);
 
@@ -145,7 +145,7 @@ export default function TopLevelObjects() {
           continue;
         }
 
-        if (target.parent) {
+        if (typeof target.parent === "string") {
           setParent(dragged, target.parent);
         } else {
           removeParent(dragged);
@@ -173,14 +173,12 @@ export default function TopLevelObjects() {
   const renameObject = (oldKey: string, newKey: string) => {
     if (!newKey || newKey === oldKey || scene[newKey]) return;
 
-    deselectObjects();
-
     scene[newKey] = scene[oldKey];
     delete scene[oldKey];
 
     if (!isSerializableObject(scene[newKey])) return;
 
-    selectObject(newKey, scene[newKey]);
+    selectObject(newKey);
   };
 
   const deleteObject = (key: string) => {
@@ -206,17 +204,16 @@ export default function TopLevelObjects() {
             aria-label="Scene Objects"
             selectionMode="single"
             dragAndDropHooks={dragAndDropHooks}
+            selectedKeys={selectedObjects}
             onSelectionChange={(keys) => {
               const key = [...keys][0];
 
-              if (!key) return;
-
-              const object = scene[String(key)];
-
-              if (isSerializableObject(object)) {
+              if (!key) {
                 deselectObjects();
-                selectObject(String(key), object);
+                return;
               }
+
+              selectObject(String(key));
             }}
           >
             <RowCollection nodes={roots} onRename={renameObject} onDelete={deleteObject} />
