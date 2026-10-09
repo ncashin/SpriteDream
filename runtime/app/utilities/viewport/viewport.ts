@@ -1,5 +1,5 @@
-import type { GameObject } from "../actions/editor/object-tree.tsx";
-import { selectObjects } from "./selected-objects.ts";
+import type { GameObject } from "../../actions/editor/object-tree.tsx";
+import { selectObjects } from "../selected-objects.ts";
 
 export type Viewport = {
   x: number;

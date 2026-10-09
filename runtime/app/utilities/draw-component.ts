@@ -1,7 +1,7 @@
 import { createRoot } from "remix/component";
 import type { RemixNode, VirtualRoot } from "remix/component";
 
-import { defaultViewport, worldToScreenMatrix } from "./viewport.ts";
+import { defaultViewport, worldToScreenMatrix } from "./viewport/viewport.ts";
 
 type Slot = {
   host: HTMLDivElement;

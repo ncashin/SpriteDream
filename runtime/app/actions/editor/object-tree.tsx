@@ -11,7 +11,7 @@ import { isObject } from "../../utilities/is-object.ts";
 import { selectedObjects } from "../../utilities/selected-objects.ts";
 import { PropertyInput } from "./property-input.tsx";
 
-export type GameObject = { [name: string]: string | GameObject };
+export type GameObject = { [key in PropertyKey]: any };
 
 export const ObjectTree = clientEntry(
   import.meta.url,

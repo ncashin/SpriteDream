@@ -4,15 +4,19 @@ import { defaulted, object, parseSafe, string } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 import { number } from "remix/data-schema/coerce";
 
-import { center, contains } from "../../utilities/bounding.ts";
+import { center, contains, drawBoundingBox } from "../../utilities/bounding.ts";
 import { createDrawComponent } from "../../utilities/draw-component.ts";
 import { inputMap } from "../../utilities/input.ts";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
+import { loadImage as loadImage } from "../../utilities/runtime-assets.ts";
 import { scene, queryScene } from "../../utilities/scene.ts";
-import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
+import {
+  selectObjects,
+  selectedObjects,
+} from "../../utilities/selected-objects.ts";
 import { updateLoop as createUpdateLoop } from "../../utilities/update-loop.ts";
-import type { WorldPoint } from "../../utilities/viewport.ts";
-import { viewport } from "../../utilities/viewport.ts";
+import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
+import { viewport } from "../../utilities/viewport/viewport.ts";
 import { ObjectTree } from "../editor/object-tree.tsx";
 import type { GameObject } from "../editor/object-tree.tsx";
 
@@ -37,36 +41,16 @@ function isSprite(value: unknown): Sprite | undefined {
   return result.value;
 }
 
-function gameObject(value: unknown): GameObject | undefined {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    return;
-  return value as GameObject;
-}
 
 function radians(degrees: number) {
   return (degrees * Math.PI) / 180;
 }
 
-const images = new Map<string, HTMLImageElement>();
-
-function loadedImage(src: string): HTMLImageElement | undefined {
-  if (src === "") return;
-  let image = images.get(src);
-  if (!image) {
-    image = new Image();
-    image.src = src;
-    images.set(src, image);
-  }
-  if (!image.complete || image.naturalWidth === 0) return;
-  return image;
-}
-
 function selectableAt(point: WorldPoint): GameObject | undefined {
-  return queryScene(scene, (node) => {
-    let sprite = isSprite(node);
-    if (!sprite) return;
-    if (contains(sprite, point)) return gameObject(node);
-  })[0];
+  const found = queryScene(scene, isSprite).find((node) => {
+    return contains(node, point);
+  });
+  return found;
 }
 
 export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
@@ -186,11 +170,10 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               const dx = input.axes.x * SPEED * deltaTime;
               const dy = input.axes.y * SPEED * deltaTime;
               for (const sprite of queryScene(scene, isSprite)) {
-                sprite.x += dx
-                sprite.y += dy
+                sprite.x += dx;
+                sprite.y += dy;
               }
             });
-       
 
             updateLoop.onUpdate(() => {
               const context = view.context;
@@ -202,7 +185,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                 context.translate(origin.x, origin.y);
                 context.rotate(radians(sprite.rotation));
 
-                const image = loadedImage(sprite.image);
+                const image = loadImage(sprite.image);
                 if (!image) {
                   context.fillStyle = sprite.tint;
                   context.fillRect(x, y, sprite.width, sprite.height);
@@ -217,6 +200,13 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                 context.globalCompositeOperation = "destination-in";
                 context.drawImage(image, x, y, sprite.width, sprite.height);
                 context.restore();
+              }
+
+              if (mode !== Mode.Edit) return;
+              for (const object of selectedObjects) {
+                const sprite = isSprite(object);
+                if (!sprite) continue;
+                drawBoundingBox(context, sprite);
               }
             });
 
