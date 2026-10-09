@@ -10,6 +10,12 @@ import {
   type ResizeHandle,
 } from "../bounding.ts";
 
+const WHEEL_PASSTHROUGH = "data-wheel-passthrough";
+
+export function isWheelPassthrough(target: EventTarget | null) {
+  return target instanceof Element && target.closest(`[${WHEEL_PASSTHROUGH}]`) !== null;
+}
+
 const HANDLE_SIZE = 8;
 const STROKE = 1.5;
 const BOUNDS_COLOR = "#7dd3fc";
@@ -60,34 +66,54 @@ export function drawBoundingBox(
   paint: (transform: DOMMatrix, node: RemixNode) => void,
   bounds: Bounds,
   clientToWorld: (clientX: number, clientY: number) => Point,
-  zoom: number,
 ) {
+  const frame = scaleRemoved(bounds);
   paint(
-    bounds.transform,
-    <BoundingBox bounds={bounds} clientToWorld={clientToWorld} zoom={zoom} />,
+    frame.transform,
+    <BoundingBox
+      bounds={bounds}
+      width={frame.width}
+      height={frame.height}
+      clientToWorld={clientToWorld}
+    />,
   );
+}
+
+function scaleRemoved(bounds: Bounds) {
+  const scaleX = Math.hypot(bounds.transform.a, bounds.transform.b);
+  const scaleY = Math.hypot(bounds.transform.c, bounds.transform.d);
+  const transform = new DOMMatrix();
+  transform.a = scaleX === 0 ? 1 : bounds.transform.a / scaleX;
+  transform.b = scaleX === 0 ? 0 : bounds.transform.b / scaleX;
+  transform.c = scaleY === 0 ? 0 : bounds.transform.c / scaleY;
+  transform.d = scaleY === 0 ? 1 : bounds.transform.d / scaleY;
+  transform.e = bounds.transform.e;
+  transform.f = bounds.transform.f;
+  return { transform, width: bounds.width * scaleX, height: bounds.height * scaleY };
 }
 
 function BoundingBox(
   handle: Handle<{
     bounds: Bounds;
+    width: number;
+    height: number;
     clientToWorld: (clientX: number, clientY: number) => Point;
-    zoom: number;
   }>,
 ) {
   return () => {
-    const { bounds, clientToWorld, zoom } = handle.props;
+    const { bounds, width, height, clientToWorld } = handle.props;
 
     return (
-      <div mix={frameCss} style={{ width: bounds.width, height: bounds.height }}>
+      <div data-wheel-passthrough="" mix={frameCss} style={{ width, height }}>
         <MoveControl bounds={bounds} clientToWorld={clientToWorld} />
         {edgeHandles.map((name) => (
           <EdgeControl
             key={name}
             name={name}
             bounds={bounds}
+            width={width}
+            height={height}
             clientToWorld={clientToWorld}
-            zoom={zoom}
           />
         ))}
         {cornerHandles.map((name) => (
@@ -95,8 +121,9 @@ function BoundingBox(
             key={name}
             name={name}
             bounds={bounds}
+            width={width}
+            height={height}
             clientToWorld={clientToWorld}
-            zoom={zoom}
           />
         ))}
       </div>
@@ -107,7 +134,6 @@ function BoundingBox(
 type ResizeControlProps = {
   bounds: Bounds;
   clientToWorld: (clientX: number, clientY: number) => Point;
-  zoom: number;
 };
 
 function MoveControl(
@@ -174,48 +200,39 @@ function MoveControl(
   );
 }
 
-function EdgeControl(handle: Handle<ResizeControlProps & { name: (typeof edgeHandles)[number] }>) {
+function EdgeControl(
+  handle: Handle<ResizeControlProps & { name: (typeof edgeHandles)[number]; width: number; height: number }>,
+) {
   const drag = resizeDrag(handle);
 
   return () => {
-    const { name, bounds, zoom } = handle.props;
+    const { name, bounds, width, height } = handle.props;
     const direction = resizeDirections[name];
     const cursor = resizeCursor(bounds.transform, direction);
 
-    return (
-      <div
-        style={{ ...edgeStyle(name, bounds, axisScale(bounds.transform, zoom)), cursor }}
-        mix={[edgeCss, drag()]}
-      />
-    );
+    return <div style={{ ...edgeStyle(name, width, height), cursor }} mix={[edgeCss, drag()]} />;
   };
 }
 
-function ResizeHandleControl(handle: Handle<ResizeControlProps & { name: ResizeHandle }>) {
+function ResizeHandleControl(
+  handle: Handle<ResizeControlProps & { name: ResizeHandle; width: number; height: number }>,
+) {
   const drag = resizeDrag(handle);
 
   return () => {
-    const { name, bounds, zoom } = handle.props;
+    const { name, bounds, width, height } = handle.props;
     const direction = resizeDirections[name];
-    const scale = axisScale(bounds.transform, zoom);
-    const width = HANDLE_SIZE / scale.x;
-    const height = HANDLE_SIZE / scale.y;
-    const origin = handleOrigin(bounds, direction);
+    const origin = handleOrigin(width, height, direction);
     const cursor = resizeCursor(bounds.transform, direction);
-    const borderX = 1 / scale.x;
-    const borderY = 1 / scale.y;
 
     return (
       <div
         style={{
           left: origin.x,
           top: origin.y,
-          width,
-          height,
-          borderTopWidth: borderY,
-          borderRightWidth: borderX,
-          borderBottomWidth: borderY,
-          borderLeftWidth: borderX,
+          width: HANDLE_SIZE,
+          height: HANDLE_SIZE,
+          borderWidth: 1,
           transform: "translate(-50%, -50%)",
           cursor,
         }}
@@ -263,50 +280,36 @@ function resizeDrag(handle: Handle<ResizeControlProps & { name: ResizeHandle }>)
     });
 }
 
-function edgeStyle(
-  name: (typeof edgeHandles)[number],
-  bounds: Bounds,
-  scale: { x: number; y: number },
-) {
-  const strokeX = STROKE / scale.x;
-  const strokeY = STROKE / scale.y;
-  const padX = Math.max(0, (HANDLE_SIZE / scale.x - strokeX) / 2);
-  const padY = Math.max(0, (HANDLE_SIZE / scale.y - strokeY) / 2);
+function edgeStyle(name: (typeof edgeHandles)[number], width: number, height: number) {
+  const pad = Math.max(0, (HANDLE_SIZE - STROKE) / 2);
 
   if (name === "north" || name === "south") {
-    const top = name === "north" ? -strokeY / 2 : bounds.height - strokeY / 2;
+    const top = name === "north" ? -STROKE / 2 : height - STROKE / 2;
     return {
-      left: -strokeX / 2,
-      top: top - padY,
-      width: bounds.width + strokeX,
-      height: strokeY,
-      paddingTop: padY,
-      paddingBottom: padY,
+      left: -STROKE / 2,
+      top: top - pad,
+      width: width + STROKE,
+      height: STROKE,
+      paddingTop: pad,
+      paddingBottom: pad,
     };
   }
 
-  const left = name === "west" ? -strokeX / 2 : bounds.width - strokeX / 2;
+  const left = name === "west" ? -STROKE / 2 : width - STROKE / 2;
   return {
-    left: left - padX,
-    top: -strokeY / 2,
-    width: strokeX,
-    height: bounds.height + strokeY,
-    paddingLeft: padX,
-    paddingRight: padX,
+    left: left - pad,
+    top: -STROKE / 2,
+    width: STROKE,
+    height: height + STROKE,
+    paddingLeft: pad,
+    paddingRight: pad,
   };
 }
 
-function axisScale(transform: DOMMatrix, zoom: number) {
+function handleOrigin(width: number, height: number, direction: { x: number; y: number }): Point {
   return {
-    x: Math.max(Math.hypot(transform.a, transform.b) * zoom, 1e-6),
-    y: Math.max(Math.hypot(transform.c, transform.d) * zoom, 1e-6),
-  };
-}
-
-function handleOrigin(bounds: Bounds, direction: { x: number; y: number }): Point {
-  return {
-    x: direction.x > 0 ? bounds.width : direction.x < 0 ? 0 : bounds.width / 2,
-    y: direction.y > 0 ? bounds.height : direction.y < 0 ? 0 : bounds.height / 2,
+    x: direction.x > 0 ? width : direction.x < 0 ? 0 : width / 2,
+    y: direction.y > 0 ? height : direction.y < 0 ? 0 : height / 2,
   };
 }
 

@@ -2,6 +2,7 @@ import { clientEntry, css, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { contains } from "../../utilities/bounding.ts";
+import { copyAndPaste } from "../../utilities/copy-and-paste.ts";
 import { inputMap } from "../../utilities/input.ts";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
 import { scene, queryScene } from "../../utilities/scene.ts";
@@ -93,6 +94,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               },
               { signal },
             );
+            copyAndPaste({ signal });
 
             const updateLoop = createUpdateLoop();
 
@@ -110,40 +112,39 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                 if (!sprite) continue;
 
                 view.drawBoundingBox(sprite);
+
+                const tempTransform = sprite.transform;
+                const scaleRemoved = new DOMMatrix();
+                scaleRemoved.a = 1;
+                scaleRemoved.b = 0;
+                scaleRemoved.c = 0;
+                scaleRemoved.d = 1;
+                scaleRemoved.e = tempTransform.e;
+                scaleRemoved.f = tempTransform.f;
+                scaleRemoved.translateSelf(0, -POPOVER_GAP);
+
                 view.drawComponent(
-                  (() => {
-                    // Remove scaling from the transform
-                    const t = sprite.transform;
-                    const scaleRemoved = new DOMMatrix();
-                    scaleRemoved.a = 1;
-                    scaleRemoved.b = 0;
-                    scaleRemoved.c = 0;
-                    scaleRemoved.d = 1;
-                    scaleRemoved.e = t.e;
-                    scaleRemoved.f = t.f;
-                    // Now translate after scaling is removed
-                    scaleRemoved.translateSelf(0, -POPOVER_GAP);
-                    return scaleRemoved;
-                  })(),
-       
-          
-                  <div
-                    mix={css({
-                      position: "absolute",
-                      left: "0",
-                      bottom: "0",
-                      width: "max-content",
-                      pointerEvents: "auto",
-                      background: "black",
-                      color: "#f4f4f5",
-                      fontSize: "0.875rem",
-                      lineHeight: "1.25rem",
-                      padding: "0.5rem",
-                      "--text-light": "#d4d4d4",
-                    })}
-                  >
-                    <ObjectTree object={object} />
-                  </div>,
+                  scaleRemoved,
+                  <>
+                    <div
+                      key={object}
+                      mix={css({
+                        position: "absolute",
+                        left: "0",
+                        bottom: "0",
+                        width: "max-content",
+                        pointerEvents: "auto",
+                        background: "black",
+                        color: "#f4f4f5",
+                        fontSize: "0.875rem",
+                        lineHeight: "1.25rem",
+                        padding: "0.5rem",
+                        "--text-light": "#d4d4d4",
+                      })}
+                    >
+                      <ObjectTree object={object} />
+                    </div>
+                  </>,
                 );
               }
             });

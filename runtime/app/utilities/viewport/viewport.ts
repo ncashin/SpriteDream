@@ -3,7 +3,7 @@ import type { RemixNode } from "remix/component";
 import type { GameObject } from "../../actions/editor/object-tree.tsx";
 import type { Bounds } from "../bounding.ts";
 import { selectObjects } from "../selected-objects.ts";
-import { drawBoundingBox as paintBoundingBox } from "./draw-bounding-box.tsx";
+import { drawBoundingBox as paintBoundingBox, isWheelPassthrough } from "./draw-bounding-box.tsx";
 import { createDrawComponent } from "./draw-component.ts";
 import { type Image, drawImage as paintImage } from "./draw-image.ts";
 
@@ -21,8 +21,6 @@ type ViewportOptions = {
   handleHoverSelectable?: (hovering: boolean) => void;
 };
 
-const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 8;
 const WHEEL_ZOOM = 0.002;
 const CLICK_SLOP = 4;
 
@@ -31,6 +29,20 @@ export function createViewport(): Viewport {
 }
 
 export const defaultViewport = createViewport();
+
+let surface: HTMLCanvasElement | undefined;
+let cursorPoint: WorldPoint | undefined;
+
+export function centerOn(point: WorldPoint) {
+  if (!surface) return;
+  let rect = surface.getBoundingClientRect();
+  defaultViewport.x = point.x - rect.width / (2 * defaultViewport.zoom);
+  defaultViewport.y = point.y - rect.height / (2 * defaultViewport.zoom);
+}
+
+export function cursorWorldPoint(): WorldPoint | undefined {
+  return cursorPoint;
+}
 
 export function screenToWorld(viewport: Viewport, x: number, y: number) {
   return {
@@ -61,7 +73,7 @@ export function panBy(viewport: Viewport, screenDx: number, screenDy: number) {
 
 export function zoomAt(viewport: Viewport, screenX: number, screenY: number, nextZoom: number) {
   let anchor = screenToWorld(viewport, screenX, screenY);
-  viewport.zoom = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+  viewport.zoom = nextZoom;
   viewport.x = anchor.x - screenX / viewport.zoom;
   viewport.y = anchor.y - screenY / viewport.zoom;
 }
@@ -81,6 +93,12 @@ export function zoomFromWheel(
 
 export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
   let signal = options?.signal;
+  surface = canvas;
+  signal?.addEventListener("abort", () => {
+    if (surface !== canvas) return;
+    surface = undefined;
+    cursorPoint = undefined;
+  });
   let drag: {
     id: number;
     x: number;
@@ -161,7 +179,7 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
   }
 
   function onWheel(event: WheelEvent) {
-    if (!onCanvasSurface(event)) return;
+    if (event.target !== canvas && !isWheelPassthrough(event.target)) return;
     event.preventDefault();
     let rect = canvas.getBoundingClientRect();
     zoomFromWheel(
@@ -178,7 +196,15 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
   canvas.addEventListener("pointerup", onPointerUp, { signal });
   canvas.addEventListener("pointercancel", onPointerCancel, { signal });
   canvas.addEventListener("pointerleave", onPointerLeave, { signal });
-  canvas.addEventListener("wheel", onWheel, { passive: false, signal });
+  let wheelSurface = canvas.parentElement ?? canvas;
+  wheelSurface.addEventListener("wheel", onWheel, { passive: false, signal });
+
+  function trackCursor(event: PointerEvent) {
+    cursorPoint = clientToWorld(event.clientX, event.clientY);
+  }
+
+  wheelSurface.addEventListener("pointerdown", trackCursor, { signal });
+  wheelSurface.addEventListener("pointermove", trackCursor, { signal });
 
   let drawing: CanvasRenderingContext2D | undefined;
   let paintComponent = createDrawComponent(canvas);
@@ -236,7 +262,6 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
         },
         bounds,
         clientToWorld,
-        defaultViewport.zoom,
       );
     },
   };
@@ -257,8 +282,4 @@ function fitCanvas(canvas: HTMLCanvasElement) {
     canvas.width = bufferWidth;
     canvas.height = bufferHeight;
   }
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
 }

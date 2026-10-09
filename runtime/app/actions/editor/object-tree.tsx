@@ -1,6 +1,7 @@
 import Box from "lucide/dist/esm/icons/box.mjs";
 import ChevronDown from "lucide/dist/esm/icons/chevron-down.mjs";
 import ChevronRight from "lucide/dist/esm/icons/chevron-right.mjs";
+import Locate from "lucide/dist/esm/icons/locate.mjs";
 import Plus from "lucide/dist/esm/icons/plus.mjs";
 import Trash from "lucide/dist/esm/icons/trash.mjs";
 import { clientEntry, css, on } from "remix/component";
@@ -8,7 +9,9 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
 import { isObject } from "../../utilities/is-object.ts";
-import { selectedObjects } from "../../utilities/selected-objects.ts";
+import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
+import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
+import { centerOn } from "../../utilities/viewport/viewport.ts";
 import { MatrixInput } from "./matrix-input.tsx";
 import { PropertyInput } from "./property-input.tsx";
 
@@ -89,6 +92,7 @@ function Branch(
 
   return () => {
     const { name, object, onDelete } = handle.props;
+    const target = jumpTarget(object);
 
     return (
       <>
@@ -131,11 +135,30 @@ function Branch(
             </span>
             {name}
           </div>
+          {target ? (
+            <button
+              type="button"
+              aria-label={`Jump to ${name}`}
+              mix={[
+                iconButton,
+                on("click", (event) => {
+                  event.stopPropagation();
+                  const point = jumpTarget(object);
+                  if (!point) return;
+                  selectObjects([object]);
+                  centerOn(point);
+                }),
+              ]}
+            >
+              <Icon icon={Locate} size={14} />
+            </button>
+          ) : null}
           <button
             type="button"
             aria-label={`Add to ${name}`}
             mix={[
               iconButton,
+              ...(target ? [grouped] : []),
               on("click", (event) => {
                 event.stopPropagation();
                 let key = "new";
@@ -171,6 +194,54 @@ function Branch(
         )}
       </>
     );
+  };
+}
+
+function jumpTarget(object: GameObject): WorldPoint | undefined {
+  const own = pointOf(object);
+  if (own) return own;
+
+  const points: WorldPoint[] = [];
+  for (const value of Object.values(object)) {
+    if (isObject(value) && !(value instanceof DOMMatrix)) collectPoints(value, points);
+  }
+  if (points.length === 0) return;
+
+  let x = 0;
+  let y = 0;
+  for (const point of points) {
+    x += point.x;
+    y += point.y;
+  }
+  return { x: x / points.length, y: y / points.length };
+}
+
+function collectPoints(object: GameObject, points: WorldPoint[]) {
+  const own = pointOf(object);
+  if (own) {
+    points.push(own);
+    return;
+  }
+  for (const value of Object.values(object)) {
+    if (isObject(value) && !(value instanceof DOMMatrix)) collectPoints(value, points);
+  }
+}
+
+function pointOf(object: GameObject): WorldPoint | undefined {
+  const transform = object.transform;
+  if (!(transform instanceof DOMMatrix)) return;
+
+  const width = Number(object.width);
+  const height = Number(object.height);
+  if (!Number.isFinite(width) || !Number.isFinite(height)) {
+    return { x: transform.e, y: transform.f };
+  }
+
+  const x = width / 2;
+  const y = height / 2;
+  return {
+    x: transform.a * x + transform.c * y + transform.e,
+    y: transform.b * x + transform.d * y + transform.f,
   };
 }
 
@@ -210,6 +281,8 @@ const row = css({
     visibility: "visible",
   },
 });
+
+const grouped = css({ marginLeft: "-0.25rem" });
 
 const iconButton = css({
   appearance: "none",

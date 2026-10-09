@@ -29,11 +29,34 @@ export function drawImage(context: CanvasRenderingContext2D, sprite: Image) {
     return;
   }
 
-  context.drawImage(image, 0, 0, sprite.width, sprite.height);
-  context.globalCompositeOperation = "multiply";
-  context.fillStyle = sprite.tint;
-  context.fillRect(0, 0, sprite.width, sprite.height);
-  context.globalCompositeOperation = "destination-in";
-  context.drawImage(image, 0, 0, sprite.width, sprite.height);
+  const tinted = applyTintToSprite(image, sprite.width, sprite.height, sprite.tint);
+  if (tinted) context.drawImage(tinted, 0, 0, sprite.width, sprite.height);
   context.restore();
+}
+
+let tintCanvas: HTMLCanvasElement | undefined;
+
+function applyTintToSprite(image: HTMLImageElement, width: number, height: number, tint: string) {
+  const canvas = tintCanvas ?? (tintCanvas = document.createElement("canvas"));
+  const pixelWidth = Math.max(1, Math.ceil(width));
+  const pixelHeight = Math.max(1, Math.ceil(height));
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+  }
+
+  const layer = canvas.getContext("2d");
+  if (!layer) return;
+
+  layer.setTransform(1, 0, 0, 1, 0, 0);
+  layer.globalCompositeOperation = "source-over";
+  layer.imageSmoothingEnabled = false;
+  layer.clearRect(0, 0, pixelWidth, pixelHeight);
+  layer.drawImage(image, 0, 0, width, height);
+  layer.globalCompositeOperation = "multiply";
+  layer.fillStyle = tint;
+  layer.fillRect(0, 0, width, height);
+  layer.globalCompositeOperation = "destination-in";
+  layer.drawImage(image, 0, 0, width, height);
+  return canvas;
 }
