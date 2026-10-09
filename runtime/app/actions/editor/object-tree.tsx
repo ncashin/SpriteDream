@@ -7,14 +7,11 @@ import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
+import { isObject } from "../../is-object.ts";
 import { selectedObjects } from "../../selected-objects.ts";
 import { PropertyInput } from "./property-input.tsx";
 
 export type GameObject = { [name: string]: string | GameObject };
-
-function isGameObject(value: string | GameObject): value is GameObject {
-  return typeof value === "object" && value !== null;
-}
 
 export const ObjectTree = clientEntry(
   import.meta.url,
@@ -28,20 +25,20 @@ export const ObjectTree = clientEntry(
       handle.signal.addEventListener("abort", () => cancelAnimationFrame(frame));
     }
 
-    return () => <NodeList object={handle.props.object} />;
+    return () => <GameObjectList object={handle.props.object} />;
   },
 );
 
-function NodeList(handle: Handle<{ object: GameObject }>) {
+function GameObjectList(handle: Handle<{ object: GameObject }>) {
   return () => {
-    let { object } = handle.props;
+    const { object } = handle.props;
     if (Object.keys(object).length === 0) return null;
 
     return (
       <div>
         {Object.entries(object).map(([name, value]) => (
           <div key={name}>
-            {isGameObject(value) ? (
+            {isObject(value) ? (
               <Branch
                 name={name}
                 object={value}
@@ -81,7 +78,7 @@ function Branch(
   let collapsed = false;
 
   return () => {
-    let { name, object, onDelete } = handle.props;
+    const { name, object, onDelete } = handle.props;
 
     return (
       <>
@@ -159,7 +156,7 @@ function Branch(
         </div>
         {collapsed ? null : (
           <div mix={css({ paddingLeft: "0.75rem" })}>
-            <NodeList object={object} />
+            <GameObjectList object={object} />
           </div>
         )}
       </>
@@ -168,11 +165,11 @@ function Branch(
 }
 
 function renameKey(object: GameObject, from: string, to: string) {
-  let renamed: GameObject = {};
-  for (let [key, value] of Object.entries(object)) {
+  const renamed: GameObject = {};
+  for (const [key, value] of Object.entries(object)) {
     renamed[key === from ? to : key] = value;
   }
-  for (let key of Object.keys(object)) delete object[key];
+  for (const key of Object.keys(object)) delete object[key];
   Object.assign(object, renamed);
 }
 

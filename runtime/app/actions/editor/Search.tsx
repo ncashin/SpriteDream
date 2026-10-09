@@ -5,7 +5,7 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
 import type { SceneNode } from "../../scene.ts";
-import { defaultScene } from "../../scene.ts";
+import { scene } from "../../scene.ts";
 import { selectObjects, selectedObjects } from "../../selected-objects.ts";
 import type { GameObject } from "./object-tree.tsx";
 
@@ -18,7 +18,7 @@ function gameObject(value: SceneNode): GameObject | undefined {
 
 function topLevelObjects() {
   let objects: { name: string; object: GameObject }[] = [];
-  for (let [name, value] of Object.entries(defaultScene)) {
+  for (let [name, value] of Object.entries(scene)) {
     let object = gameObject(value);
     if (object) objects.push({ name, object });
   }

@@ -17,9 +17,9 @@ export function createScene(): { [name: string]: SceneNode } {
   };
 }
 
-export const defaultScene = createScene();
+export const scene = createScene();
 
-export function query<Result>(
+export function queryScene<Result>(
   scene: { [name: string]: SceneNode },
   check: (value: SceneNode) => Result,
 ): NonNullable<Result>[] {

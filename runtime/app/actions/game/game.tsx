@@ -7,13 +7,13 @@ import { number } from "remix/data-schema/coerce";
 import { createDrawComponent } from "../../draw-component.ts";
 import { inputMap } from "../../input.ts";
 import { Mode, mode, onModeChange } from "../../mode.ts";
-import { defaultScene, query } from "../../scene.ts";
+import { scene, queryScene } from "../../scene.ts";
 import { selectObjects, selectedObjects } from "../../selected-objects.ts";
 import { ObjectTree } from "../editor/object-tree.tsx";
 import type { GameObject } from "../editor/object-tree.tsx";
 import type { WorldPoint } from "../../viewport.ts";
 import { viewport } from "../../viewport.ts";
-import { isObject } from "../../is-object.ts";
+import { updateLoop as createUpdateLoop } from "../../update-loop.ts";
 
 const SPEED = 240;
 const POPOVER_GAP = 10;
@@ -111,7 +111,7 @@ function drawSprite(context: CanvasRenderingContext2D, sprite: Sprite) {
 
 function selectableAt(point: WorldPoint): GameObject | undefined {
   let hit: GameObject | undefined;
-  for (const node of Object.values(defaultScene)) {
+  for (const node of Object.values(scene)) {
     let sprite = isSprite(node);
     if (!sprite) continue;
     if (contains(sprite, point)) hit = gameObject(node);
@@ -188,64 +188,22 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               { signal },
             );
 
-            let updatedAt = 0;
-            let updateFrame = 0;
+            const updateLoop = createUpdateLoop();
 
-            function update(now: number) {
-              if (signal.aborted || mode !== Mode.Play) {
-                updateFrame = 0;
-                return;
-              }
-
-              let deltaTime = (now - updatedAt) / 1000;
-              updatedAt = now;
-              let dx = input.axes.x * SPEED * deltaTime;
-              let dy = input.axes.y * SPEED * deltaTime;
-              if (dx !== 0 || dy !== 0) {
-                for (const node of Object.values(defaultScene)) {
-                  let sprite = isSprite(node);
-                  let object = gameObject(node);
-                  if (!sprite || !object) continue;
-                  object.x = String(sprite.x + dx);
-                  object.y = String(sprite.y + dy);
-                }
-              }
-
-              updateFrame = requestAnimationFrame(update);
-            }
-
-            function startUpdate() {
-              if (updateFrame !== 0 || mode !== Mode.Play) return;
-              updatedAt = performance.now();
-              updateFrame = requestAnimationFrame(update);
-            }
-
-            function stopUpdate() {
-              cancelAnimationFrame(updateFrame);
-              updateFrame = 0;
-            }
-
-            onModeChange((next) => {
-              if (next === Mode.Play) startUpdate();
-              else stopUpdate();
-            }, signal);
-            if (mode === Mode.Play) startUpdate();
-
-            let frame = requestAnimationFrame(function draw() {
-              if (signal.aborted) return;
+            updateLoop.onUpdate(() => {
               input.update();
               if (input.buttons.deselect.pressed) selectObjects([]);
+            });
 
-              const context = view.context;
-              for (const sprite of query(defaultScene, isSprite)) {
-                drawSprite(context, sprite);
-              }
+            const editorLoop = createUpdateLoop(updateLoop);
+            const gameLoop = createUpdateLoop(updateLoop);
 
+            editorLoop.onUpdate(() => {
               for (const object of selectedObjects) {
-                let sprite = isSprite(object);
-                if (!sprite) return;
+                const sprite = isSprite(object);
+                if (!sprite) continue;
 
-                let origin = center(sprite);
+                const origin = center(sprite);
                 drawComponent(
                   new DOMMatrix()
                     .translate(origin.x, origin.y)
@@ -272,12 +230,46 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                   </div>,
                 );
               }
-
-              frame = requestAnimationFrame(draw);
             });
+
+            gameLoop.onUpdate(({ deltaTime }) => {
+              let dx = input.axes.x * SPEED * deltaTime;
+              let dy = input.axes.y * SPEED * deltaTime;
+              if (dx === 0 && dy === 0) return;
+              for (const node of Object.values(scene)) {
+                let sprite = isSprite(node);
+                let object = gameObject(node);
+                if (!sprite || !object) continue;
+                object.x = String(sprite.x + dx);
+                object.y = String(sprite.y + dy);
+              }
+            });
+
+            updateLoop.onUpdate(() => {
+              const context = view.context;
+              for (const sprite of queryScene(scene, isSprite)) {
+                drawSprite(context, sprite);
+              }
+            });
+
+            onModeChange((next) => {
+              if (next === Mode.Play) {
+                editorLoop.stop();
+                gameLoop.start();
+              } else {
+                gameLoop.stop();
+                editorLoop.start();
+              }
+            }, signal);
+
+            if (mode === Mode.Play) gameLoop.start();
+            else editorLoop.start();
+            updateLoop.start();
+
             signal.addEventListener("abort", () => {
-              cancelAnimationFrame(frame);
-              stopUpdate();
+              updateLoop.stop();
+              editorLoop.stop();
+              gameLoop.stop();
               drawComponent.dispose();
             });
           }),

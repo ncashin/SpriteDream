@@ -8,7 +8,7 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
 import { Mode, mode, setMode } from "../../mode.ts";
-import { defaultScene } from "../../scene.ts";
+import { scene } from "../../scene.ts";
 import { Search } from "./Search.tsx";
 import { ObjectTree } from "./object-tree.tsx";
 
@@ -22,7 +22,7 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
     <>
       <aside mix={panel} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
         <div id="scene-tree" inert={collapsed} mix={tree}>
-          <ObjectTree object={defaultScene} />
+          <ObjectTree object={scene} />
         </div>
       </aside>
       <header mix={bar} style={{ left: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
