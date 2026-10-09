@@ -1,17 +1,16 @@
 import type { GameObject } from "../actions/editor/object-tree.tsx";
 
-export const selectedObjects: GameObject[] = [];
+export const selectedObjects = new Set<GameObject>();
 
 export function selectObject(object: GameObject) {
-  if (!selectedObjects.includes(object)) selectedObjects.push(object);
+  selectedObjects.add(object);
 }
 
 export function deselectObject(object: GameObject) {
-  let index = selectedObjects.indexOf(object);
-  if (index !== -1) selectedObjects.splice(index, 1);
+  selectedObjects.delete(object);
 }
 
-export function selectObjects(objects: readonly GameObject[]) {
-  selectedObjects.length = 0;
-  selectedObjects.push(...objects);
+export function selectObjects(objects: Iterable<GameObject>) {
+  selectedObjects.clear();
+  for (const object of objects) selectedObjects.add(object);
 }

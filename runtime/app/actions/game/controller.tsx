@@ -7,8 +7,8 @@ import { Game } from './game.tsx'
 export default createController(routes.game, {
   actions: {
     index(context) {
-      let content = <Game />
-      let isFrameRequest = context.request.headers.get('X-Remix-Frame') === 'true'
+      const content = <Game />
+      const isFrameRequest = context.request.headers.get('X-Remix-Frame') === 'true'
       if (isFrameRequest) return context.render(content)
 
       return context.render(

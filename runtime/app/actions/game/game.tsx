@@ -1,20 +1,16 @@
 import { clientEntry, css, ref } from "remix/component";
 import type { Handle } from "remix/component";
-import { defaulted, object, parseSafe, string } from "remix/data-schema";
-import type { InferOutput } from "remix/data-schema";
-import { number } from "remix/data-schema/coerce";
 
 import { center, contains, drawBoundingBox } from "../../utilities/bounding.ts";
-import { createDrawComponent } from "../../utilities/draw-component.ts";
 import { inputMap } from "../../utilities/input.ts";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
-import { loadImage as loadImage } from "../../utilities/runtime-assets.ts";
 import { scene, queryScene } from "../../utilities/scene.ts";
 import {
   selectObjects,
   selectedObjects,
 } from "../../utilities/selected-objects.ts";
 import { updateLoop as createUpdateLoop } from "../../utilities/update-loop.ts";
+import { image as imageTrait } from "../../utilities/viewport/draw-image.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
 import { viewport } from "../../utilities/viewport/viewport.ts";
 import { ObjectTree } from "../editor/object-tree.tsx";
@@ -23,31 +19,8 @@ import type { GameObject } from "../editor/object-tree.tsx";
 const SPEED = 240;
 const POPOVER_GAP = 10;
 
-const spriteSchema = object({
-  x: number(),
-  y: number(),
-  width: number(),
-  height: number(),
-  rotation: number(),
-  tint: string(),
-  image: defaulted(string(), ""),
-});
-
-type Sprite = InferOutput<typeof spriteSchema>;
-
-function isSprite(value: unknown): Sprite | undefined {
-  let result = parseSafe(spriteSchema, value);
-  if (!result.success) return;
-  return result.value;
-}
-
-
-function radians(degrees: number) {
-  return (degrees * Math.PI) / 180;
-}
-
 function selectableAt(point: WorldPoint): GameObject | undefined {
-  const found = queryScene(scene, isSprite).find((node) => {
+  const found = queryScene(scene, imageTrait).find((node) => {
     return contains(node, point);
   });
   return found;
@@ -84,7 +57,6 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             const isCanvas = node instanceof HTMLCanvasElement;
             if (!isCanvas) return;
             const canvas = node;
-            const drawComponent = createDrawComponent(canvas);
             canvas.addEventListener(
               "pointerdown",
               (event) => {
@@ -134,11 +106,11 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
 
             editorLoop.onUpdate(() => {
               for (const object of selectedObjects) {
-                const sprite = isSprite(object);
+                const sprite = imageTrait(object);
                 if (!sprite) continue;
 
                 const origin = center(sprite);
-                drawComponent(
+                view.drawComponent(
                   new DOMMatrix()
                     .translate(origin.x, origin.y)
                     .rotate(sprite.rotation)
@@ -169,44 +141,22 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             gameLoop.onUpdate(({ deltaTime }) => {
               const dx = input.axes.x * SPEED * deltaTime;
               const dy = input.axes.y * SPEED * deltaTime;
-              for (const sprite of queryScene(scene, isSprite)) {
-                sprite.x += dx;
-                sprite.y += dy;
+              for (const image of queryScene(scene, imageTrait)) {
+                image.x += dx;
+                image.y += dy;
               }
             });
 
             updateLoop.onUpdate(() => {
-              const context = view.context;
-              for (const sprite of queryScene(scene, isSprite)) {
-                const origin = center(sprite);
-                const x = -sprite.width / 2;
-                const y = -sprite.height / 2;
-                context.save();
-                context.translate(origin.x, origin.y);
-                context.rotate(radians(sprite.rotation));
-
-                const image = loadImage(sprite.image);
-                if (!image) {
-                  context.fillStyle = sprite.tint;
-                  context.fillRect(x, y, sprite.width, sprite.height);
-                  context.restore();
-                  continue;
-                }
-
-                context.drawImage(image, x, y, sprite.width, sprite.height);
-                context.globalCompositeOperation = "multiply";
-                context.fillStyle = sprite.tint;
-                context.fillRect(x, y, sprite.width, sprite.height);
-                context.globalCompositeOperation = "destination-in";
-                context.drawImage(image, x, y, sprite.width, sprite.height);
-                context.restore();
+              for (const image of queryScene(scene, imageTrait)) {
+                view.drawImage(image);
               }
 
               if (mode !== Mode.Edit) return;
               for (const object of selectedObjects) {
-                const sprite = isSprite(object);
-                if (!sprite) continue;
-                drawBoundingBox(context, sprite);
+                const image = imageTrait(object);
+                if (!image) continue;
+                drawBoundingBox(view.context, image);
               }
             });
 
@@ -228,7 +178,6 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               updateLoop.stop();
               editorLoop.stop();
               gameLoop.stop();
-              drawComponent.dispose();
             });
           }),
         ]}

@@ -82,7 +82,7 @@ function Branch(
 
     return (
       <>
-        <div aria-current={selectedObjects.includes(object) ? "true" : undefined} mix={row}>
+        <div aria-current={selectedObjects.has(object) ? "true" : undefined} mix={row}>
           <div
             aria-expanded={!collapsed}
             mix={[

@@ -1,8 +1,6 @@
 import { createRoot } from "remix/component";
 import type { RemixNode, VirtualRoot } from "remix/component";
 
-import { defaultViewport, worldToScreenMatrix } from "./viewport/viewport.ts";
-
 type Slot = {
   host: HTMLDivElement;
   root: VirtualRoot;
@@ -89,7 +87,7 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
     slot.placed = true;
     slot.host.style.visibility = "visible";
     slot.host.style.pointerEvents = "auto";
-    slot.host.style.transform = worldToScreenMatrix(defaultViewport, transform).toString();
+    slot.host.style.transform = transform.toString();
   }
 
   drawComponent.dispose = () => {

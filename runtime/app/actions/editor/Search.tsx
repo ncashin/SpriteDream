@@ -50,7 +50,7 @@ export function Search(handle: Handle) {
 
   function focusSearch() {
     let items = matchingObjects(query);
-    let current = items.findIndex((item) => selectedObjects.includes(item.object));
+    let current = items.findIndex((item) => selectedObjects.has(item.object));
     activeIndex = current === -1 ? 0 : current;
     open = true;
     handle.update();

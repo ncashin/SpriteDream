@@ -1,5 +1,9 @@
+import type { RemixNode } from "remix/component";
+
 import type { GameObject } from "../../actions/editor/object-tree.tsx";
 import { selectObjects } from "../selected-objects.ts";
+import { createDrawComponent } from "./draw-component.ts";
+import { type Image, drawImage as paintImage } from "./draw-image.ts";
 
 export type Viewport = {
   x: number;
@@ -174,27 +178,49 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
   canvas.addEventListener("pointerleave", onPointerLeave, { signal });
   canvas.addEventListener("wheel", onWheel, { passive: false, signal });
 
+  let drawing: CanvasRenderingContext2D | undefined;
+  let paintComponent = createDrawComponent(canvas);
+  signal?.addEventListener("abort", () => {
+    paintComponent.dispose();
+  });
+
+  function drawingContext() {
+    if (drawing) return drawing;
+
+    fitCanvas(canvas);
+    let context = canvas.getContext("2d");
+    if (!context) throw new Error("2D canvas context is unavailable");
+
+    context.imageSmoothingEnabled = false;
+    let ratio = devicePixelRatio();
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+
+    let scale = ratio * defaultViewport.zoom;
+    context.setTransform(
+      scale,
+      0,
+      0,
+      scale,
+      -defaultViewport.x * scale,
+      -defaultViewport.y * scale,
+    );
+    drawing = context;
+    queueMicrotask(() => {
+      drawing = undefined;
+    });
+    return context;
+  }
+
   return {
     get context() {
-      fitCanvas(canvas);
-      let context = canvas.getContext("2d");
-      if (!context) throw new Error("2D canvas context is unavailable");
-
-      context.imageSmoothingEnabled = false;
-      let ratio = devicePixelRatio();
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-
-      let scale = ratio * defaultViewport.zoom;
-      context.setTransform(
-        scale,
-        0,
-        0,
-        scale,
-        -defaultViewport.x * scale,
-        -defaultViewport.y * scale,
-      );
-      return context;
+      return drawingContext();
+    },
+    drawImage(sprite: Image) {
+      paintImage(drawingContext(), sprite);
+    },
+    drawComponent(transform: DOMMatrix, node: RemixNode) {
+      paintComponent(worldToScreenMatrix(defaultViewport, transform), node);
     },
   };
 }
