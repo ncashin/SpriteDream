@@ -1,7 +1,7 @@
 import { clientEntry, css, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { contains, drawBoundingBox } from "../../utilities/bounding.ts";
+import { contains } from "../../utilities/bounding.ts";
 import { inputMap } from "../../utilities/input.ts";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
 import { scene, queryScene } from "../../utilities/scene.ts";
@@ -109,14 +109,31 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                 const sprite = imageTrait(object);
                 if (!sprite) continue;
 
+                view.drawBoundingBox(sprite);
                 view.drawComponent(
-                  sprite.transform.translate(0, -POPOVER_GAP),
+                  (() => {
+                    // Remove scaling from the transform
+                    const t = sprite.transform;
+                    const scaleRemoved = new DOMMatrix();
+                    scaleRemoved.a = 1;
+                    scaleRemoved.b = 0;
+                    scaleRemoved.c = 0;
+                    scaleRemoved.d = 1;
+                    scaleRemoved.e = t.e;
+                    scaleRemoved.f = t.f;
+                    // Now translate after scaling is removed
+                    scaleRemoved.translateSelf(0, -POPOVER_GAP);
+                    return scaleRemoved;
+                  })(),
+       
+          
                   <div
                     mix={css({
                       position: "absolute",
                       left: "0",
                       bottom: "0",
                       width: "max-content",
+                      pointerEvents: "auto",
                       background: "black",
                       color: "#f4f4f5",
                       fontSize: "0.875rem",
@@ -142,13 +159,6 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             updateLoop.onUpdate(() => {
               for (const image of queryScene(scene, imageTrait)) {
                 view.drawImage(image);
-              }
-
-              if (mode !== Mode.Edit) return;
-              for (const object of selectedObjects) {
-                const image = imageTrait(object);
-                if (!image) continue;
-                drawBoundingBox(view.context, image);
               }
             });
 

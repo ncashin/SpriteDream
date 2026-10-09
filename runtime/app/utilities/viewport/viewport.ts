@@ -1,7 +1,9 @@
 import type { RemixNode } from "remix/component";
 
 import type { GameObject } from "../../actions/editor/object-tree.tsx";
+import type { Bounds } from "../bounding.ts";
 import { selectObjects } from "../selected-objects.ts";
+import { drawBoundingBox as paintBoundingBox } from "./draw-bounding-box.tsx";
 import { createDrawComponent } from "./draw-component.ts";
 import { type Image, drawImage as paintImage } from "./draw-image.ts";
 
@@ -100,7 +102,7 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
     } catch {
       // Pointer capture is only available for an active pointer.
     }
-    let object = options?.handleSelection?.(pointerWorld(canvas, event));
+    let object = options?.handleSelection?.(clientToWorld(event.clientX, event.clientY));
     drag = {
       id: event.pointerId,
       x: event.clientX,
@@ -154,7 +156,7 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
 
   function updateHover(event: PointerEvent) {
     if (drag) return;
-    let object = options?.handleSelection?.(pointerWorld(canvas, event));
+    let object = options?.handleSelection?.(clientToWorld(event.clientX, event.clientY));
     options?.handleHoverSelectable?.(object !== undefined);
   }
 
@@ -212,6 +214,11 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
     return context;
   }
 
+  function clientToWorld(clientX: number, clientY: number) {
+    let rect = canvas.getBoundingClientRect();
+    return screenToWorld(defaultViewport, clientX - rect.left, clientY - rect.top);
+  }
+
   return {
     get context() {
       return drawingContext();
@@ -221,6 +228,16 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
     },
     drawComponent(transform: DOMMatrix, node: RemixNode) {
       paintComponent(worldToScreenMatrix(defaultViewport, transform), node);
+    },
+    drawBoundingBox(bounds: Bounds) {
+      paintBoundingBox(
+        (transform, node) => {
+          paintComponent(worldToScreenMatrix(defaultViewport, transform), node);
+        },
+        bounds,
+        clientToWorld,
+        defaultViewport.zoom,
+      );
     },
   };
 }
@@ -240,11 +257,6 @@ function fitCanvas(canvas: HTMLCanvasElement) {
     canvas.width = bufferWidth;
     canvas.height = bufferHeight;
   }
-}
-
-function pointerWorld(canvas: HTMLCanvasElement, event: PointerEvent) {
-  let rect = canvas.getBoundingClientRect();
-  return screenToWorld(defaultViewport, event.clientX - rect.left, event.clientY - rect.top);
 }
 
 function clamp(value: number, min: number, max: number) {

@@ -9,6 +9,7 @@ import type { Handle } from "remix/component";
 import { Icon } from "../../icon.tsx";
 import { isObject } from "../../utilities/is-object.ts";
 import { selectedObjects } from "../../utilities/selected-objects.ts";
+import { MatrixInput } from "./matrix-input.tsx";
 import { PropertyInput } from "./property-input.tsx";
 
 export type GameObject = { [key in PropertyKey]: any };
@@ -38,7 +39,16 @@ function GameObjectList(handle: Handle<{ object: GameObject }>) {
       <div>
         {Object.entries(object).map(([name, value]) => (
           <div key={name}>
-            {isObject(value) ? (
+            {value instanceof DOMMatrix ? (
+              <MatrixInput
+                name={name}
+                matrix={value}
+                onDelete={() => {
+                  delete object[name];
+                  handle.update();
+                }}
+              />
+            ) : isObject(value) ? (
               <Branch
                 name={name}
                 object={value}

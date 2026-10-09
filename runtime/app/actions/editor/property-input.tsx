@@ -193,8 +193,9 @@ function formatNumeric(value: number, digits: number) {
 
 function parseFile(value: string): string | null {
   let source = value.trim();
+  if (parseNumeric(source)) return null;
   if (source.startsWith("blob:") || source.startsWith("data:")) return source;
-  if (/(?:^|\/)[^/]+\.[a-z0-9]+(?:\?.*)?$/i.test(source)) return source;
+  if (/(?:^|\/)[^/]+\.[a-z0-9]*[a-z][a-z0-9]*(?:\?.*)?$/i.test(source)) return source;
   return null;
 }
 

@@ -56,7 +56,6 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
     if (!slot.placed) return;
     slot.placed = false;
     slot.host.style.visibility = "hidden";
-    slot.host.style.pointerEvents = "none";
     slot.host.style.transform = "";
   }
 
@@ -86,7 +85,6 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
     slot.root.flush();
     slot.placed = true;
     slot.host.style.visibility = "visible";
-    slot.host.style.pointerEvents = "auto";
     slot.host.style.transform = transform.toString();
   }
 

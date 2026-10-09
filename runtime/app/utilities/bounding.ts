@@ -1,6 +1,3 @@
-import { defaultViewport } from "./viewport/viewport.ts";
-import { applyTransform } from "./viewport/transform.ts";
-
 export type Point = { x: number; y: number };
 
 export type Bounds = {
@@ -14,18 +11,9 @@ export function center(bounds: Bounds): Point {
   return { x: point.x, y: point.y };
 }
 
-export function drawBoundingBox(context: CanvasRenderingContext2D, bounds: Bounds) {
-  context.save();
-  applyTransform(context, bounds.transform);
-  context.strokeStyle = "#7dd3fc";
-  context.lineWidth = 1.5 / defaultViewport.zoom;
-  context.strokeRect(0, 0, bounds.width, bounds.height);
-  context.restore();
-}
+const MIN_AXIS = 1e-4;
 
-const MIN_SIZE = 1;
-
-const resizeDirections = {
+export const resizeDirections = {
   north: { x: 0, y: -1 },
   northEast: { x: 1, y: -1 },
   east: { x: 1, y: 0 },
@@ -38,26 +26,61 @@ const resizeDirections = {
 
 export type ResizeHandle = keyof typeof resizeDirections;
 
+export function moveBoundingBox(bounds: Bounds, translation: Point) {
+  bounds.transform.e = translation.x;
+  bounds.transform.f = translation.y;
+}
+
 export function resizeBoundingBox(bounds: Bounds, handle: ResizeHandle, point: Point) {
   const direction = resizeDirections[handle];
   const anchor = anchorPoint(bounds, direction);
   const anchorWorld = bounds.transform.transformPoint(new DOMPoint(anchor.x, anchor.y));
-  const local = bounds.transform.inverse().transformPoint(new DOMPoint(point.x, point.y));
-  const width =
-    direction.x === 0
-      ? bounds.width
-      : Math.max(MIN_SIZE, direction.x > 0 ? local.x : bounds.width - local.x);
-  const height =
-    direction.y === 0
-      ? bounds.height
-      : Math.max(MIN_SIZE, direction.y > 0 ? local.y : bounds.height - local.y);
-  const nextAnchor = anchorPoint({ width, height }, direction);
-  const shiftedX = bounds.transform.a * nextAnchor.x + bounds.transform.c * nextAnchor.y;
-  const shiftedY = bounds.transform.b * nextAnchor.x + bounds.transform.d * nextAnchor.y;
-  bounds.transform.e = anchorWorld.x - shiftedX;
-  bounds.transform.f = anchorWorld.y - shiftedY;
-  bounds.width = width;
-  bounds.height = height;
+  const offsetX = point.x - anchorWorld.x;
+  const offsetY = point.y - anchorWorld.y;
+  let { a, b, c, d } = bounds.transform;
+
+  if (direction.x !== 0 && bounds.width !== 0) {
+    const next = scaledAxis(a, b, direction.x * bounds.width, offsetX, offsetY, d, -c);
+    a = next.x;
+    b = next.y;
+  }
+  if (direction.y !== 0 && bounds.height !== 0) {
+    const next = scaledAxis(c, d, direction.y * bounds.height, offsetX, offsetY, -b, a);
+    c = next.x;
+    d = next.y;
+  }
+
+  bounds.transform.a = a;
+  bounds.transform.b = b;
+  bounds.transform.c = c;
+  bounds.transform.d = d;
+  bounds.transform.e = anchorWorld.x - (a * anchor.x + c * anchor.y);
+  bounds.transform.f = anchorWorld.y - (b * anchor.x + d * anchor.y);
+}
+
+function scaledAxis(
+  axisX: number,
+  axisY: number,
+  span: number,
+  offsetX: number,
+  offsetY: number,
+  fallbackX: number,
+  fallbackY: number,
+) {
+  const unit = unitAxis(axisX, axisY, fallbackX, fallbackY);
+  let magnitude = (offsetX * unit.x + offsetY * unit.y) / span;
+  if (!Number.isFinite(magnitude) || Math.abs(magnitude) < MIN_AXIS) {
+    magnitude = (Math.sign(magnitude) || 1) * MIN_AXIS;
+  }
+  return { x: unit.x * magnitude, y: unit.y * magnitude };
+}
+
+function unitAxis(x: number, y: number, fallbackX: number, fallbackY: number) {
+  const length = Math.hypot(x, y);
+  if (length >= 1e-8) return { x: x / length, y: y / length };
+  const fallback = Math.hypot(fallbackX, fallbackY);
+  if (fallback >= 1e-8) return { x: fallbackX / fallback, y: fallbackY / fallback };
+  return { x: 1, y: 0 };
 }
 
 function anchorPoint(
