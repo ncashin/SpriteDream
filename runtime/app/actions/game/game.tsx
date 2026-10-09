@@ -4,16 +4,17 @@ import { defaulted, object, parseSafe, string } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 import { number } from "remix/data-schema/coerce";
 
-import { createDrawComponent } from "../../draw-component.ts";
-import { inputMap } from "../../input.ts";
-import { Mode, mode, onModeChange } from "../../mode.ts";
-import { scene, queryScene } from "../../scene.ts";
-import { selectObjects, selectedObjects } from "../../selected-objects.ts";
+import { center, contains } from "../../utilities/bounding.ts";
+import { createDrawComponent } from "../../utilities/draw-component.ts";
+import { inputMap } from "../../utilities/input.ts";
+import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
+import { scene, queryScene } from "../../utilities/scene.ts";
+import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
+import { updateLoop as createUpdateLoop } from "../../utilities/update-loop.ts";
+import type { WorldPoint } from "../../utilities/viewport.ts";
+import { viewport } from "../../utilities/viewport.ts";
 import { ObjectTree } from "../editor/object-tree.tsx";
 import type { GameObject } from "../editor/object-tree.tsx";
-import type { WorldPoint } from "../../viewport.ts";
-import { viewport } from "../../viewport.ts";
-import { updateLoop as createUpdateLoop } from "../../update-loop.ts";
 
 const SPEED = 240;
 const POPOVER_GAP = 10;
@@ -46,30 +47,6 @@ function radians(degrees: number) {
   return (degrees * Math.PI) / 180;
 }
 
-function center(sprite: Sprite) {
-  return {
-    x: sprite.x + sprite.width / 2,
-    y: sprite.y + sprite.height / 2,
-  };
-}
-
-function contains(sprite: Sprite, point: WorldPoint) {
-  let origin = center(sprite);
-  let angle = -radians(sprite.rotation);
-  let cos = Math.cos(angle);
-  let sin = Math.sin(angle);
-  let dx = point.x - origin.x;
-  let dy = point.y - origin.y;
-  let localX = dx * cos - dy * sin;
-  let localY = dx * sin + dy * cos;
-  return (
-    localX >= -sprite.width / 2 &&
-    localY >= -sprite.height / 2 &&
-    localX < sprite.width / 2 &&
-    localY < sprite.height / 2
-  );
-}
-
 const images = new Map<string, HTMLImageElement>();
 
 function loadedImage(src: string): HTMLImageElement | undefined {
@@ -84,39 +61,12 @@ function loadedImage(src: string): HTMLImageElement | undefined {
   return image;
 }
 
-function drawSprite(context: CanvasRenderingContext2D, sprite: Sprite) {
-  let origin = center(sprite);
-  let x = -sprite.width / 2;
-  let y = -sprite.height / 2;
-  context.save();
-  context.translate(origin.x, origin.y);
-  context.rotate(radians(sprite.rotation));
-
-  let image = loadedImage(sprite.image);
-  if (!image) {
-    context.fillStyle = sprite.tint;
-    context.fillRect(x, y, sprite.width, sprite.height);
-    context.restore();
-    return;
-  }
-
-  context.drawImage(image, x, y, sprite.width, sprite.height);
-  context.globalCompositeOperation = "multiply";
-  context.fillStyle = sprite.tint;
-  context.fillRect(x, y, sprite.width, sprite.height);
-  context.globalCompositeOperation = "destination-in";
-  context.drawImage(image, x, y, sprite.width, sprite.height);
-  context.restore();
-}
-
 function selectableAt(point: WorldPoint): GameObject | undefined {
-  let hit: GameObject | undefined;
-  for (const node of Object.values(scene)) {
+  return queryScene(scene, (node) => {
     let sprite = isSprite(node);
-    if (!sprite) continue;
-    if (contains(sprite, point)) hit = gameObject(node);
-  }
-  return hit;
+    if (!sprite) return;
+    if (contains(sprite, point)) return gameObject(node);
+  })[0];
 }
 
 export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
@@ -233,22 +183,40 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             });
 
             gameLoop.onUpdate(({ deltaTime }) => {
-              let dx = input.axes.x * SPEED * deltaTime;
-              let dy = input.axes.y * SPEED * deltaTime;
-              if (dx === 0 && dy === 0) return;
-              for (const node of Object.values(scene)) {
-                let sprite = isSprite(node);
-                let object = gameObject(node);
-                if (!sprite || !object) continue;
-                object.x = String(sprite.x + dx);
-                object.y = String(sprite.y + dy);
+              const dx = input.axes.x * SPEED * deltaTime;
+              const dy = input.axes.y * SPEED * deltaTime;
+              for (const sprite of queryScene(scene, isSprite)) {
+                sprite.x += dx
+                sprite.y += dy
               }
             });
+       
 
             updateLoop.onUpdate(() => {
               const context = view.context;
               for (const sprite of queryScene(scene, isSprite)) {
-                drawSprite(context, sprite);
+                const origin = center(sprite);
+                const x = -sprite.width / 2;
+                const y = -sprite.height / 2;
+                context.save();
+                context.translate(origin.x, origin.y);
+                context.rotate(radians(sprite.rotation));
+
+                const image = loadedImage(sprite.image);
+                if (!image) {
+                  context.fillStyle = sprite.tint;
+                  context.fillRect(x, y, sprite.width, sprite.height);
+                  context.restore();
+                  continue;
+                }
+
+                context.drawImage(image, x, y, sprite.width, sprite.height);
+                context.globalCompositeOperation = "multiply";
+                context.fillStyle = sprite.tint;
+                context.fillRect(x, y, sprite.width, sprite.height);
+                context.globalCompositeOperation = "destination-in";
+                context.drawImage(image, x, y, sprite.width, sprite.height);
+                context.restore();
               }
             });
 

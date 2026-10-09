@@ -4,9 +4,9 @@ import { css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
-import type { SceneNode } from "../../scene.ts";
-import { scene } from "../../scene.ts";
-import { selectObjects, selectedObjects } from "../../selected-objects.ts";
+import type { SceneNode } from "../../utilities/scene.ts";
+import { scene } from "../../utilities/scene.ts";
+import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
 import type { GameObject } from "./object-tree.tsx";
 
 const LIST_ID = "object-search-list";

@@ -1,4 +1,4 @@
-import type { GameObject } from "./actions/editor/object-tree.tsx";
+import type { GameObject } from "../actions/editor/object-tree.tsx";
 
 export const selectedObjects: GameObject[] = [];
 

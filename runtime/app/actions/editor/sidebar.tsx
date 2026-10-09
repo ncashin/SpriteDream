@@ -7,8 +7,8 @@ import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
-import { Mode, mode, setMode } from "../../mode.ts";
-import { scene } from "../../scene.ts";
+import { Mode, mode, setMode } from "../../utilities/mode.ts";
+import { scene } from "../../utilities/scene.ts";
 import { Search } from "./Search.tsx";
 import { ObjectTree } from "./object-tree.tsx";
 

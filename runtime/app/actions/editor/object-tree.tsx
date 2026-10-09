@@ -7,8 +7,8 @@ import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
-import { isObject } from "../../is-object.ts";
-import { selectedObjects } from "../../selected-objects.ts";
+import { isObject } from "../../utilities/is-object.ts";
+import { selectedObjects } from "../../utilities/selected-objects.ts";
 import { PropertyInput } from "./property-input.tsx";
 
 export type GameObject = { [name: string]: string | GameObject };
