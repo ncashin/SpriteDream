@@ -252,7 +252,7 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
 
   return () => {
     let current = object[name];
-    let value = typeof current === "string" ? current : "";
+    let value = String(current);
     let color = parseHexColor(value);
     let bool = parseBoolean(value);
     let file = parseFile(value);

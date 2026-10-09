@@ -10,7 +10,7 @@ import {
   selectedObjects,
 } from "../../utilities/selected-objects.ts";
 import { updateLoop as createUpdateLoop } from "../../utilities/update-loop.ts";
-import { image as imageTrait } from "../../utilities/viewport/draw-image.ts";
+import { imageTrait as imageTrait } from "../../utilities/viewport/draw-image.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
 import { viewport } from "../../utilities/viewport/viewport.ts";
 import { ObjectTree } from "../editor/object-tree.tsx";

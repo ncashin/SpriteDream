@@ -4,7 +4,7 @@ import { number } from "remix/data-schema/coerce";
 import { defineTrait } from "../trait/trait.ts";
 import { loadImage } from "../runtime-assets.ts";
 
-export const image = defineTrait(
+export const imageTrait = defineTrait(
   object({
     x: number(),
     y: number(),
@@ -16,7 +16,7 @@ export const image = defineTrait(
   }),
 );
 
-export type Image = NonNullable<ReturnType<typeof image>>;
+export type Image = NonNullable<ReturnType<typeof imageTrait>>;
 
 function radians(degrees: number) {
   return (degrees * Math.PI) / 180;
