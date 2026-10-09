@@ -1,36 +1,25 @@
 import { defaultViewport } from "./viewport/viewport.ts";
+import { applyTransform } from "./viewport/transform.ts";
 
 export type Point = { x: number; y: number };
 
 export type Bounds = {
-  x: number;
-  y: number;
+  transform: DOMMatrix;
   width: number;
   height: number;
-  rotation: number;
 };
 
-function radians(degrees: number) {
-  return (degrees * Math.PI) / 180;
-}
-
 export function center(bounds: Bounds): Point {
-  return {
-    x: bounds.x + bounds.width / 2,
-    y: bounds.y + bounds.height / 2,
-  };
+  const point = bounds.transform.transformPoint(new DOMPoint(bounds.width / 2, bounds.height / 2));
+  return { x: point.x, y: point.y };
 }
 
 export function drawBoundingBox(context: CanvasRenderingContext2D, bounds: Bounds) {
-  const origin = center(bounds);
-  const x = -bounds.width / 2;
-  const y = -bounds.height / 2;
   context.save();
-  context.translate(origin.x, origin.y);
-  context.rotate(radians(bounds.rotation));
+  applyTransform(context, bounds.transform);
   context.strokeStyle = "#7dd3fc";
   context.lineWidth = 1.5 / defaultViewport.zoom;
-  context.strokeRect(x, y, bounds.width, bounds.height);
+  context.strokeRect(0, 0, bounds.width, bounds.height);
   context.restore();
 }
 
@@ -51,55 +40,37 @@ export type ResizeHandle = keyof typeof resizeDirections;
 
 export function resizeBoundingBox(bounds: Bounds, handle: ResizeHandle, point: Point) {
   const direction = resizeDirections[handle];
-  const origin = center(bounds);
-  const anchor = {
-    x: -direction.x * bounds.width / 2,
-    y: -direction.y * bounds.height / 2,
-  };
-  const anchorWorld = add(origin, rotate(anchor, bounds.rotation));
-  const local = rotate(
-    { x: point.x - anchorWorld.x, y: point.y - anchorWorld.y },
-    -bounds.rotation,
-  );
-  const width = direction.x === 0 ? bounds.width : Math.max(MIN_SIZE, direction.x * local.x);
-  const height = direction.y === 0 ? bounds.height : Math.max(MIN_SIZE, direction.y * local.y);
-  const next = add(
-    anchorWorld,
-    rotate({ x: direction.x * width / 2, y: direction.y * height / 2 }, bounds.rotation),
-  );
-  bounds.x = next.x - width / 2;
-  bounds.y = next.y - height / 2;
+  const anchor = anchorPoint(bounds, direction);
+  const anchorWorld = bounds.transform.transformPoint(new DOMPoint(anchor.x, anchor.y));
+  const local = bounds.transform.inverse().transformPoint(new DOMPoint(point.x, point.y));
+  const width =
+    direction.x === 0
+      ? bounds.width
+      : Math.max(MIN_SIZE, direction.x > 0 ? local.x : bounds.width - local.x);
+  const height =
+    direction.y === 0
+      ? bounds.height
+      : Math.max(MIN_SIZE, direction.y > 0 ? local.y : bounds.height - local.y);
+  const nextAnchor = anchorPoint({ width, height }, direction);
+  const shiftedX = bounds.transform.a * nextAnchor.x + bounds.transform.c * nextAnchor.y;
+  const shiftedY = bounds.transform.b * nextAnchor.x + bounds.transform.d * nextAnchor.y;
+  bounds.transform.e = anchorWorld.x - shiftedX;
+  bounds.transform.f = anchorWorld.y - shiftedY;
   bounds.width = width;
   bounds.height = height;
 }
 
-function add(point: Point, delta: Point): Point {
-  return { x: point.x + delta.x, y: point.y + delta.y };
-}
-
-function rotate(point: Point, degrees: number): Point {
-  const angle = radians(degrees);
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
+function anchorPoint(
+  bounds: { width: number; height: number },
+  direction: { x: number; y: number },
+): Point {
   return {
-    x: point.x * cos - point.y * sin,
-    y: point.x * sin + point.y * cos,
+    x: direction.x > 0 ? 0 : direction.x < 0 ? bounds.width : bounds.width / 2,
+    y: direction.y > 0 ? 0 : direction.y < 0 ? bounds.height : bounds.height / 2,
   };
 }
 
 export function contains(bounds: Bounds, point: Point) {
-  const origin = center(bounds);
-  const angle = -radians(bounds.rotation);
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  const dx = point.x - origin.x;
-  const dy = point.y - origin.y;
-  const localX = dx * cos - dy * sin;
-  const localY = dx * sin + dy * cos;
-  return (
-    localX >= -bounds.width / 2 &&
-    localY >= -bounds.height / 2 &&
-    localX < bounds.width / 2 &&
-    localY < bounds.height / 2
-  );
+  const local = bounds.transform.inverse().transformPoint(new DOMPoint(point.x, point.y));
+  return local.x >= 0 && local.y >= 0 && local.x < bounds.width && local.y < bounds.height;
 }

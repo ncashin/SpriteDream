@@ -1,16 +1,15 @@
-import { defaulted, object, string } from "remix/data-schema";
+import { defaulted, instanceof_, object, string } from "remix/data-schema";
 import { number } from "remix/data-schema/coerce";
 
 import { defineTrait } from "../trait/trait.ts";
 import { loadImage } from "../runtime-assets.ts";
+import { applyTransform } from "./transform.ts";
 
 export const imageTrait = defineTrait(
   object({
-    x: number(),
-    y: number(),
+    transform: instanceof_(DOMMatrix),
     width: number(),
     height: number(),
-    rotation: number(),
     tint: string(),
     image: defaulted(string(), ""),
   }),
@@ -18,32 +17,23 @@ export const imageTrait = defineTrait(
 
 export type Image = NonNullable<ReturnType<typeof imageTrait>>;
 
-function radians(degrees: number) {
-  return (degrees * Math.PI) / 180;
-}
-
 export function drawImage(context: CanvasRenderingContext2D, sprite: Image) {
-  const originX = sprite.x + sprite.width / 2;
-  const originY = sprite.y + sprite.height / 2;
-  const x = -sprite.width / 2;
-  const y = -sprite.height / 2;
   context.save();
-  context.translate(originX, originY);
-  context.rotate(radians(sprite.rotation));
+  applyTransform(context, sprite.transform);
 
   const image = loadImage(sprite.image);
   if (!image) {
     context.fillStyle = sprite.tint;
-    context.fillRect(x, y, sprite.width, sprite.height);
+    context.fillRect(0, 0, sprite.width, sprite.height);
     context.restore();
     return;
   }
 
-  context.drawImage(image, x, y, sprite.width, sprite.height);
+  context.drawImage(image, 0, 0, sprite.width, sprite.height);
   context.globalCompositeOperation = "multiply";
   context.fillStyle = sprite.tint;
-  context.fillRect(x, y, sprite.width, sprite.height);
+  context.fillRect(0, 0, sprite.width, sprite.height);
   context.globalCompositeOperation = "destination-in";
-  context.drawImage(image, x, y, sprite.width, sprite.height);
+  context.drawImage(image, 0, 0, sprite.width, sprite.height);
   context.restore();
 }

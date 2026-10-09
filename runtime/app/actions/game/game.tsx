@@ -1,7 +1,7 @@
 import { clientEntry, css, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { center, contains, drawBoundingBox } from "../../utilities/bounding.ts";
+import { contains, drawBoundingBox } from "../../utilities/bounding.ts";
 import { inputMap } from "../../utilities/input.ts";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
 import { scene, queryScene } from "../../utilities/scene.ts";
@@ -10,7 +10,7 @@ import {
   selectedObjects,
 } from "../../utilities/selected-objects.ts";
 import { updateLoop as createUpdateLoop } from "../../utilities/update-loop.ts";
-import { imageTrait as imageTrait } from "../../utilities/viewport/draw-image.ts";
+import { imageTrait } from "../../utilities/viewport/draw-image.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
 import { viewport } from "../../utilities/viewport/viewport.ts";
 import { ObjectTree } from "../editor/object-tree.tsx";
@@ -109,15 +109,8 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                 const sprite = imageTrait(object);
                 if (!sprite) continue;
 
-                const origin = center(sprite);
                 view.drawComponent(
-                  new DOMMatrix()
-                    .translate(origin.x, origin.y)
-                    .rotate(sprite.rotation)
-                    .translate(
-                      -sprite.width / 2,
-                      -sprite.height / 2 - POPOVER_GAP,
-                    ),
+                  sprite.transform.translate(0, -POPOVER_GAP),
                   <div
                     mix={css({
                       position: "absolute",
@@ -142,8 +135,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               const dx = input.axes.x * SPEED * deltaTime;
               const dy = input.axes.y * SPEED * deltaTime;
               for (const image of queryScene(scene, imageTrait)) {
-                image.x += dx;
-                image.y += dy;
+                image.transform.preMultiplySelf(new DOMMatrix().translate(dx, dy));
               }
             });
 
