@@ -13,7 +13,8 @@ import {
   selectedObjects,
 } from "../../utilities/selected-objects.ts";
 import { parentObject } from "../../utilities/viewport/transform.ts";
-import type { GameObject } from "./object-tree.tsx";
+import { AutoSizeInput } from "./auto-size-input.tsx";
+import { renameKey, type GameObject } from "./object-tree.tsx";
 import { expandable, iconButton, iconStack, indent, label, row } from "./tree.ts";
 
 type HierarchyNode = {
@@ -53,9 +54,10 @@ export const HierarchyTree = clientEntry(
 
 function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: GameObject }>) {
   let collapsed = false;
+  let name = handle.props.node.name;
 
   return () => {
-    const { name, object, children } = handle.props.node;
+    const { object, children } = handle.props.node;
     const { root } = handle.props;
     const hasChildren = children.length > 0;
 
@@ -83,7 +85,20 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: GameObject 
                 <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
               )}
             </span>
-            {name}
+            <AutoSizeInput
+              value={name}
+              placeholder="name"
+              label="Name"
+              onPointerDown={() => {
+                selectObjects([object]);
+                handle.update();
+              }}
+              onCommit={(next) => {
+                if (Object.hasOwn(root, next)) return false;
+                renameNode(root, name, next);
+                handle.update();
+              }}
+            />
           </div>
           <button
             type="button"
@@ -110,6 +125,13 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: GameObject 
       </>
     );
   };
+}
+
+function renameNode(root: GameObject, from: string, to: string) {
+  renameKey(root, from, to);
+  for (const value of Object.values(root)) {
+    if (isObject(value) && !(value instanceof DOMMatrix) && value.parent === from) value.parent = to;
+  }
 }
 
 function removeNode(node: HierarchyNode, root: GameObject) {

@@ -5,6 +5,7 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
 import { transform } from "../../utilities/viewport/transform.ts";
+import { AutoSizeInput } from "./auto-size-input.tsx";
 import { MatrixInput } from "./matrix-input.tsx";
 import type { GameObject } from "./object-tree.tsx";
 
@@ -95,12 +96,6 @@ const keyLabel = css({
   alignItems: "center",
   flex: "0 0 auto",
   color: "var(--text-light)",
-});
-
-const keyField = css({
-  flex: "0 0 auto",
-  fieldSizing: "content",
-  width: "auto",
 });
 
 const colorPicker = css({
@@ -203,19 +198,7 @@ function parseFile(value: string): string | null {
 
 export function PropertyInput(handle: Handle<PropertyInputProps>) {
   let name = handle.props.name;
-  let keyDraft = name;
   let object = handle.props.object;
-
-  function commitKey() {
-    let next = keyDraft;
-    if (next === name) return;
-    if (next === "" || Object.hasOwn(handle.props.object, next)) {
-      keyDraft = name;
-      handle.update();
-      return;
-    }
-    handle.props.onRename(name, next);
-  }
 
   let scrub: {
     pointerId: number;
@@ -273,27 +256,14 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
     return (
       <div mix={row}>
         <span mix={keyLabel}>
-          <input
-            type="text"
-            aria-label="Key"
-            value={keyDraft}
+          <AutoSizeInput
+            value={name}
             placeholder="key"
-            mix={[
-              field,
-              keyField,
-              on("input", (event) => {
-                keyDraft = event.currentTarget.value;
-                handle.update();
-              }),
-              on("blur", commitKey),
-              on("keydown", (event) => {
-                if (event.key === "Enter") event.currentTarget.blur();
-                if (event.key !== "Escape") return;
-                keyDraft = name;
-                handle.update();
-                event.currentTarget.blur();
-              }),
-            ]}
+            label="Key"
+            onCommit={(next) => {
+              if (Object.hasOwn(handle.props.object, next)) return false;
+              handle.props.onRename(name, next);
+            }}
           />
           <span aria-hidden="true">:</span>
         </span>

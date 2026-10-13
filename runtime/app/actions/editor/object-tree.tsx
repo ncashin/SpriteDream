@@ -9,6 +9,7 @@ import type { Handle } from "remix/component";
 import { Icon } from "../../icon.tsx";
 import { isObject } from "../../utilities/is-object.ts";
 import { selectedObjects } from "../../utilities/selected-objects.ts";
+import { AutoSizeInput } from "./auto-size-input.tsx";
 import { PropertyInput } from "./property-input.tsx";
 import { expandable, iconButton, iconStack, indent, label, row } from "./tree.ts";
 
@@ -43,6 +44,11 @@ function GameObjectList(handle: Handle<{ object: GameObject }>) {
               <Branch
                 name={name}
                 object={value}
+                onRename={(from, to) => {
+                  if (Object.hasOwn(object, to)) return false;
+                  renameKey(object, from, to);
+                  handle.update();
+                }}
                 onDelete={() => {
                   delete object[name];
                   handle.update();
@@ -73,13 +79,15 @@ function Branch(
   handle: Handle<{
     name: string;
     object: GameObject;
+    onRename: (from: string, to: string) => boolean | void;
     onDelete: () => void;
   }>,
 ) {
   let collapsed = false;
+  let name = handle.props.name;
 
   return () => {
-    const { name, object, onDelete } = handle.props;
+    const { object, onRename, onDelete } = handle.props;
 
     return (
       <>
@@ -99,7 +107,12 @@ function Branch(
               <Icon icon={Box} size={14} />
               <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
             </span>
-            {name}
+            <AutoSizeInput
+              value={name}
+              placeholder="name"
+              label="Name"
+              onCommit={(next) => onRename(name, next)}
+            />
           </div>
           <button
             type="button"
@@ -144,7 +157,7 @@ function Branch(
   };
 }
 
-function renameKey(object: GameObject, from: string, to: string) {
+export function renameKey(object: GameObject, from: string, to: string) {
   const renamed: GameObject = {};
   for (const [key, value] of Object.entries(object)) {
     renamed[key === from ? to : key] = value;

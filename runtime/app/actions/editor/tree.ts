@@ -15,10 +15,10 @@ export const row = css({
     background: "#262626",
   },
   "&[aria-current='true']": {
-    background: "#333333",
+    background: "#404040",
   },
   "&[aria-current='true']:hover": {
-    background: "#3f3f46",
+    background: "#525252",
   },
   "& > button": {
     visibility: "hidden",
