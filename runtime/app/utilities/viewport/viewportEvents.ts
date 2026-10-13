@@ -1,23 +1,17 @@
 import type { GameObject } from "../../actions/editor/object-tree.tsx";
 import { selectObjects } from "../selected-objects.ts";
 import { isWheelPassthrough } from "./draw-bounding-box.tsx";
-import type { ViewportOptions, ViewportState, WorldPoint } from "./viewport.ts";
+import type { ViewportOptions } from "./viewport.ts";
+import type { ViewportWithTransforms } from "./viewportTransforms.ts";
 
 const CLICK_SLOP = 4;
 
-type ViewportTransforms = {
-  panBy(screenDx: number, screenDy: number): void;
-  zoomFromWheel(clientX: number, clientY: number, deltaY: number, deltaMode?: number): void;
-  screenToWorld(clientX: number, clientY: number): WorldPoint;
-};
-
 export function curryViewportEvents(
-  viewportState: ViewportState,
-  transforms: ViewportTransforms,
+  viewportWithTransforms: ViewportWithTransforms,
   options?: ViewportOptions,
 ) {
   const signal = options?.signal;
-  const canvas = viewportState.canvas;
+  const canvas = viewportWithTransforms.state.canvas;
   let drag: {
     id: number;
     x: number;
@@ -40,7 +34,7 @@ export function curryViewportEvents(
       // Pointer capture is only available for an active pointer.
     }
     const object = options?.handleSelection?.(
-      transforms.screenToWorld(event.clientX, event.clientY),
+      viewportWithTransforms.screenToWorld(event.clientX, event.clientY),
     );
     drag = {
       id: event.pointerId,
@@ -66,7 +60,7 @@ export function curryViewportEvents(
       drag.moved = true;
       canvas.style.cursor = "grabbing";
     }
-    transforms.panBy(event.clientX - drag.x, event.clientY - drag.y);
+    viewportWithTransforms.panBy(event.clientX - drag.x, event.clientY - drag.y);
     drag.x = event.clientX;
     drag.y = event.clientY;
   }
@@ -96,7 +90,7 @@ export function curryViewportEvents(
   function updateHover(event: PointerEvent) {
     if (drag) return;
     const object = options?.handleSelection?.(
-      transforms.screenToWorld(event.clientX, event.clientY),
+      viewportWithTransforms.screenToWorld(event.clientX, event.clientY),
     );
     options?.handleHoverSelectable?.(object !== undefined);
   }
@@ -104,11 +98,19 @@ export function curryViewportEvents(
   function onWheel(event: WheelEvent) {
     if (event.target !== canvas && !isWheelPassthrough(event.target)) return;
     event.preventDefault();
-    transforms.zoomFromWheel(event.clientX, event.clientY, event.deltaY, event.deltaMode);
+    viewportWithTransforms.zoomFromWheel(
+      event.clientX,
+      event.clientY,
+      event.deltaY,
+      event.deltaMode,
+    );
   }
 
   function trackCursor(event: PointerEvent) {
-    viewportState.cursorPoint = transforms.screenToWorld(event.clientX, event.clientY);
+    viewportWithTransforms.state.cursorPoint = viewportWithTransforms.screenToWorld(
+      event.clientX,
+      event.clientY,
+    );
   }
 
   canvas.addEventListener("pointerdown", onPointerDown, { signal });

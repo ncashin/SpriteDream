@@ -1,16 +1,20 @@
 import type { RemixNode } from "remix/component";
 
 import type { GameObject } from "../../actions/editor/object-tree.tsx";
-import { drawBoundingBox as paintBoundingBox } from "./draw-bounding-box.tsx";
+import { drawBoundingBox } from "./draw-bounding-box.tsx";
 import { createDrawComponent } from "./draw-component.ts";
-import { type Image, drawImage as paintImage } from "./draw-image.ts";
+import { type Image, drawImage } from "./draw-image.ts";
 import { curryViewportEvents } from "./viewportEvents.ts";
 import {
   curryViewportTransforms,
   releaseViewportTransforms,
 } from "./viewportTransforms.ts";
 
-export { centerOn, cursorWorldPoint, screenToWorld } from "./viewportTransforms.ts";
+export {
+  centerOn,
+  cursorWorldPoint,
+  screenToWorld,
+} from "./viewportTransforms.ts";
 
 export type WorldPoint = { x: number; y: number };
 
@@ -38,13 +42,20 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
     cursorPoint: { x: 0, y: 0 },
   };
 
-  const viewportTransforms = curryViewportTransforms(state);
-  curryViewportEvents(state, viewportTransforms, options);
+  const transforms = curryViewportTransforms(state);
+  const paintComponent = createDrawComponent(canvas);
+  const viewport = {
+    state,
+    ...transforms,
+    drawComponent(transform: DOMMatrix, node: RemixNode) {
+      paintComponent(viewport, transform, node);
+    },
+  };
+  curryViewportEvents(viewport, options);
 
   const signal = options?.signal;
-  const paintComponent = createDrawComponent(canvas);
   signal?.addEventListener("abort", () => {
-    releaseViewportTransforms(viewportTransforms);
+    releaseViewportTransforms(transforms);
     paintComponent.dispose();
   });
 
@@ -55,7 +66,12 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
     context.imageSmoothingEnabled = false;
     const ratio = devicePixelRatio();
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.clearRect(0, 0, state.canvas.clientWidth, state.canvas.clientHeight);
+    context.clearRect(
+      0,
+      0,
+      state.canvas.clientWidth,
+      state.canvas.clientHeight,
+    );
 
     const matrix = state.matrix;
     context.setTransform(
@@ -68,23 +84,16 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
     );
   }
 
-  return Object.assign(state, {
+  return {
+    ...viewport,
     beginDrawing,
     drawImage(sprite: Image) {
-      paintImage(state.context, sprite);
-    },
-    drawComponent(transform: DOMMatrix, node: RemixNode) {
-      paintComponent(viewportTransforms.worldToScreenMatrix(transform), node);
+      drawImage(viewport, sprite);
     },
     drawBoundingBox(sprite: Image) {
-      paintBoundingBox(
-        (frame, node) => {
-          paintComponent(viewportTransforms.worldToScreenMatrix(frame), node);
-        },
-        sprite,
-      );
+      drawBoundingBox(viewport, sprite);
     },
-  });
+  };
 }
 
 function devicePixelRatio() {

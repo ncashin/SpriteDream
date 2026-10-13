@@ -1,6 +1,8 @@
 import { createRoot } from "remix/component";
 import type { RemixNode, VirtualRoot } from "remix/component";
 
+import type { ViewportWithTransforms } from "./viewportTransforms.ts";
+
 type Slot = {
   host: HTMLDivElement;
   root: VirtualRoot;
@@ -8,7 +10,7 @@ type Slot = {
 };
 
 export type DrawComponent = {
-  (transform: DOMMatrix, node: RemixNode): void;
+  (viewportWithTransforms: ViewportWithTransforms, transform: DOMMatrix, node: RemixNode): void;
   dispose(): void;
 };
 
@@ -59,7 +61,11 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
     slot.host.style.transform = "";
   }
 
-  function drawComponent(transform: DOMMatrix, node: RemixNode) {
+  function drawComponent(
+    viewportWithTransforms: ViewportWithTransforms,
+    transform: DOMMatrix,
+    node: RemixNode,
+  ) {
     if (disposed) return;
     if (!open) {
       open = true;
@@ -85,7 +91,7 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
     slot.root.flush();
     slot.placed = true;
     slot.host.style.visibility = "visible";
-    slot.host.style.transform = transform.toString();
+    slot.host.style.transform = viewportWithTransforms.worldToScreenMatrix(transform).toString();
   }
 
   drawComponent.dispose = () => {

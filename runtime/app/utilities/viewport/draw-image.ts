@@ -4,6 +4,7 @@ import { number } from "remix/data-schema/coerce";
 import { loadImage } from "../runtime-assets.ts";
 import { defineTrait } from "../trait/trait.ts";
 import { applyTransform, transform } from "./transform.ts";
+import type { ViewportWithTransforms } from "./viewportTransforms.ts";
 
 export const imageTrait = defineTrait(
   object({
@@ -17,7 +18,8 @@ export const imageTrait = defineTrait(
 
 export type Image = NonNullable<ReturnType<typeof imageTrait>>;
 
-export function drawImage(context: CanvasRenderingContext2D, sprite: Image) {
+export function drawImage(viewportWithTransforms: ViewportWithTransforms, sprite: Image) {
+  const context = viewportWithTransforms.state.context;
   const worldMatrix = transform(sprite);
   if (!worldMatrix) return;
 

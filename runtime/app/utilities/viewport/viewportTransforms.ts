@@ -2,6 +2,10 @@ import type { ViewportState, WorldPoint } from "./viewport.ts";
 
 const WHEEL_ZOOM = 0.002;
 
+export type ViewportWithTransforms = {
+  state: ViewportState;
+} & ViewportTransforms;
+
 type ViewportTransforms = {
   centerOn(point: WorldPoint): void;
   cursorWorldPoint(): WorldPoint;

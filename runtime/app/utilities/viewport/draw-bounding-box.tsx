@@ -11,7 +11,7 @@ import {
 } from "../bounding.ts";
 import type { Image } from "./draw-image.ts";
 import { transform } from "./transform.ts";
-import { screenToWorld } from "./viewportTransforms.ts";
+import { screenToWorld, type ViewportWithTransforms } from "./viewportTransforms.ts";
 
 const WHEEL_PASSTHROUGH = "data-wheel-passthrough";
 
@@ -66,14 +66,16 @@ const handleCss = css({
 });
 
 export function drawBoundingBox(
-  paint: (transform: DOMMatrix, node: RemixNode) => void,
+  viewport: ViewportWithTransforms & {
+    drawComponent(transform: DOMMatrix, node: RemixNode): void;
+  },
   sprite: Image,
 ) {
   const matrix = transform(sprite);
   if (!matrix) return;
   const bounds = { transform: matrix, width: sprite.width, height: sprite.height };
   const frame = scaleRemoved(bounds);
-  paint(
+  viewport.drawComponent(
     frame.transform,
     <BoundingBox bounds={bounds} width={frame.width} height={frame.height} />,
   );
