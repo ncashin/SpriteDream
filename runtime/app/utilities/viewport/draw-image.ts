@@ -1,3 +1,4 @@
+import ImageIcon from "lucide/dist/esm/icons/image.mjs";
 import { defaulted, instanceof_, object, string } from "remix/data-schema";
 import { number } from "remix/data-schema/coerce";
 
@@ -7,12 +8,21 @@ import { applyTransform, transform } from "./transform.ts";
 import type { ViewportWithTransforms } from "./viewportTransforms.ts";
 
 export const imageTrait = defineTrait(
+  "Image",
+  ImageIcon,
   object({
     transform: instanceof_(DOMMatrix),
     width: number(),
     height: number(),
     tint: string(),
     image: defaulted(string(), ""),
+  }),
+  () => ({
+    transform: new DOMMatrix(),
+    width: 64,
+    height: 64,
+    tint: "#f4f4f5ff",
+    image: "default.png",
   }),
 );
 

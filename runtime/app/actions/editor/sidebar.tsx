@@ -1,6 +1,5 @@
 import ArrowLeft from "lucide/dist/esm/icons/arrow-left.mjs";
 import ArrowRight from "lucide/dist/esm/icons/arrow-right.mjs";
-import Box from "lucide/dist/esm/icons/box.mjs";
 import Play from "lucide/dist/esm/icons/play.mjs";
 import Square from "lucide/dist/esm/icons/square.mjs";
 import { clientEntry, css, on } from "remix/component";
@@ -25,7 +24,7 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
     <>
       <aside mix={panel} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
         <div inert={collapsed} mix={column}>
-          <div id="scene-tree" mix={tree}>
+          <div id="scene-tree" mix={[tree, treeOuterPadding]}>
             <HierarchyTree object={scene} />
           </div>
           <SelectedObjectTree />
@@ -46,7 +45,7 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
           ]}
         >
           <span>
-            <Icon icon={Box} size={14} />
+            <img src="/favicon.svg" alt="" mix={mark} />
             <Icon icon={collapsed ? ArrowRight : ArrowLeft} size={14} />
           </span>
           <span
@@ -111,12 +110,15 @@ const column = css({
   width: SIDEBAR_WIDTH,
 });
 
+const treeOuterPadding = css({
+  padding: "0.75rem 0.5rem 1rem",
+});
+
 const tree = css({
   boxSizing: "border-box",
   flex: "1 1 0",
   minHeight: 0,
   overflow: "auto",
-  padding: "0.75rem 0.5rem 1rem",
 });
 
 function SelectedObjectTree(handle: Handle) {
@@ -135,18 +137,16 @@ function SelectedObjectTree(handle: Handle) {
     if (!active || !selectedObjects.has(active)) active = selectedObjects.values().next().value;
     const entry = active ? findEntry(scene, active) : undefined;
 
+    if (!active) return null;
+
     return (
-      <div mix={[tree, objectTree]}>
-        {active ? (
-          <ObjectTree
-            key={entry?.key ?? active}
-            object={active}
-            name={entry?.key}
-            parent={entry?.parent}
-          />
-        ) : (
-          <p mix={empty}>Select an object</p>
-        )}
+      <div mix={[tree, objectTree, treeOuterPadding]}>
+        <ObjectTree
+          key={entry?.key ?? active}
+          object={active}
+          name={entry?.key}
+          parent={entry?.parent}
+        />
       </div>
     );
   };
@@ -166,10 +166,6 @@ const objectTree = css({
   minWidth: 0,
 });
 
-const empty = css({
-  margin: 0,
-  opacity: 0.5,
-});
 
 const bar = css({
   alignItems: "flex-start",
@@ -189,6 +185,13 @@ const bar = css({
   "@media (prefers-reduced-motion: reduce)": {
     transition: "none",
   },
+});
+
+const mark = css({
+  display: "block",
+  height: "14px",
+  objectFit: "contain",
+  width: "14px",
 });
 
 const toggle = css({
@@ -211,6 +214,7 @@ const toggle = css({
   "& > span:first-child": {
     display: "grid",
     flex: "0 0 auto",
+    placeItems: "center",
   },
   "& > span:first-child > *": {
     gridArea: "1 / 1",

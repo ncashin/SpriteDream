@@ -24,7 +24,7 @@ export const row = css({
   "& > button": {
     visibility: "hidden",
   },
-  "&:hover > button": {
+  "&:hover > button, &:focus-within > button, &:has(:popover-open) > button": {
     visibility: "visible",
   },
 });

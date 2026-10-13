@@ -1,15 +1,18 @@
 import Box from "lucide/dist/esm/icons/box.mjs";
 import ChevronDown from "lucide/dist/esm/icons/chevron-down.mjs";
 import ChevronRight from "lucide/dist/esm/icons/chevron-right.mjs";
-import Plus from "lucide/dist/esm/icons/plus.mjs";
 import Trash from "lucide/dist/esm/icons/trash.mjs";
+import Type from "lucide/dist/esm/icons/type.mjs";
 import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
 import { isObject } from "../../utilities/is-object.ts";
 import { deselectObject, selectedObjects } from "../../utilities/selected-objects.ts";
+import { applyTrait, traits } from "../../utilities/trait/trait.ts";
+import "../../utilities/viewport/draw-image.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
+import { Dropdown, type DropdownItem } from "./dropdown.tsx";
 import { PropertyInput } from "./property-input.tsx";
 import { expandable, iconButton, iconStack, indent, label, row } from "./tree.ts";
 
@@ -100,6 +103,46 @@ function GameObjectList(handle: Handle<{ object: GameObject }>) {
   };
 }
 
+function addItems(object: GameObject, done: () => void): DropdownItem[] {
+  const items: DropdownItem[] = [];
+  for (const entry of traits) {
+    items.push({
+      label: entry.name,
+      icon: entry.icon,
+      onSelect: () => {
+        applyTrait(entry.trait, object);
+        done();
+      },
+    });
+  }
+  items.push(
+    {
+      label: "New Property",
+      icon: Type,
+      onSelect: () => {
+        object[uniqueKey(object, "new")] = "";
+        done();
+      },
+    },
+    {
+      label: "New Object",
+      icon: Box,
+      onSelect: () => {
+        object[uniqueKey(object, "object")] = {};
+        done();
+      },
+    },
+  );
+  return items;
+}
+
+function uniqueKey(object: GameObject, base: string) {
+  let key = base;
+  let n = 2;
+  while (Object.hasOwn(object, key)) key = `${base}${n++}`;
+  return key;
+}
+
 function Branch(
   handle: Handle<{
     name: string;
@@ -142,24 +185,13 @@ function Branch(
               onCommit={(next) => onRename(name, next)}
             />
           </div>
-          <button
-            type="button"
-            aria-label={`Add to ${name}`}
-            mix={[
-              iconButton,
-              on("click", (event) => {
-                event.stopPropagation();
-                let key = "new";
-                let n = 2;
-                while (Object.hasOwn(object, key)) key = `new${n++}`;
-                object[key] = "";
-                collapsed = false;
-                handle.update();
-              }),
-            ]}
-          >
-            <Icon icon={Plus} size={14} />
-          </button>
+          <Dropdown
+            label={`Add to ${name}`}
+            items={addItems(object, () => {
+              collapsed = false;
+              handle.update();
+            })}
+          />
           <button
             type="button"
             aria-label={`Delete ${name}`}
