@@ -7,7 +7,7 @@ export type Bounds = {
 };
 
 export function center(bounds: Bounds): Point {
-  return mapPoint(bounds.transform, bounds.width / 2, bounds.height / 2);
+  return mapPoint(bounds.transform, 0, 0);
 }
 
 const MIN_AXIS = 1e-4;
@@ -87,8 +87,8 @@ function anchorPoint(
   direction: { x: number; y: number },
 ): Point {
   return {
-    x: direction.x > 0 ? 0 : direction.x < 0 ? bounds.width : bounds.width / 2,
-    y: direction.y > 0 ? 0 : direction.y < 0 ? bounds.height : bounds.height / 2,
+    x: direction.x > 0 ? -bounds.width / 2 : direction.x < 0 ? bounds.width / 2 : 0,
+    y: direction.y > 0 ? -bounds.height / 2 : direction.y < 0 ? bounds.height / 2 : 0,
   };
 }
 
@@ -96,7 +96,14 @@ export function contains(bounds: Bounds, point: Point) {
   const inverse = invert2D(bounds.transform);
   if (!inverse) return false;
   const local = mapPoint(inverse, point.x, point.y);
-  return local.x >= 0 && local.y >= 0 && local.x < bounds.width && local.y < bounds.height;
+  const halfWidth = bounds.width / 2;
+  const halfHeight = bounds.height / 2;
+  return (
+    local.x >= -halfWidth &&
+    local.y >= -halfHeight &&
+    local.x < halfWidth &&
+    local.y < halfHeight
+  );
 }
 
 function mapPoint(matrix: DOMMatrix, x: number, y: number): Point {

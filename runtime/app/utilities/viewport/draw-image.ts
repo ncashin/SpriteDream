@@ -26,16 +26,18 @@ export function drawImage(viewportWithTransforms: ViewportWithTransforms, sprite
   context.save();
   applyTransform(context, worldMatrix);
 
+  const x = -sprite.width / 2;
+  const y = -sprite.height / 2;
   const image = loadImage(sprite.image);
   if (!image) {
     context.fillStyle = sprite.tint;
-    context.fillRect(0, 0, sprite.width, sprite.height);
+    context.fillRect(x, y, sprite.width, sprite.height);
     context.restore();
     return;
   }
 
   const tinted = applyTintToImage(image, sprite.width, sprite.height, sprite.tint);
-  if (tinted) context.drawImage(tinted, 0, 0, sprite.width, sprite.height);
+  if (tinted) context.drawImage(tinted, x, y, sprite.width, sprite.height);
   context.restore();
 }
 

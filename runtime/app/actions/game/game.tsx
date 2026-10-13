@@ -113,10 +113,12 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                 const placement = transform(image);
                 if (!placement) continue;
 
+                const halfHeight = image.height / 2;
+                const matrix = placement.matrix;
                 view.drawComponent(
                   new DOMMatrix().translate(
-                    placement.position.x,
-                    placement.position.y - POPOVER_GAP,
+                    matrix.e - matrix.c * halfHeight,
+                    matrix.f - matrix.d * halfHeight - POPOVER_GAP,
                     placement.position.z,
                   ),
                   <>
@@ -126,6 +128,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                         position: "absolute",
                         left: "0",
                         bottom: "0",
+                        transform: "translateX(-50%)",
                         width: "max-content",
                         pointerEvents: "auto",
                         background: "black",

@@ -89,9 +89,11 @@ function scaleRemoved(bounds: Bounds) {
   transform.b = scaleX === 0 ? 0 : bounds.transform.b / scaleX;
   transform.c = scaleY === 0 ? 0 : bounds.transform.c / scaleY;
   transform.d = scaleY === 0 ? 1 : bounds.transform.d / scaleY;
-  transform.e = bounds.transform.e;
-  transform.f = bounds.transform.f;
-  return { transform, width: bounds.width * scaleX, height: bounds.height * scaleY };
+  const width = bounds.width * scaleX;
+  const height = bounds.height * scaleY;
+  transform.e = bounds.transform.e - (transform.a * width + transform.c * height) / 2;
+  transform.f = bounds.transform.f - (transform.b * width + transform.d * height) / 2;
+  return { transform, width, height };
 }
 
 function BoundingBox(

@@ -1,18 +1,20 @@
 import Box from "lucide/dist/esm/icons/box.mjs";
 import ChevronDown from "lucide/dist/esm/icons/chevron-down.mjs";
 import ChevronRight from "lucide/dist/esm/icons/chevron-right.mjs";
-import Locate from "lucide/dist/esm/icons/locate.mjs";
-import { clientEntry, css, on } from "remix/component";
+import Trash from "lucide/dist/esm/icons/trash.mjs";
+import { clientEntry, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
-import { center } from "../../utilities/bounding.ts";
 import { isObject } from "../../utilities/is-object.ts";
-import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
-import { parentObject, transform } from "../../utilities/viewport/transform.ts";
-import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
-import { centerOn } from "../../utilities/viewport/viewport.ts";
+import {
+  deselectObject,
+  selectObjects,
+  selectedObjects,
+} from "../../utilities/selected-objects.ts";
+import { parentObject } from "../../utilities/viewport/transform.ts";
 import type { GameObject } from "./object-tree.tsx";
+import { expandable, iconButton, iconStack, indent, label, row } from "./tree.ts";
 
 type HierarchyNode = {
   name: string;
@@ -29,7 +31,9 @@ export const HierarchyTree = clientEntry(
         handle.update();
         frame = requestAnimationFrame(tick);
       });
-      handle.signal.addEventListener("abort", () => cancelAnimationFrame(frame));
+      handle.signal.addEventListener("abort", () =>
+        cancelAnimationFrame(frame),
+      );
     }
 
     return () => {
@@ -39,7 +43,7 @@ export const HierarchyTree = clientEntry(
       return (
         <div>
           {nodes.map((node) => (
-            <HierarchyBranch key={node.name} node={node} />
+            <HierarchyBranch key={node.name} node={node} root={handle.props.object} />
           ))}
         </div>
       );
@@ -47,69 +51,71 @@ export const HierarchyTree = clientEntry(
   },
 );
 
-function HierarchyBranch(handle: Handle<{ node: HierarchyNode }>) {
+function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: GameObject }>) {
   let collapsed = false;
 
   return () => {
     const { name, object, children } = handle.props.node;
-    const target = jumpTarget(object);
+    const { root } = handle.props;
     const hasChildren = children.length > 0;
 
+    const isSelected = selectedObjects.has(object);
     return (
       <>
-        <div aria-current={selectedObjects.has(object) ? "true" : undefined} mix={row}>
+        <div aria-current={isSelected ? "true" : undefined} mix={row}>
           <div
             aria-expanded={hasChildren ? !collapsed : undefined}
             mix={[
               label,
-              hasChildren ? expandable : null,
+              hasChildren && expandable,
               on("click", () => {
                 selectObjects([object]);
-                if (hasChildren) collapsed = !collapsed;
+                if (isSelected && hasChildren) {
+                  collapsed = !collapsed;
+                }
                 handle.update();
               }),
             ]}
           >
-            <span
-              mix={css({
-                display: "grid",
-                "& > *": { gridArea: "1 / 1" },
-              })}
-            >
+            <span mix={iconStack}>
               <Icon icon={Box} size={14} />
-              {hasChildren ? <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} /> : null}
+              {hasChildren && (
+                <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
+              )}
             </span>
             {name}
           </div>
-          {target ? (
-            <button
-              type="button"
-              aria-label={`Jump to ${name}`}
-              mix={[
-                iconButton,
-                on("click", (event) => {
-                  event.stopPropagation();
-                  const point = jumpTarget(object);
-                  if (!point) return;
-                  selectObjects([object]);
-                  centerOn(point);
-                }),
-              ]}
-            >
-              <Icon icon={Locate} size={14} />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            aria-label={`Delete ${name}`}
+            mix={[
+              iconButton,
+              on("click", (event) => {
+                event.stopPropagation();
+                removeNode(handle.props.node, root);
+                handle.update();
+              }),
+            ]}
+          >
+            <Icon icon={Trash} size={14} />
+          </button>
         </div>
-        {hasChildren && !collapsed ? (
-          <div mix={css({ paddingLeft: "0.75rem" })}>
+        {hasChildren && !collapsed && (
+          <div mix={indent}>
             {children.map((child) => (
-              <HierarchyBranch key={child.name} node={child} />
+              <HierarchyBranch key={child.name} node={child} root={root} />
             ))}
           </div>
-        ) : null}
+        )}
       </>
     );
   };
+}
+
+function removeNode(node: HierarchyNode, root: GameObject) {
+  deselectObject(node.object);
+  for (const child of node.children) removeNode(child, root);
+  delete root[node.name];
 }
 
 function hierarchy(root: GameObject): HierarchyNode[] {
@@ -124,7 +130,9 @@ function hierarchy(root: GameObject): HierarchyNode[] {
 
   for (const item of items) {
     const parent = parentObject(item.object, root);
-    const parentItem = parent ? items.find((entry) => entry.object === parent) : undefined;
+    const parentItem = parent
+      ? items.find((entry) => entry.object === parent)
+      : undefined;
     if (!parentItem) continue;
     const list = children.get(parentItem.name) ?? [];
     list.push(item);
@@ -144,123 +152,3 @@ function hierarchy(root: GameObject): HierarchyNode[] {
 
   return roots.map(node);
 }
-
-function jumpTarget(object: GameObject): WorldPoint | undefined {
-  const own = pointOf(object);
-  if (own) return own;
-
-  const points: WorldPoint[] = [];
-  for (const value of Object.values(object)) {
-    if (isObject(value) && !(value instanceof DOMMatrix)) collectPoints(value, points);
-  }
-  if (points.length === 0) return;
-
-  let x = 0;
-  let y = 0;
-  for (const point of points) {
-    x += point.x;
-    y += point.y;
-  }
-  return { x: x / points.length, y: y / points.length };
-}
-
-function collectPoints(object: GameObject, points: WorldPoint[]) {
-  const own = pointOf(object);
-  if (own) {
-    points.push(own);
-    return;
-  }
-  for (const value of Object.values(object)) {
-    if (isObject(value) && !(value instanceof DOMMatrix)) collectPoints(value, points);
-  }
-}
-
-function pointOf(object: GameObject): WorldPoint | undefined {
-  const matrix = transform(object)?.matrix;
-  if (!matrix) return;
-
-  const width = Number(object.width);
-  const height = Number(object.height);
-  if (!Number.isFinite(width) || !Number.isFinite(height)) {
-    return { x: matrix.e, y: matrix.f };
-  }
-
-  return center({ transform: matrix, width, height });
-}
-
-const borderRadius = "0.25rem";
-
-const row = css({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "0.25rem",
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "0.25rem 0.25rem 0.25rem 0.375rem",
-  borderRadius,
-  "&:hover": {
-    background: "#262626",
-  },
-  "&[aria-current='true']": {
-    background: "#333333",
-  },
-  "&[aria-current='true']:hover": {
-    background: "#3f3f46",
-  },
-  "& > button": {
-    visibility: "hidden",
-  },
-  "&:hover > button": {
-    visibility: "visible",
-  },
-});
-
-const label = css({
-  cursor: "pointer",
-  flex: "1 1 auto",
-  minWidth: 0,
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "0.25rem",
-});
-
-const expandable = css({
-  "& > span > :last-child": {
-    visibility: "hidden",
-  },
-  "&:hover > span > :first-child": {
-    visibility: "hidden",
-  },
-  "&:hover > span > :last-child": {
-    visibility: "visible",
-  },
-});
-
-const iconButton = css({
-  appearance: "none",
-  background: "transparent",
-  border: "none",
-  borderRadius,
-  color: "inherit",
-  cursor: "pointer",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flex: "0 0 auto",
-  marginLeft: "auto",
-  padding: 0,
-  width: "1.25rem",
-  height: "1.25rem",
-  font: "inherit",
-  lineHeight: 1,
-  "&:hover": {
-    background: "#333333",
-  },
-  "&:focus-visible": {
-    background: "#333333",
-    outline: "1px solid currentColor",
-    outlineOffset: "1px",
-  },
-});

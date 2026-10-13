@@ -4,6 +4,8 @@ import { css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
+import { transform } from "../../utilities/viewport/transform.ts";
+import { MatrixInput } from "./matrix-input.tsx";
 import type { GameObject } from "./object-tree.tsx";
 
 type PropertyInputProps = {
@@ -253,6 +255,16 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
 
   return () => {
     let current = object[name];
+    if (current instanceof DOMMatrix) {
+      return (
+        <MatrixInput
+          name={name}
+          matrix={name === "transform" ? (transform(object)?.matrix ?? current) : current}
+          onDelete={() => handle.props.onDelete()}
+        />
+      );
+    }
+
     let value = String(current);
     let color = parseHexColor(value);
     let bool = parseBoolean(value);

@@ -1,21 +1,16 @@
 import Box from "lucide/dist/esm/icons/box.mjs";
 import ChevronDown from "lucide/dist/esm/icons/chevron-down.mjs";
 import ChevronRight from "lucide/dist/esm/icons/chevron-right.mjs";
-import Locate from "lucide/dist/esm/icons/locate.mjs";
 import Plus from "lucide/dist/esm/icons/plus.mjs";
 import Trash from "lucide/dist/esm/icons/trash.mjs";
 import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
-import { center } from "../../utilities/bounding.ts";
 import { isObject } from "../../utilities/is-object.ts";
-import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
-import { transform } from "../../utilities/viewport/transform.ts";
-import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
-import { centerOn } from "../../utilities/viewport/viewport.ts";
-import { MatrixInput } from "./matrix-input.tsx";
+import { selectedObjects } from "../../utilities/selected-objects.ts";
 import { PropertyInput } from "./property-input.tsx";
+import { expandable, iconButton, iconStack, indent, label, row } from "./tree.ts";
 
 export type GameObject = { [key in PropertyKey]: any };
 
@@ -44,17 +39,7 @@ function GameObjectList(handle: Handle<{ object: GameObject }>) {
       <div>
         {Object.entries(object).map(([name, value]) => (
           <div key={name}>
-            {value instanceof DOMMatrix ? (
-              <MatrixInput
-                name={name}
-                matrix={name === "transform" ? transform(object)?.matrix ?? value : value}
-                pivot={localCenter(object)}
-                onDelete={() => {
-                  delete object[name];
-                  handle.update();
-                }}
-              />
-            ) : isObject(value) ? (
+            {isObject(value) && !(value instanceof DOMMatrix) ? (
               <Branch
                 name={name}
                 object={value}
@@ -95,7 +80,6 @@ function Branch(
 
   return () => {
     const { name, object, onDelete } = handle.props;
-    const target = jumpTarget(object);
 
     return (
       <>
@@ -103,65 +87,25 @@ function Branch(
           <div
             aria-expanded={!collapsed}
             mix={[
-              css({
-                cursor: "pointer",
-                flex: "1 1 auto",
-                minWidth: 0,
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                gap: "0.25rem",
-                "& > span > :last-child": {
-                  visibility: "hidden",
-                },
-                "&:hover > span > :first-child": {
-                  visibility: "hidden",
-                },
-                "&:hover > span > :last-child": {
-                  visibility: "visible",
-                },
-              }),
+              label,
+              expandable,
               on("click", () => {
                 collapsed = !collapsed;
                 handle.update();
               }),
             ]}
           >
-            <span
-              mix={css({
-                display: "grid",
-                "& > *": { gridArea: "1 / 1" },
-              })}
-            >
+            <span mix={iconStack}>
               <Icon icon={Box} size={14} />
               <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
             </span>
             {name}
           </div>
-          {target ? (
-            <button
-              type="button"
-              aria-label={`Jump to ${name}`}
-              mix={[
-                iconButton,
-                on("click", (event) => {
-                  event.stopPropagation();
-                  const point = jumpTarget(object);
-                  if (!point) return;
-                  selectObjects([object]);
-                  centerOn(point);
-                }),
-              ]}
-            >
-              <Icon icon={Locate} size={14} />
-            </button>
-          ) : null}
           <button
             type="button"
             aria-label={`Add to ${name}`}
             mix={[
               iconButton,
-              ...(target ? [grouped] : []),
               on("click", (event) => {
                 event.stopPropagation();
                 let key = "new";
@@ -191,63 +135,13 @@ function Branch(
           </button>
         </div>
         {collapsed ? null : (
-          <div mix={css({ paddingLeft: "0.75rem" })}>
+          <div mix={indent}>
             <GameObjectList object={object} />
           </div>
         )}
       </>
     );
   };
-}
-
-function jumpTarget(object: GameObject): WorldPoint | undefined {
-  const own = pointOf(object);
-  if (own) return own;
-
-  const points: WorldPoint[] = [];
-  for (const value of Object.values(object)) {
-    if (isObject(value) && !(value instanceof DOMMatrix)) collectPoints(value, points);
-  }
-  if (points.length === 0) return;
-
-  let x = 0;
-  let y = 0;
-  for (const point of points) {
-    x += point.x;
-    y += point.y;
-  }
-  return { x: x / points.length, y: y / points.length };
-}
-
-function collectPoints(object: GameObject, points: WorldPoint[]) {
-  const own = pointOf(object);
-  if (own) {
-    points.push(own);
-    return;
-  }
-  for (const value of Object.values(object)) {
-    if (isObject(value) && !(value instanceof DOMMatrix)) collectPoints(value, points);
-  }
-}
-
-function localCenter(object: GameObject) {
-  const width = Number(object.width);
-  const height = Number(object.height);
-  if (!Number.isFinite(width) || !Number.isFinite(height)) return;
-  return { x: width / 2, y: height / 2 };
-}
-
-function pointOf(object: GameObject): WorldPoint | undefined {
-  const matrix = transform(object)?.matrix;
-  if (!matrix) return;
-
-  const width = Number(object.width);
-  const height = Number(object.height);
-  if (!Number.isFinite(width) || !Number.isFinite(height)) {
-    return { x: matrix.e, y: matrix.f };
-  }
-
-  return center({ transform: matrix, width, height });
 }
 
 function renameKey(object: GameObject, from: string, to: string) {
@@ -258,61 +152,4 @@ function renameKey(object: GameObject, from: string, to: string) {
   for (const key of Object.keys(object)) delete object[key];
   Object.assign(object, renamed);
 }
-
-const borderRadius = "0.25rem";
-
-const row = css({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "0.25rem",
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "0.25rem 0.25rem 0.25rem 0.375rem",
-  borderRadius,
-  "&:hover": {
-    background: "#262626",
-  },
-  "&[aria-current='true']": {
-    background: "#333333",
-  },
-  "&[aria-current='true']:hover": {
-    background: "#3f3f46",
-  },
-  "& > button": {
-    visibility: "hidden",
-  },
-  "&:hover > button": {
-    visibility: "visible",
-  },
-});
-
-const grouped = css({ marginLeft: "-0.25rem" });
-
-const iconButton = css({
-  appearance: "none",
-  background: "transparent",
-  border: "none",
-  borderRadius,
-  color: "inherit",
-  cursor: "pointer",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flex: "0 0 auto",
-  marginLeft: "auto",
-  padding: 0,
-  width: "1.25rem",
-  height: "1.25rem",
-  font: "inherit",
-  lineHeight: 1,
-  "&:hover": {
-    background: "#333333",
-  },
-  "&:focus-visible": {
-    background: "#333333",
-    outline: "1px solid currentColor",
-    outlineOffset: "1px",
-  },
-});
 

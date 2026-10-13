@@ -401,7 +401,7 @@ const field = css({
   boxSizing: "border-box",
   color: "inherit",
   display: "block",
-  flex: "0 0 auto",
+  flex: "1 0 auto",
   fieldSizing: "content",
   font: "inherit",
   lineHeight: "inherit",
