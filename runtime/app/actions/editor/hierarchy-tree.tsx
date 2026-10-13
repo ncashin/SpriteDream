@@ -176,7 +176,7 @@ function collectPoints(object: GameObject, points: WorldPoint[]) {
 }
 
 function pointOf(object: GameObject): WorldPoint | undefined {
-  const matrix = transform(object);
+  const matrix = transform(object)?.matrix;
   if (!matrix) return;
 
   const width = Number(object.width);

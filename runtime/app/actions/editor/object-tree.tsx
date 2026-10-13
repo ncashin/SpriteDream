@@ -47,7 +47,7 @@ function GameObjectList(handle: Handle<{ object: GameObject }>) {
             {value instanceof DOMMatrix ? (
               <MatrixInput
                 name={name}
-                matrix={name === "transform" ? transform(object) ?? value : value}
+                matrix={name === "transform" ? transform(object)?.matrix ?? value : value}
                 pivot={localCenter(object)}
                 onDelete={() => {
                   delete object[name];
@@ -238,7 +238,7 @@ function localCenter(object: GameObject) {
 }
 
 function pointOf(object: GameObject): WorldPoint | undefined {
-  const matrix = transform(object);
+  const matrix = transform(object)?.matrix;
   if (!matrix) return;
 
   const width = Number(object.width);

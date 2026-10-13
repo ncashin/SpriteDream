@@ -71,7 +71,7 @@ export function drawBoundingBox(
   },
   sprite: Image,
 ) {
-  const matrix = transform(sprite);
+  const matrix = transform(sprite)?.matrix;
   if (!matrix) return;
   const bounds = { transform: matrix, width: sprite.width, height: sprite.height };
   const frame = scaleRemoved(bounds);

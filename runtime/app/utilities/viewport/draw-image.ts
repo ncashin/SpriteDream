@@ -20,7 +20,7 @@ export type Image = NonNullable<ReturnType<typeof imageTrait>>;
 
 export function drawImage(viewportWithTransforms: ViewportWithTransforms, sprite: Image) {
   const context = viewportWithTransforms.state.context;
-  const worldMatrix = transform(sprite);
+  const worldMatrix = transform(sprite)?.matrix;
   if (!worldMatrix) return;
 
   context.save();
@@ -34,14 +34,14 @@ export function drawImage(viewportWithTransforms: ViewportWithTransforms, sprite
     return;
   }
 
-  const tinted = applyTintToSprite(image, sprite.width, sprite.height, sprite.tint);
+  const tinted = applyTintToImage(image, sprite.width, sprite.height, sprite.tint);
   if (tinted) context.drawImage(tinted, 0, 0, sprite.width, sprite.height);
   context.restore();
 }
 
 let tintCanvas: HTMLCanvasElement | undefined;
 
-function applyTintToSprite(image: HTMLImageElement, width: number, height: number, tint: string) {
+function applyTintToImage(image: HTMLImageElement, width: number, height: number, tint: string) {
   const canvas = tintCanvas ?? (tintCanvas = document.createElement("canvas"));
   const pixelWidth = Math.max(1, Math.ceil(width));
   const pixelHeight = Math.max(1, Math.ceil(height));

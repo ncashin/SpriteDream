@@ -23,9 +23,9 @@ const POPOVER_GAP = 10;
 
 function selectableAt(point: WorldPoint): GameObject | undefined {
   const found = queryScene(scene, imageTrait).find((node) => {
-    const matrix = transform(node);
-    if (!matrix) return false;
-    return contains({ transform: matrix, width: node.width, height: node.height }, point);
+    const placement = transform(node);
+    if (!placement) return false;
+    return contains({ transform: placement.matrix, width: node.width, height: node.height }, point);
   });
   return found;
 }
@@ -100,12 +100,6 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             copyAndPaste({ signal });
 
             const updateLoop = createUpdateLoop();
-
-            updateLoop.onUpdate(() => {
-              input.update();
-              if (input.buttons.deselect.pressed) selectObjects([]);
-            });
-
             const editorLoop = createUpdateLoop(updateLoop);
             const gameLoop = createUpdateLoop(updateLoop);
 
@@ -116,20 +110,15 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
 
                 view.drawBoundingBox(image);
 
-                const matrix = transform(image);
-                if (!matrix) continue;
-
-                const scaleRemoved = new DOMMatrix();
-                scaleRemoved.a = 1;
-                scaleRemoved.b = 0;
-                scaleRemoved.c = 0;
-                scaleRemoved.d = 1;
-                scaleRemoved.e = matrix.e;
-                scaleRemoved.f = matrix.f;
-                scaleRemoved.translateSelf(0, -POPOVER_GAP);
+                const placement = transform(image);
+                if (!placement) continue;
 
                 view.drawComponent(
-                  scaleRemoved,
+                  new DOMMatrix().translate(
+                    placement.position.x,
+                    placement.position.y - POPOVER_GAP,
+                    placement.position.z,
+                  ),
                   <>
                     <div
                       key={object}
@@ -160,11 +149,17 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               if (dx === 0 && dy === 0) return;
               for (const image of queryScene(scene, imageTrait)) {
                 if (parentObject(image)) continue;
-                transform(image)?.preMultiplySelf(new DOMMatrix().translate(dx, dy));
+                const placement = transform(image);
+                if (!placement) continue;
+                placement.position.x += dx;
+                placement.position.y += dy;
               }
             });
 
             updateLoop.onUpdate(() => {
+              input.update();
+              if (input.buttons.deselect.pressed) selectObjects([]);
+              
               view.beginDrawing();
               for (const image of queryScene(scene, imageTrait)) {
                 view.drawImage(image);
@@ -172,14 +167,19 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             });
 
             onModeChange((next) => {
-              if (next === Mode.Play) {
-                editorLoop.stop();
-                gameLoop.start();
-              } else {
-                gameLoop.stop();
-                editorLoop.start();
+              switch (next) {
+                case Mode.Play:
+                  editorLoop.stop();
+                  gameLoop.start();
+                  break;
+                case Mode.Edit:
+                  gameLoop.stop();
+                  editorLoop.start();
+                  break;
               }
             }, signal);
+       
+       
 
             if (mode === Mode.Play) gameLoop.start();
             else editorLoop.start();
