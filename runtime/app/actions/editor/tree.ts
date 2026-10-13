@@ -11,14 +11,15 @@ export const row = css({
   boxSizing: "border-box",
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
   borderRadius,
+  cursor: "pointer",
   "&:hover": {
-    background: "#262626",
+    background: "#1e1e1e",
   },
   "&[aria-current='true']": {
-    background: "#404040",
+    background: "#262626",
   },
   "&[aria-current='true']:hover": {
-    background: "#525252",
+    background: "#262626",
   },
   "& > button": {
     visibility: "hidden",
@@ -29,7 +30,6 @@ export const row = css({
 });
 
 export const label = css({
-  cursor: "pointer",
   flex: "1 1 auto",
   minWidth: 0,
   display: "flex",
@@ -39,13 +39,13 @@ export const label = css({
 });
 
 export const expandable = css({
-  "& > span > :last-child": {
+  "& span > :last-child": {
     visibility: "hidden",
   },
-  "&:hover > span > :first-child": {
+  "&:hover span > :first-child": {
     visibility: "hidden",
   },
-  "&:hover > span > :last-child": {
+  "&:hover span > :last-child": {
     visibility: "visible",
   },
 });

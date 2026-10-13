@@ -15,11 +15,9 @@ import { imageTrait } from "../../utilities/viewport/draw-image.ts";
 import { parentObject, transform } from "../../utilities/viewport/transform.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
 import { viewport } from "../../utilities/viewport/viewport.ts";
-import { ObjectTree } from "../editor/object-tree.tsx";
 import type { GameObject } from "../editor/object-tree.tsx";
 
 const SPEED = 240;
-const POPOVER_GAP = 10;
 
 function selectableAt(point: WorldPoint): GameObject | undefined {
   const found = queryScene(scene, imageTrait).find((node) => {
@@ -109,40 +107,6 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                 if (!image) continue;
 
                 view.drawBoundingBox(image);
-
-                const placement = transform(image);
-                if (!placement) continue;
-
-                const halfHeight = image.height / 2;
-                const matrix = placement.matrix;
-                view.drawComponent(
-                  new DOMMatrix().translate(
-                    matrix.e - matrix.c * halfHeight,
-                    matrix.f - matrix.d * halfHeight - POPOVER_GAP,
-                    placement.position.z,
-                  ),
-                  <>
-                    <div
-                      key={object}
-                      mix={css({
-                        position: "absolute",
-                        left: "0",
-                        bottom: "0",
-                        transform: "translateX(-50%)",
-                        width: "max-content",
-                        pointerEvents: "auto",
-                        background: "black",
-                        color: "#f4f4f5",
-                        fontSize: "0.875rem",
-                        lineHeight: "1.25rem",
-                        padding: "0.5rem",
-                        "--text-light": "#d4d4d4",
-                      })}
-                    >
-                      <ObjectTree object={object} />
-                    </div>
-                  </>,
-                );
               }
             });
 

@@ -28,7 +28,7 @@ const row = css({
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
   borderRadius,
   "&:hover": {
-    background: "#262626",
+    background: "#1e1e1e",
   },
   "& > button": {
     visibility: "hidden",

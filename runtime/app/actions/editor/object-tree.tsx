@@ -8,7 +8,7 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
 import { isObject } from "../../utilities/is-object.ts";
-import { selectedObjects } from "../../utilities/selected-objects.ts";
+import { deselectObject, selectedObjects } from "../../utilities/selected-objects.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { PropertyInput } from "./property-input.tsx";
 import { expandable, iconButton, iconStack, indent, label, row } from "./tree.ts";
@@ -17,7 +17,7 @@ export type GameObject = { [key in PropertyKey]: any };
 
 export const ObjectTree = clientEntry(
   import.meta.url,
-  function ObjectTree(handle: Handle<{ object: GameObject }>) {
+  function ObjectTree(handle: Handle<{ object: GameObject; name?: string; parent?: GameObject }>) {
     if (typeof requestAnimationFrame === "function") {
       let frame = requestAnimationFrame(function tick() {
         if (handle.signal.aborted) return;
@@ -27,7 +27,32 @@ export const ObjectTree = clientEntry(
       handle.signal.addEventListener("abort", () => cancelAnimationFrame(frame));
     }
 
-    return () => <GameObjectList object={handle.props.object} />;
+    return () => {
+      const { object, name, parent } = handle.props;
+      if (!name || !parent) return <GameObjectList object={object} />;
+
+      return (
+        <Branch
+          name={name}
+          object={object}
+          onRename={(from, to) => {
+            if (Object.hasOwn(parent, to)) return false;
+            renameKey(parent, from, to);
+            for (const value of Object.values(parent)) {
+              if (isObject(value) && !(value instanceof DOMMatrix) && value.parent === from) {
+                value.parent = to;
+              }
+            }
+            handle.update();
+          }}
+          onDelete={() => {
+            deselectObject(object);
+            delete parent[name];
+            handle.update();
+          }}
+        />
+      );
+    };
   },
 );
 
@@ -84,33 +109,36 @@ function Branch(
   }>,
 ) {
   let collapsed = false;
-  let name = handle.props.name;
 
   return () => {
-    const { object, onRename, onDelete } = handle.props;
+    const { name, object, onRename, onDelete } = handle.props;
 
+    const isSelected = selectedObjects.has(object);
     return (
       <>
-        <div aria-current={selectedObjects.has(object) ? "true" : undefined} mix={row}>
-          <div
-            aria-expanded={!collapsed}
-            mix={[
-              label,
-              expandable,
-              on("click", () => {
-                collapsed = !collapsed;
-                handle.update();
-              }),
-            ]}
-          >
+        <div
+          aria-current={isSelected ? "true" : undefined}
+          aria-expanded={!collapsed}
+          mix={[
+            row,
+            expandable,
+            on("click", (event) => {
+              const target = event.target instanceof Element ? event.target : null;
+              if (target?.closest("button, input")) return;
+              collapsed = !collapsed;
+              handle.update();
+            }),
+          ]}
+        >
+          <div mix={label}>
             <span mix={iconStack}>
               <Icon icon={Box} size={14} />
               <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
             </span>
             <AutoSizeInput
               value={name}
-              placeholder="name"
-              label="Name"
+              placeholder="object"
+              label="Object"
               onCommit={(next) => onRename(name, next)}
             />
           </div>

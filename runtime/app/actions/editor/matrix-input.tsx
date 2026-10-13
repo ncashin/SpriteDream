@@ -174,23 +174,24 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
 
     return (
       <>
-        <div mix={row}>
-          <div
-            aria-expanded={!collapsed}
-            mix={[
-              disclosure,
-              on("click", () => {
-                collapsed = !collapsed;
-                handle.update();
-              }),
-            ]}
-          >
-            <span mix={iconStack}>
-              <Icon icon={Move} size={14} />
-              <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
-            </span>
-            {name}
-          </div>
+        <div
+          aria-expanded={!collapsed}
+          mix={[
+            row,
+            disclosure,
+            on("click", (event) => {
+              const target = event.target instanceof Element ? event.target : null;
+              if (target?.closest("button")) return;
+              collapsed = !collapsed;
+              handle.update();
+            }),
+          ]}
+        >
+          <span mix={iconStack}>
+            <Icon icon={Move} size={14} />
+            <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
+          </span>
+          {name}
           <button
             type="button"
             aria-label={`Delete ${name}`}
@@ -323,7 +324,7 @@ const row = css({
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
   borderRadius,
   "&:hover": {
-    background: "#262626",
+    background: "#1e1e1e",
   },
   "& > button": {
     visibility: "hidden",
@@ -335,12 +336,6 @@ const row = css({
 
 const disclosure = css({
   cursor: "pointer",
-  flex: "1 1 auto",
-  minWidth: 0,
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "0.25rem",
   "& > span > :last-child": {
     visibility: "hidden",
   },

@@ -57,6 +57,19 @@ export function resizeBoundingBox(bounds: Bounds, handle: ResizeHandle, point: P
   bounds.transform.f = anchorWorld.y - (b * anchor.x + d * anchor.y);
 }
 
+export function rotateBoundingBox(
+  bounds: Bounds,
+  radians: number,
+  from: { a: number; b: number; c: number; d: number },
+) {
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  bounds.transform.a = cos * from.a - sin * from.b;
+  bounds.transform.b = sin * from.a + cos * from.b;
+  bounds.transform.c = cos * from.c - sin * from.d;
+  bounds.transform.d = sin * from.c + cos * from.d;
+}
+
 function scaledAxis(
   axisX: number,
   axisY: number,

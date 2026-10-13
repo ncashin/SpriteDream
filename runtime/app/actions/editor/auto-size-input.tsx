@@ -48,17 +48,28 @@ export function AutoSizeInput(handle: Handle<AutoSizeInputProps>) {
     let next = draft;
     if (next === saved) return;
     committing = true;
-    if (next === "" || handle.props.onCommit(next) === false) {
-      committing = false;
+    let rejected = next === "" || handle.props.onCommit(next) === false;
+    committing = false;
+    if (rejected) {
       draft = saved;
       handle.update();
+      return;
     }
+    saved = next;
   }
 
   return () => (
     <input
       type="text"
       aria-label={handle.props.label}
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck={false}
+      data-1p-ignore=""
+      data-lpignore="true"
+      data-bwignore=""
+      data-form-type="other"
       value={draft}
       placeholder={handle.props.placeholder}
       mix={[

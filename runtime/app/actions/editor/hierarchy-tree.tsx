@@ -64,21 +64,22 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: GameObject 
     const isSelected = selectedObjects.has(object);
     return (
       <>
-        <div aria-current={isSelected ? "true" : undefined} mix={row}>
-          <div
-            aria-expanded={hasChildren ? !collapsed : undefined}
-            mix={[
-              label,
-              hasChildren && expandable,
-              on("click", () => {
-                selectObjects([object]);
-                if (isSelected && hasChildren) {
-                  collapsed = !collapsed;
-                }
-                handle.update();
-              }),
-            ]}
-          >
+        <div
+          aria-current={isSelected ? "true" : undefined}
+          aria-expanded={hasChildren ? !collapsed : undefined}
+          mix={[
+            row,
+            hasChildren && expandable,
+            on("click", (event) => {
+              const target = event.target instanceof Element ? event.target : null;
+              if (target?.closest("button, input")) return;
+              selectObjects([object]);
+              if (isSelected && hasChildren) collapsed = !collapsed;
+              handle.update();
+            }),
+          ]}
+        >
+          <div mix={label}>
             <span mix={iconStack}>
               <Icon icon={Box} size={14} />
               {hasChildren && (
@@ -87,8 +88,8 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: GameObject 
             </span>
             <AutoSizeInput
               value={name}
-              placeholder="name"
-              label="Name"
+              placeholder="object"
+              label="Object"
               onPointerDown={() => {
                 selectObjects([object]);
                 handle.update();

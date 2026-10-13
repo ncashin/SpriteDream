@@ -5,6 +5,7 @@ import {
   moveBoundingBox,
   resizeBoundingBox,
   resizeDirections,
+  rotateBoundingBox,
   type Bounds,
   type Point,
   type ResizeHandle,
@@ -21,6 +22,7 @@ export function isWheelPassthrough(target: EventTarget | null) {
 
 const HANDLE_SIZE = 8;
 const STROKE = 1.5;
+const ROTATION_OFFSET = 12;
 const BOUNDS_COLOR = "#7dd3fc";
 const cornerHandles = ["northWest", "northEast", "southEast", "southWest"] as const satisfies readonly ResizeHandle[];
 const edgeHandles = ["north", "east", "south", "west"] as const satisfies readonly ResizeHandle[];
@@ -63,6 +65,14 @@ const handleCss = css({
   borderColor: BOUNDS_COLOR,
   pointerEvents: "auto",
   touchAction: "none",
+});
+
+const stemCss = css({
+  position: "absolute",
+  margin: 0,
+  padding: 0,
+  background: BOUNDS_COLOR,
+  pointerEvents: "none",
 });
 
 export function drawBoundingBox(
@@ -121,6 +131,7 @@ function BoundingBox(
             height={height}
           />
         ))}
+        <RotationControl bounds={bounds} width={width} />
       </div>
     );
   };
@@ -230,6 +241,100 @@ function ResizeHandleControl(
         }}
         mix={[handleCss, drag()]}
       />
+    );
+  };
+}
+
+function RotationControl(handle: Handle<ResizeControlProps & { width: number }>) {
+  let drag: {
+    pointerId: number;
+    style: HTMLStyleElement;
+    angle: number;
+    a: number;
+    b: number;
+    c: number;
+    d: number;
+  } | null = null;
+
+  function stop(event?: PointerEvent) {
+    if (event && drag && event.pointerId !== drag.pointerId) return;
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+    window.removeEventListener("pointercancel", stop);
+    drag?.style.remove();
+    drag = null;
+  }
+
+  function move(event: PointerEvent) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const point = screenToWorld(event.clientX, event.clientY);
+    if (!point) return;
+    const { bounds } = handle.props;
+    const dx = point.x - bounds.transform.e;
+    const dy = point.y - bounds.transform.f;
+    if (dx * dx + dy * dy < 1) return;
+    rotateBoundingBox(bounds, Math.atan2(dy, dx) - drag.angle, drag);
+  }
+
+  handle.signal.addEventListener("abort", () => stop());
+
+  return () => {
+    const { width } = handle.props;
+    const stem = ROTATION_OFFSET - HANDLE_SIZE / 2;
+
+    return (
+      <>
+        <div
+          style={{
+            left: width / 2,
+            top: -stem,
+            width: STROKE,
+            height: stem,
+            transform: "translateX(-50%)",
+          }}
+          mix={stemCss}
+        />
+        <div
+          style={{
+            left: width / 2,
+            top: -ROTATION_OFFSET,
+            width: HANDLE_SIZE,
+            height: HANDLE_SIZE,
+            borderWidth: 1,
+            borderRadius: "50%",
+            transform: "translate(-50%, -50%)",
+            cursor: "grab",
+          }}
+          mix={[
+            handleCss,
+            on<HTMLDivElement, "pointerdown">("pointerdown", (event) => {
+              if (event.button !== 0) return;
+              event.preventDefault();
+              event.stopPropagation();
+              stop();
+              const origin = screenToWorld(event.clientX, event.clientY);
+              if (!origin) return;
+              const { bounds } = handle.props;
+              const style = document.createElement("style");
+              style.textContent =
+                "html, html * { cursor: grabbing !important; user-select: none !important; }";
+              document.head.append(style);
+              drag = {
+                pointerId: event.pointerId,
+                style,
+                angle: Math.atan2(origin.y - bounds.transform.f, origin.x - bounds.transform.e),
+                a: bounds.transform.a,
+                b: bounds.transform.b,
+                c: bounds.transform.c,
+                d: bounds.transform.d,
+              };
+              window.addEventListener("pointermove", move);
+              window.addEventListener("pointerup", stop);
+              window.addEventListener("pointercancel", stop);
+            }),
+          ]}
+        />
+      </>
     );
   };
 }
