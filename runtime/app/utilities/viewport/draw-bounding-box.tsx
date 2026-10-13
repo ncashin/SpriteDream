@@ -9,6 +9,9 @@ import {
   type Point,
   type ResizeHandle,
 } from "../bounding.ts";
+import type { Image } from "./draw-image.ts";
+import { transform } from "./transform.ts";
+import { screenToWorld } from "./viewportTransforms.ts";
 
 const WHEEL_PASSTHROUGH = "data-wheel-passthrough";
 
@@ -64,18 +67,15 @@ const handleCss = css({
 
 export function drawBoundingBox(
   paint: (transform: DOMMatrix, node: RemixNode) => void,
-  bounds: Bounds,
-  clientToWorld: (clientX: number, clientY: number) => Point,
+  sprite: Image,
 ) {
+  const matrix = transform(sprite);
+  if (!matrix) return;
+  const bounds = { transform: matrix, width: sprite.width, height: sprite.height };
   const frame = scaleRemoved(bounds);
   paint(
     frame.transform,
-    <BoundingBox
-      bounds={bounds}
-      width={frame.width}
-      height={frame.height}
-      clientToWorld={clientToWorld}
-    />,
+    <BoundingBox bounds={bounds} width={frame.width} height={frame.height} />,
   );
 }
 
@@ -97,24 +97,16 @@ function BoundingBox(
     bounds: Bounds;
     width: number;
     height: number;
-    clientToWorld: (clientX: number, clientY: number) => Point;
   }>,
 ) {
   return () => {
-    const { bounds, width, height, clientToWorld } = handle.props;
+    const { bounds, width, height } = handle.props;
 
     return (
       <div data-wheel-passthrough="" mix={frameCss} style={{ width, height }}>
-        <MoveControl bounds={bounds} clientToWorld={clientToWorld} />
+        <MoveControl bounds={bounds} />
         {edgeHandles.map((name) => (
-          <EdgeControl
-            key={name}
-            name={name}
-            bounds={bounds}
-            width={width}
-            height={height}
-            clientToWorld={clientToWorld}
-          />
+          <EdgeControl key={name} name={name} bounds={bounds} width={width} height={height} />
         ))}
         {cornerHandles.map((name) => (
           <ResizeHandleControl
@@ -123,7 +115,6 @@ function BoundingBox(
             bounds={bounds}
             width={width}
             height={height}
-            clientToWorld={clientToWorld}
           />
         ))}
       </div>
@@ -133,15 +124,9 @@ function BoundingBox(
 
 type ResizeControlProps = {
   bounds: Bounds;
-  clientToWorld: (clientX: number, clientY: number) => Point;
 };
 
-function MoveControl(
-  handle: Handle<{
-    bounds: Bounds;
-    clientToWorld: (clientX: number, clientY: number) => Point;
-  }>,
-) {
+function MoveControl(handle: Handle<{ bounds: Bounds }>) {
   let drag: {
     pointerId: number;
     origin: Point;
@@ -161,7 +146,8 @@ function MoveControl(
 
   function move(event: PointerEvent) {
     if (!drag || event.pointerId !== drag.pointerId) return;
-    const point = handle.props.clientToWorld(event.clientX, event.clientY);
+    const point = screenToWorld(event.clientX, event.clientY);
+    if (!point) return;
     moveBoundingBox(handle.props.bounds, {
       x: drag.x + point.x - drag.origin.x,
       y: drag.y + point.y - drag.origin.y,
@@ -179,14 +165,16 @@ function MoveControl(
           event.preventDefault();
           event.stopPropagation();
           stop();
-          const { bounds, clientToWorld } = handle.props;
+          const origin = screenToWorld(event.clientX, event.clientY);
+          if (!origin) return;
+          const { bounds } = handle.props;
           const style = document.createElement("style");
           style.textContent =
             "html, html * { cursor: move !important; user-select: none !important; }";
           document.head.append(style);
           drag = {
             pointerId: event.pointerId,
-            origin: clientToWorld(event.clientX, event.clientY),
+            origin,
             x: bounds.transform.e,
             y: bounds.transform.f,
             style,
@@ -256,8 +244,10 @@ function resizeDrag(handle: Handle<ResizeControlProps & { name: ResizeHandle }>)
 
   function move(event: PointerEvent) {
     if (!drag || event.pointerId !== drag.pointerId) return;
-    const { bounds, name, clientToWorld } = handle.props;
-    resizeBoundingBox(bounds, name, clientToWorld(event.clientX, event.clientY));
+    const point = screenToWorld(event.clientX, event.clientY);
+    if (!point) return;
+    const { bounds, name } = handle.props;
+    resizeBoundingBox(bounds, name, point);
   }
 
   handle.signal.addEventListener("abort", () => stop());

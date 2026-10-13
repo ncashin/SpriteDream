@@ -4,6 +4,7 @@ import { isObject } from "./is-object.ts";
 import { Mode, mode } from "./mode.ts";
 import { scene } from "./scene.ts";
 import { selectObjects, selectedObjects } from "./selected-objects.ts";
+import { transform } from "./viewport/transform.ts";
 import { cursorWorldPoint, type WorldPoint } from "./viewport/viewport.ts";
 
 const PASTE_STEP = 32;
@@ -143,13 +144,13 @@ function collectPoints(object: GameObject, points: WorldPoint[]) {
 }
 
 function pointOf(object: GameObject): WorldPoint | undefined {
-  const transform = object.transform;
-  if (!(transform instanceof DOMMatrix)) return;
+  const matrix = transform(object);
+  if (!matrix) return;
 
   const width = Number(object.width);
   const height = Number(object.height);
-  if (!Number.isFinite(width) || !Number.isFinite(height)) return { x: transform.e, y: transform.f };
-  return center({ transform, width, height });
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return { x: matrix.e, y: matrix.f };
+  return center({ transform: matrix, width, height });
 }
 
 function averagePoint(points: WorldPoint[]): WorldPoint | undefined {
@@ -164,10 +165,9 @@ function averagePoint(points: WorldPoint[]): WorldPoint | undefined {
 }
 
 function translateObject(object: GameObject, dx: number, dy: number) {
-  const transform = object.transform;
-  if (transform instanceof DOMMatrix) {
-    transform.e += dx;
-    transform.f += dy;
+  const matrix = transform(object);
+  if (matrix) {
+    matrix.preMultiplySelf(new DOMMatrix().translate(dx, dy));
     return;
   }
   for (const value of Object.values(object)) {

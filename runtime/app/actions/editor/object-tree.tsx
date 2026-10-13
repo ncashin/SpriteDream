@@ -8,8 +8,10 @@ import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
+import { center } from "../../utilities/bounding.ts";
 import { isObject } from "../../utilities/is-object.ts";
 import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
+import { transform } from "../../utilities/viewport/transform.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
 import { centerOn } from "../../utilities/viewport/viewport.ts";
 import { MatrixInput } from "./matrix-input.tsx";
@@ -45,7 +47,8 @@ function GameObjectList(handle: Handle<{ object: GameObject }>) {
             {value instanceof DOMMatrix ? (
               <MatrixInput
                 name={name}
-                matrix={value}
+                matrix={name === "transform" ? transform(object) ?? value : value}
+                pivot={localCenter(object)}
                 onDelete={() => {
                   delete object[name];
                   handle.update();
@@ -227,22 +230,24 @@ function collectPoints(object: GameObject, points: WorldPoint[]) {
   }
 }
 
+function localCenter(object: GameObject) {
+  const width = Number(object.width);
+  const height = Number(object.height);
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return;
+  return { x: width / 2, y: height / 2 };
+}
+
 function pointOf(object: GameObject): WorldPoint | undefined {
-  const transform = object.transform;
-  if (!(transform instanceof DOMMatrix)) return;
+  const matrix = transform(object);
+  if (!matrix) return;
 
   const width = Number(object.width);
   const height = Number(object.height);
   if (!Number.isFinite(width) || !Number.isFinite(height)) {
-    return { x: transform.e, y: transform.f };
+    return { x: matrix.e, y: matrix.f };
   }
 
-  const x = width / 2;
-  const y = height / 2;
-  return {
-    x: transform.a * x + transform.c * y + transform.e,
-    y: transform.b * x + transform.d * y + transform.f,
-  };
+  return center({ transform: matrix, width, height });
 }
 
 function renameKey(object: GameObject, from: string, to: string) {

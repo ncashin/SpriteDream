@@ -1,9 +1,9 @@
 import { defaulted, instanceof_, object, string } from "remix/data-schema";
 import { number } from "remix/data-schema/coerce";
 
-import { defineTrait } from "../trait/trait.ts";
 import { loadImage } from "../runtime-assets.ts";
-import { applyTransform } from "./transform.ts";
+import { defineTrait } from "../trait/trait.ts";
+import { applyTransform, transform } from "./transform.ts";
 
 export const imageTrait = defineTrait(
   object({
@@ -18,8 +18,11 @@ export const imageTrait = defineTrait(
 export type Image = NonNullable<ReturnType<typeof imageTrait>>;
 
 export function drawImage(context: CanvasRenderingContext2D, sprite: Image) {
+  const worldMatrix = transform(sprite);
+  if (!worldMatrix) return;
+
   context.save();
-  applyTransform(context, sprite.transform);
+  applyTransform(context, worldMatrix);
 
   const image = loadImage(sprite.image);
   if (!image) {

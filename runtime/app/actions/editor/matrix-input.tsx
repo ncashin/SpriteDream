@@ -11,6 +11,7 @@ type MatrixInputProps = {
   name: string;
   matrix: DOMMatrix;
   onDelete: () => void;
+  pivot?: { x: number; y: number };
 };
 
 type Linear = {
@@ -56,11 +57,18 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
     const matrix = handle.props.matrix;
     const next = { ...closestLinear(matrix, linearHint), ...patch };
     linearHint = next;
+    const pivot = patch.rotation !== undefined ? handle.props.pivot : undefined;
+    const center = pivot ? worldPoint(matrix, pivot) : undefined;
     const composed = new DOMMatrix().rotate(next.rotation).scale(next.scaleX, next.scaleY);
     matrix.a = composed.a;
     matrix.b = composed.b;
     matrix.c = composed.c;
     matrix.d = composed.d;
+    if (pivot && center) {
+      const shifted = worldPoint(matrix, pivot);
+      matrix.e += center.x - shifted.x;
+      matrix.f += center.y - shifted.y;
+    }
     handle.update();
   }
 
@@ -237,6 +245,13 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
         )}
       </>
     );
+  };
+}
+
+function worldPoint(matrix: DOMMatrix, point: { x: number; y: number }) {
+  return {
+    x: matrix.a * point.x + matrix.c * point.y + matrix.e,
+    y: matrix.b * point.x + matrix.d * point.y + matrix.f,
   };
 }
 

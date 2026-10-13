@@ -9,8 +9,8 @@ import type { Handle } from "remix/component";
 import { Icon } from "../../icon.tsx";
 import { Mode, mode, setMode } from "../../utilities/mode.ts";
 import { scene } from "../../utilities/scene.ts";
+import { HierarchyTree } from "./hierarchy-tree.tsx";
 import { Search } from "./Search.tsx";
-import { ObjectTree } from "./object-tree.tsx";
 
 const SIDEBAR_WIDTH = "20rem";
 const SIDEBAR_MOTION = "200ms ease";
@@ -22,7 +22,7 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
     <>
       <aside mix={panel} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
         <div id="scene-tree" inert={collapsed} mix={tree}>
-          <ObjectTree object={scene} />
+          <HierarchyTree object={scene} />
         </div>
       </aside>
       <header mix={bar} style={{ left: collapsed ? "0rem" : SIDEBAR_WIDTH }}>

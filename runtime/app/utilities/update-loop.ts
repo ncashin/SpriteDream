@@ -43,7 +43,10 @@ export const updateLoop = (parent?: UpdateLoop): UpdateLoop => {
     running = true;
     if (parent) return;
     lastTimestamp = performance.now();
-    frame = requestAnimationFrame(tick);
+    // Paint once before yielding. Client hydration is still in progress here,
+    // so the client is not finished loading until this draw returns.
+    dispatch({ deltaTime: 0 });
+    if (running) frame = requestAnimationFrame(tick);
   };
 
   const stop = () => {

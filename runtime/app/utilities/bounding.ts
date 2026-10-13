@@ -7,8 +7,7 @@ export type Bounds = {
 };
 
 export function center(bounds: Bounds): Point {
-  const point = bounds.transform.transformPoint(new DOMPoint(bounds.width / 2, bounds.height / 2));
-  return { x: point.x, y: point.y };
+  return mapPoint(bounds.transform, bounds.width / 2, bounds.height / 2);
 }
 
 const MIN_AXIS = 1e-4;
@@ -34,7 +33,7 @@ export function moveBoundingBox(bounds: Bounds, translation: Point) {
 export function resizeBoundingBox(bounds: Bounds, handle: ResizeHandle, point: Point) {
   const direction = resizeDirections[handle];
   const anchor = anchorPoint(bounds, direction);
-  const anchorWorld = bounds.transform.transformPoint(new DOMPoint(anchor.x, anchor.y));
+  const anchorWorld = mapPoint(bounds.transform, anchor.x, anchor.y);
   const offsetX = point.x - anchorWorld.x;
   const offsetY = point.y - anchorWorld.y;
   let { a, b, c, d } = bounds.transform;
@@ -94,6 +93,29 @@ function anchorPoint(
 }
 
 export function contains(bounds: Bounds, point: Point) {
-  const local = bounds.transform.inverse().transformPoint(new DOMPoint(point.x, point.y));
+  const inverse = invert2D(bounds.transform);
+  if (!inverse) return false;
+  const local = mapPoint(inverse, point.x, point.y);
   return local.x >= 0 && local.y >= 0 && local.x < bounds.width && local.y < bounds.height;
+}
+
+function mapPoint(matrix: DOMMatrix, x: number, y: number): Point {
+  return {
+    x: matrix.a * x + matrix.c * y + matrix.e,
+    y: matrix.b * x + matrix.d * y + matrix.f,
+  };
+}
+
+function invert2D(matrix: DOMMatrix): DOMMatrix | undefined {
+  const { a, b, c, d, e, f } = matrix;
+  const det = a * d - c * b;
+  if (!Number.isFinite(det) || Math.abs(det) < 1e-8) return;
+  const inverse = new DOMMatrix();
+  inverse.a = d / det;
+  inverse.b = -b / det;
+  inverse.c = -c / det;
+  inverse.d = a / det;
+  inverse.e = (c * f - d * e) / det;
+  inverse.f = (b * e - a * f) / det;
+  return inverse;
 }

@@ -10,6 +10,14 @@ export function createScene(): { [name: string]: SceneNode } {
       image: "default.png",
       booleanValue: "true",
     },
+    rectangle: {
+      transform: new DOMMatrix().translate(80, 60),
+      width: "96",
+      height: "48",
+      tint: "#d4d4d8ff",
+      image: "default.png",
+      parent: "square",
+    },
     key: "property",
     test: { nested: { objects: "hello"}},
   };

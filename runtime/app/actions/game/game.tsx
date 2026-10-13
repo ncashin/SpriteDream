@@ -12,6 +12,7 @@ import {
 } from "../../utilities/selected-objects.ts";
 import { updateLoop as createUpdateLoop } from "../../utilities/update-loop.ts";
 import { imageTrait } from "../../utilities/viewport/draw-image.ts";
+import { parentObject, transform } from "../../utilities/viewport/transform.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
 import { viewport } from "../../utilities/viewport/viewport.ts";
 import { ObjectTree } from "../editor/object-tree.tsx";
@@ -22,7 +23,9 @@ const POPOVER_GAP = 10;
 
 function selectableAt(point: WorldPoint): GameObject | undefined {
   const found = queryScene(scene, imageTrait).find((node) => {
-    return contains(node, point);
+    const matrix = transform(node);
+    if (!matrix) return false;
+    return contains({ transform: matrix, width: node.width, height: node.height }, point);
   });
   return found;
 }
@@ -108,19 +111,21 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
 
             editorLoop.onUpdate(() => {
               for (const object of selectedObjects) {
-                const sprite = imageTrait(object);
-                if (!sprite) continue;
+                const image = imageTrait(object);
+                if (!image) continue;
 
-                view.drawBoundingBox(sprite);
+                view.drawBoundingBox(image);
 
-                const tempTransform = sprite.transform;
+                const matrix = transform(image);
+                if (!matrix) continue;
+
                 const scaleRemoved = new DOMMatrix();
                 scaleRemoved.a = 1;
                 scaleRemoved.b = 0;
                 scaleRemoved.c = 0;
                 scaleRemoved.d = 1;
-                scaleRemoved.e = tempTransform.e;
-                scaleRemoved.f = tempTransform.f;
+                scaleRemoved.e = matrix.e;
+                scaleRemoved.f = matrix.f;
                 scaleRemoved.translateSelf(0, -POPOVER_GAP);
 
                 view.drawComponent(
@@ -152,12 +157,15 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             gameLoop.onUpdate(({ deltaTime }) => {
               const dx = input.axes.x * SPEED * deltaTime;
               const dy = input.axes.y * SPEED * deltaTime;
+              if (dx === 0 && dy === 0) return;
               for (const image of queryScene(scene, imageTrait)) {
-                image.transform.preMultiplySelf(new DOMMatrix().translate(dx, dy));
+                if (parentObject(image)) continue;
+                transform(image)?.preMultiplySelf(new DOMMatrix().translate(dx, dy));
               }
             });
 
             updateLoop.onUpdate(() => {
+              view.beginDrawing();
               for (const image of queryScene(scene, imageTrait)) {
                 view.drawImage(image);
               }
