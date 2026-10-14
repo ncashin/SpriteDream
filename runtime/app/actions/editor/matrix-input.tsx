@@ -151,13 +151,13 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
             }),
             on("input", (event) => {
               draft = event.currentTarget.value;
-              const next = parseNumber(draft);
-              if (next != null) apply(next);
-              handle.update();
             }),
             on("blur", () => {
-              if (focused === key) focused = null;
-              handle.update();
+              if (focused !== key) return;
+              focused = null;
+              const next = parseNumber(draft);
+              if (next != null && next !== origin) apply(next);
+              else handle.update();
             }),
             on("keydown", (event) => {
               if (event.key === "Enter") event.currentTarget.blur();

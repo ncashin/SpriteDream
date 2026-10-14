@@ -21,10 +21,20 @@ let lastPasteCursor: WorldPoint | undefined;
 
 export function copySelectedObjects() {
   const next: ClipboardEntry[] = [];
+  const seen = new Set<GameObject>();
   for (const object of selectedObjects) {
     const owner = findOwner(scene, object);
-    if (!owner) continue;
-    next.push({ parent: owner.parent, name: owner.name, value: structuredClone(object) });
+    if (!owner || seen.has(object)) continue;
+    const items = [{ name: owner.name, value: object }, ...childOwners(owner.parent, owner.name)];
+    for (const item of items) {
+      if (seen.has(item.value)) continue;
+      seen.add(item.value);
+      next.push({
+        parent: owner.parent,
+        name: item.name,
+        value: structuredClone(item.value),
+      });
+    }
   }
   if (next.length === 0) return false;
   clipboard = next;
@@ -35,17 +45,30 @@ export function copySelectedObjects() {
 
 export function pasteCopiedObjects() {
   if (clipboard.length === 0) return false;
-  const pasted: GameObject[] = [];
-  for (const entry of clipboard) {
-    if (!isAttached(scene, entry.parent)) continue;
-    const copy = structuredClone(entry.value);
-    const name = uniqueName(entry.parent, entry.name);
-    entry.parent[name] = copy;
-    pasted.push(copy);
+  const pasted: { parent: GameObject; copy: GameObject }[] = [];
+  const containers = new Set(clipboard.map((entry) => entry.parent));
+  for (const container of containers) {
+    if (!isAttached(scene, container)) continue;
+    const renamed = new Map<string, string>();
+    const copies: GameObject[] = [];
+    for (const entry of clipboard) {
+      if (entry.parent !== container) continue;
+      const copy = structuredClone(entry.value);
+      const name = uniqueName(container, entry.name);
+      renamed.set(entry.name, name);
+      container[name] = copy;
+      copies.push(copy);
+      pasted.push({ parent: container, copy });
+    }
+    for (const copy of copies) {
+      if (typeof copy.parent === "string" && renamed.has(copy.parent)) {
+        copy.parent = renamed.get(copy.parent);
+      }
+    }
   }
   if (pasted.length === 0) return false;
-  moveToCursor(pasted);
-  selectObjects(pasted);
+  moveToCursor(pastedRoots(pasted));
+  selectObjects(pasted.map((entry) => entry.copy));
   return true;
 }
 
@@ -84,6 +107,35 @@ function findOwner(
       if (found) return found;
     }
   }
+}
+
+function childOwners(container: GameObject, name: string): { name: string; value: GameObject }[] {
+  const owned = new Set<string>([name]);
+  const children: { name: string; value: GameObject }[] = [];
+  let added = true;
+  while (added) {
+    added = false;
+    for (const [key, value] of Object.entries(container)) {
+      if (owned.has(key) || !isGameObject(value)) continue;
+      if (typeof value.parent !== "string" || !owned.has(value.parent)) continue;
+      owned.add(key);
+      children.push({ name: key, value });
+      added = true;
+    }
+  }
+  return children;
+}
+
+function pastedRoots(pasted: { parent: GameObject; copy: GameObject }[]) {
+  const copies = new Set(pasted.map((entry) => entry.copy));
+  return pasted.flatMap(({ parent, copy }) => {
+    const owner = typeof copy.parent === "string" ? parent[copy.parent] : undefined;
+    return copies.has(owner as GameObject) ? [] : [copy];
+  });
+}
+
+function isGameObject(value: unknown): value is GameObject {
+  return isObject(value) && !(value instanceof DOMMatrix);
 }
 
 function isAttached(root: GameObject, target: GameObject): boolean {
@@ -147,8 +199,9 @@ function pointOf(object: GameObject): WorldPoint | undefined {
   const matrix = transform(object)?.matrix;
   if (!matrix) return;
 
-  const width = Number(object.width);
-  const height = Number(object.height);
+  const image = isObject(object.image) ? object.image : undefined;
+  const width = Number(image?.width);
+  const height = Number(image?.height);
   if (!Number.isFinite(width) || !Number.isFinite(height)) return { x: matrix.e, y: matrix.f };
   return center({ transform: matrix, width, height });
 }

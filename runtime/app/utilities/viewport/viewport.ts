@@ -1,9 +1,11 @@
 import type { RemixNode } from "remix/component";
 
 import type { GameObject } from "../../actions/editor/object-tree.tsx";
-import { drawBoundingBox } from "./draw-bounding-box.tsx";
+import type { Collider } from "../physics.ts";
 import { createDrawComponent } from "./draw-component.ts";
+import { type BoundingBox, drawBoundingBox } from "./draw-bounding-box.tsx";
 import { type Image, drawImage } from "./draw-image.ts";
+import { drawPhysicsCollider } from "./draw-physics-collider.ts";
 import { curryViewportEvents } from "./viewportEvents.ts";
 import {
   curryViewportTransforms,
@@ -87,11 +89,14 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
   return {
     ...viewport,
     beginDrawing,
-    drawImage(sprite: Image) {
-      drawImage(viewport, sprite);
+    drawImage(image: Image) {
+      drawImage(viewport, image);
     },
-    drawBoundingBox(sprite: Image) {
-      drawBoundingBox(viewport, sprite);
+    drawBoundingBox(object: BoundingBox) {
+      drawBoundingBox(viewport, object);
+    },
+    drawPhysicsCollider(object: Collider) {
+      drawPhysicsCollider(viewport, object);
     },
   };
 }

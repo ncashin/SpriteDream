@@ -4,18 +4,46 @@ export function createScene(): { [name: string]: SceneNode } {
   return {
     square: {
       transform: new DOMMatrix().translate(350, 300),
-      width: "64",
-      height: "64",
-      tint: "#f4f4f5ff",
-      image: "default.png",
+      image: {
+        width: "64",
+        height: "64",
+        tint: "#f4f4f5ff",
+        image: "default.png",
+      },
       booleanValue: "true",
+      physicsBody: {
+        body: "dynamic",
+        density: "1",
+        fixedRotation: "false",
+        gravity: "9.8",
+        velocity: { x: "0", y: "0" },
+      },
+      collider: {
+        friction: "0.4",
+        restitution: "0.2",
+      },
+    },
+    ground: {
+      transform: new DOMMatrix().translate(400, 560),
+      image: {
+        width: "720",
+        height: "24",
+        tint: "#a1a1aaff",
+        image: "default.png",
+      },
+      collider: {
+        friction: "0.6",
+        restitution: "0",
+      },
     },
     rectangle: {
       transform: new DOMMatrix().translate(80, 60),
-      width: "96",
-      height: "48",
-      tint: "#d4d4d8ff",
-      image: "default.png",
+      image: {
+        width: "96",
+        height: "48",
+        tint: "#d4d4d8ff",
+        image: "default.png",
+      },
       parent: "square",
     },
     key: "property",

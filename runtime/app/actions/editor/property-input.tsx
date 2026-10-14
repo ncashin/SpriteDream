@@ -199,6 +199,8 @@ function parseFile(value: string): string | null {
 export function PropertyInput(handle: Handle<PropertyInputProps>) {
   let name = handle.props.name;
   let object = handle.props.object;
+  let editing = false;
+  let draft = "";
 
   let scrub: {
     pointerId: number;
@@ -248,7 +250,7 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
       );
     }
 
-    let value = String(current);
+    let value = editing ? draft : String(current);
     let color = parseHexColor(value);
     let bool = parseBoolean(value);
     let file = parseFile(value);
@@ -278,8 +280,25 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
               flex: "1 1 auto",
               width: "100%",
             }),
+            on("focus", (event) => {
+              editing = true;
+              draft = event.currentTarget.value;
+            }),
             on("input", (event) => {
-              object[name] = event.currentTarget.value;
+              draft = event.currentTarget.value;
+            }),
+            on("blur", () => {
+              if (!editing) return;
+              editing = false;
+              if (object[name] !== draft) object[name] = draft;
+              handle.update();
+            }),
+            on("keydown", (event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+              if (event.key !== "Escape") return;
+              editing = false;
+              handle.update();
+              event.currentTarget.blur();
             }),
             on("pointerdown", (event) => {
               if (event.button !== 0) return;

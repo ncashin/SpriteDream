@@ -1,5 +1,8 @@
+import SquareDashed from "lucide/dist/esm/icons/square-dashed.mjs";
 import { css, on } from "remix/component";
 import type { Handle, RemixNode } from "remix/component";
+import { defaulted, object } from "remix/data-schema";
+import { number } from "remix/data-schema/coerce";
 
 import {
   moveBoundingBox,
@@ -10,9 +13,20 @@ import {
   type Point,
   type ResizeHandle,
 } from "../bounding.ts";
-import type { Image } from "./draw-image.ts";
+import { defineTrait } from "../trait/trait.ts";
 import { transform } from "./transform.ts";
 import { screenToWorld, type ViewportWithTransforms } from "./viewportTransforms.ts";
+
+export const boundingBoxTrait = defineTrait(
+  "Bounding Box",
+  SquareDashed,
+  object({
+    width: defaulted(number(), 64),
+    height: defaulted(number(), 64),
+  }),
+);
+
+export type BoundingBox = NonNullable<ReturnType<typeof boundingBoxTrait>>;
 
 const WHEEL_PASSTHROUGH = "data-wheel-passthrough";
 
@@ -79,11 +93,15 @@ export function drawBoundingBox(
   viewport: ViewportWithTransforms & {
     drawComponent(transform: DOMMatrix, node: RemixNode): void;
   },
-  sprite: Image,
+  object: BoundingBox,
 ) {
-  const matrix = transform(sprite)?.matrix;
+  const matrix = transform(object)?.matrix;
   if (!matrix) return;
-  const bounds = { transform: matrix, width: sprite.width, height: sprite.height };
+  const bounds = {
+    transform: matrix,
+    width: object.boundingBox.width,
+    height: object.boundingBox.height,
+  };
   const frame = scaleRemoved(bounds);
   viewport.drawComponent(
     frame.transform,

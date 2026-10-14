@@ -18,7 +18,7 @@ export const assets = createAssetServer({
     "app/icon.tsx",
     "app/**/public/**",
   ],
-  allowPackages: ["remix", "lucide"],
+  allowPackages: ["remix", "lucide", "planck"],
   denyFiles: ["app/**/*.test.*"],
   sourceMaps: isDevelopment ? "external" : undefined,
   minify: !isDevelopment,

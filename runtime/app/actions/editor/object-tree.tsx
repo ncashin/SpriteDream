@@ -10,6 +10,7 @@ import { Icon } from "../../icon.tsx";
 import { isObject } from "../../utilities/is-object.ts";
 import { deselectObject, selectedObjects } from "../../utilities/selected-objects.ts";
 import { applyTrait, traits } from "../../utilities/trait/trait.ts";
+import "../../utilities/physics.ts";
 import "../../utilities/viewport/draw-image.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { Dropdown, type DropdownItem } from "./dropdown.tsx";
@@ -111,6 +112,7 @@ function addItems(object: GameObject, done: () => void): DropdownItem[] {
       icon: entry.icon,
       onSelect: () => {
         applyTrait(entry.trait, object);
+        if (!(object.transform instanceof DOMMatrix)) object.transform = new DOMMatrix();
         done();
       },
     });

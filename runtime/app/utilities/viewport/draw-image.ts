@@ -1,5 +1,5 @@
 import ImageIcon from "lucide/dist/esm/icons/image.mjs";
-import { defaulted, instanceof_, object, string } from "remix/data-schema";
+import { defaulted, object, string } from "remix/data-schema";
 import { number } from "remix/data-schema/coerce";
 
 import { loadImage } from "../runtime-assets.ts";
@@ -11,18 +11,10 @@ export const imageTrait = defineTrait(
   "Image",
   ImageIcon,
   object({
-    transform: instanceof_(DOMMatrix),
-    width: number(),
-    height: number(),
-    tint: string(),
-    image: defaulted(string(), ""),
-  }),
-  () => ({
-    transform: new DOMMatrix(),
-    width: 64,
-    height: 64,
-    tint: "#f4f4f5ff",
-    image: "default.png",
+    width: defaulted(number(), 64),
+    height: defaulted(number(), 64),
+    tint: defaulted(string(), "#f4f4f5ff"),
+    image: defaulted(string(), "default.png"),
   }),
 );
 
@@ -36,18 +28,18 @@ export function drawImage(viewportWithTransforms: ViewportWithTransforms, sprite
   context.save();
   applyTransform(context, worldMatrix);
 
-  const x = -sprite.width / 2;
-  const y = -sprite.height / 2;
-  const image = loadImage(sprite.image);
+  const x = -sprite.image.width / 2;
+  const y = -sprite.image.height / 2;
+  const image = loadImage(sprite.image.image);
   if (!image) {
-    context.fillStyle = sprite.tint;
-    context.fillRect(x, y, sprite.width, sprite.height);
+    context.fillStyle = sprite.image.tint;
+    context.fillRect(x, y, sprite.image.width, sprite.image.height);
     context.restore();
     return;
   }
 
-  const tinted = applyTintToImage(image, sprite.width, sprite.height, sprite.tint);
-  if (tinted) context.drawImage(tinted, x, y, sprite.width, sprite.height);
+  const tinted = applyTintToImage(image, sprite.image.width, sprite.image.height, sprite.image.tint);
+  if (tinted) context.drawImage(tinted, x, y, sprite.image.width, sprite.image.height);
   context.restore();
 }
 

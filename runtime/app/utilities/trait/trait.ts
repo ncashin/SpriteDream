@@ -14,24 +14,27 @@ export type TraitEntry = {
 
 export const traits = new Set<TraitEntry>();
 
-const initials = new WeakMap<Trait, () => Record<string, unknown>>();
+type PropertyName<name extends string> = name extends `${infer First} ${infer Rest}`
+  ? `${Lowercase<First>}${Capitalize<PropertyName<Rest>>}`
+  : Lowercase<name>;
 
-export function defineTrait<schema extends Schema<any, any>>(
-  name: string,
+const stored = new WeakMap<Trait, { property: string; schema: Schema<any, any> }>();
+
+export function defineTrait<name extends string, schema extends Schema<any, any>>(
+  name: name,
   icon: IconNode,
   schema: schema,
-  create?: () => Record<string, unknown>,
-): Trait<InferOutput<schema>> {
-  const trait: Trait<InferOutput<schema>> = (value) => {
-    const result = parseSafe(schema, value);
+): Trait<{ [K in PropertyName<name>]: InferOutput<schema> }> {
+  const property = propertyName(name);
+  const trait: Trait<{ [K in PropertyName<name>]: InferOutput<schema> }> = (value) => {
+    if (!isObject(value)) return;
+    const child = value[property];
+    const result = parseSafe(schema, child);
     if (!result.success) return;
-    if (isObject(value) && isObject(result.value)) {
-      writeParsed(value, result.value);
-      return value as InferOutput<schema>;
-    }
-    return result.value;
+    if (isObject(child) && isObject(result.value)) writeParsed(child, result.value);
+    return value as { [K in PropertyName<name>]: InferOutput<schema> };
   };
-  if (create) initials.set(trait, create);
+  stored.set(trait, { property, schema });
   traits.add({ name, icon, trait });
   return trait;
 }
@@ -40,28 +43,42 @@ export function applyTrait<output>(
   trait: Trait<output>,
   object: Record<string, unknown>,
 ): output | undefined {
-  const value: Record<string, unknown> = { ...object };
-  const created = initials.get(trait as Trait)?.() ?? trait({});
-  if (isObject(created)) {
-    for (const key of Object.keys(created)) {
-      if (!Object.hasOwn(value, key)) value[key] = created[key];
+  const entry = stored.get(trait as Trait);
+  if (entry) {
+    const defaults = parseSafe(entry.schema, {});
+    if (defaults.success && isObject(defaults.value)) {
+      const current = object[entry.property];
+      if (!isObject(current)) object[entry.property] = { ...defaults.value };
+      else {
+        for (const field of Object.keys(defaults.value)) {
+          if (!Object.hasOwn(current, field)) current[field] = defaults.value[field];
+        }
+      }
     }
   }
 
-  const applied = trait(value);
-  if (!isObject(applied)) return;
-  writeParsed(object, applied);
-  return object as output;
+  return trait(object);
+}
+
+function propertyName(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((word, index) => {
+      const lower = word.toLowerCase();
+      return index === 0 ? lower : lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join("");
 }
 
 function writeParsed(target: Record<string, unknown>, parsed: Record<string, unknown>) {
-  for (const key of Object.keys(parsed)) {
-    const next = parsed[key];
-    const current = target[key];
+  for (const field of Object.keys(parsed)) {
+    const next = parsed[field];
+    const current = target[field];
     if (isObject(current) && isObject(next)) {
       writeParsed(current, next);
       continue;
     }
-    target[key] = next;
+    target[field] = next;
   }
 }
