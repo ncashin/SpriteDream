@@ -1,3 +1,26 @@
+import type { GameObject } from "../actions/editor/object-tree.tsx";
+import { transform } from "./viewport/transform.ts";
+
+export type BoundingBoxSize = { width: number; height: number };
+
+type BoundingBoxLookup = (object: GameObject) => BoundingBoxSize | undefined;
+
+const lookups = new Set<BoundingBoxLookup>();
+
+export function addBoundingBoxLookup(lookup: BoundingBoxLookup) {
+  lookups.add(lookup);
+}
+
+export function lookupBoundingBox(object: GameObject): Bounds | undefined {
+  const matrix = transform(object)?.matrix;
+  if (!matrix) return;
+  for (const lookup of lookups) {
+    const size = lookup(object);
+    if (!size) continue;
+    return { transform: matrix, width: size.width, height: size.height };
+  }
+}
+
 export type Point = { x: number; y: number };
 
 export type Bounds = {

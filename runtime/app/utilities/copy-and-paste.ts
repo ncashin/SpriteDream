@@ -1,5 +1,5 @@
 import type { GameObject } from "../actions/editor/object-tree.tsx";
-import { center } from "./bounding.ts";
+import { center } from "./bounding-box.ts";
 import { isObject } from "./is-object.ts";
 import { Mode, mode } from "./mode.ts";
 import { scene } from "./scene.ts";

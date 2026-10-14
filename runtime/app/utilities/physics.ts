@@ -5,9 +5,10 @@ import { defaulted, enum_, object } from "remix/data-schema";
 import { boolean, number } from "remix/data-schema/coerce";
 
 import type { GameObject } from "../actions/editor/object-tree.tsx";
+import { addBoundingBoxLookup, lookupBoundingBox } from "./bounding-box.ts";
 import { queryScene, scene } from "./scene.ts";
 import { defineTrait } from "./trait/trait.ts";
-import { imageTrait } from "./viewport/draw-image.ts";
+import "./viewport/draw-image.ts";
 import { transform } from "./viewport/transform.ts";
 
 const bodyTypes = ["static", "kinematic", "dynamic"] as const;
@@ -42,6 +43,11 @@ export const physicsBodyTrait = defineTrait(
 
 export type Collider = NonNullable<ReturnType<typeof colliderTrait>>;
 export type PhysicsBody = NonNullable<ReturnType<typeof physicsBodyTrait>>;
+
+addBoundingBoxLookup((object) => {
+  if (!colliderTrait(object)) return;
+  return { width: 64, height: 64 };
+});
 
 const pixelsPerMeter = 64;
 const maxStep = 1 / 20;
@@ -91,9 +97,9 @@ function createBody(object: GameObject) {
 
   const physics = physicsBodyTrait(object);
   const collider = colliderTrait(object);
-  const image = imageTrait(object);
-  const width = toMeters(Math.abs((image?.image.width ?? 64) * placement.scale.x));
-  const height = toMeters(Math.abs((image?.image.height ?? 64) * placement.scale.y));
+  const bounds = lookupBoundingBox(object);
+  const width = toMeters(Math.abs((bounds?.width ?? 64) * placement.scale.x));
+  const height = toMeters(Math.abs((bounds?.height ?? 64) * placement.scale.y));
   const body = world.createBody({
     type: physics?.physicsBody.body ?? "static",
     position: Vec2(toMeters(placement.position.x), toMeters(placement.position.y)),

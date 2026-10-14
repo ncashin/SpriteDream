@@ -2,6 +2,7 @@ import ImageIcon from "lucide/dist/esm/icons/image.mjs";
 import { defaulted, object, string } from "remix/data-schema";
 import { number } from "remix/data-schema/coerce";
 
+import { addBoundingBoxLookup } from "../bounding-box.ts";
 import { loadImage } from "../runtime-assets.ts";
 import { defineTrait } from "../trait/trait.ts";
 import { applyTransform, transform } from "./transform.ts";
@@ -19,6 +20,12 @@ export const imageTrait = defineTrait(
 );
 
 export type Image = NonNullable<ReturnType<typeof imageTrait>>;
+
+addBoundingBoxLookup((object) => {
+  const image = imageTrait(object);
+  if (!image) return;
+  return { width: image.image.width, height: image.image.height };
+});
 
 export function drawImage(viewportWithTransforms: ViewportWithTransforms, sprite: Image) {
   const context = viewportWithTransforms.state.context;

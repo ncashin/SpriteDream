@@ -1,10 +1,9 @@
-import SquareDashed from "lucide/dist/esm/icons/square-dashed.mjs";
 import { css, on } from "remix/component";
 import type { Handle, RemixNode } from "remix/component";
-import { defaulted, object } from "remix/data-schema";
-import { number } from "remix/data-schema/coerce";
 
+import type { GameObject } from "../../actions/editor/object-tree.tsx";
 import {
+  lookupBoundingBox,
   moveBoundingBox,
   resizeBoundingBox,
   resizeDirections,
@@ -12,21 +11,8 @@ import {
   type Bounds,
   type Point,
   type ResizeHandle,
-} from "../bounding.ts";
-import { defineTrait } from "../trait/trait.ts";
-import { transform } from "./transform.ts";
+} from "../bounding-box.ts";
 import { screenToWorld, type ViewportWithTransforms } from "./viewportTransforms.ts";
-
-export const boundingBoxTrait = defineTrait(
-  "Bounding Box",
-  SquareDashed,
-  object({
-    width: defaulted(number(), 64),
-    height: defaulted(number(), 64),
-  }),
-);
-
-export type BoundingBox = NonNullable<ReturnType<typeof boundingBoxTrait>>;
 
 const WHEEL_PASSTHROUGH = "data-wheel-passthrough";
 
@@ -93,15 +79,10 @@ export function drawBoundingBox(
   viewport: ViewportWithTransforms & {
     drawComponent(transform: DOMMatrix, node: RemixNode): void;
   },
-  object: BoundingBox,
+  object: GameObject,
 ) {
-  const matrix = transform(object)?.matrix;
-  if (!matrix) return;
-  const bounds = {
-    transform: matrix,
-    width: object.boundingBox.width,
-    height: object.boundingBox.height,
-  };
+  const bounds = lookupBoundingBox(object);
+  if (!bounds) return;
   const frame = scaleRemoved(bounds);
   viewport.drawComponent(
     frame.transform,

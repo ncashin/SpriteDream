@@ -1,5 +1,5 @@
+import { lookupBoundingBox } from "../bounding-box.ts";
 import type { Collider } from "../physics.ts";
-import { imageTrait } from "./draw-image.ts";
 import { applyTransform, transform } from "./transform.ts";
 import type { ViewportWithTransforms } from "./viewportTransforms.ts";
 
@@ -7,9 +7,9 @@ export function drawPhysicsCollider(viewport: ViewportWithTransforms, object: Co
   const worldMatrix = transform(object)?.matrix;
   if (!worldMatrix) return;
 
-  const image = imageTrait(object);
-  const width = image?.image.width ?? 64;
-  const height = image?.image.height ?? 64;
+  const bounds = lookupBoundingBox(object);
+  const width = bounds?.width ?? 64;
+  const height = bounds?.height ?? 64;
   const context = viewport.state.context;
 
   context.save();

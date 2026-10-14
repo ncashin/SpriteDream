@@ -1,9 +1,10 @@
 import { clientEntry, css, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { contains } from "../../utilities/bounding.ts";
+import { contains, lookupBoundingBox } from "../../utilities/bounding-box.ts";
 import { copyAndPaste } from "../../utilities/copy-and-paste.ts";
 import { inputMap } from "../../utilities/input.ts";
+import { isObject } from "../../utilities/is-object.ts";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
 import { colliderTrait, physicsBodyTrait, resetPhysics, stepPhysics } from "../../utilities/physics.ts";
 import { scene, queryScene } from "../../utilities/scene.ts";
@@ -12,7 +13,6 @@ import {
   selectedObjects,
 } from "../../utilities/selected-objects.ts";
 import { updateLoop as createUpdateLoop } from "../../utilities/update-loop.ts";
-import { boundingBoxTrait } from "../../utilities/viewport/draw-bounding-box.tsx";
 import { imageTrait } from "../../utilities/viewport/draw-image.ts";
 import { parentObject, transform } from "../../utilities/viewport/transform.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
@@ -22,15 +22,13 @@ import type { GameObject } from "../editor/object-tree.tsx";
 const SPEED = 240;
 
 function selectableAt(point: WorldPoint): GameObject | undefined {
-  const found = queryScene(scene, imageTrait).find((node) => {
-    const placement = transform(node);
-    if (!placement) return false;
-    return contains(
-      { transform: placement.matrix, width: node.image.width, height: node.image.height },
-      point,
-    );
+  const found = queryScene(scene, (node) => {
+    if (!isObject(node) || node instanceof DOMMatrix) return;
+    const bounds = lookupBoundingBox(node);
+    if (!bounds || !contains(bounds, point)) return;
+    return node;
   });
-  return found;
+  return found[0];
 }
 
 export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
@@ -107,10 +105,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             const gameLoop = createUpdateLoop(updateLoop);
 
             editorLoop.onUpdate(() => {
-              for (const box of queryScene(scene, boundingBoxTrait)) {
-                if (!selectedObjects.has(box)) continue;
-                view.drawBoundingBox(box);
-              }
+              for (const object of selectedObjects) view.drawBoundingBox(object);
             });
 
             gameLoop.onUpdate(({ deltaTime }) => {
