@@ -5,9 +5,9 @@ import { defaulted, enum_, object } from "remix/data-schema";
 import { boolean, number } from "remix/data-schema/coerce";
 
 import type { GameObject } from "../actions/editor/object-tree.tsx";
-import { addBoundingBoxLookup, lookupBoundingBox } from "./bounding-box.ts";
+import { addBoundingBoxLookup } from "./bounding-box.ts";
 import { isObject } from "./is-object.ts";
-import { queryScene, scene } from "./scene.ts";
+import { filterScene, scene } from "./scene.ts";
 import { defineTrait } from "./trait/trait.ts";
 import "./viewport/draw-image.ts";
 import { parentObject, transform } from "./viewport/transform.ts";
@@ -18,9 +18,12 @@ export const colliderTrait = defineTrait(
   "Collider",
   Square,
   object({
+    width: defaulted(number(), 64),
+    height: defaulted(number(), 64),
     friction: defaulted(number(), 0.3),
     restitution: defaulted(number(), 0),
     sensor: defaulted(boolean(), false),
+    propagateCollision: defaulted(boolean(), false),
   }),
 );
 
@@ -46,8 +49,16 @@ export type Collider = NonNullable<ReturnType<typeof colliderTrait>>;
 export type PhysicsBody = NonNullable<ReturnType<typeof physicsBodyTrait>>;
 
 addBoundingBoxLookup((object) => {
-  if (!colliderTrait(object)) return;
-  return { width: 64, height: 64 };
+  const collider = colliderTrait(object);
+  if (!collider) return;
+  return {
+    width: collider.collider.width,
+    height: collider.collider.height,
+    resizeCallback: ({ width, height }) => {
+      collider.collider.width = width;
+      collider.collider.height = height;
+    },
+  };
 });
 
 const pixelsPerMeter = 128;
@@ -63,33 +74,50 @@ function toPixels(meters: number) {
 
 const world = new World(Vec2(0, 0));
 const simulated = new Map<GameObject, Body>();
+const hostedFixtures = new Map<GameObject, { propagate: boolean; children: readonly GameObject[]; sizes: string; kind: string }>();
+const localPose = new Map<
+  GameObject,
+  { x: number; y: number; angle: number; vx: number; vy: number; spin: number; sceneX: number; sceneY: number; sceneAngle: number }
+>();
 
 export function stepPhysics(deltaTime: number) {
   if (!(deltaTime > 0)) return;
 
-  const bodies = queryScene(scene, physicsBodyTrait).filter((object) => !hostedCollider(object));
-  const colliders = queryScene(scene, colliderTrait).filter((object) => !hostedCollider(object));
+  const bodies = filterScene(scene, physicsBodyTrait).filter((object) => !hostedCollider(object));
+  const colliders = filterScene(scene, colliderTrait).filter((object) => !hostedCollider(object));
   const live = new Set<GameObject>([...bodies, ...colliders]);
   for (const [object, body] of simulated) {
     if (live.has(object)) continue;
     world.destroyBody(body);
     simulated.delete(object);
+    hostedFixtures.delete(object);
+    localPose.delete(object);
   }
   for (const object of live) {
+    if (simulated.has(object) && fixturesStale(object)) {
+      world.destroyBody(simulated.get(object)!);
+      simulated.delete(object);
+      hostedFixtures.delete(object);
+      localPose.delete(object);
+    }
     if (!simulated.has(object)) createBody(object);
     else syncFromScene(object, deltaTime);
   }
 
   for (const object of bodies) applyGravity(object);
+  for (const object of colliders) applySeparatedGravity(object);
 
   world.step(Math.min(deltaTime, maxStep), 8, 3);
 
   for (const object of bodies) writeBack(object);
+  for (const object of colliders) writeSeparatedCollider(object);
 }
 
 export function resetPhysics() {
   for (const body of simulated.values()) world.destroyBody(body);
   simulated.clear();
+  hostedFixtures.clear();
+  localPose.clear();
 }
 
 function createBody(object: GameObject) {
@@ -98,14 +126,24 @@ function createBody(object: GameObject) {
 
   const physics = physicsBodyTrait(object);
   const collider = colliderTrait(object);
+  const separated = separatedCollider(object);
   const body = world.createBody({
-    type: physics?.physicsBody.body ?? "static",
+    type: physics?.physicsBody.body ?? (separated ? "dynamic" : "static"),
     position: Vec2(toMeters(placement.position.x), toMeters(placement.position.y)),
     angle: (placement.rotation * Math.PI) / 180,
     fixedRotation: physics?.physicsBody.fixedRotation ?? false,
+    gravityScale: separated ? 0 : 1,
   });
+  const children = propagatedColliders(object);
   if (collider) addColliderFixture(body, object, object);
-  for (const child of propagatedColliders(object)) addColliderFixture(body, child, object);
+  for (const child of children) addColliderFixture(body, child, object);
+  hostedFixtures.set(object, {
+    propagate: propagatesCollision(object),
+    children,
+    sizes: fixtureSizes(object, children),
+    kind: bodyKind(object),
+  });
+  if (separated) rememberLocalPose(object);
   const velocity = physics?.physicsBody.velocity;
   if (velocity) body.setLinearVelocity(Vec2(toMeters(velocity.x), toMeters(velocity.y)));
   simulated.set(object, body);
@@ -116,6 +154,10 @@ function syncFromScene(object: GameObject, deltaTime: number) {
   const placement = transform(object);
   if (!body || !placement) return;
 
+  if (separatedCollider(object)) {
+    placeWithParent(object, body);
+    return;
+  }
   const position = Vec2(toMeters(placement.position.x), toMeters(placement.position.y));
   const angle = (placement.rotation * Math.PI) / 180;
   const physics = physicsBodyTrait(object)?.physicsBody;
@@ -133,9 +175,34 @@ function syncFromScene(object: GameObject, deltaTime: number) {
   }
 }
 
+function fixturesStale(object: GameObject) {
+  const previous = hostedFixtures.get(object);
+  if (!previous) return false;
+  const children = propagatedColliders(object);
+  if (previous.propagate !== propagatesCollision(object)) return true;
+  if (previous.kind !== bodyKind(object)) return true;
+  if (previous.sizes !== fixtureSizes(object, children)) return true;
+  return previous.children.length !== children.length || previous.children.some((child, index) => child !== children[index]);
+}
+
+function fixtureSizes(object: GameObject, children: readonly GameObject[]) {
+  return [object, ...children].map(colliderSize).join("|");
+}
+
+function bodyKind(object: GameObject) {
+  const physics = physicsBodyTrait(object)?.physicsBody;
+  if (!physics) return separatedCollider(object) ? "separated" : "static";
+  return `${physics.body},${physics.fixedRotation},${physics.density}`;
+}
+
+function colliderSize(object: GameObject) {
+  const collider = colliderTrait(object)?.collider;
+  if (!collider) return "";
+  return `${collider.width},${collider.height}`;
+}
+
 function propagatesCollision(object: GameObject) {
-  const value = object.propagateCollision;
-  return value === true || value === "true";
+  return colliderTrait(object)?.collider.propagateCollision === true;
 }
 
 function hostedCollider(object: GameObject) {
@@ -147,11 +214,84 @@ function collisionHost(object: GameObject): GameObject | undefined {
   if (!parent) return;
   const higher = collisionHost(parent);
   if (higher) return higher;
-  if (propagatesCollision(parent) && colliderTrait(parent)) return parent;
+  if (propagatesCollision(parent) && (physicsBodyTrait(parent) || colliderTrait(parent))) return parent;
+}
+
+function separatedCollider(object: GameObject) {
+  return Boolean(colliderTrait(object) && !physicsBodyTrait(object) && parentObject(object) && !hostedCollider(object));
+}
+
+function carrierBody(object: GameObject) {
+  const seen = new Set<GameObject>();
+  let current = parentObject(object);
+  while (current && !seen.has(current)) {
+    const body = simulated.get(current);
+    if (body) return body;
+    seen.add(current);
+    current = parentObject(current);
+  }
+}
+
+function sceneLocalPose(object: GameObject) {
+  const placement = transform(object);
+  const parent = parentObject(object);
+  const parentPlacement = parent ? transform(parent) : undefined;
+  if (!placement || !parentPlacement) return;
+  const local = bodyLocal(parentPlacement, placement);
+  return { x: local.x, y: local.y, angle: local.angle };
+}
+
+function rememberLocalPose(object: GameObject) {
+  const local = sceneLocalPose(object);
+  if (!local) return;
+  localPose.set(object, { ...local, vx: 0, vy: 0, spin: 0, sceneX: local.x, sceneY: local.y, sceneAngle: local.angle });
+}
+
+function adoptEditedPose(object: GameObject) {
+  const local = localPose.get(object);
+  const scene = sceneLocalPose(object);
+  if (!local || !scene) return;
+  const moved =
+    Math.abs(scene.x - local.sceneX) > 1e-4 ||
+    Math.abs(scene.y - local.sceneY) > 1e-4 ||
+    Math.abs(scene.angle - local.sceneAngle) > 1e-4;
+  if (!moved) return;
+  local.x = scene.x;
+  local.y = scene.y;
+  local.angle = scene.angle;
+  local.vx = 0;
+  local.vy = 0;
+  local.spin = 0;
+  local.sceneX = scene.x;
+  local.sceneY = scene.y;
+  local.sceneAngle = scene.angle;
+}
+
+function placeWithParent(object: GameObject, body: Body) {
+  const parent = carrierBody(object);
+  adoptEditedPose(object);
+  const local = localPose.get(object);
+  if (!parent || !local) return;
+  const origin = parent.getPosition();
+  const rotation = parent.getAngle();
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const velocity = parent.getLinearVelocity();
+  const tangentX = -sin * local.x - cos * local.y;
+  const tangentY = cos * local.x - sin * local.y;
+  const spin = parent.getAngularVelocity();
+  body.setLinearVelocity(
+    Vec2(velocity.x + tangentX * spin + local.vx * cos - local.vy * sin, velocity.y + tangentY * spin + local.vx * sin + local.vy * cos),
+  );
+  body.setAngularVelocity(spin + local.spin);
+  body.setTransform(
+    Vec2(origin.x + local.x * cos - local.y * sin, origin.y + local.x * sin + local.y * cos),
+    rotation + local.angle,
+  );
 }
 
 function propagatedColliders(host: GameObject) {
-  return queryScene(scene, (node) => {
+  return filterScene(scene, (node) => {
     if (!isObject(node) || node instanceof DOMMatrix || collisionHost(node) !== host) return;
     return colliderTrait(node);
   });
@@ -162,11 +302,11 @@ function addColliderFixture(body: Body, object: Collider, host: GameObject) {
   const hostPlacement = transform(host);
   if (!placement || !hostPlacement) return;
 
-  const bounds = lookupBoundingBox(object);
-  const width = toMeters(Math.abs((bounds?.width ?? 64) * placement.scale.x));
-  const height = toMeters(Math.abs((bounds?.height ?? 64) * placement.scale.y));
+  const width = toMeters(Math.abs(object.collider.width * placement.scale.x));
+  const height = toMeters(Math.abs(object.collider.height * placement.scale.y));
   const local = bodyLocal(hostPlacement, placement);
   const physics = physicsBodyTrait(host);
+  const dynamic = physics ? physics.physicsBody.body === "dynamic" : body.getType() === "dynamic";
   body.createFixture(
     BoxShape(
       Math.max(width, toMeters(1)) / 2,
@@ -175,7 +315,7 @@ function addColliderFixture(body: Body, object: Collider, host: GameObject) {
       local.angle,
     ),
     {
-      density: physics?.physicsBody.body === "dynamic" ? Math.max(physics.physicsBody.density, 0) : 0,
+      density: dynamic ? Math.max(physics?.physicsBody.density ?? 1, 0) : 0,
       friction: object.collider.friction,
       restitution: object.collider.restitution,
       isSensor: object.collider.sensor,
@@ -197,6 +337,69 @@ function bodyLocal(
     y: dx * sin + dy * cos,
     angle: ((placement.rotation - host.rotation) * Math.PI) / 180,
   };
+}
+
+function writeSeparatedCollider(object: GameObject) {
+  if (!separatedCollider(object)) return;
+  const body = simulated.get(object);
+  const parent = carrierBody(object);
+  const placement = transform(object);
+  if (!body || !parent || !placement) return;
+
+  const origin = parent.getPosition();
+  const rotation = -parent.getAngle();
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const position = body.getPosition();
+  const dx = position.x - origin.x;
+  const dy = position.y - origin.y;
+  const velocity = body.getLinearVelocity();
+  const parentVelocity = parent.getLinearVelocity();
+  const spin = parent.getAngularVelocity();
+  const worldX = velocity.x - parentVelocity.x - (-Math.sin(parent.getAngle()) * dx - Math.cos(parent.getAngle()) * dy) * spin;
+  const worldY = velocity.y - parentVelocity.y - (Math.cos(parent.getAngle()) * dx - Math.sin(parent.getAngle()) * dy) * spin;
+  const next = {
+    x: dx * cos - dy * sin,
+    y: dx * sin + dy * cos,
+    angle: body.getAngle() - parent.getAngle(),
+    vx: worldX * cos - worldY * sin,
+    vy: worldX * sin + worldY * cos,
+    spin: body.getAngularVelocity() - spin,
+  };
+  localPose.set(object, { ...next, sceneX: next.x, sceneY: next.y, sceneAngle: next.angle });
+
+  const world = body.getPosition();
+  placement.position.x = toPixels(world.x);
+  placement.position.y = toPixels(world.y);
+  placement.rotation = (body.getAngle() * 180) / Math.PI;
+  const written = sceneLocalPose(object);
+  const stored = localPose.get(object);
+  if (written && stored) {
+    stored.sceneX = written.x;
+    stored.sceneY = written.y;
+    stored.sceneAngle = written.angle;
+  }
+}
+
+function applySeparatedGravity(object: GameObject) {
+  if (!separatedCollider(object)) return;
+  const body = simulated.get(object);
+  const carrier = carrierObject(object);
+  const physics = carrier ? physicsBodyTrait(carrier) : undefined;
+  if (!body || !physics || physics.physicsBody.body !== "dynamic") return;
+  const mass = body.getMass();
+  if (!(mass > 0)) return;
+  body.applyForceToCenter(Vec2(0, mass * physics.physicsBody.gravity));
+}
+
+function carrierObject(object: GameObject) {
+  const seen = new Set<GameObject>();
+  let current = parentObject(object);
+  while (current && !seen.has(current)) {
+    if (simulated.has(current)) return current;
+    seen.add(current);
+    current = parentObject(current);
+  }
 }
 
 function applyGravity(object: PhysicsBody) {

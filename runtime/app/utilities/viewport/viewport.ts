@@ -5,6 +5,7 @@ import type { Collider } from "../physics.ts";
 import { createDrawComponent } from "./draw-component.ts";
 import { drawBoundingBox } from "./draw-bounding-box.tsx";
 import { type Image, drawImage } from "./draw-image.ts";
+import { type Text, drawText } from "./draw-text.ts";
 import { type FrameObject, drawFrame } from "./frame.tsx";
 import { drawPhysicsCollider } from "./draw-physics-collider.ts";
 import { curryViewportEvents } from "./viewportEvents.ts";
@@ -92,6 +93,9 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
     beginDrawing,
     drawImage(image: Image) {
       drawImage(viewport, image);
+    },
+    drawText(text: Text) {
+      drawText(viewport, text);
     },
     drawFrame(frame: FrameObject) {
       drawFrame(viewport, frame);

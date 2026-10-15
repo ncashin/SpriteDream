@@ -5,7 +5,7 @@ export type SceneNode = string | DOMMatrix | { [name: string]: SceneNode };
 export function createScene(): { [name: string]: SceneNode } {
   return {
     square: {
-      transform: new DOMMatrix().translate(350, 300),
+      transform: new DOMMatrix().translate(350, 180),
       image: {
         width: "64",
         height: "64",
@@ -21,10 +21,12 @@ export function createScene(): { [name: string]: SceneNode } {
         velocity: { x: "0", y: "0" },
       },
       collider: {
+        width: "64",
+        height: "64",
         friction: "0.4",
         restitution: "0.2",
+        propagateCollision: "true",
       },
-      propagateCollision: "true",
     },
     ground: {
       transform: new DOMMatrix().translate(400, 560),
@@ -35,21 +37,25 @@ export function createScene(): { [name: string]: SceneNode } {
         image: "default.png",
       },
       collider: {
+        width: "720",
+        height: "24",
         friction: "0.6",
         restitution: "0",
       },
     },
     rectangle: {
-      transform: new DOMMatrix().translate(80, 60),
+      transform: new DOMMatrix().translate(70, 80).rotateSelf(25),
       image: {
-        width: "96",
-        height: "48",
+        width: "36",
+        height: "36",
         tint: "#d4d4d8ff",
         image: "default.png",
       },
       collider: {
-        friction: "0.4",
-        restitution: "0.2",
+        width: "36",
+        height: "36",
+        friction: "0.05",
+        restitution: "0.4",
       },
       parent: "square",
     },
@@ -59,6 +65,21 @@ export function createScene(): { [name: string]: SceneNode } {
         frameSource: routes.game.panel.href(),
         width: "220",
         height: "120",
+      },
+      collider: {
+        width: "220",
+        height: "120",
+        friction: "0.4",
+        restitution: "0",
+      },
+    },
+    label: {
+      transform: new DOMMatrix().translate(400, 40),
+      text: {
+        value: "Spritedream",
+        font: "/fonts/Ethnocentric Rg.otf",
+        fontSize: "32",
+        color: "#f4f4f5ff",
       },
     },
     key: "property",
@@ -80,7 +101,7 @@ export function restoreScene() {
   Object.assign(scene, structuredClone(snapshot));
 }
 
-export function queryScene<Result>(
+export function filterScene<Result>(
   scene: { [name: string]: SceneNode },
   check: (value: SceneNode) => Result,
 ): NonNullable<Result>[] {

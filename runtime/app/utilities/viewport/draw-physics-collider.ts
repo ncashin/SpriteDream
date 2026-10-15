@@ -1,4 +1,3 @@
-import { lookupBoundingBox } from "../bounding-box.ts";
 import type { Collider } from "../physics.ts";
 import { applyTransform, transform } from "./transform.ts";
 import type { ViewportWithTransforms } from "./viewportTransforms.ts";
@@ -7,9 +6,8 @@ export function drawPhysicsCollider(viewport: ViewportWithTransforms, object: Co
   const worldMatrix = transform(object)?.matrix;
   if (!worldMatrix) return;
 
-  const bounds = lookupBoundingBox(object);
-  const width = bounds?.width ?? 64;
-  const height = bounds?.height ?? 64;
+  const width = object.collider.width;
+  const height = object.collider.height;
   const context = viewport.state.context;
 
   const frame = withoutScale(worldMatrix);

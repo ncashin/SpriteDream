@@ -24,7 +24,14 @@ export type Image = NonNullable<ReturnType<typeof imageTrait>>;
 addBoundingBoxLookup((object) => {
   const image = imageTrait(object);
   if (!image) return;
-  return { width: image.image.width, height: image.image.height };
+  return {
+    width: image.image.width,
+    height: image.image.height,
+    resizeCallback: ({ width, height }) => {
+      image.image.width = width;
+      image.image.height = height;
+    },
+  };
 });
 
 export function drawImage(viewportWithTransforms: ViewportWithTransforms, sprite: Image) {

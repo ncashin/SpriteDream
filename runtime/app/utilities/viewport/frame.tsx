@@ -24,7 +24,14 @@ export type FrameObject = NonNullable<ReturnType<typeof frameTrait>>;
 addBoundingBoxLookup((object) => {
   const frame = frameTrait(object);
   if (!frame) return;
-  return { width: frame.frame.width, height: frame.frame.height };
+  return {
+    width: frame.frame.width,
+    height: frame.frame.height,
+    resizeCallback: ({ width, height }) => {
+      frame.frame.width = width;
+      frame.frame.height = height;
+    },
+  };
 });
 
 export function drawFrame(

@@ -7,13 +7,14 @@ import { inputMap } from "../../utilities/input.ts";
 import { isObject } from "../../utilities/is-object.ts";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
 import { colliderTrait, physicsBodyTrait, resetPhysics, stepPhysics } from "../../utilities/physics.ts";
-import { scene, queryScene, restoreScene, snapshotScene } from "../../utilities/scene.ts";
+import { filterScene, scene, restoreScene, snapshotScene } from "../../utilities/scene.ts";
 import {
   selectObjects,
   selectedObjects,
 } from "../../utilities/selected-objects.ts";
 import { updateLoop as createUpdateLoop } from "../../utilities/update-loop.ts";
 import { imageTrait } from "../../utilities/viewport/draw-image.ts";
+import { textTrait } from "../../utilities/viewport/draw-text.ts";
 import { frameTrait } from "../../utilities/viewport/frame.tsx";
 import { parentObject, transform } from "../../utilities/viewport/transform.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
@@ -23,7 +24,7 @@ import type { GameObject } from "../editor/object-tree.tsx";
 const SPEED = 240;
 
 function selectableAt(point: WorldPoint): GameObject | undefined {
-  const found = queryScene(scene, (node) => {
+  const found = filterScene(scene, (node) => {
     if (!isObject(node) || node instanceof DOMMatrix) return;
     const bounds = lookupBoundingBox(node);
     if (!bounds || !contains(bounds, point)) return;
@@ -106,7 +107,6 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             const gameLoop = createUpdateLoop(updateLoop);
 
             editorLoop.onUpdate(() => {
-              for (const object of selectedObjects) editorViewport.drawBoundingBox(object);
             });
 
             gameLoop.onUpdate(({ deltaTime }) => {
@@ -114,8 +114,11 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               const dx = input.axes.x * SPEED * deltaTime;
               const dy = input.axes.y * SPEED * deltaTime;
               if (dx === 0 && dy === 0) return;
-              for (const image of queryScene(scene, imageTrait)) {
-                if (parentObject(image) || physicsBodyTrait(image)) continue;
+              for (const image of filterScene(scene, (node) => {
+                const image = imageTrait(node);
+                if (!image || parentObject(image) || physicsBodyTrait(image)) return;
+                return image;
+              })) {
                 const placement = transform(image);
                 if (!placement) continue;
                 placement.position.x += dx;
@@ -124,17 +127,22 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             });
 
             updateLoop.onUpdate(() => {
+              for (const object of selectedObjects) editorViewport.drawBoundingBox(object);
+
               input.update();
               if (input.buttons.deselect.pressed) selectObjects([]);
               
               editorViewport.beginDrawing();
-              for (const image of queryScene(scene, imageTrait)) {
+              for (const image of filterScene(scene, imageTrait)) {
                 editorViewport.drawImage(image);
               }
-              for (const frame of queryScene(scene, frameTrait)) {
+              for (const text of filterScene(scene, textTrait)) {
+                editorViewport.drawText(text);
+              }
+              for (const frame of filterScene(scene, frameTrait)) {
                 editorViewport.drawFrame(frame);
               }
-              for (const collider of queryScene(scene, colliderTrait)) {
+              for (const collider of filterScene(scene, colliderTrait)) {
                 editorViewport.drawPhysicsCollider(collider);
               }
             });

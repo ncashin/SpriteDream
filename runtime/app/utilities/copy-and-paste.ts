@@ -18,6 +18,7 @@ type ClipboardEntry = {
 let clipboard: ClipboardEntry[] = [];
 let pasteCount = 0;
 let lastPasteCursor: WorldPoint | undefined;
+let objectPaste: ReturnType<typeof setTimeout> | undefined;
 
 export function copySelectedObjects() {
   const next: ClipboardEntry[] = [];
@@ -115,13 +116,67 @@ export function copyAndPaste(options?: { signal?: AbortSignal }) {
       event.stopPropagation();
       return;
     }
-    if (key === "v" && pasteCopiedObjects()) {
-      event.preventDefault();
-      event.stopPropagation();
+    if (key === "v") {
+      clearTimeout(objectPaste);
+      objectPaste = setTimeout(() => {
+        objectPaste = undefined;
+        pasteCopiedObjects();
+      }, 0);
     }
   };
 
+  const onPaste = (event: ClipboardEvent) => {
+    if (mode !== Mode.Edit) return;
+    if (isTyping(event.target)) return;
+    const file = clipboardImage(event.clipboardData);
+    if (!file) return;
+    clearTimeout(objectPaste);
+    objectPaste = undefined;
+    event.preventDefault();
+    event.stopPropagation();
+    void pasteImage(file);
+  };
+
   window.addEventListener("keydown", onKeyDown, { capture: true, signal: options?.signal });
+  window.addEventListener("paste", onPaste, { capture: true, signal: options?.signal });
+}
+
+function clipboardImage(data: DataTransfer | null) {
+  if (!data) return;
+  for (const file of data.files) {
+    if (file.type.startsWith("image/")) return file;
+  }
+  for (const item of data.items) {
+    if (item.kind !== "file" || !item.type.startsWith("image/")) continue;
+    const file = item.getAsFile();
+    if (file) return file;
+  }
+}
+
+async function pasteImage(file: File) {
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+  image.src = url;
+  try {
+    await image.decode();
+  } catch {
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  const cursor = cursorWorldPoint();
+  const object: GameObject = {
+    transform: new DOMMatrix().translate(cursor?.x ?? 0, cursor?.y ?? 0),
+    image: {
+      width: String(image.naturalWidth || 64),
+      height: String(image.naturalHeight || 64),
+      tint: "#ffffffff",
+      image: url,
+    },
+  };
+  const name = uniqueName(scene, "image");
+  scene[name] = object;
+  selectObjects([object]);
 }
 
 function findOwner(

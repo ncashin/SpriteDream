@@ -1,7 +1,11 @@
 import type { GameObject } from "../actions/editor/object-tree.tsx";
 import { transform } from "./viewport/transform.ts";
 
-export type BoundingBoxSize = { width: number; height: number };
+export type BoundingBoxSize = {
+  width: number;
+  height: number;
+  resizeCallback?: (size: { width: number; height: number }) => void;
+};
 
 type BoundingBoxLookup = (object: GameObject) => BoundingBoxSize | undefined;
 
@@ -14,11 +18,24 @@ export function addBoundingBoxLookup(lookup: BoundingBoxLookup) {
 export function lookupBoundingBox(object: GameObject): Bounds | undefined {
   const matrix = transform(object)?.matrix;
   if (!matrix) return;
+  const sizes: BoundingBoxSize[] = [];
   for (const lookup of lookups) {
     const size = lookup(object);
-    if (!size) continue;
-    return { transform: matrix, width: size.width, height: size.height };
+    if (size) sizes.push(size);
   }
+  const size = sizes[0];
+  if (!size) return;
+  const callbacks = sizes.flatMap((match) => (match.resizeCallback ? [match.resizeCallback] : []));
+  return {
+    transform: matrix,
+    width: size.width,
+    height: size.height,
+    resizeCallback: callbacks.length
+      ? (next) => {
+          for (const callback of callbacks) callback(next);
+        }
+      : undefined,
+  };
 }
 
 export type Point = { x: number; y: number };
@@ -27,6 +44,7 @@ export type Bounds = {
   transform: DOMMatrix;
   width: number;
   height: number;
+  resizeCallback?: (size: { width: number; height: number }) => void;
 };
 
 export function center(bounds: Bounds): Point {
@@ -59,6 +77,10 @@ export function resizeBoundingBox(bounds: Bounds, handle: ResizeHandle, point: P
   const anchorWorld = mapPoint(bounds.transform, anchor.x, anchor.y);
   const offsetX = point.x - anchorWorld.x;
   const offsetY = point.y - anchorWorld.y;
+  if (bounds.resizeCallback) {
+    resizeSize(bounds, direction, anchorWorld, offsetX, offsetY);
+    return;
+  }
   let { a, b, c, d } = bounds.transform;
 
   if (direction.x !== 0 && bounds.width !== 0) {
@@ -91,6 +113,48 @@ export function rotateBoundingBox(
   bounds.transform.b = sin * from.a + cos * from.b;
   bounds.transform.c = cos * from.c - sin * from.d;
   bounds.transform.d = sin * from.c + cos * from.d;
+}
+
+function resizeSize(
+  bounds: Bounds,
+  direction: { x: number; y: number },
+  anchorWorld: Point,
+  offsetX: number,
+  offsetY: number,
+) {
+  const { a, b, c, d } = bounds.transform;
+  let { width, height } = bounds;
+
+  if (direction.x !== 0) {
+    width = axisLength(a, b, direction.x, offsetX, offsetY, d, -c);
+  }
+  if (direction.y !== 0) {
+    height = axisLength(c, d, direction.y, offsetX, offsetY, -b, a);
+  }
+
+  bounds.width = width;
+  bounds.height = height;
+  const anchor = anchorPoint(bounds, direction);
+  bounds.transform.e = anchorWorld.x - (a * anchor.x + c * anchor.y);
+  bounds.transform.f = anchorWorld.y - (b * anchor.x + d * anchor.y);
+  bounds.resizeCallback?.({ width, height });
+}
+
+function axisLength(
+  axisX: number,
+  axisY: number,
+  direction: number,
+  offsetX: number,
+  offsetY: number,
+  fallbackX: number,
+  fallbackY: number,
+) {
+  const unit = unitAxis(axisX, axisY, fallbackX, fallbackY);
+  const scale = Math.hypot(axisX, axisY);
+  let length = (offsetX * unit.x + offsetY * unit.y) * direction;
+  if (scale >= 1e-8) length /= scale;
+  if (!Number.isFinite(length) || length < MIN_AXIS) length = MIN_AXIS;
+  return length;
 }
 
 function scaledAxis(
