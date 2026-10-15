@@ -1,3 +1,5 @@
+import { isTyping } from "./hotkey.ts";
+
 const MOUSE_BUTTONS = ["mouseleft", "mousemiddle", "mouseright", "mouseback", "mouseforward"];
 
 export type ButtonState = {
@@ -36,13 +38,6 @@ const keyIds = (event: KeyboardEvent) => [normalize(event.key), normalize(event.
 const mouseIds = (button: number) => {
   const name = MOUSE_BUTTONS[button];
   return name === undefined ? [`mouse${button}`] : [`mouse${button}`, name];
-};
-
-const isTyping = (target: EventTarget | null) => {
-  if (target instanceof HTMLInputElement) return true;
-  if (target instanceof HTMLTextAreaElement) return true;
-  if (target instanceof HTMLSelectElement) return true;
-  return target instanceof HTMLElement && target.isContentEditable;
 };
 
 export const inputMap = <

@@ -1,8 +1,8 @@
 import Box from "lucide/dist/esm/icons/box.mjs";
-import ChevronDown from "lucide/dist/esm/icons/chevron-down.mjs";
 import ChevronRight from "lucide/dist/esm/icons/chevron-right.mjs";
+import Plus from "lucide/dist/esm/icons/plus.mjs";
 import Trash from "lucide/dist/esm/icons/trash.mjs";
-import { clientEntry, on } from "remix/component";
+import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
@@ -15,7 +15,19 @@ import {
 import { parentObject } from "../../utilities/viewport/transform.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { renameKey, type GameObject } from "./object-tree.tsx";
-import { expandable, iconButton, iconStack, indent, label, row } from "./tree.ts";
+import {
+  chevronOpen,
+  childrenClip,
+  childrenOpen,
+  childrenPanel,
+  expandable,
+  iconButton,
+  iconMotion,
+  iconStack,
+  indent,
+  label,
+  row,
+} from "./tree.ts";
 
 type HierarchyNode = {
   name: string;
@@ -38,13 +50,33 @@ export const HierarchyTree = clientEntry(
     }
 
     return () => {
-      const nodes = hierarchy(handle.props.object);
-      if (nodes.length === 0) return null;
+      const root = handle.props.object;
+      const nodes = hierarchy(root);
 
       return (
         <div>
+          <button
+            type="button"
+            mix={[
+              row,
+              newObject,
+              on("click", () => {
+                const object = {};
+                root[uniqueName(root, "object")] = object;
+                selectObjects([object]);
+                handle.update();
+              }),
+            ]}
+          >
+            <div mix={label}>
+              <span mix={iconStack}>
+                <Icon icon={Plus} size={14} />
+              </span>
+              New Object
+            </div>
+          </button>
           {nodes.map((node) => (
-            <HierarchyBranch key={node.name} node={node} root={handle.props.object} />
+            <HierarchyBranch key={node.name} node={node} root={root} />
           ))}
         </div>
       );
@@ -62,11 +94,12 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: GameObject 
     const hasChildren = children.length > 0;
 
     const isSelected = selectedObjects.has(object);
+    const open = !collapsed || isSelected;
     return (
       <>
         <div
           aria-current={isSelected ? "true" : undefined}
-          aria-expanded={hasChildren ? !collapsed : undefined}
+          aria-expanded={hasChildren ? open : undefined}
           mix={[
             row,
             hasChildren && expandable,
@@ -80,11 +113,9 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: GameObject 
           ]}
         >
           <div mix={label}>
-            <span mix={iconStack}>
+            <span mix={[iconStack, iconMotion, hasChildren && open && chevronOpen]}>
               <Icon icon={Box} size={14} />
-              {hasChildren && (
-                <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
-              )}
+              {hasChildren && <Icon icon={ChevronRight} size={14} />}
             </span>
             <AutoSizeInput
               value={name}
@@ -116,16 +147,42 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: GameObject 
             <Icon icon={Trash} size={14} />
           </button>
         </div>
-        {hasChildren && !collapsed && (
-          <div mix={indent}>
-            {children.map((child) => (
-              <HierarchyBranch key={child.name} node={child} root={root} />
-            ))}
+        {hasChildren && (
+          <div mix={[childrenPanel, open && childrenOpen]}>
+            <div mix={[childrenClip, indent]}>
+              {children.map((child) => (
+                <HierarchyBranch key={child.name} node={child} root={root} />
+              ))}
+            </div>
           </div>
         )}
       </>
     );
   };
+}
+
+const newObject = css({
+  appearance: "none",
+  background: "transparent",
+  border: "none",
+  color: "inherit",
+  font: "inherit",
+  textAlign: "left",
+  "&:hover": {
+    background: "#1e1e1e",
+  },
+  "&:focus-visible": {
+    background: "#1e1e1e",
+    outline: "1px solid currentColor",
+    outlineOffset: "1px",
+  },
+});
+
+function uniqueName(root: GameObject, base: string) {
+  let name = base;
+  let n = 2;
+  while (Object.hasOwn(root, name)) name = `${base}${n++}`;
+  return name;
 }
 
 function renameNode(root: GameObject, from: string, to: string) {

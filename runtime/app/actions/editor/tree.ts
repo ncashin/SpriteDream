@@ -57,6 +57,39 @@ export const iconStack = css({
 
 export const indent = css({ paddingLeft: "0.75rem" });
 
+export const chevronOpen = css({
+  "& > :last-child": {
+    transform: "rotate(90deg)",
+  },
+});
+
+export const iconMotion = css({
+  "& svg": {
+    transition: "transform 180ms ease",
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    "& svg": { transition: "none" },
+  },
+});
+
+export const childrenPanel = css({
+  display: "grid",
+  gridTemplateRows: "0fr",
+  transition: "grid-template-rows 180ms ease",
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+  },
+});
+
+export const childrenOpen = css({
+  gridTemplateRows: "1fr",
+});
+
+export const childrenClip = css({
+  minHeight: 0,
+  overflow: "hidden",
+});
+
 export const iconButton = css({
   appearance: "none",
   background: "transparent",

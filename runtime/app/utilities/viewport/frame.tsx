@@ -7,7 +7,10 @@ import { number } from "remix/data-schema/coerce";
 import { addBoundingBoxLookup } from "../bounding-box.ts";
 import { defineTrait } from "../trait/trait.ts";
 import { transform } from "./transform.ts";
+import { componentKeys } from "./draw-component.ts";
 import type { ViewportWithTransforms } from "./viewportTransforms.ts";
+
+const frameKey = componentKeys();
 
 export const frameTrait = defineTrait(
   "Frame",
@@ -36,7 +39,7 @@ addBoundingBoxLookup((object) => {
 
 export function drawFrame(
   viewport: ViewportWithTransforms & {
-    drawComponent(transform: DOMMatrix, node: RemixNode): void;
+    drawComponent(key: object, transform: DOMMatrix, node: RemixNode): void;
   },
   frame: FrameObject,
 ) {
@@ -47,6 +50,7 @@ export function drawFrame(
   const { width, height } = frame.frame;
   const placed = new DOMMatrix().translate(-width / 2, -height / 2);
   viewport.drawComponent(
+    frameKey(frame),
     worldMatrix.multiply(placed),
     <div
       mix={[

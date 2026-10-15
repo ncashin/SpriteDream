@@ -6,15 +6,13 @@ import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
-import { isObject } from "../../utilities/is-object.ts";
 import { Mode, mode, setMode } from "../../utilities/mode.ts";
 import { scene } from "../../utilities/scene.ts";
-import { selectedObjects } from "../../utilities/selected-objects.ts";
 import { HierarchyTree } from "./hierarchy-tree.tsx";
-import { ObjectTree, type GameObject } from "./object-tree.tsx";
+import { ObjectSidebar, OBJECT_SIDEBAR_WIDTH } from "./object-sidebar.tsx";
 import { Search } from "./Search.tsx";
 
-const SIDEBAR_WIDTH = "20rem";
+const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_MOTION = "200ms ease";
 
 export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Handle) {
@@ -24,18 +22,19 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
     <>
       <aside mix={panel} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
         <div inert={collapsed} mix={column}>
+          <h2 mix={heading}>Scene Tree</h2>
           <div id="scene-tree" mix={[tree, treeOuterPadding]}>
             <HierarchyTree object={scene} />
           </div>
-          <SelectedObjectTree />
         </div>
       </aside>
-      <header mix={bar} style={{ left: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
+      <ObjectSidebar collapsed={collapsed} />
+      <header mix={bar} style={{ left: collapsed ? "0rem" : `calc(${SIDEBAR_WIDTH} + ${OBJECT_SIDEBAR_WIDTH})` }}>
         <button
           type="button"
           aria-expanded={!collapsed}
-          aria-controls="scene-tree"
-          aria-label={collapsed ? "Expand scene tree" : "Collapse scene tree"}
+          aria-controls="scene-tree object-view"
+          aria-label={collapsed ? "Expand sidebars" : "Collapse sidebars"}
           mix={[
             toggle,
             on("click", () => {
@@ -110,8 +109,18 @@ const column = css({
   width: SIDEBAR_WIDTH,
 });
 
+const heading = css({
+  color: "#f4f4f5",
+  flex: "0 0 auto",
+  fontSize: "0.875rem",
+  fontWeight: 400,
+  lineHeight: "1.25rem",
+  margin: 0,
+  padding: "1rem 1rem 0.25rem",
+});
+
 const treeOuterPadding = css({
-  padding: "0.75rem 0.5rem 1rem",
+  padding: "0.25rem 0.625rem 1rem",
 });
 
 const tree = css({
@@ -120,52 +129,6 @@ const tree = css({
   minHeight: 0,
   overflow: "auto",
 });
-
-function SelectedObjectTree(handle: Handle) {
-  let active: GameObject | undefined;
-
-  if (typeof requestAnimationFrame === "function") {
-    let frame = requestAnimationFrame(function tick() {
-      if (handle.signal.aborted) return;
-      handle.update();
-      frame = requestAnimationFrame(tick);
-    });
-    handle.signal.addEventListener("abort", () => cancelAnimationFrame(frame));
-  }
-
-  return () => {
-    if (!active || !selectedObjects.has(active)) active = selectedObjects.values().next().value;
-    const entry = active ? findEntry(scene, active) : undefined;
-
-    if (!active) return null;
-
-    return (
-      <div mix={[tree, objectTree, treeOuterPadding]}>
-        <ObjectTree
-          key={entry?.key ?? active}
-          object={active}
-          name={entry?.key}
-          parent={entry?.parent}
-        />
-      </div>
-    );
-  };
-}
-
-function findEntry(root: GameObject, target: GameObject): { parent: GameObject; key: string } | undefined {
-  for (const [key, value] of Object.entries(root)) {
-    if (value === target) return { parent: root, key };
-    if (!isObject(value) || value instanceof DOMMatrix) continue;
-    const nested = findEntry(value, target);
-    if (nested) return nested;
-  }
-}
-
-const objectTree = css({
-  borderTop: "1px solid #262626",
-  minWidth: 0,
-});
-
 
 const bar = css({
   alignItems: "flex-start",
@@ -180,7 +143,7 @@ const bar = css({
   position: "absolute",
   right: 0,
   top: 0,
-  transition: `left ${SIDEBAR_MOTION}`,
+  transition: `left ${SIDEBAR_MOTION}, right ${SIDEBAR_MOTION}`,
   zIndex: 2,
   "@media (prefers-reduced-motion: reduce)": {
     transition: "none",
@@ -189,9 +152,9 @@ const bar = css({
 
 const mark = css({
   display: "block",
-  height: "14px",
+  height: "22px",
   objectFit: "contain",
-  width: "14px",
+  width: "22px",
 });
 
 const toggle = css({

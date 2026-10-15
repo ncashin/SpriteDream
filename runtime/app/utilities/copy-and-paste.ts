@@ -1,5 +1,6 @@
 import type { GameObject } from "../actions/editor/object-tree.tsx";
 import { center } from "./bounding-box.ts";
+import { hotkeys, isTyping } from "./hotkey.ts";
 import { isObject } from "./is-object.ts";
 import { Mode, mode } from "./mode.ts";
 import { scene } from "./scene.ts";
@@ -97,33 +98,28 @@ export function deleteSelectedObjects() {
 export function copyAndPaste(options?: { signal?: AbortSignal }) {
   if (typeof window === "undefined") return;
 
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (mode !== Mode.Edit) return;
-    if (event.repeat || event.altKey || event.shiftKey) return;
-    if (isTyping(event.target)) return;
-
-    const key = event.key.toLowerCase();
-    if (key === "delete" || key === "backspace") {
-      if (!deleteSelectedObjects()) return;
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-
-    if (!event.metaKey && !event.ctrlKey) return;
-    if (key === "c" && copySelectedObjects()) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-    if (key === "v") {
-      clearTimeout(objectPaste);
-      objectPaste = setTimeout(() => {
-        objectPaste = undefined;
-        pasteCopiedObjects();
-      }, 0);
-    }
-  };
+  hotkeys(
+    {
+      "delete, backspace": (event) => {
+        if (!deleteSelectedObjects()) return;
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      "mod+c": (event) => {
+        if (!copySelectedObjects()) return;
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      "mod+v": () => {
+        clearTimeout(objectPaste);
+        objectPaste = setTimeout(() => {
+          objectPaste = undefined;
+          pasteCopiedObjects();
+        }, 0);
+      },
+    },
+    { signal: options?.signal, when: () => mode === Mode.Edit },
+  );
 
   const onPaste = (event: ClipboardEvent) => {
     if (mode !== Mode.Edit) return;
@@ -137,7 +133,6 @@ export function copyAndPaste(options?: { signal?: AbortSignal }) {
     void pasteImage(file);
   };
 
-  window.addEventListener("keydown", onKeyDown, { capture: true, signal: options?.signal });
   window.addEventListener("paste", onPaste, { capture: true, signal: options?.signal });
 }
 
@@ -321,11 +316,4 @@ function uniqueName(parent: GameObject, name: string) {
     next = `${base}${index}`;
   }
   return next;
-}
-
-function isTyping(target: EventTarget | null) {
-  if (target instanceof HTMLInputElement) return true;
-  if (target instanceof HTMLTextAreaElement) return true;
-  if (target instanceof HTMLSelectElement) return true;
-  return target instanceof HTMLElement && target.isContentEditable;
 }

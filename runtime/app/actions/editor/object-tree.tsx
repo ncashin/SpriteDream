@@ -1,8 +1,8 @@
+import type { IconNode } from "lucide";
 import Box from "lucide/dist/esm/icons/box.mjs";
-import ChevronDown from "lucide/dist/esm/icons/chevron-down.mjs";
 import ChevronRight from "lucide/dist/esm/icons/chevron-right.mjs";
+import Braces from "lucide/dist/esm/icons/braces.mjs";
 import Trash from "lucide/dist/esm/icons/trash.mjs";
-import Type from "lucide/dist/esm/icons/type.mjs";
 import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
@@ -17,7 +17,19 @@ import "../../utilities/viewport/transform.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { Dropdown, type DropdownItem } from "./dropdown.tsx";
 import { PropertyInput } from "./property-input.tsx";
-import { expandable, iconButton, iconStack, indent, label, row } from "./tree.ts";
+import {
+  chevronOpen,
+  childrenClip,
+  childrenOpen,
+  childrenPanel,
+  expandable,
+  iconButton,
+  iconMotion,
+  iconStack,
+  indent,
+  label,
+  row,
+} from "./tree.ts";
 
 export type GameObject = { [key in PropertyKey]: any };
 
@@ -71,7 +83,7 @@ function GameObjectList(handle: Handle<{ object: GameObject }>) {
       <div>
         {Object.entries(object).map(([name, value]) => (
           <div key={name}>
-            {isObject(value) && !(value instanceof DOMMatrix) ? (
+            {name === "__icon" ? null : isObject(value) && !(value instanceof DOMMatrix) ? (
               <Branch
                 name={name}
                 object={value}
@@ -122,7 +134,7 @@ function addItems(object: GameObject, done: () => void): DropdownItem[] {
   items.push(
     {
       label: "New Property",
-      icon: Type,
+      icon: Braces,
       onSelect: () => {
         object[uniqueKey(object, "new")] = "";
         done();
@@ -178,9 +190,9 @@ function Branch(
           ]}
         >
           <div mix={label}>
-            <span mix={iconStack}>
-              <Icon icon={Box} size={14} />
-              <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
+            <span mix={[iconStack, iconMotion, !collapsed && chevronOpen]}>
+              <Icon icon={iconFor(object)} size={14} />
+              <Icon icon={ChevronRight} size={14} />
             </span>
             <AutoSizeInput
               value={name}
@@ -211,14 +223,27 @@ function Branch(
             <Icon icon={Trash} size={14} />
           </button>
         </div>
-        {collapsed ? null : (
-          <div mix={indent}>
+        <div mix={[childrenPanel, !collapsed && childrenOpen]}>
+          <div mix={[childrenClip, indent]}>
             <GameObjectList object={object} />
           </div>
-        )}
+        </div>
       </>
     );
   };
+}
+
+function iconFor(object: GameObject): IconNode {
+  return isIconNode(object.__icon) ? object.__icon : Box;
+}
+
+function isIconNode(value: unknown): value is IconNode {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (part) => Array.isArray(part) && typeof part[0] === "string" && isObject(part[1]),
+    )
+  );
 }
 
 export function renameKey(object: GameObject, from: string, to: string) {

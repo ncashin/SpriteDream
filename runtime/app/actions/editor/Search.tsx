@@ -4,6 +4,7 @@ import { css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
+import { hotkeys } from "../../utilities/hotkey.ts";
 import type { SceneNode } from "../../utilities/scene.ts";
 import { scene } from "../../utilities/scene.ts";
 import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
@@ -58,20 +59,16 @@ export function Search(handle: Handle) {
     input?.select();
   }
 
-  if (typeof window !== "undefined") {
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (event.repeat || event.altKey || event.shiftKey) return;
-        if (event.key.toLowerCase() !== "p") return;
-        if (!event.metaKey && !event.ctrlKey) return;
+  hotkeys(
+    {
+      "mod+p": (event) => {
         event.preventDefault();
         event.stopPropagation();
         focusSearch();
       },
-      { capture: true, signal: handle.signal },
-    );
-  }
+    },
+    { signal: handle.signal },
+  );
 
   return () => {
     let items = open ? matchingObjects(query) : [];

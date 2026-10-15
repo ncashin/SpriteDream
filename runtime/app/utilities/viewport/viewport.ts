@@ -51,8 +51,8 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
   const viewport = {
     state,
     ...transforms,
-    drawComponent(transform: DOMMatrix, node: RemixNode) {
-      paintComponent(viewport, transform, node);
+    drawComponent(key: object, transform: DOMMatrix, node: RemixNode) {
+      paintComponent(viewport, key, transform, node);
     },
   };
   curryViewportEvents(viewport, options);

@@ -32,6 +32,8 @@ export function defineTrait<name extends string, schema extends Schema<any, any>
     const result = parseSafe(schema, child);
     if (!result.success) return;
     if (isObject(child) && isObject(result.value)) writeParsed(child, result.value);
+    const next = value[property];
+    if (isObject(next) && next.__icon === undefined) next.__icon = icon;
     return value as { [K in PropertyName<name>]: InferOutput<schema> };
   };
   stored.set(trait, { property, schema });
