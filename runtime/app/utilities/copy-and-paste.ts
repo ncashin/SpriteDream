@@ -3,7 +3,7 @@ import { center } from "./bounding-box.ts";
 import { isObject } from "./is-object.ts";
 import { Mode, mode } from "./mode.ts";
 import { scene } from "./scene.ts";
-import { selectObjects, selectedObjects } from "./selected-objects.ts";
+import { deselectObject, selectObjects, selectedObjects } from "./selected-objects.ts";
 import { transform } from "./viewport/transform.ts";
 import { cursorWorldPoint, type WorldPoint } from "./viewport/viewport.ts";
 
@@ -72,16 +72,44 @@ export function pasteCopiedObjects() {
   return true;
 }
 
+export function deleteSelectedObjects() {
+  const seen = new Set<GameObject>();
+  const removals: { parent: GameObject; name: string; value: GameObject }[] = [];
+  for (const object of selectedObjects) {
+    const owner = findOwner(scene, object);
+    if (!owner || seen.has(object)) continue;
+    const items = [{ name: owner.name, value: object }, ...childOwners(owner.parent, owner.name)];
+    for (const item of items) {
+      if (seen.has(item.value)) continue;
+      seen.add(item.value);
+      removals.push({ parent: owner.parent, ...item });
+    }
+  }
+  if (removals.length === 0) return false;
+  for (const item of removals) {
+    deselectObject(item.value);
+    delete item.parent[item.name];
+  }
+  return true;
+}
+
 export function copyAndPaste(options?: { signal?: AbortSignal }) {
   if (typeof window === "undefined") return;
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (mode !== Mode.Edit) return;
     if (event.repeat || event.altKey || event.shiftKey) return;
-    if (!event.metaKey && !event.ctrlKey) return;
     if (isTyping(event.target)) return;
 
     const key = event.key.toLowerCase();
+    if (key === "delete" || key === "backspace") {
+      if (!deleteSelectedObjects()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    if (!event.metaKey && !event.ctrlKey) return;
     if (key === "c" && copySelectedObjects()) {
       event.preventDefault();
       event.stopPropagation();

@@ -14,6 +14,7 @@ export const assets = createAssetServer({
     "app/routes.ts",
     "app/utilities/**",
     "app/actions/game/game.tsx",
+    "app/actions/game/panel.tsx",
     "app/actions/editor/**",
     "app/icon.tsx",
     "app/**/public/**",

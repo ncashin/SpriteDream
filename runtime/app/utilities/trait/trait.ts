@@ -54,6 +54,8 @@ export function applyTrait<output>(
           if (!Object.hasOwn(current, field)) current[field] = defaults.value[field];
         }
       }
+    } else if (defaults.success && object[entry.property] === undefined) {
+      object[entry.property] = defaults.value;
     }
   }
 

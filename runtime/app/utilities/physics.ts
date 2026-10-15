@@ -6,10 +6,11 @@ import { boolean, number } from "remix/data-schema/coerce";
 
 import type { GameObject } from "../actions/editor/object-tree.tsx";
 import { addBoundingBoxLookup, lookupBoundingBox } from "./bounding-box.ts";
+import { isObject } from "./is-object.ts";
 import { queryScene, scene } from "./scene.ts";
 import { defineTrait } from "./trait/trait.ts";
 import "./viewport/draw-image.ts";
-import { transform } from "./viewport/transform.ts";
+import { parentObject, transform } from "./viewport/transform.ts";
 
 const bodyTypes = ["static", "kinematic", "dynamic"] as const;
 
@@ -49,7 +50,7 @@ addBoundingBoxLookup((object) => {
   return { width: 64, height: 64 };
 });
 
-const pixelsPerMeter = 64;
+const pixelsPerMeter = 128;
 const maxStep = 1 / 20;
 
 function toMeters(pixels: number) {
@@ -66,8 +67,8 @@ const simulated = new Map<GameObject, Body>();
 export function stepPhysics(deltaTime: number) {
   if (!(deltaTime > 0)) return;
 
-  const bodies = queryScene(scene, physicsBodyTrait);
-  const colliders = queryScene(scene, colliderTrait);
+  const bodies = queryScene(scene, physicsBodyTrait).filter((object) => !hostedCollider(object));
+  const colliders = queryScene(scene, colliderTrait).filter((object) => !hostedCollider(object));
   const live = new Set<GameObject>([...bodies, ...colliders]);
   for (const [object, body] of simulated) {
     if (live.has(object)) continue;
@@ -97,23 +98,14 @@ function createBody(object: GameObject) {
 
   const physics = physicsBodyTrait(object);
   const collider = colliderTrait(object);
-  const bounds = lookupBoundingBox(object);
-  const width = toMeters(Math.abs((bounds?.width ?? 64) * placement.scale.x));
-  const height = toMeters(Math.abs((bounds?.height ?? 64) * placement.scale.y));
   const body = world.createBody({
     type: physics?.physicsBody.body ?? "static",
     position: Vec2(toMeters(placement.position.x), toMeters(placement.position.y)),
     angle: (placement.rotation * Math.PI) / 180,
     fixedRotation: physics?.physicsBody.fixedRotation ?? false,
   });
-  if (collider) {
-    body.createFixture(BoxShape(Math.max(width, toMeters(1)) / 2, Math.max(height, toMeters(1)) / 2), {
-      density: physics?.physicsBody.body === "dynamic" ? Math.max(physics.physicsBody.density, 0) : 0,
-      friction: collider.collider.friction,
-      restitution: collider.collider.restitution,
-      isSensor: collider.collider.sensor,
-    });
-  }
+  if (collider) addColliderFixture(body, object, object);
+  for (const child of propagatedColliders(object)) addColliderFixture(body, child, object);
   const velocity = physics?.physicsBody.velocity;
   if (velocity) body.setLinearVelocity(Vec2(toMeters(velocity.x), toMeters(velocity.y)));
   simulated.set(object, body);
@@ -139,6 +131,72 @@ function syncFromScene(object: GameObject, deltaTime: number) {
   if (physics?.body === "dynamic") {
     body.setLinearVelocity(Vec2(toMeters(physics.velocity.x), toMeters(physics.velocity.y)));
   }
+}
+
+function propagatesCollision(object: GameObject) {
+  const value = object.propagateCollision;
+  return value === true || value === "true";
+}
+
+function hostedCollider(object: GameObject) {
+  return Boolean(colliderTrait(object) && collisionHost(object));
+}
+
+function collisionHost(object: GameObject): GameObject | undefined {
+  const parent = parentObject(object);
+  if (!parent) return;
+  const higher = collisionHost(parent);
+  if (higher) return higher;
+  if (propagatesCollision(parent) && colliderTrait(parent)) return parent;
+}
+
+function propagatedColliders(host: GameObject) {
+  return queryScene(scene, (node) => {
+    if (!isObject(node) || node instanceof DOMMatrix || collisionHost(node) !== host) return;
+    return colliderTrait(node);
+  });
+}
+
+function addColliderFixture(body: Body, object: Collider, host: GameObject) {
+  const placement = transform(object);
+  const hostPlacement = transform(host);
+  if (!placement || !hostPlacement) return;
+
+  const bounds = lookupBoundingBox(object);
+  const width = toMeters(Math.abs((bounds?.width ?? 64) * placement.scale.x));
+  const height = toMeters(Math.abs((bounds?.height ?? 64) * placement.scale.y));
+  const local = bodyLocal(hostPlacement, placement);
+  const physics = physicsBodyTrait(host);
+  body.createFixture(
+    BoxShape(
+      Math.max(width, toMeters(1)) / 2,
+      Math.max(height, toMeters(1)) / 2,
+      Vec2(local.x, local.y),
+      local.angle,
+    ),
+    {
+      density: physics?.physicsBody.body === "dynamic" ? Math.max(physics.physicsBody.density, 0) : 0,
+      friction: object.collider.friction,
+      restitution: object.collider.restitution,
+      isSensor: object.collider.sensor,
+    },
+  );
+}
+
+function bodyLocal(
+  host: NonNullable<ReturnType<typeof transform>>,
+  placement: NonNullable<ReturnType<typeof transform>>,
+) {
+  const radians = (-host.rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const dx = toMeters(placement.position.x - host.position.x);
+  const dy = toMeters(placement.position.y - host.position.y);
+  return {
+    x: dx * cos - dy * sin,
+    y: dx * sin + dy * cos,
+    angle: ((placement.rotation - host.rotation) * Math.PI) / 180,
+  };
 }
 
 function applyGravity(object: PhysicsBody) {

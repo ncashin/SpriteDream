@@ -1,3 +1,5 @@
+import { routes } from "../routes.ts";
+
 export type SceneNode = string | DOMMatrix | { [name: string]: SceneNode };
 
 export function createScene(): { [name: string]: SceneNode } {
@@ -22,6 +24,7 @@ export function createScene(): { [name: string]: SceneNode } {
         friction: "0.4",
         restitution: "0.2",
       },
+      propagateCollision: "true",
     },
     ground: {
       transform: new DOMMatrix().translate(400, 560),
@@ -44,7 +47,19 @@ export function createScene(): { [name: string]: SceneNode } {
         tint: "#d4d4d8ff",
         image: "default.png",
       },
+      collider: {
+        friction: "0.4",
+        restitution: "0.2",
+      },
       parent: "square",
+    },
+    panel: {
+      transform: new DOMMatrix().translate(560, 160),
+      frame: {
+        frameSource: routes.game.panel.href(),
+        width: "220",
+        height: "120",
+      },
     },
     key: "property",
     test: { nested: { objects: "hello"}},
@@ -52,6 +67,18 @@ export function createScene(): { [name: string]: SceneNode } {
 }
 
 export const scene = createScene();
+
+let snapshot: { [name: string]: SceneNode } | undefined;
+
+export function snapshotScene() {
+  snapshot = structuredClone(scene);
+}
+
+export function restoreScene() {
+  if (!snapshot) return;
+  for (const key of Object.keys(scene)) delete scene[key];
+  Object.assign(scene, structuredClone(snapshot));
+}
 
 export function queryScene<Result>(
   scene: { [name: string]: SceneNode },

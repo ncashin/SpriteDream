@@ -2,6 +2,7 @@ import { createController } from 'remix/router'
 
 import { assets } from '../assets.ts'
 import { routes } from '../routes.ts'
+import { Document } from './document.tsx'
 import { Editor } from './editor/editor.tsx'
 
 export default createController(routes, {
@@ -11,6 +12,13 @@ export default createController(routes, {
     },
     home(context) {
       return context.render(<Editor />)
+    },
+    mario(context) {
+      return context.render(
+        <Document title="Mario">
+          <img src="/mario.png" alt="Mario" />
+        </Document>,
+      )
     },
   },
 })

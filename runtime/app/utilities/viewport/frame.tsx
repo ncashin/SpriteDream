@@ -1,0 +1,61 @@
+import AppWindow from "lucide/dist/esm/icons/app-window.mjs";
+import { css, Frame } from "remix/component";
+import type { RemixNode } from "remix/component";
+import { defaulted, object, string } from "remix/data-schema";
+import { number } from "remix/data-schema/coerce";
+
+import { addBoundingBoxLookup } from "../bounding-box.ts";
+import { defineTrait } from "../trait/trait.ts";
+import { transform } from "./transform.ts";
+import type { ViewportWithTransforms } from "./viewportTransforms.ts";
+
+export const frameTrait = defineTrait(
+  "Frame",
+  AppWindow,
+  object({
+    frameSource: defaulted(string(), ""),
+    width: defaulted(number(), 320),
+    height: defaulted(number(), 240),
+  }),
+);
+
+export type FrameObject = NonNullable<ReturnType<typeof frameTrait>>;
+
+addBoundingBoxLookup((object) => {
+  const frame = frameTrait(object);
+  if (!frame) return;
+  return { width: frame.frame.width, height: frame.frame.height };
+});
+
+export function drawFrame(
+  viewport: ViewportWithTransforms & {
+    drawComponent(transform: DOMMatrix, node: RemixNode): void;
+  },
+  frame: FrameObject,
+) {
+  const source = frame.frame.frameSource;
+  const worldMatrix = transform(frame)?.matrix;
+  if (!source || !worldMatrix) return;
+
+  const { width, height } = frame.frame;
+  const placed = new DOMMatrix().translate(-width / 2, -height / 2);
+  viewport.drawComponent(
+    worldMatrix.multiply(placed),
+    <div
+      mix={[
+        css({
+          boxSizing: "border-box",
+          width: `${width}px`,
+          height: `${height}px`,
+          maxWidth: `${width}px`,
+          maxHeight: `${height}px`,
+          overflow: "hidden",
+          contain: "size",
+          pointerEvents: "auto",
+        }),
+      ]}
+    >
+      <Frame src={source} />
+    </div>,
+  );
+}

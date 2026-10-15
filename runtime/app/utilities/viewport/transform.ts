@@ -1,6 +1,10 @@
+import GitFork from "lucide/dist/esm/icons/git-fork.mjs";
+import { defaulted, string } from "remix/data-schema";
+
 import type { GameObject } from "../../actions/editor/object-tree.tsx";
 import { isObject } from "../is-object.ts";
 import { scene } from "../scene.ts";
+import { defineTrait } from "../trait/trait.ts";
 
 type TransformRoot = { [name: string]: unknown };
 
@@ -14,6 +18,8 @@ export type Transform = {
   rotation: number;
   scale: Vector2;
 };
+
+export const parentTrait = defineTrait("Parent", GitFork, defaulted(string(), ""));
 
 const views = new WeakMap<GameObject, Transform>();
 
@@ -198,8 +204,8 @@ function writeLocal(object: GameObject, world: DOMMatrix) {
 }
 
 function parentName(object: GameObject): string | undefined {
-  const parent = object.parent;
-  if (typeof parent !== "string" || parent === "") return;
+  const parent = parentTrait(object)?.parent;
+  if (!parent) return;
   return parent;
 }
 

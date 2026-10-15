@@ -7,13 +7,14 @@ import { inputMap } from "../../utilities/input.ts";
 import { isObject } from "../../utilities/is-object.ts";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
 import { colliderTrait, physicsBodyTrait, resetPhysics, stepPhysics } from "../../utilities/physics.ts";
-import { scene, queryScene } from "../../utilities/scene.ts";
+import { scene, queryScene, restoreScene, snapshotScene } from "../../utilities/scene.ts";
 import {
   selectObjects,
   selectedObjects,
 } from "../../utilities/selected-objects.ts";
 import { updateLoop as createUpdateLoop } from "../../utilities/update-loop.ts";
 import { imageTrait } from "../../utilities/viewport/draw-image.ts";
+import { frameTrait } from "../../utilities/viewport/frame.tsx";
 import { parentObject, transform } from "../../utilities/viewport/transform.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
 import { viewport } from "../../utilities/viewport/viewport.ts";
@@ -71,7 +72,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               { signal },
             );
 
-            const view = viewport(canvas, {
+            const editorViewport = viewport(canvas, {
               signal,
               handleSelection: selectableAt,
               handleHoverSelectable(next) {
@@ -105,7 +106,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             const gameLoop = createUpdateLoop(updateLoop);
 
             editorLoop.onUpdate(() => {
-              for (const object of selectedObjects) view.drawBoundingBox(object);
+              for (const object of selectedObjects) editorViewport.drawBoundingBox(object);
             });
 
             gameLoop.onUpdate(({ deltaTime }) => {
@@ -126,32 +127,39 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               input.update();
               if (input.buttons.deselect.pressed) selectObjects([]);
               
-              view.beginDrawing();
+              editorViewport.beginDrawing();
               for (const image of queryScene(scene, imageTrait)) {
-                view.drawImage(image);
+                editorViewport.drawImage(image);
+              }
+              for (const frame of queryScene(scene, frameTrait)) {
+                editorViewport.drawFrame(frame);
               }
               for (const collider of queryScene(scene, colliderTrait)) {
-                view.drawPhysicsCollider(collider);
+                editorViewport.drawPhysicsCollider(collider);
               }
             });
 
             onModeChange((next) => {
               switch (next) {
                 case Mode.Play:
+                  snapshotScene();
                   editorLoop.stop();
                   gameLoop.start();
                   break;
                 case Mode.Edit:
                   gameLoop.stop();
+                  restoreScene();
                   resetPhysics();
+                  selectObjects([]);
                   editorLoop.start();
                   break;
               }
             }, signal);
-       
-       
 
-            if (mode === Mode.Play) gameLoop.start();
+            if (mode === Mode.Play) {
+              snapshotScene();
+              gameLoop.start();
+            }
             else editorLoop.start();
             updateLoop.start();
 

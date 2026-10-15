@@ -12,6 +12,8 @@ import { deselectObject, selectedObjects } from "../../utilities/selected-object
 import { applyTrait, traits } from "../../utilities/trait/trait.ts";
 import "../../utilities/physics.ts";
 import "../../utilities/viewport/draw-image.ts";
+import "../../utilities/viewport/frame.tsx";
+import "../../utilities/viewport/transform.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { Dropdown, type DropdownItem } from "./dropdown.tsx";
 import { PropertyInput } from "./property-input.tsx";

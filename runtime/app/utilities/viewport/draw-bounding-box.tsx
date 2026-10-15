@@ -21,8 +21,9 @@ export function isWheelPassthrough(target: EventTarget | null) {
 }
 
 const HANDLE_SIZE = 8;
+const ROTATION_HANDLE_SIZE = 12;
 const STROKE = 1.5;
-const ROTATION_OFFSET = 12;
+const ROTATION_OFFSET = 16;
 const BOUNDS_COLOR = "#7dd3fc";
 const cornerHandles = ["northWest", "northEast", "southEast", "southWest"] as const satisfies readonly ResizeHandle[];
 const edgeHandles = ["north", "east", "south", "west"] as const satisfies readonly ResizeHandle[];
@@ -279,7 +280,7 @@ function RotationControl(handle: Handle<ResizeControlProps & { width: number }>)
 
   return () => {
     const { width } = handle.props;
-    const stem = ROTATION_OFFSET - HANDLE_SIZE / 2;
+    const stem = ROTATION_OFFSET - ROTATION_HANDLE_SIZE / 2;
 
     return (
       <>
@@ -297,8 +298,8 @@ function RotationControl(handle: Handle<ResizeControlProps & { width: number }>)
           style={{
             left: width / 2,
             top: -ROTATION_OFFSET,
-            width: HANDLE_SIZE,
-            height: HANDLE_SIZE,
+            width: ROTATION_HANDLE_SIZE,
+            height: ROTATION_HANDLE_SIZE,
             borderWidth: 1,
             borderRadius: "50%",
             transform: "translate(-50%, -50%)",
