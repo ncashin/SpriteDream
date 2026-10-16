@@ -110,19 +110,9 @@ export const scene = createScene();
 
 export type ScenePatch = { path: ScenePath; value?: unknown }[];
 
-let before = plain(scene);
-
-export function takeScenePatch(): ScenePatch {
-  const after = plain(scene);
-  const patch: ScenePatch = [];
-  diff(before, after, [], patch);
-  before = after;
-  return patch;
-}
-
-export function applyScenePatch(patch: ScenePatch) {
+export function applyScenePatch(patch: ScenePatch, root: SceneNode = scene) {
   for (const change of patch) {
-    let parent: unknown = scene;
+    let parent: unknown = root;
     for (let index = 0; index < change.path.length - 1; index++) {
       if (!isObject(parent)) {
         parent = undefined;
@@ -135,33 +125,29 @@ export function applyScenePatch(patch: ScenePatch) {
     if ("value" in change) parent[key] = revive(change.value);
     else delete parent[key];
   }
-  before = plain(scene);
 }
 
-function diff(previous: unknown, next: unknown, path: ScenePath, patch: ScenePatch) {
-  if (JSON.stringify(previous) === JSON.stringify(next)) return;
+export function diffScene(previous: unknown, next: unknown): ScenePatch {
+  const patch: ScenePatch = [];
+  walk(previous, next, [], patch);
+  return patch;
+}
+
+function walk(previous: unknown, next: unknown, path: ScenePath, patch: ScenePatch) {
+  const matrix = (_key: string, item: unknown) =>
+    item instanceof DOMMatrix
+      ? { __matrix: [item.a, item.b, item.c, item.d, item.e, item.f] }
+      : item;
+  if (JSON.stringify(previous, matrix) === JSON.stringify(next, matrix)) return;
   if (isRecord(previous) && isRecord(next)) {
     for (const key of new Set([...Object.keys(previous), ...Object.keys(next)])) {
       if (!Object.hasOwn(next, key)) patch.push({ path: [...path, key] });
-      else if (!Object.hasOwn(previous, key)) patch.push({ path: [...path, key], value: next[key] });
-      else diff(previous[key], next[key], [...path, key], patch);
+      else if (!Object.hasOwn(previous, key)) patch.push({ path: [...path, key], value: JSON.parse(JSON.stringify(next[key], matrix)) });
+      else walk(previous[key], next[key], [...path, key], patch);
     }
     return;
   }
-  patch.push({ path, value: next });
-}
-
-function plain(value: unknown): unknown {
-  if (value instanceof DOMMatrix) return { __matrix: [value.a, value.b, value.c, value.d, value.e, value.f] };
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null) return value;
-  if (Array.isArray(value)) return value.map(plain);
-  if (!isObject(value)) return;
-  const copy: Record<string, unknown> = {};
-  for (const [key, child] of Object.entries(value)) {
-    const next = plain(child);
-    if (next !== undefined) copy[key] = next;
-  }
-  return copy;
+  patch.push({ path, value: JSON.parse(JSON.stringify(next, matrix) ?? "null") });
 }
 
 function revive(value: unknown): unknown {
@@ -174,7 +160,7 @@ function revive(value: unknown): unknown {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return isObject(value) && !isMatrix(value);
+  return isObject(value) && !(value instanceof DOMMatrix) && !isMatrix(value);
 }
 
 function isMatrix(value: unknown): value is { __matrix: [number, number, number, number, number, number] } {
@@ -184,23 +170,16 @@ function isMatrix(value: unknown): value is { __matrix: [number, number, number,
 let snapshot: SceneNode | undefined;
 
 export function snapshotScene() {
-  snapshot = cloneData(scene) as SceneNode;
+  if (snapshot) return;
+  snapshot = structuredClone(scene);
 }
 
 export function restoreScene() {
-  if (!snapshot) return;
+  if (!snapshot) return false;
   for (const key of Object.keys(scene)) delete scene[key];
-  Object.assign(scene, cloneData(snapshot));
-}
-
-function cloneData(value: unknown): unknown {
-  if (typeof value === "function") return value;
-  if (value instanceof DOMMatrix) return DOMMatrix.fromMatrix(value);
-  if (Array.isArray(value)) return value.map(cloneData);
-  if (!isObject(value)) return value;
-  const copy: Record<string, unknown> = {};
-  for (const [key, child] of Object.entries(value)) copy[key] = cloneData(child);
-  return copy;
+  Object.assign(scene, structuredClone(snapshot));
+  snapshot = undefined;
+  return true;
 }
 
 export function objectPath(root: object, target: object): string[] | undefined {

@@ -4,6 +4,7 @@ import type { Collider } from "../physics.ts";
 import type { SceneNode } from "../scene.ts";
 import { createDrawComponent } from "./draw-component.ts";
 import { drawBoundingBox } from "./draw-bounding-box.tsx";
+import { createDrawCursor } from "./draw-cursor.ts";
 import { type Image, drawImage } from "./draw-image.ts";
 import { type Text, drawText } from "./draw-text.ts";
 import { type FrameObject, drawFrame } from "./frame.tsx";
@@ -47,12 +48,13 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
   };
 
   const transforms = curryViewportTransforms(state);
-  const paintComponent = createDrawComponent(canvas);
+  const drawComponent = createDrawComponent(canvas);
+  const drawCursor = createDrawCursor(canvas);
   const viewport = {
     state,
     ...transforms,
     drawComponent(key: object, transform: DOMMatrix, node: RemixNode) {
-      paintComponent(viewport, key, transform, node);
+      drawComponent(viewport, key, transform, node);
     },
   };
   curryViewportEventListeners(viewport, options);
@@ -60,7 +62,8 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
   const signal = options?.signal;
   signal?.addEventListener("abort", () => {
     releaseViewportTransforms(transforms);
-    paintComponent.dispose();
+    drawComponent.dispose();
+    drawCursor.dispose();
   });
 
   function beginDrawing() {
@@ -108,6 +111,9 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
     },
     drawPhysicsCollider(object: Collider) {
       drawPhysicsCollider(viewport, object);
+    },
+    drawCursor(point: WorldPoint, color: string) {
+      drawCursor(viewport, point, color);
     },
   };
 }

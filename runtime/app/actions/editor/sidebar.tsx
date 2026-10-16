@@ -6,11 +6,11 @@ import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
-import { Mode, mode, onModeChange, setMode } from "../../utilities/mode.ts";
+import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
 import { scene } from "../../utilities/scene.ts";
 import { HierarchyTree } from "./hierarchy-tree.tsx";
 import { ObjectSidebar, OBJECT_SIDEBAR_WIDTH } from "./object-sidebar.tsx";
-import { Room, syncMode } from "./room.tsx";
+import { syncMode } from "./room.tsx";
 import { Search } from "./Search.tsx";
 
 const SIDEBAR_WIDTH = "16rem";
@@ -18,6 +18,7 @@ const SIDEBAR_MOTION = "200ms ease";
 const COLLAPSED_KEY = "sidebar-collapsed";
 
 function readCollapsed() {
+  if (typeof window === "undefined") return false;
   try {
     return localStorage.getItem(COLLAPSED_KEY) === "1";
   } catch {
@@ -97,7 +98,6 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
           </span>
         </button>
         <Search />
-        <Room />
         <button
           type="button"
           aria-pressed={mode === Mode.Play}

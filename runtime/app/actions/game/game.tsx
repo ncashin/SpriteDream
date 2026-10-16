@@ -1,17 +1,31 @@
 import { clientEntry, css, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
+import { joinRoom } from "../editor/room.tsx";
 import { contains, lookupBoundingBox } from "../../utilities/bounding-box.ts";
 import { copyAndPaste } from "../../utilities/copy-and-paste.ts";
 import { inputMap } from "../../utilities/input.ts";
-import { isObject } from "../../utilities/is-object.ts";
-import { Mode, mode, onModeChange, simulating } from "../../utilities/mode.ts";
-import { colliderTrait, physicsBodyTrait, resetPhysics, stepPhysics } from "../../utilities/physics.ts";
-import { applyScenePatch, filterScene, scene, restoreScene, snapshotScene, takeScenePatch } from "../../utilities/scene.ts";
+import { Mode, setMode } from "../../utilities/mode.ts";
+import {
+  colliderTrait,
+  physicsBodyTrait,
+  resetPhysics,
+  stepPhysics,
+} from "../../utilities/physics.ts";
+import {
+  applyScenePatch,
+  diffScene,
+  filterScene,
+  scene,
+  restoreScene,
+  snapshotScene,
+  type ScenePatch,
+} from "../../utilities/scene.ts";
 import {
   selectObjects,
   selectedObjects,
 } from "../../utilities/selected-objects.ts";
+import { playerColor } from "../../utilities/player-color.ts";
 import { updateLoop as createUpdateLoop } from "../../utilities/update-loop.ts";
 import { imageTrait } from "../../utilities/viewport/draw-image.ts";
 import { textTrait } from "../../utilities/viewport/draw-text.ts";
@@ -62,14 +76,6 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             const isCanvas = node instanceof HTMLCanvasElement;
             if (!isCanvas) return;
             const canvas = node;
-            canvas.addEventListener(
-              "pointerdown",
-              (event) => {
-                if (event.target !== canvas) return;
-                canvas.focus({ preventScroll: true });
-              },
-              { signal },
-            );
 
             const editorViewport = viewport(canvas, {
               signal,
@@ -80,6 +86,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                 handle.update();
               },
             });
+
             const input = inputMap(
               {
                 buttons: {
@@ -104,8 +111,36 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             const editorLoop = createUpdateLoop(updateLoop);
             const gameLoop = createUpdateLoop(updateLoop);
 
-            editorLoop.onUpdate(() => {
+            editorLoop.onUpdate(() => {});
+
+            const syncLoops = () => {
+              if (room.state.mode === Mode.Play && room.isHost) {
+                snapshotScene();
+                editorLoop.stop();
+                gameLoop.start();
+                return;
+              }
+              gameLoop.stop();
+              if (restoreScene()) {
+                resetPhysics();
+                selectObjects([]);
+              }
+              if (room.state.mode === Mode.Edit) editorLoop.start();
+              else editorLoop.stop();
+            };
+            let before = structuredClone(scene);
+            const room = joinRoom(signal, {
+              onScene(patch) {
+                applyScenePatch(patch);
+                applyScenePatch(patch, before);
+              },
+              onModeChange(next) {
+                setMode(next, next === Mode.Play && room.isHost);
+                syncLoops();
+              },
+              onHostChange: syncLoops,
             });
+            syncLoops();
 
             gameLoop.onUpdate(({ deltaTime }) => {
               stepPhysics(deltaTime);
@@ -114,7 +149,8 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               if (dx === 0 && dy === 0) return;
               for (const image of filterScene(scene, (node) => {
                 const image = imageTrait(node);
-                if (!image || parentObject(image) || physicsBodyTrait(image)) return;
+                if (!image || parentObject(image) || physicsBodyTrait(image))
+                  return;
                 return image;
               })) {
                 const placement = transform(image);
@@ -125,11 +161,12 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             });
 
             updateLoop.onUpdate(() => {
-              for (const object of selectedObjects) editorViewport.drawBoundingBox(object);
+              for (const object of selectedObjects)
+                editorViewport.drawBoundingBox(object);
 
               input.update();
               if (input.buttons.deselect.pressed) selectObjects([]);
-              
+
               editorViewport.beginDrawing();
               for (const image of filterScene(scene, imageTrait)) {
                 editorViewport.drawImage(image);
@@ -144,44 +181,24 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                 editorViewport.drawPhysicsCollider(collider);
               }
 
-              const patch = takeScenePatch();
-              if (patch.length > 0 && (mode !== Mode.Play || simulating)) {
-                window.postMessage({ scene: patch, local: true }, location.origin);
+              room.sendCursor(editorViewport.state.cursorPoint);
+
+              for (const person of Object.values(room.state.people)) {
+                if (person.id === room.you || !person.cursor) continue;
+                editorViewport.drawCursor(
+                  person.cursor,
+                  playerColor(person.id),
+                );
+              }
+
+              const patch = diffScene(before, scene);
+              if (patch.length === 0) return;
+              applyScenePatch(patch, before);
+              if (room.state.mode !== Mode.Play || room.isHost) {
+                room.sendScenePatch(patch);
               }
             });
 
-            let ownsSnapshot = false;
-            const followRoom = () => {
-              const running = mode === Mode.Play && simulating;
-              if (running) {
-                if (!ownsSnapshot) {
-                  snapshotScene();
-                  ownsSnapshot = true;
-                }
-                editorLoop.stop();
-                gameLoop.start();
-                return;
-              }
-              gameLoop.stop();
-              if (ownsSnapshot) {
-                restoreScene();
-                resetPhysics();
-                selectObjects([]);
-                ownsSnapshot = false;
-              }
-              if (mode === Mode.Edit) editorLoop.start();
-              else editorLoop.stop();
-            };
-
-            const onPatch = (event: MessageEvent) => {
-              if (event.origin !== location.origin || event.data?.local || !Array.isArray(event.data?.scene)) return;
-              applyScenePatch(event.data.scene);
-            };
-            window.addEventListener("message", onPatch);
-            signal.addEventListener("abort", () => window.removeEventListener("message", onPatch));
-
-            onModeChange(() => followRoom(), signal);
-            followRoom();
             updateLoop.start();
 
             signal.addEventListener("abort", () => {
