@@ -27,7 +27,7 @@ export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar
     const collapsed = handle.props.collapsed === true;
 
     return (
-      <aside id="object-view" mix={panel} style={{ width: collapsed ? "0rem" : OBJECT_SIDEBAR_WIDTH }}>
+      <aside id="object-view" data-sidebar="" mix={panel} style={{ width: collapsed ? "0rem" : OBJECT_SIDEBAR_WIDTH }}>
         <div inert={collapsed} mix={column}>
           <h2 mix={heading}>Selected Objects</h2>
           {active ? (

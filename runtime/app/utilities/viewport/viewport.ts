@@ -100,8 +100,11 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
     drawFrame(frame: FrameObject) {
       drawFrame(viewport, frame);
     },
-    drawBoundingBox(object: GameObject) {
-      drawBoundingBox(viewport, object);
+    drawBoundingBox(
+      object: GameObject,
+      options?: { color?: string; handles?: boolean; key?: object },
+    ) {
+      drawBoundingBox(viewport, object, options);
     },
     drawPhysicsCollider(object: Collider) {
       drawPhysicsCollider(viewport, object);

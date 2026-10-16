@@ -30,6 +30,8 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="color-scheme" content="dark" />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <title>{title}</title>
+          <style>{SIDEBAR_COLLAPSED_STYLE}</style>
+          <script>{SIDEBAR_COLLAPSED_SCRIPT}</script>
           {head}
           <ImportMap value={importMap} />
           {preloads.map((preloadHref) => (
@@ -56,6 +58,27 @@ export function Document(handle: Handle<DocumentProps>) {
     )
   }
 }
+
+const SIDEBAR_COLLAPSED_STYLE = `
+html[data-sidebar-collapsed] [data-sidebar],
+html[data-sidebar-collapsed] [data-sidebar-bar] {
+  transition: none !important;
+}
+html[data-sidebar-collapsed] [data-sidebar] {
+  width: 0 !important;
+}
+html[data-sidebar-collapsed] [data-sidebar-bar] {
+  left: 0 !important;
+}
+`
+
+const SIDEBAR_COLLAPSED_SCRIPT = `
+try {
+  if (localStorage.getItem("sidebar-collapsed") === "1") {
+    document.documentElement.dataset.sidebarCollapsed = "";
+  }
+} catch (e) {}
+`
 
 function readAppDisplayName(value: string): string {
   return value.startsWith('%%') ? 'Remix App' : decodeURIComponent(value)

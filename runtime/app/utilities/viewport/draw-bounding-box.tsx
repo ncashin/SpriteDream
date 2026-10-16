@@ -27,14 +27,14 @@ const HANDLE_SIZE = 8;
 const CORNER_HANDLE_SIZE = 10;
 const STROKE = 1.5;
 const ROTATION_REACH = 24;
-const BOUNDS_COLOR = "#7dd3fc";
+const BOUNDS_COLOR = "var(--bounds-color, #7dd3fc)";
 const cornerHandles = ["northWest", "northEast", "southEast", "southWest"] as const satisfies readonly ResizeHandle[];
 const edgeHandles = ["north", "east", "south", "west"] as const satisfies readonly ResizeHandle[];
 
-// Material Design Icons, Apache-2.0. Files live in public/cursors.
-const CURSOR_OUTLINE = `fill="#000" stroke="#fff" stroke-width="2" stroke-linejoin="round" paint-order="stroke fill"`;
-const RESIZE_CURSOR = `<path ${CURSOR_OUTLINE} d="M6.45 17.45L1 12l5.45-5.45l1.41 1.41L4.83 11h14.34l-3.03-3.04l1.41-1.41L23 12l-5.45 5.45l-1.41-1.41L19.17 13H4.83l3.03 3.04z"/>`;
-const ROTATE_CURSOR = `<path ${CURSOR_OUTLINE} d="M15 6V3.5L19.5 7.25L15 11V8.5A6.5 6.5 0 0 0 8.5 15H11L7.25 19.5L3.5 15H6A9 9 0 0 1 15 6Z"/>`;
+// macOS-style cursors. Files live in public/cursors.
+const CURSOR_OUTLINE = `fill="#000" stroke="#fff" stroke-width="2" stroke-miterlimit="10" paint-order="stroke fill"`;
+const RESIZE_CURSOR = `<path ${CURSOR_OUTLINE} d="M5.41 12L9 8.41V11h6V8.41L18.59 12 15 15.59V13H9v2.59Z"/>`;
+const ROTATE_CURSOR = `<path ${CURSOR_OUTLINE} d="M15 7.5V4.91L18.59 8.5 15 12.09V9.5A5.5 5.5 0 0 0 9.5 15h2.59L8.5 18.59 4.91 15H7.5A7.5 7.5 0 0 1 15 7.5Z"/>`;
 
 const frameCss = css({
   position: "relative",
@@ -88,18 +88,22 @@ export function drawBoundingBox(
     drawComponent(key: object, transform: DOMMatrix, node: RemixNode): void;
   },
   object: GameObject,
+  options?: { color?: string; handles?: boolean; key?: object },
 ) {
   const bounds = lookupBoundingBox(object);
   if (!bounds) return;
   const frame = scaleRemoved(bounds);
+  const handles = options?.handles !== false;
   viewport.drawComponent(
-    boundsKey(object),
+    options?.key ?? boundsKey(object),
     frame.transform,
     <BoundingBox
       bounds={bounds}
       width={frame.width}
       height={frame.height}
       zoom={screenZoom(viewport.state.matrix)}
+      color={options?.color}
+      handles={handles}
     />,
   );
 }
@@ -130,14 +134,20 @@ function BoundingBox(
     width: number;
     height: number;
     zoom: number;
+    color?: string;
+    handles: boolean;
   }>,
 ) {
   return () => {
-    const { bounds, width, height, zoom } = handle.props;
+    const { bounds, width, height, zoom, color, handles } = handle.props;
 
     return (
-      <div data-wheel-passthrough="" mix={frameCss} style={{ width, height }}>
-        <MoveControl bounds={bounds} />
+      <div
+        data-wheel-passthrough=""
+        mix={frameCss}
+        style={{ width, height, "--bounds-color": color ?? "#7dd3fc" }}
+      >
+        {handles ? <MoveControl bounds={bounds} /> : null}
         {edgeHandles.map((name) => (
           <EdgeControl
             key={name}
@@ -146,19 +156,22 @@ function BoundingBox(
             width={width}
             height={height}
             zoom={zoom}
+            handles={handles}
           />
         ))}
-        <RotationControl bounds={bounds} width={width} height={height} zoom={zoom} />
-        {cornerHandles.map((name) => (
-          <ResizeHandleControl
-            key={name}
-            name={name}
-            bounds={bounds}
-            width={width}
-            height={height}
-            zoom={zoom}
-          />
-        ))}
+        {handles ? <RotationControl bounds={bounds} width={width} height={height} zoom={zoom} /> : null}
+        {handles
+          ? cornerHandles.map((name) => (
+              <ResizeHandleControl
+                key={name}
+                name={name}
+                bounds={bounds}
+                width={width}
+                height={height}
+                zoom={zoom}
+              />
+            ))
+          : null}
       </div>
     );
   };
@@ -233,15 +246,28 @@ function MoveControl(handle: Handle<{ bounds: Bounds }>) {
 
 function EdgeControl(
   handle: Handle<
-    ResizeControlProps & { name: (typeof edgeHandles)[number]; width: number; height: number }
+    ResizeControlProps & {
+      name: (typeof edgeHandles)[number];
+      width: number;
+      height: number;
+      handles?: boolean;
+    }
   >,
 ) {
   const drag = resizeDrag(handle);
 
   return () => {
-    const { name, bounds, width, height, zoom } = handle.props;
+    const { name, bounds, width, height, zoom, handles } = handle.props;
     const direction = resizeDirections[name];
     const cursor = resizeCursor(bounds.transform, direction);
+    if (handles === false) {
+      return (
+        <div
+          style={{ ...edgeStyle(name, width, height, zoom), pointerEvents: "none" }}
+          mix={edgeCss}
+        />
+      );
+    }
 
     return (
       <div style={{ ...edgeStyle(name, width, height, zoom), cursor }} mix={[edgeCss, drag()]} />
@@ -473,8 +499,8 @@ function rotateCursor(transform: DOMMatrix, corner: (typeof cornerHandles)[numbe
 
 function svgCursor(body: string, radians: number) {
   const degrees = Math.round((radians * 180) / Math.PI);
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='-2 -2 28 28'><defs><filter id='shadow' x='-50%' y='-50%' width='200%' height='200%'><feDropShadow dx='0' dy='1' stdDeviation='0.6' flood-color='black' flood-opacity='0.45'/></filter></defs><g filter='url(#shadow)'><g transform='rotate(${degrees} 12 12)'>${body}</g></g></svg>`;
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 11 11, auto`;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><defs><filter id='shadow' x='-50%' y='-50%' width='200%' height='200%'><feDropShadow dx='0' dy='1' stdDeviation='0.6' flood-color='black' flood-opacity='0.45'/></filter></defs><g filter='url(#shadow)'><g transform='rotate(${degrees} 12 12)'>${body}</g></g></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 12 12, auto`;
 }
 
 function cursorStyle(cursor: string) {

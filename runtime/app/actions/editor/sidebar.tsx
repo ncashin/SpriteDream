@@ -6,21 +6,54 @@ import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
-import { Mode, mode, setMode } from "../../utilities/mode.ts";
+import { Mode, mode, onModeChange, setMode } from "../../utilities/mode.ts";
 import { scene } from "../../utilities/scene.ts";
 import { HierarchyTree } from "./hierarchy-tree.tsx";
 import { ObjectSidebar, OBJECT_SIDEBAR_WIDTH } from "./object-sidebar.tsx";
+import { Room, syncMode } from "./room.tsx";
 import { Search } from "./Search.tsx";
 
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_MOTION = "200ms ease";
+const COLLAPSED_KEY = "sidebar-collapsed";
+
+function readCollapsed() {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function releaseInitialCollapse() {
+  const release = () => {
+    const panels = document.querySelectorAll<HTMLElement>("[data-sidebar]");
+    const ready = panels.length >= 2 && [...panels].every((panel) => panel.style.width === "0rem");
+    if (!ready) {
+      requestAnimationFrame(release);
+      return;
+    }
+    delete document.documentElement.dataset.sidebarCollapsed;
+  };
+  requestAnimationFrame(release);
+}
+
+function writeCollapsed(collapsed: boolean) {
+  try {
+    localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0");
+  } catch {
+    // Storage can be unavailable in private browsing.
+  }
+}
 
 export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Handle) {
-  let collapsed = false;
+  let collapsed = readCollapsed();
+  if (collapsed) releaseInitialCollapse();
+  onModeChange(() => handle.update());
 
   return () => (
     <>
-      <aside mix={panel} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
+      <aside data-sidebar="" mix={panel} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
         <div inert={collapsed} mix={column}>
           <h2 mix={heading}>Scene Tree</h2>
           <div id="scene-tree" mix={[tree, treeOuterPadding]}>
@@ -29,7 +62,7 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
         </div>
       </aside>
       <ObjectSidebar collapsed={collapsed} />
-      <header mix={bar} style={{ left: collapsed ? "0rem" : `calc(${SIDEBAR_WIDTH} + ${OBJECT_SIDEBAR_WIDTH})` }}>
+      <header data-sidebar-bar="" mix={bar} style={{ left: collapsed ? "0rem" : `calc(${SIDEBAR_WIDTH} + ${OBJECT_SIDEBAR_WIDTH})` }}>
         <button
           type="button"
           aria-expanded={!collapsed}
@@ -39,6 +72,7 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
             toggle,
             on("click", () => {
               collapsed = !collapsed;
+              writeCollapsed(collapsed);
               handle.update();
             }),
           ]}
@@ -63,6 +97,7 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
           </span>
         </button>
         <Search />
+        <Room />
         <button
           type="button"
           aria-pressed={mode === Mode.Play}
@@ -70,12 +105,16 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
           mix={[
             control,
             on("click", () => {
-              setMode(mode === Mode.Play ? Mode.Edit : Mode.Play);
+              const next = mode === Mode.Play ? Mode.Edit : Mode.Play;
+              syncMode(next);
               handle.update();
             }),
           ]}
         >
-          {mode === Mode.Play ? "Stop" : "Play"}
+          <span mix={label}>
+            <span style={{ visibility: mode === Mode.Play ? "hidden" : "visible" }}>Play</span>
+            <span style={{ visibility: mode === Mode.Play ? "visible" : "hidden" }}>Stop</span>
+          </span>
           <Icon icon={mode === Mode.Play ? Square : Play} size={14} />
         </button>
       </header>
@@ -152,9 +191,9 @@ const bar = css({
 
 const mark = css({
   display: "block",
-  height: "22px",
+  height: "32px",
   objectFit: "contain",
-  width: "22px",
+  width: "32px",
 });
 
 const toggle = css({
@@ -165,7 +204,7 @@ const toggle = css({
   color: "inherit",
   cursor: "pointer",
   display: "inline-flex",
-  alignItems: "center",
+  alignItems: "flex-start",
   justifyContent: "flex-start",
   flex: "0 1 auto",
   gap: "0.25rem",
@@ -198,6 +237,13 @@ const toggle = css({
     background: "#262626",
     outline: "1px solid currentColor",
     outlineOffset: "1px",
+  },
+});
+
+const label = css({
+  display: "grid",
+  "& > span": {
+    gridArea: "1 / 1",
   },
 });
 

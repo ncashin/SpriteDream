@@ -83,7 +83,7 @@ function loadFont(source: string) {
   void face.load().then((loaded) => {
     document.fonts.add(loaded);
   }).catch(() => {
-    loadedFonts.delete(path);
+    // Keep the entry so a missing file is not requested again every frame.
   });
   return family;
 }
