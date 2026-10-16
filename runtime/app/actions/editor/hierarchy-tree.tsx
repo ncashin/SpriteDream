@@ -189,7 +189,7 @@ function uniqueName(root: SceneNode, base: string) {
 function renameNode(root: SceneNode, from: string, to: string) {
   renameKey(root, from, to);
   for (const value of Object.values(root)) {
-    if (isObject(value) && !(value instanceof DOMMatrix) && value.parent === from) value.parent = to;
+    if (isObject(value) && value.parent === from) value.parent = to;
   }
 }
 
@@ -202,7 +202,7 @@ function removeNode(node: HierarchyNode, root: SceneNode) {
 function hierarchy(root: SceneNode): HierarchyNode[] {
   const items: { name: string; object: SceneNode }[] = [];
   for (const [name, value] of Object.entries(root)) {
-    if (!isObject(value) || value instanceof DOMMatrix) continue;
+    if (!isObject(value)) continue;
     items.push({ name, object: value });
   }
 

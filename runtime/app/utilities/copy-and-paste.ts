@@ -4,7 +4,7 @@ import { isObject } from "./is-object.ts";
 import { Mode, mode } from "./mode.ts";
 import { scene, type SceneNode } from "./scene.ts";
 import { deselectObject, selectObjects, selectedObjects } from "./selected-objects.ts";
-import { transform } from "./viewport/transform.ts";
+import { createMatrix, transform } from "./viewport/transform.ts";
 import { cursorWorldPoint, type WorldPoint } from "./viewport/viewport.ts";
 
 const PASTE_STEP = 32;
@@ -160,7 +160,7 @@ async function pasteImage(file: File) {
 
   const cursor = cursorWorldPoint();
   const object: SceneNode = {
-    transform: new DOMMatrix().translate(cursor?.x ?? 0, cursor?.y ?? 0),
+    transform: createMatrix(),
     image: {
       width: String(image.naturalWidth || 64),
       height: String(image.naturalHeight || 64),
@@ -168,6 +168,11 @@ async function pasteImage(file: File) {
       image: url,
     },
   };
+  const placed = transform(object);
+  if (placed && cursor) {
+    placed.matrix.e = cursor.x;
+    placed.matrix.f = cursor.y;
+  }
   const name = uniqueName(scene, "image");
   scene[name] = object;
   selectObjects([object]);
@@ -179,7 +184,7 @@ function findOwner(
 ): { parent: SceneNode; name: string } | undefined {
   for (const [name, value] of Object.entries(root)) {
     if (value === target) return { parent: root, name };
-    if (isObject(value) && !(value instanceof DOMMatrix)) {
+    if (isObject(value)) {
       const found = findOwner(value, target);
       if (found) return found;
     }
@@ -212,13 +217,13 @@ function pastedRoots(pasted: { parent: SceneNode; copy: SceneNode }[]) {
 }
 
 function isSceneNode(value: unknown): value is SceneNode {
-  return isObject(value) && !(value instanceof DOMMatrix);
+  return isObject(value);
 }
 
 function isAttached(root: SceneNode, target: SceneNode): boolean {
   if (root === target) return true;
   for (const value of Object.values(root)) {
-    if (!isObject(value) || value instanceof DOMMatrix) continue;
+    if (!isObject(value)) continue;
     if (isAttached(value, target)) return true;
   }
   return false;
@@ -256,7 +261,7 @@ function placementPoint(object: SceneNode): WorldPoint | undefined {
 
   const points: WorldPoint[] = [];
   for (const value of Object.values(object)) {
-    if (isObject(value) && !(value instanceof DOMMatrix)) collectPoints(value, points);
+    if (isObject(value)) collectPoints(value, points);
   }
   return averagePoint(points);
 }
@@ -268,7 +273,7 @@ function collectPoints(object: SceneNode, points: WorldPoint[]) {
     return;
   }
   for (const value of Object.values(object)) {
-    if (isObject(value) && !(value instanceof DOMMatrix)) collectPoints(value, points);
+    if (isObject(value)) collectPoints(value, points);
   }
 }
 
@@ -301,7 +306,7 @@ function translateObject(object: SceneNode, dx: number, dy: number) {
     return;
   }
   for (const value of Object.values(object)) {
-    if (isObject(value) && !(value instanceof DOMMatrix)) translateObject(value, dx, dy);
+    if (isObject(value)) translateObject(value, dx, dy);
   }
 }
 

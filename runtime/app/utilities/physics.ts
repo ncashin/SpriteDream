@@ -291,7 +291,7 @@ function placeWithParent(object: SceneNode, body: Body) {
 
 function propagatedColliders(host: SceneNode) {
   return filterScene(scene, (node) => {
-    if (!isObject(node) || node instanceof DOMMatrix || collisionHost(node) !== host) return;
+    if (!isObject(node) || collisionHost(node) !== host) return;
     return colliderTrait(node);
   });
 }

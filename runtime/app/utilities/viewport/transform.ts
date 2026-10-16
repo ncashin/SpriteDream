@@ -20,27 +20,39 @@ export type Transform = {
 
 export const parentTrait = defineTrait("Parent", GitFork, defaulted(string(), ""));
 
-const views = new WeakMap<SceneNode, Transform>();
-
-const components = new Set([
-  "a",
-  "b",
-  "c",
-  "d",
-  "e",
-  "f",
+const fields = [
   "m11",
   "m12",
+  "m13",
+  "m14",
   "m21",
   "m22",
+  "m23",
+  "m24",
+  "m31",
+  "m32",
+  "m33",
+  "m34",
   "m41",
   "m42",
   "m43",
-]);
+  "m44",
+] as const;
+
+const views = new WeakMap<SceneNode, Transform>();
+
+const components = new Set<string>([...fields, "a", "b", "c", "d", "e", "f"]);
+
+export function createMatrix() {
+  return "matrix(1, 0, 0, 1, 0, 0)";
+}
+
+export function isMatrix(value: unknown): value is string {
+  return typeof value === "string" && (value.startsWith("matrix(") || value.startsWith("matrix3d("));
+}
 
 export function transform(object: SceneNode): Transform | undefined {
-  const local = object.transform;
-  if (!(local instanceof DOMMatrix)) return;
+  if (!isMatrix(object.transform)) return;
   return view(object);
 }
 
@@ -181,25 +193,25 @@ function setScale(object: SceneNode, scaleX: number, scaleY: number) {
 }
 
 function compose(object: SceneNode): DOMMatrix {
-  const local = object.transform instanceof DOMMatrix ? copyMatrix(object.transform) : new DOMMatrix();
+  const stored = object.transform;
+  const local = isMatrix(stored) ? new DOMMatrix(stored) : new DOMMatrix();
   const parent = parentObject(object);
   if (!parent) return local;
   return compose(parent).multiply(local);
 }
 
 function writeLocal(object: SceneNode, world: DOMMatrix) {
-  const local = object.transform;
-  if (!(local instanceof DOMMatrix)) return;
+  if (!isMatrix(object.transform)) return;
   const parent = parentObject(object);
   if (!parent) {
-    writeMatrix(local, world);
+    object.transform = world.toString();
     return;
   }
-  const inverse = invert2D(compose(parent));
+  const inverse = inverseMatrix(compose(parent));
   if (!inverse) return;
   const next = inverse.multiply(world);
   if (!isFiniteMatrix(next)) return;
-  writeMatrix(local, next);
+  object.transform = next.toString();
 }
 
 function parentName(object: SceneNode): string | undefined {
@@ -209,28 +221,16 @@ function parentName(object: SceneNode): string | undefined {
 }
 
 function sceneNode(value: unknown): SceneNode | undefined {
-  if (!isObject(value) || value instanceof DOMMatrix) return;
+  if (!isObject(value)) return;
   return value;
 }
 
-function copyMatrix(matrix: DOMMatrix) {
-  const copy = new DOMMatrix();
-  writeMatrix(copy, matrix);
-  return copy;
-}
-
 function writeMatrix(target: DOMMatrix, source: DOMMatrix) {
-  target.a = source.a;
-  target.b = source.b;
-  target.c = source.c;
-  target.d = source.d;
-  target.e = source.e;
-  target.f = source.f;
-  target.m43 = source.m43;
+  for (const key of fields) target[key] = source[key];
 }
 
 function snapshot(matrix: DOMMatrix) {
-  return [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f, matrix.m43];
+  return fields.map((key) => matrix[key]);
 }
 
 function same(before: number[], matrix: DOMMatrix) {
@@ -257,23 +257,15 @@ function applyLinear(matrix: DOMMatrix, rotation: number, scaleX: number, scaleY
   matrix.d = linear.d;
 }
 
-function invert2D(matrix: DOMMatrix): DOMMatrix | undefined {
-  const { a, b, c, d, e, f } = matrix;
-  const det = a * d - c * b;
-  if (!Number.isFinite(det) || Math.abs(det) < 1e-8) return;
-  const inverse = new DOMMatrix();
-  inverse.a = d / det;
-  inverse.b = -b / det;
-  inverse.c = -c / det;
-  inverse.d = a / det;
-  inverse.e = (c * f - d * e) / det;
-  inverse.f = (b * e - a * f) / det;
-  inverse.m43 = -matrix.m43;
+function inverseMatrix(matrix: DOMMatrix): DOMMatrix | undefined {
+  if (!isFiniteMatrix(matrix)) return;
+  const inverse = matrix.inverse();
+  if (!isFiniteMatrix(inverse)) return;
   return inverse;
 }
 
 function isFiniteMatrix(matrix: DOMMatrix) {
-  return [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f, matrix.m43].every(Number.isFinite);
+  return fields.every((key) => Number.isFinite(matrix[key]));
 }
 
 function finite(value: unknown): value is number {

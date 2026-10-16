@@ -14,7 +14,7 @@ import { applyTrait, traits } from "../../utilities/trait/trait.ts";
 import "../../utilities/physics.ts";
 import "../../utilities/viewport/draw-image.ts";
 import "../../utilities/viewport/frame.tsx";
-import "../../utilities/viewport/transform.ts";
+import { createMatrix, isMatrix } from "../../utilities/viewport/transform.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { Dropdown, type DropdownItem } from "./dropdown.tsx";
 import { PropertyInput } from "./property-input.tsx";
@@ -56,7 +56,7 @@ export const ObjectTree = clientEntry(
             if (Object.hasOwn(parent, to)) return false;
             renameKey(parent, from, to);
             for (const value of Object.values(parent)) {
-              if (isObject(value) && !(value instanceof DOMMatrix) && value.parent === from) {
+              if (isObject(value) && value.parent === from) {
                 value.parent = to;
               }
             }
@@ -82,7 +82,7 @@ function SceneNodeList(handle: Handle<{ object: SceneNode }>) {
       <div>
         {Object.entries(object).map(([name, value]) => (
           <div key={name}>
-            {name === "__icon" ? null : isObject(value) && !(value instanceof DOMMatrix) ? (
+            {name === "__icon" ? null : isObject(value) ? (
               <Branch
                 name={name}
                 object={value}
@@ -125,7 +125,7 @@ function addItems(object: SceneNode, done: () => void): DropdownItem[] {
       icon: entry.icon,
       onSelect: () => {
         applyTrait(entry.trait, object);
-        if (!(object.transform instanceof DOMMatrix)) object.transform = new DOMMatrix();
+        if (!isMatrix(object.transform)) object.transform = createMatrix();
         done();
       },
     });

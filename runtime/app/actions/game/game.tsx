@@ -146,19 +146,19 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               stepPhysics(deltaTime);
               const dx = input.axes.x * SPEED * deltaTime;
               const dy = input.axes.y * SPEED * deltaTime;
-              if (dx === 0 && dy === 0) return;
-              for (const image of filterScene(scene, (node) => {
-                const image = imageTrait(node);
-                if (!image || parentObject(image) || physicsBodyTrait(image))
-                  return;
-                return image;
-              })) {
-                const placement = transform(image);
-                if (!placement) continue;
-                placement.position.x += dx;
-                placement.position.y += dy;
-              }
+              if (!dx && !dy) return;
+              filterScene(scene, (node) => {
+                const img = imageTrait(node);
+                if (img && !parentObject(img) && !physicsBodyTrait(img)) {
+                  const placement = transform(img);
+                  if (placement) {
+                    placement.position.x += dx;
+                    placement.position.y += dy;
+                  }
+                }
+              });
             });
+       
 
             updateLoop.onUpdate(() => {
               for (const object of selectedObjects)

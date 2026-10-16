@@ -5,7 +5,7 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
 import type { SceneNode } from "../../utilities/scene.ts";
-import { transform } from "../../utilities/viewport/transform.ts";
+import { isMatrix, transform } from "../../utilities/viewport/transform.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { MatrixInput } from "./matrix-input.tsx";
 
@@ -240,11 +240,13 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
 
   return () => {
     let current = object[name];
-    if (current instanceof DOMMatrix) {
+    if (isMatrix(current)) {
+      const matrix = transform(object)?.matrix;
+      if (!matrix) return null;
       return (
         <MatrixInput
           name={name}
-          matrix={name === "transform" ? (transform(object)?.matrix ?? current) : current}
+          matrix={matrix}
           onDelete={() => handle.props.onDelete()}
         />
       );

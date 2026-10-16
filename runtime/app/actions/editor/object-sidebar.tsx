@@ -49,7 +49,7 @@ export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar
 function findEntry(root: SceneNode, target: SceneNode): { parent: SceneNode; key: string } | undefined {
   for (const [key, value] of Object.entries(root)) {
     if (value === target) return { parent: root, key };
-    if (!isObject(value) || value instanceof DOMMatrix) continue;
+    if (!isObject(value)) continue;
     const nested = findEntry(value, target);
     if (nested) return nested;
   }

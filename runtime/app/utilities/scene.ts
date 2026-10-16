@@ -13,7 +13,7 @@ export type SceneNode = { [key in PropertyKey]: any };
 export function createScene(): SceneNode {
   return {
     square: {
-      transform: new DOMMatrix().translate(350, 180),
+      transform: "matrix(1, 0, 0, 1, 350, 180)",
       image: {
         __icon: ImageIcon,
         width: "64",
@@ -40,7 +40,7 @@ export function createScene(): SceneNode {
       },
     },
     ground: {
-      transform: new DOMMatrix().translate(400, 560),
+      transform: "matrix(1, 0, 0, 1, 400, 560)",
       image: {
         __icon: ImageIcon,
         width: "720",
@@ -57,7 +57,7 @@ export function createScene(): SceneNode {
       },
     },
     rectangle: {
-      transform: new DOMMatrix().translate(70, 80).rotateSelf(25),
+      transform: "matrix(0.9063077870366499, 0.42261826174069944, -0.42261826174069944, 0.9063077870366499, 70, 80)",
       image: {
         __icon: ImageIcon,
         width: "36",
@@ -75,7 +75,7 @@ export function createScene(): SceneNode {
       parent: "square",
     },
     panel: {
-      transform: new DOMMatrix().translate(560, 160),
+      transform: "matrix(1, 0, 0, 1, 560, 160)",
       count: "0",
       frame: {
         __icon: AppWindow,
@@ -92,7 +92,7 @@ export function createScene(): SceneNode {
       },
     },
     label: {
-      transform: new DOMMatrix().translate(400, 40),
+      transform: "matrix(1, 0, 0, 1, 400, 40)",
       text: {
         __icon: Type,
         value: "Spritedream",
@@ -134,37 +134,24 @@ export function diffScene(previous: unknown, next: unknown): ScenePatch {
 }
 
 function walk(previous: unknown, next: unknown, path: ScenePath, patch: ScenePatch) {
-  const matrix = (_key: string, item: unknown) =>
-    item instanceof DOMMatrix
-      ? { __matrix: [item.a, item.b, item.c, item.d, item.e, item.f] }
-      : item;
-  if (JSON.stringify(previous, matrix) === JSON.stringify(next, matrix)) return;
-  if (isRecord(previous) && isRecord(next)) {
+  if (JSON.stringify(previous) === JSON.stringify(next)) return;
+  if (isObject(previous) && isObject(next)) {
     for (const key of new Set([...Object.keys(previous), ...Object.keys(next)])) {
       if (!Object.hasOwn(next, key)) patch.push({ path: [...path, key] });
-      else if (!Object.hasOwn(previous, key)) patch.push({ path: [...path, key], value: JSON.parse(JSON.stringify(next[key], matrix)) });
+      else if (!Object.hasOwn(previous, key)) patch.push({ path: [...path, key], value: JSON.parse(JSON.stringify(next[key])) });
       else walk(previous[key], next[key], [...path, key], patch);
     }
     return;
   }
-  patch.push({ path, value: JSON.parse(JSON.stringify(next, matrix) ?? "null") });
+  patch.push({ path, value: JSON.parse(JSON.stringify(next) ?? "null") });
 }
 
 function revive(value: unknown): unknown {
-  if (isMatrix(value)) return new DOMMatrix(value.__matrix);
   if (Array.isArray(value)) return value.map(revive);
   if (!isObject(value)) return value;
   const copy: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(value)) copy[key] = revive(child);
   return copy;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return isObject(value) && !(value instanceof DOMMatrix) && !isMatrix(value);
-}
-
-function isMatrix(value: unknown): value is { __matrix: [number, number, number, number, number, number] } {
-  return isObject(value) && Array.isArray(value.__matrix);
 }
 
 let snapshot: SceneNode | undefined;
@@ -185,7 +172,7 @@ export function restoreScene() {
 export function objectPath(root: object, target: object): string[] | undefined {
   for (const [key, value] of Object.entries(root)) {
     if (value === target) return [key];
-    if (!isObject(value) || value instanceof DOMMatrix) continue;
+    if (!isObject(value)) continue;
     const nested = objectPath(value, target);
     if (nested) return [key, ...nested];
   }
@@ -197,7 +184,7 @@ export function objectAt(root: object, path: readonly string[]): Record<string, 
     if (!isObject(current)) return;
     current = current[key];
   }
-  if (!isObject(current) || current instanceof DOMMatrix) return;
+  if (!isObject(current)) return;
   return current;
 }
 
