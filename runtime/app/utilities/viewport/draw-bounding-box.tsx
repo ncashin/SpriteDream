@@ -1,7 +1,7 @@
 import { css, on } from "remix/component";
 import type { Handle, RemixNode } from "remix/component";
 
-import type { GameObject } from "../../actions/editor/object-tree.tsx";
+import type { SceneNode } from "../scene.ts";
 import {
   lookupBoundingBox,
   moveBoundingBox,
@@ -12,10 +12,8 @@ import {
   type Point,
   type ResizeHandle,
 } from "../bounding-box.ts";
-import { componentKeys } from "./draw-component.ts";
+import { drawComponentKey } from "./draw-component.ts";
 import { screenToWorld, type ViewportWithTransforms } from "./viewportTransforms.ts";
-
-const boundsKey = componentKeys();
 
 const WHEEL_PASSTHROUGH = "data-wheel-passthrough";
 
@@ -87,15 +85,15 @@ export function drawBoundingBox(
   viewport: ViewportWithTransforms & {
     drawComponent(key: object, transform: DOMMatrix, node: RemixNode): void;
   },
-  object: GameObject,
-  options?: { color?: string; handles?: boolean; key?: object },
+  object: SceneNode,
+  options?: { color?: string; handles?: boolean },
 ) {
   const bounds = lookupBoundingBox(object);
   if (!bounds) return;
   const frame = scaleRemoved(bounds);
   const handles = options?.handles !== false;
   viewport.drawComponent(
-    options?.key ?? boundsKey(object),
+    drawComponentKey(object),
     frame.transform,
     <BoundingBox
       bounds={bounds}

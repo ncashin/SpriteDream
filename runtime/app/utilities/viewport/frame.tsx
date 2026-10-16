@@ -8,10 +8,8 @@ import { addBoundingBoxLookup } from "../bounding-box.ts";
 import { objectPath, scene } from "../scene.ts";
 import { defineTrait } from "../trait/trait.ts";
 import { transform } from "./transform.ts";
-import { componentKeys } from "./draw-component.ts";
+import { drawComponentKey } from "./draw-component.ts";
 import type { ViewportWithTransforms } from "./viewportTransforms.ts";
-
-const frameKey = componentKeys();
 
 export const frameTrait = defineTrait(
   "Frame",
@@ -52,7 +50,7 @@ export function drawFrame(
   const { width, height } = frame.frame;
   const placed = new DOMMatrix().translate(-width / 2, -height / 2);
   viewport.drawComponent(
-    frameKey(frame),
+    drawComponentKey(frame),
     worldMatrix.multiply(placed),
     <div
       data-scene-object={path}

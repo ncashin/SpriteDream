@@ -7,7 +7,7 @@ import { inputMap } from "../../utilities/input.ts";
 import { isObject } from "../../utilities/is-object.ts";
 import { Mode, mode, onModeChange, simulating } from "../../utilities/mode.ts";
 import { colliderTrait, physicsBodyTrait, resetPhysics, stepPhysics } from "../../utilities/physics.ts";
-import { applyScenePatch, filterScene, objectAt, objectPath, scene, restoreScene, snapshotScene, takeScenePatch } from "../../utilities/scene.ts";
+import { applyScenePatch, filterScene, scene, restoreScene, snapshotScene, takeScenePatch } from "../../utilities/scene.ts";
 import {
   selectObjects,
   selectedObjects,
@@ -19,25 +19,11 @@ import { frameTrait } from "../../utilities/viewport/frame.tsx";
 import { parentObject, transform } from "../../utilities/viewport/transform.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
 import { viewport } from "../../utilities/viewport/viewport.ts";
-import type { GameObject } from "../editor/object-tree.tsx";
-
-declare global {
-  interface Window {
-    spritedream?: {
-      screenToWorld(clientX: number, clientY: number): { x: number; y: number };
-      worldToScreen(x: number, y: number): { x: number; y: number };
-      selection(): string[][];
-      remoteSelections: { id: string; color: string; paths: string[][] }[];
-      scene: typeof scene;
-    };
-  }
-}
 
 const SPEED = 240;
 
-function selectableAt(point: WorldPoint): GameObject | undefined {
+function handleSelection(point: WorldPoint) {
   const found = filterScene(scene, (node) => {
-    if (!isObject(node) || node instanceof DOMMatrix) return;
     const bounds = lookupBoundingBox(node);
     if (!bounds || !contains(bounds, point)) return;
     return node;
@@ -87,27 +73,12 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
 
             const editorViewport = viewport(canvas, {
               signal,
-              handleSelection: selectableAt,
+              handleSelection,
               handleHoverSelectable(next) {
                 if (hovering === next) return;
                 hovering = next;
                 handle.update();
               },
-            });
-            const canvasSpace = {
-              screenToWorld: (clientX: number, clientY: number) => editorViewport.screenToWorld(clientX, clientY),
-              worldToScreen: (x: number, y: number) => editorViewport.worldToScreen(x, y),
-              selection: () =>
-                [...selectedObjects].flatMap((object) => {
-                  const path = objectPath(scene, object);
-                  return path ? [path] : [];
-                }),
-              remoteSelections: [] as { id: string; color: string; paths: string[][] }[],
-              scene,
-            };
-            window.spritedream = canvasSpace;
-            signal.addEventListener("abort", () => {
-              if (window.spritedream === canvasSpace) delete window.spritedream;
             });
             const input = inputMap(
               {
@@ -153,19 +124,8 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               }
             });
 
-            const remoteKeys = new Map<string, object>();
             updateLoop.onUpdate(() => {
               for (const object of selectedObjects) editorViewport.drawBoundingBox(object);
-              for (const person of canvasSpace.remoteSelections) {
-                for (const path of person.paths) {
-                  const object = objectAt(scene, path);
-                  if (!object || selectedObjects.has(object)) continue;
-                  const name = `${person.id}:${path.join("\0")}`;
-                  let key = remoteKeys.get(name);
-                  if (!key) remoteKeys.set(name, (key = {}));
-                  editorViewport.drawBoundingBox(object, { color: person.color, handles: false, key });
-                }
-              }
 
               input.update();
               if (input.buttons.deselect.pressed) selectObjects([]);

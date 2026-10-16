@@ -1,14 +1,14 @@
 import type { RemixNode } from "remix/component";
 
-import type { GameObject } from "../../actions/editor/object-tree.tsx";
 import type { Collider } from "../physics.ts";
+import type { SceneNode } from "../scene.ts";
 import { createDrawComponent } from "./draw-component.ts";
 import { drawBoundingBox } from "./draw-bounding-box.tsx";
 import { type Image, drawImage } from "./draw-image.ts";
 import { type Text, drawText } from "./draw-text.ts";
 import { type FrameObject, drawFrame } from "./frame.tsx";
 import { drawPhysicsCollider } from "./draw-physics-collider.ts";
-import { curryViewportEvents } from "./viewportEvents.ts";
+import { curryViewportEventListeners } from "./viewportEventListeners.ts";
 import {
   curryViewportTransforms,
   releaseViewportTransforms,
@@ -24,7 +24,7 @@ export type WorldPoint = { x: number; y: number };
 
 export type ViewportOptions = {
   signal?: AbortSignal;
-  handleSelection?: (point: WorldPoint) => GameObject | undefined;
+  handleSelection?: (point: WorldPoint) => SceneNode | undefined;
   handleHoverSelectable?: (hovering: boolean) => void;
 };
 
@@ -55,7 +55,7 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
       paintComponent(viewport, key, transform, node);
     },
   };
-  curryViewportEvents(viewport, options);
+  curryViewportEventListeners(viewport, options);
 
   const signal = options?.signal;
   signal?.addEventListener("abort", () => {
@@ -101,8 +101,8 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
       drawFrame(viewport, frame);
     },
     drawBoundingBox(
-      object: GameObject,
-      options?: { color?: string; handles?: boolean; key?: object },
+      object: SceneNode,
+      options?: { color?: string; handles?: boolean },
     ) {
       drawBoundingBox(viewport, object, options);
     },

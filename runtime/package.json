@@ -16,10 +16,12 @@
     "geometry-interfaces": "^2.0.0",
     "lucide": "^1.50.0",
     "planck": "^1.5.1",
-    "remix": "^3.0.0"
+    "remix": "^3.0.0",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@types/node": "latest",
+    "@types/ws": "^8.18.2",
     "typescript": "latest"
   }
 }

@@ -2,14 +2,14 @@ import { clientEntry, css } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { isObject } from "../../utilities/is-object.ts";
-import { scene } from "../../utilities/scene.ts";
+import { scene, type SceneNode } from "../../utilities/scene.ts";
 import { selectedObjects } from "../../utilities/selected-objects.ts";
-import { ObjectTree, type GameObject } from "./object-tree.tsx";
+import { ObjectTree } from "./object-tree.tsx";
 
 export const OBJECT_SIDEBAR_WIDTH = "20rem";
 
 export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar(handle: Handle<{ collapsed?: boolean }>) {
-  let active: GameObject | undefined;
+  let active: SceneNode | undefined;
 
   if (typeof requestAnimationFrame === "function") {
     let frame = requestAnimationFrame(function tick() {
@@ -46,7 +46,7 @@ export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar
   };
 });
 
-function findEntry(root: GameObject, target: GameObject): { parent: GameObject; key: string } | undefined {
+function findEntry(root: SceneNode, target: SceneNode): { parent: SceneNode; key: string } | undefined {
   for (const [key, value] of Object.entries(root)) {
     if (value === target) return { parent: root, key };
     if (!isObject(value) || value instanceof DOMMatrix) continue;

@@ -8,6 +8,7 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
 import { isObject } from "../../utilities/is-object.ts";
+import type { SceneNode } from "../../utilities/scene.ts";
 import { deselectObject, selectedObjects } from "../../utilities/selected-objects.ts";
 import { applyTrait, traits } from "../../utilities/trait/trait.ts";
 import "../../utilities/physics.ts";
@@ -31,11 +32,9 @@ import {
   row,
 } from "./tree.ts";
 
-export type GameObject = { [key in PropertyKey]: any };
-
 export const ObjectTree = clientEntry(
   import.meta.url,
-  function ObjectTree(handle: Handle<{ object: GameObject; name?: string; parent?: GameObject }>) {
+  function ObjectTree(handle: Handle<{ object: SceneNode; name?: string; parent?: SceneNode }>) {
     if (typeof requestAnimationFrame === "function") {
       let frame = requestAnimationFrame(function tick() {
         if (handle.signal.aborted) return;
@@ -47,7 +46,7 @@ export const ObjectTree = clientEntry(
 
     return () => {
       const { object, name, parent } = handle.props;
-      if (!name || !parent) return <GameObjectList object={object} />;
+      if (!name || !parent) return <SceneNodeList object={object} />;
 
       return (
         <Branch
@@ -74,7 +73,7 @@ export const ObjectTree = clientEntry(
   },
 );
 
-function GameObjectList(handle: Handle<{ object: GameObject }>) {
+function SceneNodeList(handle: Handle<{ object: SceneNode }>) {
   return () => {
     const { object } = handle.props;
     if (Object.keys(object).length === 0) return null;
@@ -118,7 +117,7 @@ function GameObjectList(handle: Handle<{ object: GameObject }>) {
   };
 }
 
-function addItems(object: GameObject, done: () => void): DropdownItem[] {
+function addItems(object: SceneNode, done: () => void): DropdownItem[] {
   const items: DropdownItem[] = [];
   for (const entry of traits) {
     items.push({
@@ -152,7 +151,7 @@ function addItems(object: GameObject, done: () => void): DropdownItem[] {
   return items;
 }
 
-function uniqueKey(object: GameObject, base: string) {
+function uniqueKey(object: SceneNode, base: string) {
   let key = base;
   let n = 2;
   while (Object.hasOwn(object, key)) key = `${base}${n++}`;
@@ -162,7 +161,7 @@ function uniqueKey(object: GameObject, base: string) {
 function Branch(
   handle: Handle<{
     name: string;
-    object: GameObject;
+    object: SceneNode;
     onRename: (from: string, to: string) => boolean | void;
     onDelete: () => void;
   }>,
@@ -225,7 +224,7 @@ function Branch(
         </div>
         <div mix={[childrenPanel, !collapsed && childrenOpen]}>
           <div mix={[childrenClip, indent]}>
-            <GameObjectList object={object} />
+            <SceneNodeList object={object} />
           </div>
         </div>
       </>
@@ -233,7 +232,7 @@ function Branch(
   };
 }
 
-function iconFor(object: GameObject): IconNode {
+function iconFor(object: SceneNode): IconNode {
   return isIconNode(object.__icon) ? object.__icon : Box;
 }
 
@@ -246,8 +245,8 @@ function isIconNode(value: unknown): value is IconNode {
   );
 }
 
-export function renameKey(object: GameObject, from: string, to: string) {
-  const renamed: GameObject = {};
+export function renameKey(object: SceneNode, from: string, to: string) {
+  const renamed: SceneNode = {};
   for (const [key, value] of Object.entries(object)) {
     renamed[key === from ? to : key] = value;
   }

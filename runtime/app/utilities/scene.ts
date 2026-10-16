@@ -1,4 +1,3 @@
-import type { IconNode } from "lucide";
 import Atom from "lucide/dist/esm/icons/atom.mjs";
 import AppWindow from "lucide/dist/esm/icons/app-window.mjs";
 import ImageIcon from "lucide/dist/esm/icons/image.mjs";
@@ -8,9 +7,10 @@ import Type from "lucide/dist/esm/icons/type.mjs";
 import { routes } from "../routes.ts";
 import { isObject } from "./is-object.ts";
 
-export type SceneNode = string | DOMMatrix | IconNode | { [name: string]: SceneNode };
+export type ScenePath = string[];
+export type SceneNode = { [key in PropertyKey]: any };
 
-export function createScene(): { [name: string]: SceneNode } {
+export function createScene(): SceneNode {
   return {
     square: {
       transform: new DOMMatrix().translate(350, 180),
@@ -108,7 +108,7 @@ export function createScene(): { [name: string]: SceneNode } {
 
 export const scene = createScene();
 
-export type ScenePatch = { path: string[]; value?: unknown }[];
+export type ScenePatch = { path: ScenePath; value?: unknown }[];
 
 let before = plain(scene);
 
@@ -138,7 +138,7 @@ export function applyScenePatch(patch: ScenePatch) {
   before = plain(scene);
 }
 
-function diff(previous: unknown, next: unknown, path: string[], patch: ScenePatch) {
+function diff(previous: unknown, next: unknown, path: ScenePath, patch: ScenePatch) {
   if (JSON.stringify(previous) === JSON.stringify(next)) return;
   if (isRecord(previous) && isRecord(next)) {
     for (const key of new Set([...Object.keys(previous), ...Object.keys(next)])) {
@@ -181,10 +181,10 @@ function isMatrix(value: unknown): value is { __matrix: [number, number, number,
   return isObject(value) && Array.isArray(value.__matrix);
 }
 
-let snapshot: { [name: string]: SceneNode } | undefined;
+let snapshot: SceneNode | undefined;
 
 export function snapshotScene() {
-  snapshot = cloneData(scene) as { [name: string]: SceneNode };
+  snapshot = cloneData(scene) as SceneNode;
 }
 
 export function restoreScene() {
@@ -223,7 +223,7 @@ export function objectAt(root: object, path: readonly string[]): Record<string, 
 }
 
 export function filterScene<Result>(
-  scene: { [name: string]: SceneNode },
+  scene: SceneNode,
   check: (value: SceneNode) => Result,
 ): NonNullable<Result>[] {
   return Object.values(scene)

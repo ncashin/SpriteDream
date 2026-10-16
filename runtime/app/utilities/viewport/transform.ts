@@ -1,9 +1,8 @@
 import GitFork from "lucide/dist/esm/icons/git-fork.mjs";
 import { defaulted, string } from "remix/data-schema";
 
-import type { GameObject } from "../../actions/editor/object-tree.tsx";
 import { isObject } from "../is-object.ts";
-import { scene } from "../scene.ts";
+import { scene, type SceneNode } from "../scene.ts";
 import { defineTrait } from "../trait/trait.ts";
 
 type TransformRoot = { [name: string]: unknown };
@@ -21,7 +20,7 @@ export type Transform = {
 
 export const parentTrait = defineTrait("Parent", GitFork, defaulted(string(), ""));
 
-const views = new WeakMap<GameObject, Transform>();
+const views = new WeakMap<SceneNode, Transform>();
 
 const components = new Set([
   "a",
@@ -39,24 +38,24 @@ const components = new Set([
   "m43",
 ]);
 
-export function transform(object: GameObject): Transform | undefined {
+export function transform(object: SceneNode): Transform | undefined {
   const local = object.transform;
   if (!(local instanceof DOMMatrix)) return;
   return view(object);
 }
 
-export function parentObject(object: GameObject, root: TransformRoot = scene): GameObject | undefined {
+export function parentObject(object: SceneNode, root: TransformRoot = scene): SceneNode | undefined {
   const name = parentName(object);
   if (!name) return;
-  const parent = gameObject(root[name]);
+  const parent = sceneNode(root[name]);
   if (!parent || parent === object) return;
 
-  const seen = new Set<GameObject>([object, parent]);
+  const seen = new Set<SceneNode>([object, parent]);
   let current = parent;
   while (true) {
     const nextName = parentName(current);
     if (!nextName) return parent;
-    const next = gameObject(root[nextName]);
+    const next = sceneNode(root[nextName]);
     if (!next || next === current) return parent;
     if (seen.has(next)) return;
     seen.add(next);
@@ -68,7 +67,7 @@ export function applyTransform(context: CanvasRenderingContext2D, matrix: DOMMat
   context.setTransform(context.getTransform().multiply(matrix));
 }
 
-function view(object: GameObject): Transform {
+function view(object: SceneNode): Transform {
   const cached = views.get(object);
   if (cached) return cached;
 
@@ -174,21 +173,21 @@ function view(object: GameObject): Transform {
   return placement;
 }
 
-function setScale(object: GameObject, scaleX: number, scaleY: number) {
+function setScale(object: SceneNode, scaleX: number, scaleY: number) {
   if (!finite(scaleX) || !finite(scaleY)) return;
   const world = compose(object);
   applyLinear(world, decompose(world).rotation, scaleX, scaleY);
   writeLocal(object, world);
 }
 
-function compose(object: GameObject): DOMMatrix {
+function compose(object: SceneNode): DOMMatrix {
   const local = object.transform instanceof DOMMatrix ? copyMatrix(object.transform) : new DOMMatrix();
   const parent = parentObject(object);
   if (!parent) return local;
   return compose(parent).multiply(local);
 }
 
-function writeLocal(object: GameObject, world: DOMMatrix) {
+function writeLocal(object: SceneNode, world: DOMMatrix) {
   const local = object.transform;
   if (!(local instanceof DOMMatrix)) return;
   const parent = parentObject(object);
@@ -203,13 +202,13 @@ function writeLocal(object: GameObject, world: DOMMatrix) {
   writeMatrix(local, next);
 }
 
-function parentName(object: GameObject): string | undefined {
+function parentName(object: SceneNode): string | undefined {
   const parent = parentTrait(object)?.parent;
   if (!parent) return;
   return parent;
 }
 
-function gameObject(value: unknown): GameObject | undefined {
+function sceneNode(value: unknown): SceneNode | undefined {
   if (!isObject(value) || value instanceof DOMMatrix) return;
   return value;
 }

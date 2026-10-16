@@ -4,10 +4,9 @@ import { BoxShape, Vec2, World, type Body } from "planck";
 import { defaulted, enum_, object } from "remix/data-schema";
 import { boolean, number } from "remix/data-schema/coerce";
 
-import type { GameObject } from "../actions/editor/object-tree.tsx";
 import { addBoundingBoxLookup } from "./bounding-box.ts";
 import { isObject } from "./is-object.ts";
-import { filterScene, scene } from "./scene.ts";
+import { filterScene, scene, type SceneNode } from "./scene.ts";
 import { defineTrait } from "./trait/trait.ts";
 import "./viewport/draw-image.ts";
 import { parentObject, transform } from "./viewport/transform.ts";
@@ -73,10 +72,10 @@ function toPixels(meters: number) {
 }
 
 const world = new World(Vec2(0, 0));
-const simulated = new Map<GameObject, Body>();
-const hostedFixtures = new Map<GameObject, { propagate: boolean; children: readonly GameObject[]; sizes: string; kind: string }>();
+const simulated = new Map<SceneNode, Body>();
+const hostedFixtures = new Map<SceneNode, { propagate: boolean; children: readonly SceneNode[]; sizes: string; kind: string }>();
 const localPose = new Map<
-  GameObject,
+  SceneNode,
   { x: number; y: number; angle: number; vx: number; vy: number; spin: number; sceneX: number; sceneY: number; sceneAngle: number }
 >();
 
@@ -85,7 +84,7 @@ export function stepPhysics(deltaTime: number) {
 
   const bodies = filterScene(scene, physicsBodyTrait).filter((object) => !hostedCollider(object));
   const colliders = filterScene(scene, colliderTrait).filter((object) => !hostedCollider(object));
-  const live = new Set<GameObject>([...bodies, ...colliders]);
+  const live = new Set<SceneNode>([...bodies, ...colliders]);
   for (const [object, body] of simulated) {
     if (live.has(object)) continue;
     world.destroyBody(body);
@@ -120,7 +119,7 @@ export function resetPhysics() {
   localPose.clear();
 }
 
-function createBody(object: GameObject) {
+function createBody(object: SceneNode) {
   const placement = transform(object);
   if (!placement) return;
 
@@ -149,7 +148,7 @@ function createBody(object: GameObject) {
   simulated.set(object, body);
 }
 
-function syncFromScene(object: GameObject, deltaTime: number) {
+function syncFromScene(object: SceneNode, deltaTime: number) {
   const body = simulated.get(object);
   const placement = transform(object);
   if (!body || !placement) return;
@@ -175,7 +174,7 @@ function syncFromScene(object: GameObject, deltaTime: number) {
   }
 }
 
-function fixturesStale(object: GameObject) {
+function fixturesStale(object: SceneNode) {
   const previous = hostedFixtures.get(object);
   if (!previous) return false;
   const children = propagatedColliders(object);
@@ -185,31 +184,31 @@ function fixturesStale(object: GameObject) {
   return previous.children.length !== children.length || previous.children.some((child, index) => child !== children[index]);
 }
 
-function fixtureSizes(object: GameObject, children: readonly GameObject[]) {
+function fixtureSizes(object: SceneNode, children: readonly SceneNode[]) {
   return [object, ...children].map(colliderSize).join("|");
 }
 
-function bodyKind(object: GameObject) {
+function bodyKind(object: SceneNode) {
   const physics = physicsBodyTrait(object)?.physicsBody;
   if (!physics) return separatedCollider(object) ? "separated" : "static";
   return `${physics.body},${physics.fixedRotation},${physics.density}`;
 }
 
-function colliderSize(object: GameObject) {
+function colliderSize(object: SceneNode) {
   const collider = colliderTrait(object)?.collider;
   if (!collider) return "";
   return `${collider.width},${collider.height}`;
 }
 
-function propagatesCollision(object: GameObject) {
+function propagatesCollision(object: SceneNode) {
   return colliderTrait(object)?.collider.propagateCollision === true;
 }
 
-function hostedCollider(object: GameObject) {
+function hostedCollider(object: SceneNode) {
   return Boolean(colliderTrait(object) && collisionHost(object));
 }
 
-function collisionHost(object: GameObject): GameObject | undefined {
+function collisionHost(object: SceneNode): SceneNode | undefined {
   const parent = parentObject(object);
   if (!parent) return;
   const higher = collisionHost(parent);
@@ -217,12 +216,12 @@ function collisionHost(object: GameObject): GameObject | undefined {
   if (propagatesCollision(parent) && (physicsBodyTrait(parent) || colliderTrait(parent))) return parent;
 }
 
-function separatedCollider(object: GameObject) {
+function separatedCollider(object: SceneNode) {
   return Boolean(colliderTrait(object) && !physicsBodyTrait(object) && parentObject(object) && !hostedCollider(object));
 }
 
-function carrierBody(object: GameObject) {
-  const seen = new Set<GameObject>();
+function carrierBody(object: SceneNode) {
+  const seen = new Set<SceneNode>();
   let current = parentObject(object);
   while (current && !seen.has(current)) {
     const body = simulated.get(current);
@@ -232,7 +231,7 @@ function carrierBody(object: GameObject) {
   }
 }
 
-function sceneLocalPose(object: GameObject) {
+function sceneLocalPose(object: SceneNode) {
   const placement = transform(object);
   const parent = parentObject(object);
   const parentPlacement = parent ? transform(parent) : undefined;
@@ -241,13 +240,13 @@ function sceneLocalPose(object: GameObject) {
   return { x: local.x, y: local.y, angle: local.angle };
 }
 
-function rememberLocalPose(object: GameObject) {
+function rememberLocalPose(object: SceneNode) {
   const local = sceneLocalPose(object);
   if (!local) return;
   localPose.set(object, { ...local, vx: 0, vy: 0, spin: 0, sceneX: local.x, sceneY: local.y, sceneAngle: local.angle });
 }
 
-function adoptEditedPose(object: GameObject) {
+function adoptEditedPose(object: SceneNode) {
   const local = localPose.get(object);
   const scene = sceneLocalPose(object);
   if (!local || !scene) return;
@@ -267,7 +266,7 @@ function adoptEditedPose(object: GameObject) {
   local.sceneAngle = scene.angle;
 }
 
-function placeWithParent(object: GameObject, body: Body) {
+function placeWithParent(object: SceneNode, body: Body) {
   const parent = carrierBody(object);
   adoptEditedPose(object);
   const local = localPose.get(object);
@@ -290,14 +289,14 @@ function placeWithParent(object: GameObject, body: Body) {
   );
 }
 
-function propagatedColliders(host: GameObject) {
+function propagatedColliders(host: SceneNode) {
   return filterScene(scene, (node) => {
     if (!isObject(node) || node instanceof DOMMatrix || collisionHost(node) !== host) return;
     return colliderTrait(node);
   });
 }
 
-function addColliderFixture(body: Body, object: Collider, host: GameObject) {
+function addColliderFixture(body: Body, object: Collider, host: SceneNode) {
   const placement = transform(object);
   const hostPlacement = transform(host);
   if (!placement || !hostPlacement) return;
@@ -339,7 +338,7 @@ function bodyLocal(
   };
 }
 
-function writeSeparatedCollider(object: GameObject) {
+function writeSeparatedCollider(object: SceneNode) {
   if (!separatedCollider(object)) return;
   const body = simulated.get(object);
   const parent = carrierBody(object);
@@ -381,7 +380,7 @@ function writeSeparatedCollider(object: GameObject) {
   }
 }
 
-function applySeparatedGravity(object: GameObject) {
+function applySeparatedGravity(object: SceneNode) {
   if (!separatedCollider(object)) return;
   const body = simulated.get(object);
   const carrier = carrierObject(object);
@@ -392,8 +391,8 @@ function applySeparatedGravity(object: GameObject) {
   body.applyForceToCenter(Vec2(0, mass * physics.physicsBody.gravity));
 }
 
-function carrierObject(object: GameObject) {
-  const seen = new Set<GameObject>();
+function carrierObject(object: SceneNode) {
+  const seen = new Set<SceneNode>();
   let current = parentObject(object);
   while (current && !seen.has(current)) {
     if (simulated.has(current)) return current;

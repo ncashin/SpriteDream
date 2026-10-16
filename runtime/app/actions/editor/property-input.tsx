@@ -4,14 +4,14 @@ import { css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
+import type { SceneNode } from "../../utilities/scene.ts";
 import { transform } from "../../utilities/viewport/transform.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { MatrixInput } from "./matrix-input.tsx";
-import type { GameObject } from "./object-tree.tsx";
 
 type PropertyInputProps = {
   name: string;
-  object: GameObject;
+  object: SceneNode;
   onRename: (from: string, to: string) => void;
   onDelete: () => void;
 };

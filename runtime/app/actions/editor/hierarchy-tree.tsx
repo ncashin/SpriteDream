@@ -7,6 +7,7 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
 import { isObject } from "../../utilities/is-object.ts";
+import type { SceneNode } from "../../utilities/scene.ts";
 import {
   deselectObject,
   selectObjects,
@@ -14,7 +15,7 @@ import {
 } from "../../utilities/selected-objects.ts";
 import { parentObject } from "../../utilities/viewport/transform.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
-import { renameKey, type GameObject } from "./object-tree.tsx";
+import { renameKey } from "./object-tree.tsx";
 import {
   chevronOpen,
   childrenClip,
@@ -31,13 +32,13 @@ import {
 
 type HierarchyNode = {
   name: string;
-  object: GameObject;
+  object: SceneNode;
   children: HierarchyNode[];
 };
 
 export const HierarchyTree = clientEntry(
   import.meta.url,
-  function HierarchyTree(handle: Handle<{ object: GameObject }>) {
+  function HierarchyTree(handle: Handle<{ object: SceneNode }>) {
     if (typeof requestAnimationFrame === "function") {
       let frame = requestAnimationFrame(function tick() {
         if (handle.signal.aborted) return;
@@ -84,7 +85,7 @@ export const HierarchyTree = clientEntry(
   },
 );
 
-function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: GameObject }>) {
+function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode }>) {
   let collapsed = false;
   let name = handle.props.node.name;
 
@@ -178,34 +179,34 @@ const newObject = css({
   },
 });
 
-function uniqueName(root: GameObject, base: string) {
+function uniqueName(root: SceneNode, base: string) {
   let name = base;
   let n = 2;
   while (Object.hasOwn(root, name)) name = `${base}${n++}`;
   return name;
 }
 
-function renameNode(root: GameObject, from: string, to: string) {
+function renameNode(root: SceneNode, from: string, to: string) {
   renameKey(root, from, to);
   for (const value of Object.values(root)) {
     if (isObject(value) && !(value instanceof DOMMatrix) && value.parent === from) value.parent = to;
   }
 }
 
-function removeNode(node: HierarchyNode, root: GameObject) {
+function removeNode(node: HierarchyNode, root: SceneNode) {
   deselectObject(node.object);
   for (const child of node.children) removeNode(child, root);
   delete root[node.name];
 }
 
-function hierarchy(root: GameObject): HierarchyNode[] {
-  const items: { name: string; object: GameObject }[] = [];
+function hierarchy(root: SceneNode): HierarchyNode[] {
+  const items: { name: string; object: SceneNode }[] = [];
   for (const [name, value] of Object.entries(root)) {
     if (!isObject(value) || value instanceof DOMMatrix) continue;
     items.push({ name, object: value });
   }
 
-  const children = new Map<string, { name: string; object: GameObject }[]>();
+  const children = new Map<string, { name: string; object: SceneNode }[]>();
   const childNames = new Set<string>();
 
   for (const item of items) {
@@ -222,7 +223,7 @@ function hierarchy(root: GameObject): HierarchyNode[] {
 
   const roots = items.filter((item) => !childNames.has(item.name));
 
-  function node(item: { name: string; object: GameObject }): HierarchyNode {
+  function node(item: { name: string; object: SceneNode }): HierarchyNode {
     return {
       name: item.name,
       object: item.object,

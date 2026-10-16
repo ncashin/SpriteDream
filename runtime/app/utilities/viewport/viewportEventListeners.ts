@@ -1,4 +1,4 @@
-import type { GameObject } from "../../actions/editor/object-tree.tsx";
+import type { SceneNode } from "../scene.ts";
 import { selectObjects } from "../selected-objects.ts";
 import { isWheelPassthrough } from "./draw-bounding-box.tsx";
 import type { ViewportOptions } from "./viewport.ts";
@@ -6,7 +6,7 @@ import type { ViewportWithTransforms } from "./viewportTransforms.ts";
 
 const CLICK_SLOP = 4;
 
-export function curryViewportEvents(
+export function curryViewportEventListeners(
   viewportWithTransforms: ViewportWithTransforms,
   options?: ViewportOptions,
 ) {
@@ -19,7 +19,7 @@ export function curryViewportEvents(
     originX: number;
     originY: number;
     moved: boolean;
-    object: GameObject | undefined;
+    object: SceneNode | undefined;
   } | null = null;
 
   function onCanvasSurface(event: Event) {

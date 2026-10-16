@@ -8,19 +8,18 @@ import { hotkeys } from "../../utilities/hotkey.ts";
 import type { SceneNode } from "../../utilities/scene.ts";
 import { scene } from "../../utilities/scene.ts";
 import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
-import type { GameObject } from "./object-tree.tsx";
 
 const LIST_ID = "object-search-list";
 
-function gameObject(value: SceneNode): GameObject | undefined {
+function sceneNode(value: SceneNode): SceneNode | undefined {
   if (typeof value !== "object" || value === null) return;
-  return value as GameObject;
+  return value;
 }
 
 function topLevelObjects() {
-  let objects: { name: string; object: GameObject }[] = [];
+  let objects: { name: string; object: SceneNode }[] = [];
   for (let [name, value] of Object.entries(scene)) {
-    let object = gameObject(value);
+    let object = sceneNode(value);
     if (object) objects.push({ name, object });
   }
   return objects;

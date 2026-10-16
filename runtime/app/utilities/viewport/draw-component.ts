@@ -25,14 +25,12 @@ export type DrawComponent = {
   dispose(): void;
 };
 
-/** Stable identity for one kind of overlay drawn from `source`. */
-export function componentKeys() {
-  const keys = new WeakMap<object, object>();
-  return (source: object) => {
-    let key = keys.get(source);
-    if (!key) keys.set(source, (key = {}));
-    return key;
-  };
+const keys = new WeakMap<object, object>();
+
+export function drawComponentKey(source: object) {
+  let key = keys.get(source);
+  if (!key) keys.set(source, (key = {}));
+  return key;
 }
 
 export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {

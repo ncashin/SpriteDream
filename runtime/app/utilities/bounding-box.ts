@@ -1,4 +1,4 @@
-import type { GameObject } from "../actions/editor/object-tree.tsx";
+import type { SceneNode } from "./scene.ts";
 import { transform } from "./viewport/transform.ts";
 
 export type BoundingBoxSize = {
@@ -7,7 +7,7 @@ export type BoundingBoxSize = {
   resizeCallback?: (size: { width: number; height: number }) => void;
 };
 
-type BoundingBoxLookup = (object: GameObject) => BoundingBoxSize | undefined;
+type BoundingBoxLookup = (object: SceneNode) => BoundingBoxSize | undefined;
 
 const lookups = new Set<BoundingBoxLookup>();
 
@@ -15,7 +15,7 @@ export function addBoundingBoxLookup(lookup: BoundingBoxLookup) {
   lookups.add(lookup);
 }
 
-export function lookupBoundingBox(object: GameObject): Bounds | undefined {
+export function lookupBoundingBox(object: SceneNode): Bounds | undefined {
   const matrix = transform(object)?.matrix;
   if (!matrix) return;
   const sizes: BoundingBoxSize[] = [];

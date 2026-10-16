@@ -2,14 +2,12 @@ import { clientEntry, css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { isObject } from "../../utilities/is-object.ts";
-import { objectAt } from "../../utilities/scene.ts";
+import { objectAt, scene } from "../../utilities/scene.ts";
 
 let panelRoot: Element | undefined;
 
 function countObject() {
   if (typeof window === "undefined" || !panelRoot) return;
-  const parentScene = window.parent !== window ? window.parent.spritedream?.scene : undefined;
-  const scene = parentScene ?? window.spritedream?.scene;
   const frameHost = window.frameElement instanceof HTMLElement ? window.frameElement.closest("[data-scene-object]") : null;
   const host = panelRoot.closest("[data-scene-object]") ?? frameHost;
   const name = host instanceof HTMLElement ? host.dataset.sceneObject : undefined;

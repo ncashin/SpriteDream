@@ -1,17 +1,22 @@
-import { clientEntry, css, ref } from "remix/component";
+import { clientEntry, css } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Mode, setMode } from "../../utilities/mode.ts";
 import { playerColor } from "../../utilities/player-color.ts";
+import type { ScenePath } from "../../utilities/scene.ts";
 
-type Person = { id: string; x: number | null; y: number | null; selected?: string[][] };
+type Person = { id: string; cursor: { x: number; y: number } | null; selectedObjects?: ScenePath[] };
+
+type RoomState = {
+  mode: Mode;
+  host: string;
+  people: Record<string, Person>;
+};
 
 type RoomConnection = {
   socket: WebSocket;
   you: string;
-  host: string;
-  mode: Mode;
-  people: Person[];
+  state: RoomState;
   stop: AbortController;
   bound: boolean;
 };
@@ -24,9 +29,7 @@ function connection(): RoomConnection {
   const next: RoomConnection = {
     socket: new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/room`),
     you: "",
-    host: "",
-    mode: Mode.Edit,
-    people: [],
+    state: { mode: Mode.Edit, host: "", people: {} },
     stop: new AbortController(),
     bound: false,
   };
@@ -36,10 +39,10 @@ function connection(): RoomConnection {
 
 export function syncMode(next: Mode) {
   const room = connection();
-  room.mode = next;
+  room.state.mode = next;
   const starting = next === Mode.Play;
-  if (starting && room.you) room.host = room.you;
-  setMode(next, starting || (room.you !== "" && room.you === room.host));
+  if (starting && room.you) room.state.host = room.you;
+  setMode(next, starting || (room.you !== "" && room.you === room.state.host));
   if (room.socket.readyState === WebSocket.OPEN) {
     room.socket.send(JSON.stringify({ mode: next, claim: starting }));
   }
@@ -47,53 +50,40 @@ export function syncMode(next: Mode) {
 
 export const Room = clientEntry(import.meta.url, function Room(handle: Handle) {
   let you = "";
-  let people: Person[] = [];
+  let people: Record<string, Person> = {};
   let sharedMode = Mode.Edit;
   let host = "";
-  let cursorsFor = new Map<string, HTMLElement>();
 
   if (typeof location !== "undefined") {
     const room = connection();
     const socket = room.socket;
     you = room.you;
-    people = room.people;
-    sharedMode = room.mode;
-    host = room.host;
+    people = room.state.people;
+    sharedMode = room.state.mode;
+    host = room.state.host;
     if (!room.bound) {
       room.bound = true;
       const signal = room.stop.signal;
       socket.addEventListener("message", (event) => {
         const message = JSON.parse(String(event.data)) as {
           you?: string;
-          people?: Person[];
+          people?: Record<string, Person>;
           scene?: unknown;
           mode?: string;
           host?: string;
         };
-        if (message.mode === Mode.Edit || message.mode === Mode.Play) sharedMode = message.mode;
         if (Array.isArray(message.scene)) {
           window.postMessage({ scene: message.scene }, location.origin);
           return;
         }
-        if (!message.you || !message.people) return;
+        if (!message.you || !message.people || Array.isArray(message.people) || (message.mode !== Mode.Edit && message.mode !== Mode.Play)) return;
         you = message.you;
         people = message.people;
-        host = message.people.some((person) => person.id === message.host) ? message.host! : message.people[0]?.id ?? "";
+        host = message.host ?? "";
+        sharedMode = message.mode;
         room.you = you;
-        room.people = people;
-        room.mode = sharedMode;
-        room.host = host;
+        room.state = { mode: sharedMode, host, people };
         setMode(sharedMode, you !== "" && you === host);
-        const space = canvasView()?.spritedream;
-        if (space) {
-          space.remoteSelections = people
-            .filter((person) => person.id !== you)
-            .map((person) => ({
-              id: person.id,
-              color: playerColor(person.id),
-              paths: person.selected ?? [],
-            }));
-        }
         handle.update();
       }, { signal });
       window.addEventListener("message", (event) => {
@@ -101,123 +91,18 @@ export const Room = clientEntry(import.meta.url, function Room(handle: Handle) {
         if (socket.readyState !== WebSocket.OPEN) return;
         socket.send(JSON.stringify({ scene: event.data.scene }));
       }, { signal });
-
-      let point: { x: number; y: number } | null = null;
-      let selectedKey = "";
-      let queued = false;
-      const sendState = () => {
-        queued = false;
-        if (socket.readyState !== WebSocket.OPEN) return;
-        const selected = canvasView()?.spritedream?.selection() ?? [];
-        selectedKey = selected.map((path) => path.join("\0")).join("\n");
-        socket.send(JSON.stringify({ x: point?.x ?? null, y: point?.y ?? null, selected }));
-      };
-      const queueSend = () => {
-        if (queued) return;
-        queued = true;
-        requestAnimationFrame(sendState);
-      };
-      const move = (event: PointerEvent) => {
-        const view = canvasView();
-        if (!view?.spritedream) return;
-        const local = toViewClient(event, view);
-        point = view.spritedream.screenToWorld(local.x, local.y);
-        queueSend();
-      };
-      const hide = () => {
-        point = null;
-        queueSend();
-      };
-      const watchSelection = () => {
-        const next = canvasView()?.spritedream?.selection() ?? [];
-        const key = next.map((path) => path.join("\0")).join("\n");
-        if (key !== selectedKey) queueSend();
-        requestAnimationFrame(watchSelection);
-      };
-      requestAnimationFrame(watchSelection);
-      const seen = new WeakSet<Window>();
-      const watch = (view: Window) => {
-        if (seen.has(view)) return;
-        seen.add(view);
-        view.addEventListener("pointermove", move);
-        view.addEventListener("blur", hide);
-        view.document.addEventListener("pointerleave", (event) => {
-          if (event.relatedTarget == null) hide();
-        });
-      };
-      const watchFrames = () => {
-        watch(window);
-        for (const frame of document.querySelectorAll("iframe")) {
-          try {
-            if (frame.contentWindow) watch(frame.contentWindow);
-          } catch {
-            // A cross-origin frame has no pointer coordinates to share.
-          }
-        }
-      };
-      watchFrames();
-      new MutationObserver(watchFrames).observe(document.documentElement, { childList: true, subtree: true });
-
-      const nodes = new Map<string, HTMLElement>();
-      cursorsFor = nodes;
-      const place = () => {
-        const view = canvasView();
-        const space = view?.spritedream;
-        const origin = view ? canvasOrigin(view) : undefined;
-        for (const [id, node] of nodes) {
-          const person = people.find((entry) => entry.id === id);
-          if (!person || person.x == null || person.y == null || !space || !origin) continue;
-          const screen = space.worldToScreen(person.x, person.y);
-          node.style.left = `${origin.left + screen.x}px`;
-          node.style.top = `${origin.top + screen.y}px`;
-        }
-        requestAnimationFrame(place);
-      };
-      requestAnimationFrame(place);
     }
   }
 
   return () => (
     <>
       <ul aria-label="People in the room" mix={list}>
-        {people.map((person) => (
+        {Object.values(people).map((person) => (
           <li key={person.id} title={person.id === host ? "Host" : person.id}>
             {faceFor(person.id)}
           </li>
         ))}
       </ul>
-      <div mix={cursors}>
-        {people
-          .filter((person) => person.id !== you && person.x != null && person.y != null)
-          .map((person) => (
-            <div
-              key={person.id}
-              mix={[
-                cursor,
-                ref((node, signal) => {
-                  if (!(node instanceof HTMLElement)) return;
-                  cursorsFor.set(person.id, node);
-                  signal.addEventListener("abort", () => {
-                    if (cursorsFor.get(person.id) === node) cursorsFor.delete(person.id);
-                  });
-                }),
-              ]}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.86a.5.5 0 0 0-.85.35Z"
-                  fill={playerColor(person.id)}
-                  stroke="#fff"
-                  stroke-width="1.5"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <span mix={name} style={{ background: playerColor(person.id) }}>
-                {person.id.slice(0, 4)}
-              </span>
-            </div>
-          ))}
-      </div>
     </>
   );
 });
@@ -245,30 +130,6 @@ function hash(value: string) {
   return total;
 }
 
-function canvasView() {
-  if (window.spritedream) return window;
-  const frame = document.querySelector("iframe");
-  if (frame?.contentWindow?.spritedream) return frame.contentWindow;
-}
-
-function toViewClient(event: PointerEvent, view: Window) {
-  if (event.view === view) return { x: event.clientX, y: event.clientY };
-  const frame = view.frameElement;
-  if (!(frame instanceof HTMLElement)) return { x: event.clientX, y: event.clientY };
-  const box = frame.getBoundingClientRect();
-  return { x: event.clientX - box.left, y: event.clientY - box.top };
-}
-
-function canvasOrigin(view: Window) {
-  const canvas = view.document.querySelector("canvas");
-  if (!canvas) return;
-  const local = canvas.getBoundingClientRect();
-  const frame = view.frameElement;
-  if (!(frame instanceof HTMLElement)) return local;
-  const box = frame.getBoundingClientRect();
-  return { left: box.left + local.left, top: box.top + local.top };
-}
-
 const list = css({
   alignItems: "center",
   alignSelf: "center",
@@ -287,28 +148,4 @@ const face = css({
   flex: "0 0 auto",
   height: "1.75rem",
   width: "1.4rem",
-});
-
-const cursors = css({
-  inset: 0,
-  pointerEvents: "none",
-  position: "fixed",
-  zIndex: 30,
-});
-
-const cursor = css({
-  position: "absolute",
-});
-
-const name = css({
-  borderRadius: "0.15rem 0.7rem 0.7rem 0.7rem",
-  color: "#fff",
-  fontSize: "0.6875rem",
-  fontWeight: 600,
-  left: "0.7rem",
-  lineHeight: "1rem",
-  padding: "0.05rem 0.4rem 0.1rem",
-  position: "absolute",
-  top: "1rem",
-  whiteSpace: "nowrap",
 });

@@ -1,9 +1,8 @@
-import type { GameObject } from "../actions/editor/object-tree.tsx";
 import { center } from "./bounding-box.ts";
 import { hotkeys, isTyping } from "./hotkey.ts";
 import { isObject } from "./is-object.ts";
 import { Mode, mode } from "./mode.ts";
-import { scene } from "./scene.ts";
+import { scene, type SceneNode } from "./scene.ts";
 import { deselectObject, selectObjects, selectedObjects } from "./selected-objects.ts";
 import { transform } from "./viewport/transform.ts";
 import { cursorWorldPoint, type WorldPoint } from "./viewport/viewport.ts";
@@ -11,9 +10,9 @@ import { cursorWorldPoint, type WorldPoint } from "./viewport/viewport.ts";
 const PASTE_STEP = 32;
 
 type ClipboardEntry = {
-  parent: GameObject;
+  parent: SceneNode;
   name: string;
-  value: GameObject;
+  value: SceneNode;
 };
 
 let clipboard: ClipboardEntry[] = [];
@@ -23,7 +22,7 @@ let objectPaste: ReturnType<typeof setTimeout> | undefined;
 
 export function copySelectedObjects() {
   const next: ClipboardEntry[] = [];
-  const seen = new Set<GameObject>();
+  const seen = new Set<SceneNode>();
   for (const object of selectedObjects) {
     const owner = findOwner(scene, object);
     if (!owner || seen.has(object)) continue;
@@ -47,12 +46,12 @@ export function copySelectedObjects() {
 
 export function pasteCopiedObjects() {
   if (clipboard.length === 0) return false;
-  const pasted: { parent: GameObject; copy: GameObject }[] = [];
+  const pasted: { parent: SceneNode; copy: SceneNode }[] = [];
   const containers = new Set(clipboard.map((entry) => entry.parent));
   for (const container of containers) {
     if (!isAttached(scene, container)) continue;
     const renamed = new Map<string, string>();
-    const copies: GameObject[] = [];
+    const copies: SceneNode[] = [];
     for (const entry of clipboard) {
       if (entry.parent !== container) continue;
       const copy = structuredClone(entry.value);
@@ -75,8 +74,8 @@ export function pasteCopiedObjects() {
 }
 
 export function deleteSelectedObjects() {
-  const seen = new Set<GameObject>();
-  const removals: { parent: GameObject; name: string; value: GameObject }[] = [];
+  const seen = new Set<SceneNode>();
+  const removals: { parent: SceneNode; name: string; value: SceneNode }[] = [];
   for (const object of selectedObjects) {
     const owner = findOwner(scene, object);
     if (!owner || seen.has(object)) continue;
@@ -160,7 +159,7 @@ async function pasteImage(file: File) {
   }
 
   const cursor = cursorWorldPoint();
-  const object: GameObject = {
+  const object: SceneNode = {
     transform: new DOMMatrix().translate(cursor?.x ?? 0, cursor?.y ?? 0),
     image: {
       width: String(image.naturalWidth || 64),
@@ -175,9 +174,9 @@ async function pasteImage(file: File) {
 }
 
 function findOwner(
-  root: GameObject,
-  target: GameObject,
-): { parent: GameObject; name: string } | undefined {
+  root: SceneNode,
+  target: SceneNode,
+): { parent: SceneNode; name: string } | undefined {
   for (const [name, value] of Object.entries(root)) {
     if (value === target) return { parent: root, name };
     if (isObject(value) && !(value instanceof DOMMatrix)) {
@@ -187,14 +186,14 @@ function findOwner(
   }
 }
 
-function childOwners(container: GameObject, name: string): { name: string; value: GameObject }[] {
+function childOwners(container: SceneNode, name: string): { name: string; value: SceneNode }[] {
   const owned = new Set<string>([name]);
-  const children: { name: string; value: GameObject }[] = [];
+  const children: { name: string; value: SceneNode }[] = [];
   let added = true;
   while (added) {
     added = false;
     for (const [key, value] of Object.entries(container)) {
-      if (owned.has(key) || !isGameObject(value)) continue;
+      if (owned.has(key) || !isSceneNode(value)) continue;
       if (typeof value.parent !== "string" || !owned.has(value.parent)) continue;
       owned.add(key);
       children.push({ name: key, value });
@@ -204,19 +203,19 @@ function childOwners(container: GameObject, name: string): { name: string; value
   return children;
 }
 
-function pastedRoots(pasted: { parent: GameObject; copy: GameObject }[]) {
+function pastedRoots(pasted: { parent: SceneNode; copy: SceneNode }[]) {
   const copies = new Set(pasted.map((entry) => entry.copy));
   return pasted.flatMap(({ parent, copy }) => {
     const owner = typeof copy.parent === "string" ? parent[copy.parent] : undefined;
-    return copies.has(owner as GameObject) ? [] : [copy];
+    return copies.has(owner as SceneNode) ? [] : [copy];
   });
 }
 
-function isGameObject(value: unknown): value is GameObject {
+function isSceneNode(value: unknown): value is SceneNode {
   return isObject(value) && !(value instanceof DOMMatrix);
 }
 
-function isAttached(root: GameObject, target: GameObject): boolean {
+function isAttached(root: SceneNode, target: SceneNode): boolean {
   if (root === target) return true;
   for (const value of Object.values(root)) {
     if (!isObject(value) || value instanceof DOMMatrix) continue;
@@ -225,7 +224,7 @@ function isAttached(root: GameObject, target: GameObject): boolean {
   return false;
 }
 
-function moveToCursor(objects: GameObject[]) {
+function moveToCursor(objects: SceneNode[]) {
   const cursor = cursorWorldPoint();
   const anchor = averagePoint(objects.flatMap((object) => {
     const point = placementPoint(object);
@@ -251,7 +250,7 @@ function moveToCursor(objects: GameObject[]) {
   }
 }
 
-function placementPoint(object: GameObject): WorldPoint | undefined {
+function placementPoint(object: SceneNode): WorldPoint | undefined {
   const own = pointOf(object);
   if (own) return own;
 
@@ -262,7 +261,7 @@ function placementPoint(object: GameObject): WorldPoint | undefined {
   return averagePoint(points);
 }
 
-function collectPoints(object: GameObject, points: WorldPoint[]) {
+function collectPoints(object: SceneNode, points: WorldPoint[]) {
   const own = pointOf(object);
   if (own) {
     points.push(own);
@@ -273,7 +272,7 @@ function collectPoints(object: GameObject, points: WorldPoint[]) {
   }
 }
 
-function pointOf(object: GameObject): WorldPoint | undefined {
+function pointOf(object: SceneNode): WorldPoint | undefined {
   const matrix = transform(object)?.matrix;
   if (!matrix) return;
 
@@ -295,7 +294,7 @@ function averagePoint(points: WorldPoint[]): WorldPoint | undefined {
   return { x: x / points.length, y: y / points.length };
 }
 
-function translateObject(object: GameObject, dx: number, dy: number) {
+function translateObject(object: SceneNode, dx: number, dy: number) {
   const matrix = transform(object)?.matrix;
   if (matrix) {
     matrix.preMultiplySelf(new DOMMatrix().translate(dx, dy));
@@ -306,7 +305,7 @@ function translateObject(object: GameObject, dx: number, dy: number) {
   }
 }
 
-function uniqueName(parent: GameObject, name: string) {
+function uniqueName(parent: SceneNode, name: string) {
   if (!Object.hasOwn(parent, name)) return name;
   const base = name.replace(/\d+$/, "");
   let index = 2;
