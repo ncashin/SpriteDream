@@ -86,15 +86,14 @@ export function drawBoundingBox(
     drawComponent(key: object | string, transform: DOMMatrix, node: RemixNode): void;
   },
   object: SceneNode,
-  options?: { color?: string; handles?: boolean; key?: object | string },
+  options?: { color?: string; handles?: boolean },
 ) {
   const bounds = lookupBoundingBox(object);
   if (!bounds) return;
   const frame = scaleRemoved(bounds);
   const handles = options?.handles !== false;
-  const key = options?.key ?? object;
   viewport.drawComponent(
-    typeof key === "string" ? key : drawComponentKey(key),
+    drawComponentKey(object, "boundingbox"),
     frame.transform,
     <BoundingBox
       bounds={bounds}

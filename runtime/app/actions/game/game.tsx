@@ -8,9 +8,8 @@ import { inputMap } from "../../utilities/input.ts";
 import { Mode, setMode } from "../../utilities/mode.ts";
 import {
   colliderTrait,
+  physics as createPhysics,
   physicsBodyTrait,
-  resetPhysics,
-  stepPhysics,
 } from "../../utilities/physics.ts";
 import {
   applyScenePatch,
@@ -27,17 +26,18 @@ import {
   selectedObjects,
 } from "../../utilities/selected-objects.ts";
 import { playerColor } from "../../utilities/player-color.ts";
-import { updateLoop as createUpdateLoop } from "../../utilities/update-loop.ts";
+import { traits } from "../../utilities/trait/trait.ts";
+import { updateLoop } from "../../utilities/update-loop.ts";
 import { imageTrait } from "../../utilities/viewport/draw-image.ts";
 import { textTrait } from "../../utilities/viewport/draw-text.ts";
 import { frameTrait } from "../../utilities/viewport/frame.tsx";
-import { parentObject, transform } from "../../utilities/viewport/transform.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
 import { viewport } from "../../utilities/viewport/viewport.ts";
 
-const SPEED = 240;
+const RUN_SPEED = 280;
+const JUMP_SPEED = -560;
 
-function handleSelection(point: WorldPoint) {
+function objectAtPoint(point: WorldPoint) {
   const found = filterScene(scene, (node) => {
     const bounds = lookupBoundingBox(node);
     if (!bounds || !contains(bounds, point)) return;
@@ -48,6 +48,18 @@ function handleSelection(point: WorldPoint) {
 
 export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
   let hovering = false;
+
+  function onWorldHover(point: WorldPoint) {
+    const next = objectAtPoint(point) !== undefined;
+    if (hovering === next) return;
+    hovering = next;
+    handle.update();
+  }
+
+  function onWorldClick(point: WorldPoint) {
+    const node = objectAtPoint(point);
+    selectObjects(node === undefined ? [] : [node]);
+  }
 
   return () => (
     <main
@@ -68,7 +80,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             display: "block",
             width: "100%",
             height: "100%",
-            cursor: hovering ? "pointer" : "grab",
+            cursor: hovering ? "pointer" : undefined,
             touchAction: "none",
             background: "#262626",
             outline: "none",
@@ -80,27 +92,29 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
 
             const editorViewport = viewport(canvas, {
               signal,
-              handleSelection,
-              handleHoverSelectable(next) {
-                if (hovering === next) return;
-                hovering = next;
+              onWorldHover,
+              onWorldClick,
+            });
+            canvas.addEventListener(
+              "pointerleave",
+              () => {
+                if (!hovering) return;
+                hovering = false;
                 handle.update();
               },
-            });
+              { signal },
+            );
 
             const input = inputMap(
               {
                 buttons: {
                   deselect: ["escape"],
+                  jump: [" ", "w", "arrowup"],
                 },
                 axes: {
                   x: {
                     positive: ["d", "arrowright"],
                     negative: ["a", "arrowleft"],
-                  },
-                  y: {
-                    positive: ["s", "arrowdown"],
-                    negative: ["w", "arrowup"],
                   },
                 },
               },
@@ -108,27 +122,17 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             );
             copyAndPaste({ signal });
 
-            const updateLoop = createUpdateLoop();
-            const editorLoop = createUpdateLoop(updateLoop);
-            const gameLoop = createUpdateLoop(updateLoop);
+            const loop = updateLoop();
+            const physics = createPhysics();
 
-            editorLoop.onUpdate(() => {});
-
-            const syncLoops = () => {
+            const syncMode = () => {
               if (room.state.mode === Mode.Play && room.isHost) {
                 snapshotScene();
-                editorLoop.stop();
-                gameLoop.start();
                 return;
               }
-              gameLoop.stop();
-              if (restoreScene()) {
-                resetPhysics();
-                selectObjects([]);
-              }
-              if (room.state.mode === Mode.Edit) editorLoop.start();
-              else editorLoop.stop();
+              if (restoreScene()) selectObjects([]);
             };
+            
             let before = structuredClone(scene);
             const room = joinRoom(signal, {
               onScene(patch) {
@@ -137,52 +141,61 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               },
               onModeChange(next) {
                 setMode(next, next === Mode.Play && room.isHost);
-                syncLoops();
+                syncMode();
               },
-              onHostChange: syncLoops,
+              onHostChange: syncMode,
             });
-            syncLoops();
-
-            gameLoop.onUpdate(({ deltaTime }) => {
-              stepPhysics(deltaTime);
-              const dx = input.axes.x * SPEED * deltaTime;
-              const dy = input.axes.y * SPEED * deltaTime;
-              if (!dx && !dy) return;
-              filterScene(scene, (node) => {
-                const img = imageTrait(node);
-                if (img && !parentObject(img) && !physicsBodyTrait(img)) {
-                  const placement = transform(img);
-                  if (placement) {
-                    placement.position.x += dx;
-                    placement.position.y += dy;
-                  }
-                }
-              });
-            });
-       
+            syncMode();
 
             let sentSelection = "";
+            let sentInput = "";
 
-            updateLoop.onUpdate(() => {
-              for (const object of selectedObjects)
-                editorViewport.drawBoundingBox(object);
-
-              for (const person of Object.values(room.state.people)) {
-                if (person.id === room.you) continue;
-                const color = playerColor(person.id);
-                if (person.cursor) {
-                  editorViewport.drawCursor(person.cursor, color);
+            loop.onUpdate(({ deltaTime }) => {
+              const playing = room.state.mode === Mode.Play;
+              const mine = { x: input.axes.x, jump: input.buttons.jump.down };
+              if (playing) {
+                const encoded = JSON.stringify(mine);
+                if (encoded !== sentInput) {
+                  sentInput = encoded;
+                  room.sendInput(mine);
                 }
-                
-                for (const path of person.selectedObjects ?? []) {
-                  const object = objectAt(scene, path);
-                  if (!object) continue;
-                  editorViewport.drawBoundingBox(object, {
-                    color,
-                    handles: false,
-                    key: `${person.id}:${path.join("/")}`,
+              }
+
+              if (playing && room.isHost) {
+                let x = 0;
+                let jumped = false;
+                for (const person of Object.values(room.state.people)) {
+                  const controls = person.id === room.you ? mine : person.input;
+                  const axis = controls?.x;
+                  if (typeof axis === "number") x += axis;
+                  jumped ||= controls?.jump === true;
+                }
+                x = Math.max(-1, Math.min(1, x));
+
+                const player = physicsBodyTrait(scene.player);
+                if (player) {
+                  player.physicsBody.velocity.x = x * RUN_SPEED;
+                  const grounded = physics.contacts().some((contact) => {
+                    if (!contact.touching) return false;
+                    if (contact.a === scene.player) return contact.normalY > 0.5;
+                    if (contact.b === scene.player) return contact.normalY < -0.5;
+                    return false;
                   });
+                  if (jumped && grounded) {
+                    player.physicsBody.velocity.y = JUMP_SPEED;
+                  }
                 }
+
+                physics.beginFrame(deltaTime);
+
+                for (const object of filterScene(
+                  scene,
+                  (node) => physicsBodyTrait(node) || colliderTrait(node),
+                )) {
+                  physics.simulate(object);
+                }
+
+                physics.endFrame();
               }
 
               input.update();
@@ -200,6 +213,26 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               }
               for (const collider of filterScene(scene, colliderTrait)) {
                 editorViewport.drawPhysicsCollider(collider);
+              }
+
+              for (const object of selectedObjects)
+                editorViewport.drawBoundingBox(object);
+
+              for (const person of Object.values(room.state.people)) {
+                if (person.id === room.you) continue;
+                const color = playerColor(person.id);
+                if (person.cursor) {
+                  editorViewport.drawCursor(person.cursor, color);
+                }
+
+                for (const path of person.selectedObjects ?? []) {
+                  const object = objectAt(scene, path);
+                  if (!object) continue;
+                  editorViewport.drawBoundingBox(object, {
+                    color,
+                    handles: false,
+                  });
+                }
               }
 
               room.sendCursor(editorViewport.state.cursorPoint);
@@ -221,12 +254,10 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               }
             });
 
-            updateLoop.start();
+            loop.start();
 
             signal.addEventListener("abort", () => {
-              updateLoop.stop();
-              editorLoop.stop();
-              gameLoop.stop();
+              loop.stop();
             });
           }),
         ]}

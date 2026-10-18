@@ -1,5 +1,3 @@
-import type { SceneNode } from "../scene.ts";
-import { selectObjects } from "../selected-objects.ts";
 import { isWheelPassthrough } from "./draw-bounding-box.tsx";
 import type { ViewportOptions } from "./viewport.ts";
 import type { ViewportWithTransforms } from "./viewportTransforms.ts";
@@ -19,7 +17,6 @@ export function curryViewportEventListeners(
     originX: number;
     originY: number;
     moved: boolean;
-    object: SceneNode | undefined;
   } | null = null;
 
   function onCanvasSurface(event: Event) {
@@ -33,9 +30,6 @@ export function curryViewportEventListeners(
     } catch {
       // Pointer capture is only available for an active pointer.
     }
-    const object = options?.handleSelection?.(
-      viewportWithTransforms.screenToWorld(event.clientX, event.clientY),
-    );
     drag = {
       id: event.pointerId,
       x: event.clientX,
@@ -43,9 +37,7 @@ export function curryViewportEventListeners(
       originX: event.clientX,
       originY: event.clientY,
       moved: false,
-      object,
     };
-    if (object === undefined) canvas.style.cursor = "grabbing";
   }
 
   function onPointerMove(event: PointerEvent) {
@@ -67,11 +59,14 @@ export function curryViewportEventListeners(
 
   function onPointerUp(event: PointerEvent) {
     if (!drag || drag.id !== event.pointerId) return;
-    const object = drag.object;
     const moved = drag.moved;
     drag = null;
     canvas.style.cursor = "";
-    if (!moved) selectObjects(object === undefined ? [] : [object]);
+    if (!moved) {
+      options?.onWorldClick?.(
+        viewportWithTransforms.screenToWorld(event.clientX, event.clientY),
+      );
+    }
     updateHover(event);
   }
 
@@ -84,15 +79,14 @@ export function curryViewportEventListeners(
 
   function onPointerLeave() {
     if (drag) return;
-    options?.handleHoverSelectable?.(false);
+    canvas.style.cursor = "";
   }
 
   function updateHover(event: PointerEvent) {
     if (drag) return;
-    const object = options?.handleSelection?.(
+    options?.onWorldHover?.(
       viewportWithTransforms.screenToWorld(event.clientX, event.clientY),
     );
-    options?.handleHoverSelectable?.(object !== undefined);
   }
 
   function onWheel(event: WheelEvent) {

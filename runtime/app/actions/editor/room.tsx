@@ -1,4 +1,4 @@
-import { any, array, enum_, number, object, optional, parseSafe, record, string, union } from "remix/data-schema";
+import { any, array, boolean, enum_, number, object, optional, parseSafe, record, string, union } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 
 import { Mode, setMode } from "../../utilities/mode.ts";
@@ -9,20 +9,22 @@ const person = object({
   id: string(),
   cursor: optional(object({ x: number(), y: number() })),
   selectedObjects: optional(array(array(string()))),
+  input: optional(record(string(), union([number(), boolean()]))),
 });
+
+const scene = array(object({ path: array(string()), value: optional(any()) }));
 
 const roomSnapshot = object({
   you: string(),
   mode: enum_([Mode.Edit, Mode.Play]),
   host: string(),
   people: record(string(), person),
+  scene: optional(scene),
 });
-
-const scene = array(object({ path: array(string()), value: optional(any()) }));
 
 const scenePatch = object({ scene });
 
-const serverMessage = union([scenePatch, roomSnapshot]);
+const serverMessage = union([roomSnapshot, scenePatch]);
 
 type Person = InferOutput<typeof person>;
 
@@ -48,6 +50,7 @@ type RoomConnection = {
   sendScenePatch: (patch: ScenePatch) => void;
   sendCursor: (cursor: WorldPoint) => void;
   sendSelectedObjects: (selectedObjects: ScenePath[]) => void;
+  sendInput: (input: Record<string, number | boolean>) => void;
   readonly isHost: boolean;
 };
 
@@ -93,6 +96,10 @@ export function joinRoom(signal: AbortSignal, handlers: RoomHandlers = {}): Room
       if (this.socket.readyState !== WebSocket.OPEN) return;
       this.socket.send(JSON.stringify({ type: "selectionUpdate", selectedObjects }));
     },
+    sendInput(input) {
+      if (this.socket.readyState !== WebSocket.OPEN) return;
+      this.socket.send(JSON.stringify({ type: "inputUpdate", input }));
+    },
     get isHost() {
       return this.you !== "" && this.you === this.state.host;
     },
@@ -111,13 +118,14 @@ export function joinRoom(signal: AbortSignal, handlers: RoomHandlers = {}): Room
     const result = parseSafe(serverMessage, payload);
     if (!result.success) return;
     const message = result.value;
-    if ("scene" in message) {
+    if (!("you" in message)) {
       dispatch(next, (entry) => entry.onScene?.(message.scene as ScenePatch));
       return;
     }
     const previous = next.state;
     next.you = message.you;
     next.state = { mode: message.mode, host: message.host, people: message.people };
+    if (message.scene) dispatch(next, (entry) => entry.onScene?.(message.scene as ScenePatch));
     if (previous.mode !== message.mode) dispatch(next, (entry) => entry.onModeChange?.(message.mode));
     if (previous.host !== message.host) dispatch(next, (entry) => entry.onHostChange?.(message.host));
     for (const arrival of Object.values(message.people)) {

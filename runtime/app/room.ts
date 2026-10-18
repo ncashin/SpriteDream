@@ -1,15 +1,15 @@
 import type * as http from 'node:http'
 import { randomUUID } from 'node:crypto'
-import { any, array, boolean, defaulted, enum_, literal, number, object, optional, parseSafe, string, union } from 'remix/data-schema'
+import { any, array, boolean, defaulted, enum_, literal, number, object, optional, parseSafe, record, string, union } from 'remix/data-schema'
 import { WebSocketServer, type WebSocket } from 'ws'
 
-import type { ScenePath } from './utilities/scene.ts'
+import { applyScenePatch, createScene, diffScene, type SceneNode, type ScenePath } from './utilities/scene.ts'
 import type { WorldPoint } from './utilities/viewport/viewport.ts'
 
 const roomMessage = union([
   object({
     type: defaulted(literal('scenePatch'), 'scenePatch'),
-    scene: array(any()),
+    scene: array(object({ path: array(string()), value: optional(any()) })),
   }),
   object({
     type: defaulted(literal('modeChange'), 'modeChange'),
@@ -24,6 +24,10 @@ const roomMessage = union([
     type: defaulted(literal('selectionUpdate'), 'selectionUpdate'),
     selectedObjects: array(array(string())),
   }),
+  object({
+    type: defaulted(literal('inputUpdate'), 'inputUpdate'),
+    input: record(string(), union([number(), boolean()])),
+  }),
 ])
 
 type Person = {
@@ -31,6 +35,7 @@ type Person = {
   socket: WebSocket
   cursor?: WorldPoint
   selectedObjects: ScenePath[]
+  input: Record<string, number | boolean>
   quiet: boolean
 }
 
@@ -42,6 +47,7 @@ export type RoomState = {
 
 const sockets = new WebSocketServer({ noServer: true })
 const roomState: RoomState = { mode: 'edit', host: '', people: {} }
+const roomScene: SceneNode = createScene()
 
 setInterval(() => {
   for (const person of Object.values(roomState.people)) {
@@ -69,10 +75,17 @@ export function attachRoom(server: http.Server) {
   })
 
   sockets.on('connection', (socket) => {
-    const person: Person = { id: randomUUID(), socket, selectedObjects: [], quiet: false }
+    const person: Person = {
+      id: randomUUID(),
+      socket,
+      selectedObjects: [],
+      input: {},
+      quiet: false,
+    }
     roomState.people[person.id] = person
     if (!roomState.host) roomState.host = person.id
-    broadcast()
+    socket.send(JSON.stringify({ ...snapshot(), you: person.id, scene: diffScene(createScene(), roomScene) }))
+    broadcast(socket)
 
     socket.on('message', (data) => {
       const current = personFor(socket)
@@ -85,6 +98,7 @@ export function attachRoom(server: http.Server) {
         const message = result.value
         switch (message.type) {
           case 'scenePatch':
+            applyScenePatch(message.scene, roomScene)
             for (const other of Object.values(roomState.people)) {
               if (other.socket !== socket) other.socket.send(text)
             }
@@ -100,6 +114,10 @@ export function attachRoom(server: http.Server) {
             break
           case 'selectionUpdate':
             current.selectedObjects = message.selectedObjects
+            broadcast()
+            break
+          case 'inputUpdate':
+            current.input = message.input
             broadcast()
             break
         }
@@ -128,12 +146,17 @@ function leave(socket: WebSocket) {
   broadcast()
 }
 
-function broadcast() {
+function snapshot() {
   const people = Object.fromEntries(
     Object.values(roomState.people).map(({ socket: _socket, quiet: _quiet, ...person }) => [person.id, person]),
   )
+  return { mode: roomState.mode, host: roomState.host, people }
+}
+
+function broadcast(except?: WebSocket) {
+  const state = snapshot()
   for (const person of Object.values(roomState.people)) {
-    if (person.socket.readyState !== person.socket.OPEN) continue
-    person.socket.send(JSON.stringify({ you: person.id, ...roomState, people }))
+    if (person.socket === except || person.socket.readyState !== person.socket.OPEN) continue
+    person.socket.send(JSON.stringify({ you: person.id, ...state }))
   }
 }

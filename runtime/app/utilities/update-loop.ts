@@ -10,7 +10,7 @@ export type UpdateLoop = {
   listeners: Set<UpdateCallback>;
 };
 
-export const updateLoop = (parent?: UpdateLoop): UpdateLoop => {
+export const updateLoop = (): UpdateLoop => {
   const listeners = new Set<UpdateCallback>();
   let running = false;
   let lastTimestamp = 0;
@@ -26,22 +26,12 @@ export const updateLoop = (parent?: UpdateLoop): UpdateLoop => {
     const deltaTime = (timestamp - lastTimestamp) / 1000;
     lastTimestamp = timestamp;
     dispatch({ deltaTime });
-    if (running) {
-      frame = requestAnimationFrame(tick);
-    }
+    if (running) frame = requestAnimationFrame(tick);
   };
-
-  if (parent) {
-    parent.onUpdate((frameInfo) => {
-      if (!running) return;
-      dispatch(frameInfo);
-    });
-  }
 
   const start = () => {
     if (running) return;
     running = true;
-    if (parent) return;
     lastTimestamp = performance.now();
     // Paint once before yielding. Client hydration is still in progress here,
     // so the client is not finished loading until this draw returns.

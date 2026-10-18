@@ -1,6 +1,6 @@
 import Atom from "lucide/dist/esm/icons/atom.mjs";
 import Square from "lucide/dist/esm/icons/square.mjs";
-import { BoxShape, Vec2, World, type Body } from "planck";
+import { BoxShape, Vec2, World, type Body, type Contact } from "planck";
 import { defaulted, enum_, object } from "remix/data-schema";
 import { boolean, number } from "remix/data-schema/coerce";
 
@@ -71,28 +71,61 @@ function toPixels(meters: number) {
   return meters * pixelsPerMeter;
 }
 
-const world = new World(Vec2(0, 0));
-const simulated = new Map<SceneNode, Body>();
-const hostedFixtures = new Map<SceneNode, { propagate: boolean; children: readonly SceneNode[]; sizes: string; kind: string }>();
-const localPose = new Map<
-  SceneNode,
-  { x: number; y: number; angle: number; vx: number; vy: number; spin: number; sceneX: number; sceneY: number; sceneAngle: number }
->();
+type LocalPose = {
+  x: number;
+  y: number;
+  angle: number;
+  vx: number;
+  vy: number;
+  spin: number;
+  sceneX: number;
+  sceneY: number;
+  sceneAngle: number;
+};
 
-export function stepPhysics(deltaTime: number) {
-  if (!(deltaTime > 0)) return;
+type HostedFixtures = {
+  propagate: boolean;
+  children: readonly SceneNode[];
+  sizes: string;
+  kind: string;
+};
 
-  const bodies = filterScene(scene, physicsBodyTrait).filter((object) => !hostedCollider(object));
-  const colliders = filterScene(scene, colliderTrait).filter((object) => !hostedCollider(object));
-  const live = new Set<SceneNode>([...bodies, ...colliders]);
-  for (const [object, body] of simulated) {
-    if (live.has(object)) continue;
-    world.destroyBody(body);
-    simulated.delete(object);
-    hostedFixtures.delete(object);
-    localPose.delete(object);
+export type PhysicsContact = {
+  a: SceneNode;
+  b: SceneNode;
+  normalY: number;
+  touching: boolean;
+};
+
+export function physics() {
+  const world = new World(Vec2(0, 0));
+  const simulated = new Map<SceneNode, Body>();
+  const hostedFixtures = new Map<SceneNode, HostedFixtures>();
+  const localPose = new Map<SceneNode, LocalPose>();
+  const touched = new Set<SceneNode>();
+  const contacts = new Set<Contact>();
+  let frameDelta = 0;
+  let stepping = false;
+
+  world.on("begin-contact", (contact) => {
+    contacts.add(contact);
+  });
+  world.on("end-contact", (contact) => {
+    contacts.delete(contact);
+  });
+
+  function beginFrame(deltaTime: number) {
+    frameDelta = deltaTime;
+    stepping = deltaTime > 0;
+    touched.clear();
   }
-  for (const object of live) {
+
+  function simulate(object: SceneNode) {
+    if (!stepping) return;
+    if (hostedCollider(object)) return;
+    if (!physicsBodyTrait(object) && !colliderTrait(object)) return;
+
+    touched.add(object);
     if (simulated.has(object) && fixturesStale(object)) {
       world.destroyBody(simulated.get(object)!);
       simulated.delete(object);
@@ -100,26 +133,36 @@ export function stepPhysics(deltaTime: number) {
       localPose.delete(object);
     }
     if (!simulated.has(object)) createBody(object);
-    else syncFromScene(object, deltaTime);
+    else syncFromScene(object, frameDelta);
   }
 
-  for (const object of bodies) applyGravity(object);
-  for (const object of colliders) applySeparatedGravity(object);
+  function endFrame() {
+    if (!stepping) return;
 
-  world.step(Math.min(deltaTime, maxStep), 8, 3);
+    for (const [object, body] of simulated) {
+      if (touched.has(object)) continue;
+      world.destroyBody(body);
+      simulated.delete(object);
+      hostedFixtures.delete(object);
+      localPose.delete(object);
+    }
 
-  for (const object of bodies) writeBack(object);
-  for (const object of colliders) writeSeparatedCollider(object);
-}
+    for (const object of touched) {
+      const body = physicsBodyTrait(object);
+      if (body) applyGravity(body);
+      if (colliderTrait(object)) applySeparatedGravity(object);
+    }
 
-export function resetPhysics() {
-  for (const body of simulated.values()) world.destroyBody(body);
-  simulated.clear();
-  hostedFixtures.clear();
-  localPose.clear();
-}
+    world.step(Math.min(frameDelta, maxStep), 8, 3);
 
-function createBody(object: SceneNode) {
+    for (const object of touched) {
+      const body = physicsBodyTrait(object);
+      if (body) writeBack(body);
+      if (colliderTrait(object)) writeSeparatedCollider(object);
+    }
+  }
+
+  function createBody(object: SceneNode) {
   const placement = transform(object);
   if (!placement) return;
 
@@ -132,9 +175,10 @@ function createBody(object: SceneNode) {
     angle: (placement.rotation * Math.PI) / 180,
     fixedRotation: physics?.physicsBody.fixedRotation ?? false,
     gravityScale: separated ? 0 : 1,
+    userData: object,
   });
   const children = propagatedColliders(object);
-  if (collider) addColliderFixture(body, object, object);
+  if (collider) addColliderFixture(body, collider, object);
   for (const child of children) addColliderFixture(body, child, object);
   hostedFixtures.set(object, {
     propagate: propagatesCollision(object),
@@ -159,14 +203,22 @@ function syncFromScene(object: SceneNode, deltaTime: number) {
   }
   const position = Vec2(toMeters(placement.position.x), toMeters(placement.position.y));
   const angle = (placement.rotation * Math.PI) / 180;
+  const previous = body.getPosition();
+  const previousAngle = body.getAngle();
+  const moved =
+    Math.abs(position.x - previous.x) > 1e-4 ||
+    Math.abs(position.y - previous.y) > 1e-4 ||
+    Math.abs(angle - previousAngle) > 1e-4;
   const physics = physicsBodyTrait(object)?.physicsBody;
-  if (physics?.body === "kinematic") {
-    const previous = body.getPosition();
-    const previousAngle = body.getAngle();
-    body.setLinearVelocity(
-      Vec2((position.x - previous.x) / deltaTime, (position.y - previous.y) / deltaTime),
-    );
-    body.setAngularVelocity((angle - previousAngle) / deltaTime);
+  if (physics?.body === "kinematic" && moved) {
+    const vx = (position.x - previous.x) / deltaTime;
+    const vy = (position.y - previous.y) / deltaTime;
+    const spin = (angle - previousAngle) / deltaTime;
+    const snapped = Math.hypot(vx, vy) > toMeters(4000) || Math.abs(spin) > Math.PI * 8;
+    body.setLinearVelocity(snapped ? Vec2(0, 0) : Vec2(vx, vy));
+    body.setAngularVelocity(snapped ? 0 : spin);
+  } else if (moved) {
+    body.setAngularVelocity(0);
   }
   body.setTransform(position, angle);
   if (physics?.body === "dynamic") {
@@ -422,4 +474,30 @@ function writeBack(object: PhysicsBody) {
   const velocity = body.getLinearVelocity();
   object.physicsBody.velocity.x = toPixels(velocity.x);
   object.physicsBody.velocity.y = toPixels(velocity.y);
+}
+
+  function contactList(): PhysicsContact[] {
+    const list: PhysicsContact[] = [];
+    for (const contact of contacts) {
+      const fixtureA = contact.getFixtureA();
+      const fixtureB = contact.getFixtureB();
+      const a = fixtureA.getBody().getUserData();
+      const b = fixtureB.getBody().getUserData();
+      if (!isSceneNode(a) || !isSceneNode(b)) continue;
+      const manifold = contact.getWorldManifold(null);
+      list.push({
+        a,
+        b,
+        normalY: manifold?.normal.y ?? 0,
+        touching: contact.isTouching() && !fixtureA.isSensor() && !fixtureB.isSensor(),
+      });
+    }
+    return list;
+  }
+
+  return { beginFrame, simulate, endFrame, contacts: contactList };
+}
+
+function isSceneNode(value: unknown): value is SceneNode {
+  return isObject(value);
 }

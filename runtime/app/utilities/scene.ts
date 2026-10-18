@@ -12,6 +12,31 @@ export type SceneNode = { [key in PropertyKey]: any };
 
 export function createScene(): SceneNode {
   return {
+    player: {
+      transform: "matrix(1, 0, 0, 1, 180, 524)",
+      image: {
+        __icon: ImageIcon,
+        width: "32",
+        height: "48",
+        tint: "#38bdf8ff",
+        image: "default.png",
+      },
+      physicsBody: {
+        __icon: Atom,
+        body: "dynamic",
+        density: "1",
+        fixedRotation: "true",
+        gravity: "9.8",
+        velocity: { x: "0", y: "0" },
+      },
+      collider: {
+        __icon: Square,
+        width: "32",
+        height: "48",
+        friction: "0",
+        restitution: "0",
+      },
+    },
     square: {
       transform: "matrix(1, 0, 0, 1, 350, 180)",
       image: {

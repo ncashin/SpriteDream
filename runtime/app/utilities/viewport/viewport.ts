@@ -25,8 +25,8 @@ export type WorldPoint = { x: number; y: number };
 
 export type ViewportOptions = {
   signal?: AbortSignal;
-  handleSelection?: (point: WorldPoint) => SceneNode | undefined;
-  handleHoverSelectable?: (hovering: boolean) => void;
+  onWorldHover?: (point: WorldPoint) => void;
+  onWorldClick?: (point: WorldPoint) => void;
 };
 
 export type ViewportState = {
@@ -105,7 +105,7 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
     },
     drawBoundingBox(
       object: SceneNode,
-      options?: { color?: string; handles?: boolean; key?: object | string },
+      options?: { color?: string; handles?: boolean },
     ) {
       drawBoundingBox(viewport, object, options);
     },
