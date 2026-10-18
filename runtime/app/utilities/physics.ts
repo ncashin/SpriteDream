@@ -237,7 +237,20 @@ function fixturesStale(object: SceneNode) {
 }
 
 function fixtureSizes(object: SceneNode, children: readonly SceneNode[]) {
-  return [object, ...children].map(colliderSize).join("|");
+  return [object, ...children].map((node) => colliderLayout(object, node)).join("|");
+}
+
+function colliderLayout(host: SceneNode, object: SceneNode) {
+  const size = colliderSize(object);
+  const placement = transform(object);
+  const hostPlacement = transform(host);
+  if (!placement || !hostPlacement) return size;
+  const local = bodyLocal(hostPlacement, placement);
+  return `${size},${round(placement.scale.x)},${round(placement.scale.y)}@${round(local.x)},${round(local.y)},${round(local.angle)}`;
+}
+
+function round(value: number) {
+  return Math.round(value * 1e4) / 1e4;
 }
 
 function bodyKind(object: SceneNode) {

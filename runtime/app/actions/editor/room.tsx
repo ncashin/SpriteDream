@@ -18,6 +18,7 @@ const roomSnapshot = object({
   you: string(),
   mode: enum_([Mode.Edit, Mode.Play]),
   host: string(),
+  dirty: boolean(),
   people: record(string(), person),
   scene: optional(scene),
 });
@@ -31,6 +32,7 @@ type Person = InferOutput<typeof person>;
 type RoomState = {
   mode: Mode;
   host: string;
+  dirty: boolean;
   people: Record<string, Person>;
 };
 
@@ -40,6 +42,7 @@ export type RoomHandlers = {
   onScene?: (scene: ScenePatch) => void;
   onModeChange?: (mode: Mode) => void;
   onHostChange?: (host: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 type RoomConnection = {
@@ -82,7 +85,7 @@ export function joinRoom(signal: AbortSignal, handlers: RoomHandlers = {}): Room
   const next: RoomConnection = {
     socket: new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/room`),
     you: "",
-    state: { mode: Mode.Edit, host: "", people: {} },
+    state: { mode: Mode.Edit, host: "", dirty: false, people: {} },
     handlers: [],
     sendScenePatch(patch) {
       if (this.socket.readyState !== WebSocket.OPEN) return;
@@ -124,10 +127,11 @@ export function joinRoom(signal: AbortSignal, handlers: RoomHandlers = {}): Room
     }
     const previous = next.state;
     next.you = message.you;
-    next.state = { mode: message.mode, host: message.host, people: message.people };
+    next.state = { mode: message.mode, host: message.host, dirty: message.dirty, people: message.people };
     if (message.scene) dispatch(next, (entry) => entry.onScene?.(message.scene as ScenePatch));
     if (previous.mode !== message.mode) dispatch(next, (entry) => entry.onModeChange?.(message.mode));
     if (previous.host !== message.host) dispatch(next, (entry) => entry.onHostChange?.(message.host));
+    if (previous.dirty !== message.dirty) dispatch(next, (entry) => entry.onDirtyChange?.(message.dirty));
     for (const arrival of Object.values(message.people)) {
       if (arrival.id === message.you || previous.people[arrival.id]) continue;
       dispatch(next, (entry) => entry.onOtherPlayerJoin?.(arrival));

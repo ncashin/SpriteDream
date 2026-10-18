@@ -1,4 +1,4 @@
-import { get, route } from 'remix/routes'
+import { get, put, route } from 'remix/routes'
 
 export const routes = route({
   assets: get('/assets/*path'),
@@ -7,5 +7,10 @@ export const routes = route({
   game: route('/game', {
     index: get('/'),
     panel: get('/panel'),
+  }),
+  editor: route('/editor', {
+    scenes: get('/scenes'),
+    scene: get('/scenes/:name'),
+    saveScene: put('/scenes/:name'),
   }),
 })

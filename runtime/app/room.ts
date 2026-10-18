@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto'
 import { any, array, boolean, defaulted, enum_, literal, number, object, optional, parseSafe, record, string, union } from 'remix/data-schema'
 import { WebSocketServer, type WebSocket } from 'ws'
 
-import { applyScenePatch, createScene, diffScene, type SceneNode, type ScenePath } from './utilities/scene.ts'
+import { readSceneFile } from './scene-file.ts'
+import { applyScenePatch, diffScene, type SceneNode, type ScenePath } from './utilities/scene.ts'
 import type { WorldPoint } from './utilities/viewport/viewport.ts'
 
 const roomMessage = union([
@@ -42,12 +43,19 @@ type Person = {
 export type RoomState = {
   mode: 'edit' | 'play'
   host: string
+  dirty: boolean
   people: Record<string, Person>
 }
 
 const sockets = new WebSocketServer({ noServer: true })
-const roomState: RoomState = { mode: 'edit', host: '', people: {} }
-const roomScene: SceneNode = createScene()
+const roomState: RoomState = { mode: 'edit', host: '', dirty: false, people: {} }
+const roomScene: SceneNode = readSceneFile('Example Scene') ?? {}
+let savedScene = JSON.stringify(roomScene)
+
+export function noteSceneSaved(value: SceneNode) {
+  savedScene = JSON.stringify(value)
+  setDirty(roomState.mode === 'play' ? false : JSON.stringify(roomScene) !== savedScene)
+}
 
 setInterval(() => {
   for (const person of Object.values(roomState.people)) {
@@ -84,7 +92,7 @@ export function attachRoom(server: http.Server) {
     }
     roomState.people[person.id] = person
     if (!roomState.host) roomState.host = person.id
-    socket.send(JSON.stringify({ ...snapshot(), you: person.id, scene: diffScene(createScene(), roomScene) }))
+    socket.send(JSON.stringify({ ...snapshot(), you: person.id, scene: diffScene(readSceneFile('Example Scene') ?? {}, roomScene) }))
     broadcast(socket)
 
     socket.on('message', (data) => {
@@ -102,6 +110,7 @@ export function attachRoom(server: http.Server) {
             for (const other of Object.values(roomState.people)) {
               if (other.socket !== socket) other.socket.send(text)
             }
+            if (roomState.mode !== 'play') setDirty(JSON.stringify(roomScene) !== savedScene)
             break
           case 'modeChange':
             if (message.claim) roomState.host = current.id
@@ -150,7 +159,13 @@ function snapshot() {
   const people = Object.fromEntries(
     Object.values(roomState.people).map(({ socket: _socket, quiet: _quiet, ...person }) => [person.id, person]),
   )
-  return { mode: roomState.mode, host: roomState.host, people }
+  return { mode: roomState.mode, host: roomState.host, dirty: roomState.dirty, people }
+}
+
+function setDirty(next: boolean) {
+  if (roomState.dirty === next) return
+  roomState.dirty = next
+  broadcast()
 }
 
 function broadcast(except?: WebSocket) {

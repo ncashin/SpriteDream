@@ -7,7 +7,8 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
-import { scene } from "../../utilities/scene.ts";
+import { currentSceneName, scene } from "../../utilities/scene.ts";
+import { joinRoom } from "./room.tsx";
 import { HierarchyTree } from "./hierarchy-tree.tsx";
 import { ObjectSidebar } from "./object-sidebar.tsx";
 import { syncMode } from "./room.tsx";
@@ -51,6 +52,30 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
   let collapsed = readCollapsed();
   if (collapsed) releaseInitialCollapse();
   onModeChange(() => handle.update());
+  let dirty = false;
+  let name = currentSceneName();
+  if (typeof window !== "undefined") {
+    const room = joinRoom(handle.signal, {
+      onDirtyChange(next) {
+        if (dirty === next) return;
+        dirty = next;
+        handle.update();
+      },
+    });
+    dirty = room.state.dirty;
+  }
+  if (typeof requestAnimationFrame === "function") {
+    let frame = requestAnimationFrame(function tick() {
+      if (handle.signal.aborted) return;
+      const nextName = currentSceneName();
+      if (nextName !== name) {
+        name = nextName;
+        handle.update();
+      }
+      frame = requestAnimationFrame(tick);
+    });
+    handle.signal.addEventListener("abort", () => cancelAnimationFrame(frame));
+  }
 
   return () => (
     <>
@@ -94,7 +119,8 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
           >
      
           
-            SpriteDream
+            {name}
+            {dirty ? <span aria-label="Unsaved changes" title="Unsaved changes" mix={unsaved} /> : null}
           </span>
         </button>
         <Search />
@@ -188,6 +214,16 @@ const bar = css({
   "@media (prefers-reduced-motion: reduce)": {
     transition: "none",
   },
+});
+
+const unsaved = css({
+  background: "#f5a524",
+  borderRadius: "999px",
+  display: "inline-block",
+  flex: "0 0 auto",
+  height: "0.5rem",
+  marginLeft: "0.4rem",
+  width: "0.5rem",
 });
 
 const mark = css({

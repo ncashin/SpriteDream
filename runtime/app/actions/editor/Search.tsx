@@ -1,62 +1,128 @@
 import Box from "lucide/dist/esm/icons/box.mjs";
+import File from "lucide/dist/esm/icons/file.mjs";
 import SearchIcon from "lucide/dist/esm/icons/search.mjs";
 import { css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
+import { routes } from "../../routes.ts";
 import { Icon } from "../../icon.tsx";
 import { hotkeys } from "../../utilities/hotkey.ts";
-import type { SceneNode } from "../../utilities/scene.ts";
-import { scene } from "../../utilities/scene.ts";
-import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
+import { isObject } from "../../utilities/is-object.ts";
+import { loadScene, saveSceneHotkey, scene, type SceneNode } from "../../utilities/scene.ts";
+import { selectObjects } from "../../utilities/selected-objects.ts";
 
-const LIST_ID = "object-search-list";
+const LIST_ID = "scene-search-list";
 
-function sceneNode(value: SceneNode): SceneNode | undefined {
-  if (typeof value !== "object" || value === null) return;
-  return value;
+type SearchItem =
+  | { kind: "scene"; name: string }
+  | { kind: "object"; name: string; object: SceneNode };
+
+function sceneObjects(): SearchItem[] {
+  return Object.entries(scene).flatMap(([name, value]) =>
+    isObject(value) ? [{ kind: "object" as const, name, object: value }] : [],
+  );
 }
 
-function topLevelObjects() {
-  let objects: { name: string; object: SceneNode }[] = [];
-  for (let [name, value] of Object.entries(scene)) {
-    let object = sceneNode(value);
-    if (object) objects.push({ name, object });
-  }
-  return objects;
-}
-
-function matchingObjects(query: string) {
+function fuzzyScore(text: string, query: string) {
+  let haystack = text.toLowerCase();
   let needle = query.trim().toLowerCase();
-  if (needle === "") return topLevelObjects();
-  return topLevelObjects().filter((item) => item.name.toLowerCase().includes(needle));
+  if (needle === "") return 1;
+  if (haystack === needle) return 1000;
+  if (haystack.startsWith(needle)) return 800;
+  let contains = haystack.indexOf(needle);
+  if (contains !== -1) return 600 - contains;
+
+  let score = 0;
+  let index = 0;
+  let streak = 0;
+  for (let char of needle) {
+    let found = haystack.indexOf(char, index);
+    if (found === -1) return 0;
+    streak = found === index ? streak + 1 : 1;
+    score += 10 + streak * 5;
+    let previous = haystack[found - 1];
+    if (found === 0 || previous === " " || previous === "-" || previous === "_" || previous === "/") {
+      score += 8;
+    }
+    index = found + 1;
+  }
+  return score;
+}
+
+function matchingItems(scenes: string[], query: string): SearchItem[] {
+  let items: SearchItem[] = [
+    ...scenes.map((name) => ({ kind: "scene" as const, name })),
+    ...sceneObjects(),
+  ];
+  return items
+    .map((item) => ({ item, score: fuzzyScore(item.name, query) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.item.name.localeCompare(b.item.name))
+    .map((entry) => entry.item);
+}
+
+function openInFrames(name: string, target: Window = window) {
+  for (let index = 0; index < target.frames.length; index++) {
+    let child = target.frames[index];
+    if (!child) continue;
+    try {
+      child.postMessage({ type: "openScene", name }, location.origin);
+      openInFrames(name, child);
+    } catch {
+      // A cross-origin frame cannot be reached.
+    }
+  }
 }
 
 export function Search(handle: Handle) {
   let query = "";
   let open = false;
   let activeIndex = 0;
+  let scenes: string[] = [];
+  let current = "Example Scene";
   let input: HTMLInputElement | null = null;
 
+  function refreshScenes() {
+    void fetch(routes.editor.scenes.href()).then(async (response) => {
+      if (!response.ok) return;
+      let next: unknown = await response.json();
+      if (!Array.isArray(next)) return;
+      scenes = next.filter((name): name is string => typeof name === "string");
+      handle.update();
+    });
+  }
+
   function choose(index: number) {
-    let item = matchingObjects(query)[index];
+    let item = matchingItems(scenes, query)[index];
     if (!item) return;
-    selectObjects([item.object]);
     query = "";
     open = false;
     activeIndex = 0;
     input?.blur();
+    if (item.kind === "object") {
+      selectObjects([item.object]);
+      handle.update();
+      return;
+    }
+    current = item.name;
+    selectObjects([]);
+    void loadScene(item.name);
+    openInFrames(item.name);
     handle.update();
   }
 
   function focusSearch() {
-    let items = matchingObjects(query);
-    let current = items.findIndex((item) => selectedObjects.has(item.object));
-    activeIndex = current === -1 ? 0 : current;
+    refreshScenes();
+    let items = matchingItems(scenes, query);
+    let currentIndex = items.findIndex((item) => item.kind === "scene" && item.name === current);
+    activeIndex = currentIndex === -1 ? 0 : currentIndex;
     open = true;
     handle.update();
     input?.focus();
     input?.select();
   }
+
+  saveSceneHotkey(handle.signal);
 
   hotkeys(
     {
@@ -70,7 +136,7 @@ export function Search(handle: Handle) {
   );
 
   return () => {
-    let items = open ? matchingObjects(query) : [];
+    let items = open ? matchingItems(scenes, query) : [];
     let index = items.length === 0 ? 0 : Math.min(activeIndex, items.length - 1);
 
     return (
@@ -84,10 +150,10 @@ export function Search(handle: Handle) {
               aria-autocomplete="list"
               aria-controls={LIST_ID}
               aria-expanded={open}
-              aria-label="Search objects"
+              aria-label="Search"
               aria-activedescendant={open && items.length > 0 ? `${LIST_ID}-${index}` : undefined}
               autocomplete="off"
-              placeholder="Search objects"
+              placeholder="Search"
               spellcheck={false}
               value={query}
               mix={[
@@ -96,6 +162,7 @@ export function Search(handle: Handle) {
                   input = node instanceof HTMLInputElement ? node : null;
                 }),
                 on("focus", () => {
+                  refreshScenes();
                   open = true;
                   handle.update();
                 }),
@@ -112,7 +179,7 @@ export function Search(handle: Handle) {
                 on("keydown", (event) => {
                   if (event.key === "ArrowDown") {
                     event.preventDefault();
-                    let count = matchingObjects(query).length;
+                    let count = matchingItems(scenes, query).length;
                     if (count === 0) return;
                     open = true;
                     activeIndex = Math.min(index + 1, count - 1);
@@ -147,14 +214,14 @@ export function Search(handle: Handle) {
             ) : null}
           </label>
           {open ? (
-            <ul id={LIST_ID} role="listbox" aria-label="Top level objects" mix={list}>
+            <ul id={LIST_ID} role="listbox" aria-label="Search results" mix={list}>
               {items.length === 0 ? (
-                <li mix={empty}>No matching objects</li>
+                <li mix={empty}>No matches</li>
               ) : (
                 items.map((item, itemIndex) => (
                   <li
                     id={`${LIST_ID}-${itemIndex}`}
-                    key={item.name}
+                    key={item.kind === "scene" ? `scene:${item.name}` : `object:${item.name}`}
                     role="option"
                     aria-selected={itemIndex === index}
                     mix={[
@@ -171,7 +238,7 @@ export function Search(handle: Handle) {
                       }),
                     ]}
                   >
-                    <Icon icon={Box} size={14} />
+                    <Icon icon={item.kind === "scene" ? File : Box} size={14} />
                     {item.name}
                   </li>
                 ))

@@ -15,6 +15,10 @@ export function blobColor(id: string) {
   return colors[total];
 }
 
+export function blobPath(id: string) {
+  return blobs[hash(id) % blobs.length];
+}
+
 export function faceFor(id: string) {
   return (
     <svg viewBox="0 0 101 130" aria-hidden="true" mix={face}>

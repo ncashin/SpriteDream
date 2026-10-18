@@ -20,6 +20,7 @@ import {
   scene,
   restoreScene,
   snapshotScene,
+  type SceneNode,
 } from "../../utilities/scene.ts";
 import {
   selectObjects,
@@ -36,6 +37,40 @@ import { viewport } from "../../utilities/viewport/viewport.ts";
 
 const RUN_SPEED = 280;
 const JUMP_SPEED = -560;
+const PLAYER_GAP = 40;
+
+function playerKey(id: string) {
+  return `player:${id}`;
+}
+
+function createPlayer(id: string, index: number): SceneNode {
+  const x = 400 + index * PLAYER_GAP;
+  const y = 524;
+  return {
+    transform: `matrix(1, 0, 0, 1, ${x}, ${y})`,
+    image: {
+      width: 32,
+      height: 48,
+      tint: `${playerColor(id)}ff`,
+      image: "default.png",
+    },
+    physicsBody: {
+      body: "dynamic",
+      density: "1",
+      fixedRotation: "true",
+      gravity: "9.8",
+      velocity: { x: "0", y: "0" },
+    },
+    collider: {
+      width: 32,
+      height: 48,
+      friction: 0,
+      restitution: 0,
+      sensor: false,
+      propagateCollision: false,
+    },
+  };
+}
 
 function objectAtPoint(point: WorldPoint) {
   const found = filterScene(scene, (node) => {
@@ -125,9 +160,23 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             const loop = updateLoop();
             const physics = createPhysics();
 
+            const spawnPlayers = () => {
+              const people = Object.values(room.state.people);
+              const live = new Set(people.map((person) => playerKey(person.id)));
+              for (const key of Object.keys(scene)) {
+                if (key.startsWith("player:") && !live.has(key)) delete scene[key];
+              }
+              people.forEach((person, index) => {
+                const key = playerKey(person.id);
+                if (scene[key]) return;
+                scene[key] = createPlayer(person.id, index);
+              });
+            };
+
             const syncMode = () => {
               if (room.state.mode === Mode.Play && room.isHost) {
                 snapshotScene();
+                spawnPlayers();
                 return;
               }
               if (restoreScene()) selectObjects([]);
@@ -162,26 +211,22 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               }
 
               if (playing && room.isHost) {
-                let x = 0;
-                let jumped = false;
+                spawnPlayers();
                 for (const person of Object.values(room.state.people)) {
+                  const node = scene[playerKey(person.id)];
+                  const player = physicsBodyTrait(node);
+                  if (!player || !node) continue;
                   const controls = person.id === room.you ? mine : person.input;
                   const axis = controls?.x;
-                  if (typeof axis === "number") x += axis;
-                  jumped ||= controls?.jump === true;
-                }
-                x = Math.max(-1, Math.min(1, x));
-
-                const player = physicsBodyTrait(scene.player);
-                if (player) {
+                  const x = Math.max(-1, Math.min(1, typeof axis === "number" ? axis : 0));
                   player.physicsBody.velocity.x = x * RUN_SPEED;
                   const grounded = physics.contacts().some((contact) => {
                     if (!contact.touching) return false;
-                    if (contact.a === scene.player) return contact.normalY > 0.5;
-                    if (contact.b === scene.player) return contact.normalY < -0.5;
+                    if (contact.a === node) return contact.normalY > 0.5;
+                    if (contact.b === node) return contact.normalY < -0.5;
                     return false;
                   });
-                  if (jumped && grounded) {
+                  if (controls?.jump === true && grounded) {
                     player.physicsBody.velocity.y = JUMP_SPEED;
                   }
                 }
@@ -222,7 +267,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                 if (person.id === room.you) continue;
                 const color = playerColor(person.id);
                 if (person.cursor) {
-                  editorViewport.drawCursor(person.cursor, color);
+                  editorViewport.drawCursor(person.cursor, person.id);
                 }
 
                 for (const path of person.selectedObjects ?? []) {
@@ -249,9 +294,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               const patch = diffScene(before, scene);
               if (patch.length === 0) return;
               applyScenePatch(patch, before);
-              if (room.state.mode !== Mode.Play || room.isHost) {
-                room.sendScenePatch(patch);
-              }
+              room.sendScenePatch(patch);
             });
 
             loop.start();

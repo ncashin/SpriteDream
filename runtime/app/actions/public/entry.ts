@@ -5,7 +5,21 @@ import {
 } from 'remix/multiple-import-maps-polyfill'
 import { run } from 'remix/component'
 
+import { isObject } from '../../utilities/is-object.ts'
+import { loadScene, saveSceneHotkey } from '../../utilities/scene.ts'
+import { selectObjects } from '../../utilities/selected-objects.ts'
 import { setAppFrame } from '../../utilities/viewport/draw-component.ts'
+
+await loadScene()
+saveSceneHotkey()
+
+window.addEventListener('message', (event) => {
+  if (event.origin !== location.origin) return
+  const data: unknown = event.data
+  if (!isObject(data) || data.type !== 'openScene' || typeof data.name !== 'string') return
+  selectObjects([])
+  void loadScene(data.name)
+})
 
 const app = run({
   async loadModule(moduleUrl, exportName) {

@@ -1,139 +1,56 @@
-import Atom from "lucide/dist/esm/icons/atom.mjs";
-import AppWindow from "lucide/dist/esm/icons/app-window.mjs";
-import ImageIcon from "lucide/dist/esm/icons/image.mjs";
-import Square from "lucide/dist/esm/icons/square.mjs";
-import Type from "lucide/dist/esm/icons/type.mjs";
-
+import { syncMode } from "../actions/editor/room.tsx";
 import { routes } from "../routes.ts";
+import { hotkeys } from "./hotkey.ts";
 import { isObject } from "./is-object.ts";
+import { Mode } from "./mode.ts";
 
 export type ScenePath = string[];
 export type SceneNode = { [key in PropertyKey]: any };
 
-export function createScene(): SceneNode {
-  return {
-    player: {
-      transform: "matrix(1, 0, 0, 1, 180, 524)",
-      image: {
-        __icon: ImageIcon,
-        width: "32",
-        height: "48",
-        tint: "#38bdf8ff",
-        image: "default.png",
-      },
-      physicsBody: {
-        __icon: Atom,
-        body: "dynamic",
-        density: "1",
-        fixedRotation: "true",
-        gravity: "9.8",
-        velocity: { x: "0", y: "0" },
-      },
-      collider: {
-        __icon: Square,
-        width: "32",
-        height: "48",
-        friction: "0",
-        restitution: "0",
-      },
-    },
-    square: {
-      transform: "matrix(1, 0, 0, 1, 350, 180)",
-      image: {
-        __icon: ImageIcon,
-        width: "64",
-        height: "64",
-        tint: "#f4f4f5ff",
-        image: "default.png",
-      },
-      booleanValue: "true",
-      physicsBody: {
-        __icon: Atom,
-        body: "dynamic",
-        density: "1",
-        fixedRotation: "false",
-        gravity: "9.8",
-        velocity: { x: "0", y: "0" },
-      },
-      collider: {
-        __icon: Square,
-        width: "64",
-        height: "64",
-        friction: "0.4",
-        restitution: "0.2",
-        propagateCollision: "true",
-      },
-    },
-    ground: {
-      transform: "matrix(1, 0, 0, 1, 400, 560)",
-      image: {
-        __icon: ImageIcon,
-        width: "720",
-        height: "24",
-        tint: "#a1a1aaff",
-        image: "default.png",
-      },
-      collider: {
-        __icon: Square,
-        width: "720",
-        height: "24",
-        friction: "0.6",
-        restitution: "0",
-      },
-    },
-    rectangle: {
-      transform: "matrix(0.9063077870366499, 0.42261826174069944, -0.42261826174069944, 0.9063077870366499, 70, 80)",
-      image: {
-        __icon: ImageIcon,
-        width: "36",
-        height: "36",
-        tint: "#d4d4d8ff",
-        image: "default.png",
-      },
-      collider: {
-        __icon: Square,
-        width: "36",
-        height: "36",
-        friction: "0.05",
-        restitution: "0.4",
-      },
-      parent: "square",
-    },
-    panel: {
-      transform: "matrix(1, 0, 0, 1, 560, 160)",
-      count: "0",
-      frame: {
-        __icon: AppWindow,
-        frameSource: routes.game.panel.href(),
-        width: "220",
-        height: "120",
-      },
-      collider: {
-        __icon: Square,
-        width: "220",
-        height: "120",
-        friction: "0.4",
-        restitution: "0",
-      },
-    },
-    label: {
-      transform: "matrix(1, 0, 0, 1, 400, 40)",
-      text: {
-        __icon: Type,
-        value: "Spritedream",
-        font: "",
-        fontSize: "32",
-        color: "#f4f4f5ff",
-      },
-    },
-    key: "property",
-    test: { nested: { objects: "hello"}},
-  };
+export const scene: SceneNode = {};
+
+let sceneName = "Example Scene";
+
+export function currentSceneName() {
+  return sceneName;
 }
 
-export const scene = createScene();
+export function loadScene(name = "Example Scene") {
+  return fetch(routes.editor.scene.href({ name })).then(async (response) => {
+    if (!response.ok) return;
+    const next = await response.json();
+    if (!isObject(next)) return;
+    for (const key of Object.keys(scene)) delete scene[key];
+    Object.assign(scene, next);
+    sceneName = name;
+    syncMode(Mode.Edit);
+  });
+}
+
+export function saveScene() {
+  const body = snapshot ?? scene;
+  return fetch(routes.editor.saveScene.href({ name: sceneName }), {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function saveSceneHotkey(signal?: AbortSignal) {
+  hotkeys(
+    {
+      "mod+s": (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void saveScene();
+      },
+    },
+    { signal, typing: true },
+  );
+}
 
 export type ScenePatch = { path: ScenePath; value?: unknown }[];
+
 
 export function applyScenePatch(patch: ScenePatch, root: SceneNode = scene) {
   for (const change of patch) {
