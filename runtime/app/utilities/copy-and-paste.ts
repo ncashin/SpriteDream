@@ -8,6 +8,7 @@ import { createMatrix, transform } from "./viewport/transform.ts";
 import { cursorWorldPoint, type WorldPoint } from "./viewport/viewport.ts";
 
 const PASTE_STEP = 32;
+const OBJECT_CLIPBOARD = "spritedream/objects\n";
 
 type ClipboardEntry = {
   parent: SceneNode;
@@ -94,8 +95,21 @@ export function deleteSelectedObjects() {
   return true;
 }
 
-export function copyAndPaste(options?: { signal?: AbortSignal }) {
+export type ClipboardContent =
+  | { type: "objects"; objects: SceneNode[] }
+  | { type: "image"; file: File }
+  | { type: "text"; text: string };
+
+type ClipboardHandler = (content: ClipboardContent, event: ClipboardEvent) => void;
+
+export function copyAndPaste(options: {
+  signal?: AbortSignal;
+  onCopy?: ClipboardHandler;
+  onPaste?: ClipboardHandler;
+} = {}) {
   if (typeof window === "undefined") return;
+
+  let copiedByShortcut = false;
 
   hotkeys(
     {
@@ -104,39 +118,97 @@ export function copyAndPaste(options?: { signal?: AbortSignal }) {
         event.preventDefault();
         event.stopPropagation();
       },
-      "mod+c": (event) => {
-        if (!copySelectedObjects()) return;
-        event.preventDefault();
-        event.stopPropagation();
+      "mod+c": () => {
+        copiedByShortcut = copySelectedObjects();
       },
       "mod+v": () => {
         clearTimeout(objectPaste);
         objectPaste = setTimeout(() => {
           objectPaste = undefined;
-          pasteCopiedObjects();
+          if (clipboard.length === 0 || mode !== Mode.Edit) return;
+          const content: ClipboardContent = { type: "objects", objects: copiedObjects() };
+          if (!options.onPaste) {
+            pasteCopiedObjects();
+            return;
+          }
+          options.onPaste(content, new ClipboardEvent("paste"));
         }, 0);
       },
     },
-    { signal: options?.signal, when: () => mode === Mode.Edit },
+    { signal: options.signal, when: () => mode === Mode.Edit },
   );
 
-  const onPaste = (event: ClipboardEvent) => {
-    if (mode !== Mode.Edit) return;
+  const handle = (handler: ClipboardHandler | undefined, event: ClipboardEvent) => {
     if (isTyping(event.target)) return;
-    const file = clipboardImage(event.clipboardData);
-    if (!file) return;
-    clearTimeout(objectPaste);
-    objectPaste = undefined;
-    event.preventDefault();
-    event.stopPropagation();
-    void pasteImage(file);
+    const content = clipboardContent(event.clipboardData);
+    if (!content) return;
+    handler?.(content, event);
   };
 
-  window.addEventListener("paste", onPaste, { capture: true, signal: options?.signal });
+  window.addEventListener(
+    "copy",
+    (event) => {
+      if (isTyping(event.target) || mode !== Mode.Edit) return;
+      const copied = copiedByShortcut;
+      copiedByShortcut = false;
+      if (copied || copySelectedObjects()) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.clipboardData?.setData("text/plain", encodeObjects(clipboard));
+        options.onCopy?.({ type: "objects", objects: copiedObjects() }, event);
+        return;
+      }
+      handle(options.onCopy, event);
+    },
+    { capture: true, signal: options.signal },
+  );
+
+  window.addEventListener(
+    "paste",
+    (event) => {
+      if (isTyping(event.target) || mode !== Mode.Edit) return;
+      const content = clipboardContent(event.clipboardData);
+      if (!content || !options.onPaste) return;
+      event.preventDefault();
+      event.stopPropagation();
+      clearTimeout(objectPaste);
+      objectPaste = undefined;
+      options.onPaste(content, event);
+    },
+    { capture: true, signal: options.signal },
+  );
 }
 
-function clipboardImage(data: DataTransfer | null) {
+function copiedObjects() {
+  return clipboard.map((entry) => entry.value);
+}
+
+function encodeObjects(entries: ClipboardEntry[]) {
+  return OBJECT_CLIPBOARD + JSON.stringify(entries.map((entry) => entry.value));
+}
+
+function decodeObjects(text: string): SceneNode[] | undefined {
+  if (!text.startsWith(OBJECT_CLIPBOARD)) return;
+  try {
+    const value = JSON.parse(text.slice(OBJECT_CLIPBOARD.length));
+    if (!Array.isArray(value) || !value.every(isObject)) return;
+    return value;
+  } catch {
+    return;
+  }
+}
+
+function clipboardContent(data: DataTransfer | null): ClipboardContent | undefined {
   if (!data) return;
+  const file = clipboardImage(data);
+  if (file) return { type: "image", file };
+  const text = data.getData("text/plain");
+  const objects = text ? decodeObjects(text) : undefined;
+  if (objects) return { type: "objects", objects };
+  if (text) return { type: "text", text };
+}
+
+function clipboardImage(data: DataTransfer) {
   for (const file of data.files) {
     if (file.type.startsWith("image/")) return file;
   }
@@ -147,7 +219,7 @@ function clipboardImage(data: DataTransfer | null) {
   }
 }
 
-async function pasteImage(file: File) {
+export async function pasteImage(file: File) {
   const url = URL.createObjectURL(file);
   const image = new Image();
   image.src = url;
@@ -174,6 +246,28 @@ async function pasteImage(file: File) {
     placed.matrix.f = cursor.y;
   }
   const name = uniqueName(scene, "image");
+  scene[name] = object;
+  selectObjects([object]);
+}
+
+export function pasteText(text: string) {
+  const cursor = cursorWorldPoint();
+  const object: SceneNode = {
+    transform: createMatrix(),
+    text: {
+      value: text,
+      font: "",
+      fontWeight: 400,
+      fontSize: 24,
+      color: "#f4f4f5ff",
+    },
+  };
+  const placed = transform(object);
+  if (placed && cursor) {
+    placed.matrix.e = cursor.x;
+    placed.matrix.f = cursor.y;
+  }
+  const name = uniqueName(scene, "text");
   scene[name] = object;
   selectObjects([object]);
 }

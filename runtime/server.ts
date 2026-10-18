@@ -12,14 +12,14 @@ const hmrProxyPort = process.env.HMR_PROXY_PORT
 const isHmr = process.env.REMIX_NODE_HMR === '1'
 
 const server = http.createServer(createRequestListener(router.fetch, { trustProxy: isHmr }))
-attachRoom(server)
+attachRoom(server).then(() => {
+  server.listen(port, () => {
+    if (isHmr) {
+      import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
+    }
 
-server.listen(port, () => {
-  if (isHmr) {
-    import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
-  }
-
-  console.log(`Server listening on http://localhost:${hmrProxyPort ?? port}`)
+    console.log(`Server listening on http://localhost:${hmrProxyPort ?? port}`)
+  })
 })
 
 let shuttingDown = false

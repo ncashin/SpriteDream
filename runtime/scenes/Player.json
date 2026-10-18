@@ -1,0 +1,68 @@
+{
+  "player": {
+    "transform": "matrix(1, 0, 0, 1, 500.41796875, 223.0625)",
+    "image": {
+      "width": 32,
+      "height": 48,
+      "tint": "#ffffffff",
+      "image": "default.png",
+      "__icon": [
+        [
+          "rect",
+          {
+            "width": "18",
+            "height": "18",
+            "x": "3",
+            "y": "3",
+            "rx": "2",
+            "ry": "2"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "9",
+            "cy": "9",
+            "r": "2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+          }
+        ]
+      ]
+    },
+    "physicsBody": {
+      "body": "dynamic",
+      "density": "1",
+      "fixedRotation": "true",
+      "gravity": "9.8",
+      "velocity": {
+        "x": "0",
+        "y": "0"
+      }
+    },
+    "collider": {
+      "width": 32,
+      "height": 48,
+      "friction": 0,
+      "restitution": 0,
+      "sensor": false,
+      "propagateCollision": false,
+      "__icon": [
+        [
+          "rect",
+          {
+            "width": "18",
+            "height": "18",
+            "x": "3",
+            "y": "3",
+            "rx": "2"
+          }
+        ]
+      ]
+    }
+  }
+}

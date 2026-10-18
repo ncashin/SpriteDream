@@ -15,11 +15,18 @@ export function currentSceneName() {
   return sceneName;
 }
 
-export function loadScene(name = "Example Scene") {
+export function fetchScene(name: string): Promise<SceneNode | undefined> {
   return fetch(routes.editor.scene.href({ name })).then(async (response) => {
     if (!response.ok) return;
-    const next = await response.json();
+    const next: unknown = await response.json();
     if (!isObject(next)) return;
+    return next;
+  });
+}
+
+export function loadScene(name = "Example Scene") {
+  return fetchScene(name).then((next) => {
+    if (!next) return;
     for (const key of Object.keys(scene)) delete scene[key];
     Object.assign(scene, next);
     sceneName = name;

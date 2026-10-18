@@ -49,8 +49,9 @@ export type RoomState = {
 
 const sockets = new WebSocketServer({ noServer: true })
 const roomState: RoomState = { mode: 'edit', host: '', dirty: false, people: {} }
-const roomScene: SceneNode = readSceneFile('Example Scene') ?? {}
-let savedScene = JSON.stringify(roomScene)
+const roomScene: SceneNode = {}
+let savedScene = "{}"
+let exampleScene: SceneNode = {}
 
 export function noteSceneSaved(value: SceneNode) {
   savedScene = JSON.stringify(value)
@@ -69,7 +70,11 @@ setInterval(() => {
   }
 }, 15000)
 
-export function attachRoom(server: http.Server) {
+export async function attachRoom(server: http.Server) {
+  exampleScene = (await readSceneFile("Example Scene")) ?? {}
+  Object.assign(roomScene, exampleScene)
+  savedScene = JSON.stringify(roomScene)
+
   server.on('upgrade', (request, socket, head) => {
     const url = new URL(request.url ?? '/', 'http://localhost')
     if (url.pathname !== '/room') {
@@ -92,7 +97,7 @@ export function attachRoom(server: http.Server) {
     }
     roomState.people[person.id] = person
     if (!roomState.host) roomState.host = person.id
-    socket.send(JSON.stringify({ ...snapshot(), you: person.id, scene: diffScene(readSceneFile('Example Scene') ?? {}, roomScene) }))
+    socket.send(JSON.stringify({ ...snapshot(), you: person.id, scene: diffScene(exampleScene, roomScene) }))
     broadcast(socket)
 
     socket.on('message', (data) => {

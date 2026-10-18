@@ -3,8 +3,10 @@ import type { Handle } from "remix/component";
 
 import { joinRoom } from "../editor/room.tsx";
 import { contains, lookupBoundingBox } from "../../utilities/bounding-box.ts";
-import { copyAndPaste } from "../../utilities/copy-and-paste.ts";
+import { copyAndPaste, pasteCopiedObjects, pasteImage, pasteText } from "../../utilities/copy-and-paste.ts";
+import { undoHistory } from "../../utilities/undo-history.ts";
 import { inputMap } from "../../utilities/input.ts";
+import { isObject } from "../../utilities/is-object.ts";
 import { Mode, setMode } from "../../utilities/mode.ts";
 import {
   colliderTrait,
@@ -15,12 +17,14 @@ import {
   applyScenePatch,
   diffScene,
   filterScene,
+  fetchScene,
   objectAt,
   objectPath,
   scene,
   restoreScene,
   snapshotScene,
   type SceneNode,
+  type ScenePatch,
 } from "../../utilities/scene.ts";
 import {
   selectObjects,
@@ -32,6 +36,7 @@ import { updateLoop } from "../../utilities/update-loop.ts";
 import { imageTrait } from "../../utilities/viewport/draw-image.ts";
 import { textTrait } from "../../utilities/viewport/draw-text.ts";
 import { frameTrait } from "../../utilities/viewport/frame.tsx";
+import { transform } from "../../utilities/viewport/transform.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
 import { viewport } from "../../utilities/viewport/viewport.ts";
 
@@ -39,37 +44,34 @@ const RUN_SPEED = 280;
 const JUMP_SPEED = -560;
 const PLAYER_GAP = 40;
 
+type HistoryChange = {
+  patch: ScenePatch;
+  selection: string[][];
+};
+
+let playerScene: SceneNode | undefined;
+
+function loadPlayerScene() {
+  if (playerScene) return;
+  void fetchScene("Player").then((next) => {
+    if (next) playerScene = next;
+  });
+}
+
 function playerKey(id: string) {
   return `player:${id}`;
 }
 
-function createPlayer(id: string, index: number): SceneNode {
-  const x = 400 + index * PLAYER_GAP;
-  const y = 524;
-  return {
-    transform: `matrix(1, 0, 0, 1, ${x}, ${y})`,
-    image: {
-      width: 32,
-      height: 48,
-      tint: `${playerColor(id)}ff`,
-      image: "default.png",
-    },
-    physicsBody: {
-      body: "dynamic",
-      density: "1",
-      fixedRotation: "true",
-      gravity: "9.8",
-      velocity: { x: "0", y: "0" },
-    },
-    collider: {
-      width: 32,
-      height: 48,
-      friction: 0,
-      restitution: 0,
-      sensor: false,
-      propagateCollision: false,
-    },
-  };
+function createPlayer(id: string, index: number): SceneNode | undefined {
+  if (!isObject(playerScene?.player)) return;
+  const player = structuredClone(playerScene.player);
+  const placed = transform(player);
+  if (placed) {
+    placed.position.x = 400 + index * PLAYER_GAP;
+    placed.position.y = 524;
+  }
+  if (isObject(player.image)) player.image.tint = `${playerColor(id)}ff`;
+  return player;
 }
 
 function objectAtPoint(point: WorldPoint) {
@@ -155,8 +157,24 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               },
               { signal },
             );
-            copyAndPaste({ signal });
+            copyAndPaste({
+              signal,
+              onPaste(content) {
+                switch (content.type) {
+                  case "objects":
+                    pasteCopiedObjects();
+                    break;
+                  case "image":
+                    pasteImage(content.file);
+                    break;
+                  case "text":
+                    pasteText(content.text);
+                    break;
+                }
+              },
+            });
 
+            loadPlayerScene();
             const loop = updateLoop();
             const physics = createPhysics();
 
@@ -169,7 +187,8 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               people.forEach((person, index) => {
                 const key = playerKey(person.id);
                 if (scene[key]) return;
-                scene[key] = createPlayer(person.id, index);
+                const player = createPlayer(person.id, index);
+                if (player) scene[key] = player;
               });
             };
 
@@ -181,8 +200,44 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               }
               if (restoreScene()) selectObjects([]);
             };
-            
+
             let before = structuredClone(scene);
+            let ignoreHistory = false;
+
+            const history = undoHistory<HistoryChange>({
+              signal,
+              join(current, next) {
+                return {
+                  undo: {
+                    patch: [...next.undo.patch, ...current.undo.patch],
+                    selection: current.undo.selection,
+                  },
+                  redo: {
+                    patch: [...current.redo.patch, ...next.redo.patch],
+                    selection: next.redo.selection,
+                  },
+                };
+              },
+              onUndo(change) {
+                ignoreHistory = true;
+                applyChange(change);
+              },
+              onRedo(change) {
+                ignoreHistory = true;
+                applyChange(change);
+              },
+            });
+
+            const applyChange = (change: HistoryChange) => {
+              applyScenePatch(change.patch);
+              sentSelection = JSON.stringify(change.selection);
+              selectObjects(
+                change.selection.flatMap((path) => {
+                  const object = objectAt(scene, path);
+                  return object ? [object] : [];
+                }),
+              );
+            };
             const room = joinRoom(signal, {
               onScene(patch) {
                 applyScenePatch(patch);
@@ -196,7 +251,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             });
             syncMode();
 
-            let sentSelection = "";
+            let sentSelection = "[]";
             let sentInput = "";
 
             loop.onUpdate(({ deltaTime }) => {
@@ -286,15 +341,29 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
                 return path ? [path] : [];
               });
               const selection = JSON.stringify(paths);
-              if (selection !== sentSelection) {
+              const previousSelection = sentSelection;
+              const selectionChanged = selection !== previousSelection;
+              if (selectionChanged) {
                 sentSelection = selection;
                 room.sendSelectedObjects(paths);
               }
 
               const patch = diffScene(before, scene);
-              if (patch.length === 0) return;
-              applyScenePatch(patch, before);
-              room.sendScenePatch(patch);
+              const undoPatch = patch.length > 0 ? diffScene(scene, before) : [];
+              if (patch.length > 0) {
+                applyScenePatch(patch, before);
+                room.sendScenePatch(patch);
+              }
+              if (ignoreHistory) {
+                ignoreHistory = false;
+                return;
+              }
+              if (room.state.mode !== Mode.Edit) return;
+              if (patch.length === 0 && !selectionChanged) return;
+              history.pushChange({
+                undo: { patch: undoPatch, selection: JSON.parse(previousSelection) },
+                redo: { patch, selection: paths },
+              });
             });
 
             loop.start();
