@@ -53,7 +53,7 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
   const viewport = {
     state,
     ...transforms,
-    drawComponent(key: object, transform: DOMMatrix, node: RemixNode) {
+    drawComponent(key: object | string, transform: DOMMatrix, node: RemixNode) {
       drawComponent(viewport, key, transform, node);
     },
   };
@@ -105,7 +105,7 @@ export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
     },
     drawBoundingBox(
       object: SceneNode,
-      options?: { color?: string; handles?: boolean },
+      options?: { color?: string; handles?: boolean; key?: object | string },
     ) {
       drawBoundingBox(viewport, object, options);
     },

@@ -18,18 +18,20 @@ type Slot = {
 export type DrawComponent = {
   (
     viewportWithTransforms: ViewportWithTransforms,
-    key: object,
+    key: object | string,
     transform: DOMMatrix,
     node: RemixNode,
   ): void;
   dispose(): void;
 };
 
-const keys = new WeakMap<object, object>();
+const keys = new WeakMap<object, Map<string, object>>();
 
-export function drawComponentKey(source: object) {
-  let key = keys.get(source);
-  if (!key) keys.set(source, (key = {}));
+export function drawComponentKey(source: object, name = "") {
+  let byName = keys.get(source);
+  if (!byName) keys.set(source, (byName = new Map()));
+  let key = byName.get(name);
+  if (!key) byName.set(name, (key = {}));
   return key;
 }
 
@@ -68,9 +70,9 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
   view?.addEventListener("keyup", onAltKey);
   view?.addEventListener("blur", clearAltPassthrough);
 
-  let slots = new Map<object, Slot>();
+  let slots = new Map<object | string, Slot>();
   let pool: Slot[] = [];
-  let seen: object[] = [];
+  let seen: (object | string)[] = [];
   let epoch = 0;
   let open = false;
   let disposed = false;
@@ -91,7 +93,7 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
     return { host, root: createRoot(host, appFrame ? { frame: appFrame } : undefined), placed: false };
   }
 
-  function slotFor(key: object) {
+  function slotFor(key: object | string) {
     let slot = slots.get(key);
     if (slot) return slot;
     slot = pool.pop() ?? createSlot();
@@ -99,7 +101,7 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
     return slot;
   }
 
-  function release(key: object, slot: Slot) {
+  function release(key: object | string, slot: Slot) {
     clearSlot(slot);
     slot.root.dispose();
     slot.root = createRoot(slot.host, appFrame ? { frame: appFrame } : undefined);
@@ -116,7 +118,7 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
 
   function drawComponent(
     viewportWithTransforms: ViewportWithTransforms,
-    key: object,
+    key: object | string,
     transform: DOMMatrix,
     node: RemixNode,
   ) {

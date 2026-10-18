@@ -9,11 +9,11 @@ import { Icon } from "../../icon.tsx";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
 import { scene } from "../../utilities/scene.ts";
 import { HierarchyTree } from "./hierarchy-tree.tsx";
-import { ObjectSidebar, OBJECT_SIDEBAR_WIDTH } from "./object-sidebar.tsx";
+import { ObjectSidebar } from "./object-sidebar.tsx";
 import { syncMode } from "./room.tsx";
 import { Search } from "./Search.tsx";
 
-const SIDEBAR_WIDTH = "16rem";
+const SIDEBAR_WIDTH = "20rem";
 const SIDEBAR_MOTION = "200ms ease";
 const COLLAPSED_KEY = "sidebar-collapsed";
 
@@ -29,7 +29,7 @@ function readCollapsed() {
 function releaseInitialCollapse() {
   const release = () => {
     const panels = document.querySelectorAll<HTMLElement>("[data-sidebar]");
-    const ready = panels.length >= 2 && [...panels].every((panel) => panel.style.width === "0rem");
+    const ready = panels.length >= 1 && [...panels].every((panel) => panel.style.width === "0rem");
     if (!ready) {
       requestAnimationFrame(release);
       return;
@@ -54,16 +54,16 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
 
   return () => (
     <>
-      <aside data-sidebar="" mix={panel} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
-        <div inert={collapsed} mix={column}>
+      <div data-sidebar="" mix={dock} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
+        <aside inert={collapsed} mix={column}>
           <h2 mix={heading}>Scene Tree</h2>
           <div id="scene-tree" mix={[tree, treeOuterPadding]}>
             <HierarchyTree object={scene} />
           </div>
-        </div>
-      </aside>
-      <ObjectSidebar collapsed={collapsed} />
-      <header data-sidebar-bar="" mix={bar} style={{ left: collapsed ? "0rem" : `calc(${SIDEBAR_WIDTH} + ${OBJECT_SIDEBAR_WIDTH})` }}>
+        </aside>
+        <ObjectSidebar collapsed={collapsed} />
+      </div>
+      <header data-sidebar-bar="" mix={bar} style={{ left: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
         <button
           type="button"
           aria-expanded={!collapsed}
@@ -122,7 +122,7 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
   );
 });
 
-const panel = css({
+const dock = css({
   boxSizing: "border-box",
   display: "flex",
   flexDirection: "column",
@@ -132,6 +132,7 @@ const panel = css({
   minHeight: 0,
   minWidth: 0,
   overflow: "hidden",
+  borderRight: "1px solid #262626",
   transition: `width ${SIDEBAR_MOTION}`,
   "@media (prefers-reduced-motion: reduce)": {
     transition: "none",
@@ -140,12 +141,12 @@ const panel = css({
 
 const column = css({
   boxSizing: "border-box",
-  borderRight: "1px solid #262626",
+  borderBottom: "1px solid #262626",
   display: "flex",
-  flex: "1 1 auto",
+  flex: "1 1 33.333%",
   flexDirection: "column",
   minHeight: 0,
-  width: SIDEBAR_WIDTH,
+  minWidth: 0,
 });
 
 const heading = css({

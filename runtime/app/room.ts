@@ -18,9 +18,12 @@ const roomMessage = union([
   }),
   object({
     type: defaulted(literal('cursorUpdate'), 'cursorUpdate'),
-    cursor: optional(object({ x: number(), y: number() })),
-    selectedObjects: optional(array(array(string()))),
-  }).refine((message) => message.cursor !== undefined || message.selectedObjects !== undefined),
+    cursor: object({ x: number(), y: number() }),
+  }),
+  object({
+    type: defaulted(literal('selectionUpdate'), 'selectionUpdate'),
+    selectedObjects: array(array(string())),
+  }),
 ])
 
 type Person = {
@@ -93,7 +96,10 @@ export function attachRoom(server: http.Server) {
             break
           case 'cursorUpdate':
             current.cursor = message.cursor
-            if (message.selectedObjects) current.selectedObjects = message.selectedObjects
+            broadcast()
+            break
+          case 'selectionUpdate':
+            current.selectedObjects = message.selectedObjects
             broadcast()
             break
         }

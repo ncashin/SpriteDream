@@ -16,10 +16,11 @@ import {
   applyScenePatch,
   diffScene,
   filterScene,
+  objectAt,
+  objectPath,
   scene,
   restoreScene,
   snapshotScene,
-  type ScenePatch,
 } from "../../utilities/scene.ts";
 import {
   selectObjects,
@@ -160,9 +161,29 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             });
        
 
+            let sentSelection = "";
+
             updateLoop.onUpdate(() => {
               for (const object of selectedObjects)
                 editorViewport.drawBoundingBox(object);
+
+              for (const person of Object.values(room.state.people)) {
+                if (person.id === room.you) continue;
+                const color = playerColor(person.id);
+                if (person.cursor) {
+                  editorViewport.drawCursor(person.cursor, color);
+                }
+                
+                for (const path of person.selectedObjects ?? []) {
+                  const object = objectAt(scene, path);
+                  if (!object) continue;
+                  editorViewport.drawBoundingBox(object, {
+                    color,
+                    handles: false,
+                    key: `${person.id}:${path.join("/")}`,
+                  });
+                }
+              }
 
               input.update();
               if (input.buttons.deselect.pressed) selectObjects([]);
@@ -182,13 +203,14 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
               }
 
               room.sendCursor(editorViewport.state.cursorPoint);
-
-              for (const person of Object.values(room.state.people)) {
-                if (person.id === room.you || !person.cursor) continue;
-                editorViewport.drawCursor(
-                  person.cursor,
-                  playerColor(person.id),
-                );
+              const paths = [...selectedObjects].flatMap((object) => {
+                const path = objectPath(scene, object);
+                return path ? [path] : [];
+              });
+              const selection = JSON.stringify(paths);
+              if (selection !== sentSelection) {
+                sentSelection = selection;
+                room.sendSelectedObjects(paths);
               }
 
               const patch = diffScene(before, scene);

@@ -6,8 +6,6 @@ import { scene, type SceneNode } from "../../utilities/scene.ts";
 import { selectedObjects } from "../../utilities/selected-objects.ts";
 import { ObjectTree } from "./object-tree.tsx";
 
-export const OBJECT_SIDEBAR_WIDTH = "20rem";
-
 export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar(handle: Handle<{ collapsed?: boolean }>) {
   let active: SceneNode | undefined;
 
@@ -27,8 +25,8 @@ export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar
     const collapsed = handle.props.collapsed === true;
 
     return (
-      <aside id="object-view" data-sidebar="" mix={panel} style={{ width: collapsed ? "0rem" : OBJECT_SIDEBAR_WIDTH }}>
-        <div inert={collapsed} mix={column}>
+      <aside id="object-view" inert={collapsed} mix={panel}>
+        <div mix={column}>
           <h2 mix={heading}>Selected Objects</h2>
           {active ? (
             <div mix={tree}>
@@ -59,26 +57,21 @@ const panel = css({
   boxSizing: "border-box",
   display: "flex",
   flexDirection: "column",
-  flex: "0 0 auto",
+  flex: "2 1 66.667%",
   fontSize: "0.875rem",
   lineHeight: "1.25rem",
   minHeight: 0,
   minWidth: 0,
   overflow: "hidden",
-  transition: "width 200ms ease",
-  "@media (prefers-reduced-motion: reduce)": {
-    transition: "none",
-  },
 });
 
 const column = css({
   boxSizing: "border-box",
-  borderRight: "1px solid #262626",
   display: "flex",
   flex: "1 1 auto",
   flexDirection: "column",
   minHeight: 0,
-  width: OBJECT_SIDEBAR_WIDTH,
+  minWidth: 0,
 });
 
 const heading = css({

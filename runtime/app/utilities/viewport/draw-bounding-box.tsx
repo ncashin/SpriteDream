@@ -83,17 +83,18 @@ const rotationCss = css({
 
 export function drawBoundingBox(
   viewport: ViewportWithTransforms & {
-    drawComponent(key: object, transform: DOMMatrix, node: RemixNode): void;
+    drawComponent(key: object | string, transform: DOMMatrix, node: RemixNode): void;
   },
   object: SceneNode,
-  options?: { color?: string; handles?: boolean },
+  options?: { color?: string; handles?: boolean; key?: object | string },
 ) {
   const bounds = lookupBoundingBox(object);
   if (!bounds) return;
   const frame = scaleRemoved(bounds);
   const handles = options?.handles !== false;
+  const key = options?.key ?? object;
   viewport.drawComponent(
-    drawComponentKey(object),
+    typeof key === "string" ? key : drawComponentKey(key),
     frame.transform,
     <BoundingBox
       bounds={bounds}

@@ -2,7 +2,7 @@ import { any, array, enum_, number, object, optional, parseSafe, record, string,
 import type { InferOutput } from "remix/data-schema";
 
 import { Mode, setMode } from "../../utilities/mode.ts";
-import type { ScenePatch } from "../../utilities/scene.ts";
+import type { ScenePatch, ScenePath } from "../../utilities/scene.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
 
 const person = object({
@@ -47,6 +47,7 @@ type RoomConnection = {
   handlers: RoomHandlers[];
   sendScenePatch: (patch: ScenePatch) => void;
   sendCursor: (cursor: WorldPoint) => void;
+  sendSelectedObjects: (selectedObjects: ScenePath[]) => void;
   readonly isHost: boolean;
 };
 
@@ -87,6 +88,10 @@ export function joinRoom(signal: AbortSignal, handlers: RoomHandlers = {}): Room
     sendCursor(cursor) {
       if (this.socket.readyState !== WebSocket.OPEN) return;
       this.socket.send(JSON.stringify({ type: "cursorUpdate", cursor }));
+    },
+    sendSelectedObjects(selectedObjects) {
+      if (this.socket.readyState !== WebSocket.OPEN) return;
+      this.socket.send(JSON.stringify({ type: "selectionUpdate", selectedObjects }));
     },
     get isHost() {
       return this.you !== "" && this.you === this.state.host;

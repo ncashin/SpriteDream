@@ -38,7 +38,7 @@ addBoundingBoxLookup((object) => {
 
 export function drawFrame(
   viewport: ViewportWithTransforms & {
-    drawComponent(key: object, transform: DOMMatrix, node: RemixNode): void;
+    drawComponent(key: object | string, transform: DOMMatrix, node: RemixNode): void;
   },
   frame: FrameObject,
 ) {
@@ -50,7 +50,7 @@ export function drawFrame(
   const { width, height } = frame.frame;
   const placed = new DOMMatrix().translate(-width / 2, -height / 2);
   viewport.drawComponent(
-    drawComponentKey(frame),
+    drawComponentKey(frame, "frame"),
     worldMatrix.multiply(placed),
     <div
       data-scene-object={path}
