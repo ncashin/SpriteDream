@@ -29,6 +29,12 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <meta name="color-scheme" content="dark" />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link
+            href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,420..560&display=swap"
+            rel="stylesheet"
+          />
           <title>{title}</title>
           <style>{SIDEBAR_COLLAPSED_STYLE}</style>
           <script>{SIDEBAR_COLLAPSED_SCRIPT}</script>
@@ -42,13 +48,26 @@ export function Document(handle: Handle<DocumentProps>) {
         <body
           mix={css({
             margin: 0,
+            background: "#121213",
+            color: "#ededed",
+            fontSize: "13px",
+            lineHeight: 1.35,
+            fontWeight: 450,
+            letterSpacing: "-0.011em",
+            WebkitFontSmoothing: "antialiased",
             "--font-sans":
-              '-apple-system, BlinkMacSystemFont, "avenir next", avenir, "segoe ui", "helvetica neue", "Adwaita Sans", Cantarell, Ubuntu, roboto, noto, helvetica, arial, sans-serif',
+              'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
             "--font-serif":
               '"Iowan Old Style", "Apple Garamond", Baskerville, "Times New Roman", "Droid Serif", Times, "Source Serif Pro", serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"',
             "--font-mono":
-              'Menlo, Consolas, Monaco, "Adwaita Mono", "Liberation Mono", "Lucida Console", monospace',
-            "--text-light": "#d4d4d4",
+              'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+            "--text": "#ededed",
+            "--text-muted": "#8f8f8f",
+            "--text-light": "#ededed",
+            "--hover": "#ffffff12",
+            "--selected": "#ffffff1a",
+            "--line": "#ffffff14",
+            "--menu": "#19191b",
             fontFamily: "var(--font-sans)",
           })}
         >

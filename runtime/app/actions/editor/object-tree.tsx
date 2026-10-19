@@ -11,6 +11,7 @@ import { isObject } from "../../utilities/is-object.ts";
 import type { SceneNode } from "../../utilities/scene.ts";
 import { deselectObject, selectedObjects } from "../../utilities/selected-objects.ts";
 import { applyTrait, traits } from "../../utilities/trait/trait.ts";
+import { textTrait } from "../../utilities/viewport/draw-text.ts";
 import "../../utilities/physics.ts";
 import "../../utilities/viewport/draw-image.ts";
 import "../../utilities/viewport/frame.tsx";
@@ -34,7 +35,7 @@ import {
 
 export const ObjectTree = clientEntry(
   import.meta.url,
-  function ObjectTree(handle: Handle<{ object: SceneNode; name?: string; parent?: SceneNode }>) {
+  function ObjectTree(handle: Handle<{ object: SceneNode }>) {
     if (typeof requestAnimationFrame === "function") {
       let frame = requestAnimationFrame(function tick() {
         if (handle.signal.aborted) return;
@@ -44,32 +45,7 @@ export const ObjectTree = clientEntry(
       handle.signal.addEventListener("abort", () => cancelAnimationFrame(frame));
     }
 
-    return () => {
-      const { object, name, parent } = handle.props;
-      if (!name || !parent) return <SceneNodeList object={object} />;
-
-      return (
-        <Branch
-          name={name}
-          object={object}
-          onRename={(from, to) => {
-            if (Object.hasOwn(parent, to)) return false;
-            renameKey(parent, from, to);
-            for (const value of Object.values(parent)) {
-              if (isObject(value) && value.parent === from) {
-                value.parent = to;
-              }
-            }
-            handle.update();
-          }}
-          onDelete={() => {
-            deselectObject(object);
-            delete parent[name];
-            handle.update();
-          }}
-        />
-      );
-    };
+    return () => <SceneNodeList object={handle.props.object} />;
   },
 );
 
@@ -120,6 +96,7 @@ function SceneNodeList(handle: Handle<{ object: SceneNode }>) {
 function addItems(object: SceneNode, done: () => void): DropdownItem[] {
   const items: DropdownItem[] = [];
   for (const entry of traits) {
+    if (entry.trait === textTrait) continue;
     items.push({
       label: entry.name,
       icon: entry.icon,
@@ -157,6 +134,69 @@ function uniqueKey(object: SceneNode, base: string) {
   while (Object.hasOwn(object, key)) key = `${base}${n++}`;
   return key;
 }
+
+export function SelectedHeader(
+  handle: Handle<{
+    name: string;
+    object: SceneNode;
+    onRename: (from: string, to: string) => boolean | void;
+    onDelete: () => void;
+  }>,
+) {
+  return () => {
+    const { name, object, onRename, onDelete } = handle.props;
+    return (
+      <div mix={header}>
+        <div mix={label}>
+          <AutoSizeInput
+            value={name}
+            placeholder="object"
+            label="Selected object"
+            onCommit={(next) => onRename(name, next)}
+          />
+        </div>
+        <Dropdown
+          label={`Add to ${name}`}
+          text="Add"
+          items={addItems(object, () => handle.update())}
+        />
+        <button
+          type="button"
+          aria-label={`Delete ${name}`}
+          mix={[
+            iconButton,
+            on("click", (event) => {
+              event.stopPropagation();
+              onDelete();
+            }),
+          ]}
+        >
+          <Icon icon={Trash} size={11} />
+          Delete
+        </button>
+      </div>
+    );
+  };
+}
+
+const header = css({
+  alignItems: "center",
+  boxSizing: "border-box",
+  color: "var(--text)",
+  display: "flex",
+  flex: "0 0 auto",
+  flexDirection: "row",
+  fontSize: "13px",
+  fontWeight: 500,
+  gap: "0.25rem",
+  lineHeight: 1.35,
+  margin: 0,
+  minWidth: 0,
+  padding: "1rem 1rem 0.5rem",
+  "& > button": {
+    visibility: "visible",
+  },
+});
 
 function Branch(
   handle: Handle<{
@@ -202,6 +242,7 @@ function Branch(
           </div>
           <Dropdown
             label={`Add to ${name}`}
+            text="Add"
             items={addItems(object, () => {
               collapsed = false;
               handle.update();
@@ -212,14 +253,14 @@ function Branch(
             aria-label={`Delete ${name}`}
             mix={[
               iconButton,
-              css({ marginLeft: "-0.25rem" }),
               on("click", (event) => {
                 event.stopPropagation();
                 onDelete();
               }),
             ]}
           >
-            <Icon icon={Trash} size={14} />
+            <Icon icon={Trash} size={11} />
+            Delete
           </button>
         </div>
         <div mix={[childrenPanel, !collapsed && childrenOpen]}>

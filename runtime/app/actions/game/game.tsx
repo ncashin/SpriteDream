@@ -119,7 +119,7 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
             height: "100%",
             cursor: hovering ? "pointer" : undefined,
             touchAction: "none",
-            background: "#262626",
+            background: "#1c1c1e",
             outline: "none",
           }),
           ref((node, signal) => {

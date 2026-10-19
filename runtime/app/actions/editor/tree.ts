@@ -1,6 +1,6 @@
 import { css } from "remix/component";
 
-const borderRadius = "0.25rem";
+const borderRadius = "6px";
 
 export const row = css({
   display: "flex",
@@ -13,13 +13,13 @@ export const row = css({
   borderRadius,
   cursor: "pointer",
   "&:hover": {
-    background: "#1e1e1e",
+    background: "var(--hover)",
   },
   "&[aria-current='true']": {
-    background: "#262626",
+    background: "var(--selected)",
   },
   "&[aria-current='true']:hover": {
-    background: "#262626",
+    background: "var(--selected)",
   },
   "& > button": {
     visibility: "hidden",
@@ -95,24 +95,28 @@ export const iconButton = css({
   background: "transparent",
   border: "none",
   borderRadius,
-  color: "inherit",
+  color: "var(--text-muted)",
   cursor: "pointer",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   flex: "0 0 auto",
   marginLeft: "auto",
-  padding: 0,
-  width: "1.25rem",
-  height: "1.25rem",
+  padding: "3px 5px",
+  gap: "3px",
+  maxHeight: "1.25rem",
   font: "inherit",
-  lineHeight: 1,
+  fontSize: "10px",
+  fontWeight: 500,
+  lineHeight: 1.35,
   "&:hover": {
-    background: "#333333",
+    background: "var(--hover)",
+    color: "var(--text)",
   },
   "&:focus-visible": {
-    background: "#333333",
-    outline: "1px solid currentColor",
+    background: "var(--hover)",
+    color: "var(--text)",
+    outline: "1px solid var(--line)",
     outlineOffset: "1px",
   },
 });

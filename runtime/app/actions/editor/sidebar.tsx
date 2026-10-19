@@ -81,7 +81,6 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
     <>
       <div data-sidebar="" mix={dock} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
         <aside inert={collapsed} mix={column}>
-          <h2 mix={heading}>Scene Tree</h2>
           <div id="scene-tree" mix={[tree, treeOuterPadding]}>
             <HierarchyTree object={scene} />
           </div>
@@ -109,7 +108,7 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
           </span>
           <span
             mix={css({
-              fontSize: "0.875rem",
+              fontSize: "13px",
               fontWeight: 400,
               lineHeight: "1.25rem",
               minWidth: 0,
@@ -153,12 +152,12 @@ const dock = css({
   display: "flex",
   flexDirection: "column",
   flex: "0 0 auto",
-  fontSize: "0.875rem",
-  lineHeight: "1.25rem",
+  fontSize: "13px",
+  lineHeight: 1.35,
   minHeight: 0,
   minWidth: 0,
   overflow: "hidden",
-  borderRight: "1px solid #262626",
+  borderRight: "1px solid var(--line)",
   transition: `width ${SIDEBAR_MOTION}`,
   "@media (prefers-reduced-motion: reduce)": {
     transition: "none",
@@ -167,7 +166,7 @@ const dock = css({
 
 const column = css({
   boxSizing: "border-box",
-  borderBottom: "1px solid #262626",
+  borderBottom: "1px solid var(--line)",
   display: "flex",
   flex: "1 1 33.333%",
   flexDirection: "column",
@@ -175,18 +174,8 @@ const column = css({
   minWidth: 0,
 });
 
-const heading = css({
-  color: "#f4f4f5",
-  flex: "0 0 auto",
-  fontSize: "0.875rem",
-  fontWeight: 400,
-  lineHeight: "1.25rem",
-  margin: 0,
-  padding: "1rem 1rem 0.25rem",
-});
-
 const treeOuterPadding = css({
-  padding: "0.25rem 0.625rem 1rem",
+  padding: "0.875rem 0.625rem 1rem",
 });
 
 const tree = css({
@@ -199,7 +188,7 @@ const tree = css({
 const bar = css({
   alignItems: "flex-start",
   background: "transparent",
-  color: "#f4f4f5",
+  color: "var(--text)",
   display: "flex",
   flexDirection: "row",
   gap: "0.75rem",
@@ -268,11 +257,11 @@ const toggle = css({
     visibility: "visible",
   },
   "&:hover": {
-    background: "#262626",
+    background: "var(--hover)",
   },
   "&:focus-visible": {
-    background: "#262626",
-    outline: "1px solid currentColor",
+    background: "var(--hover)",
+    outline: "1px solid var(--line)",
     outlineOffset: "1px",
   },
 });
@@ -299,15 +288,15 @@ const control = css({
   padding: "0.25rem 0.5rem",
   pointerEvents: "auto",
   font: "inherit",
-  fontSize: "0.875rem",
-  fontWeight: 400,
-  lineHeight: "1.25rem",
+  fontSize: "13px",
+  fontWeight: 500,
+  lineHeight: 1.35,
   "&:hover": {
-    background: "#262626",
+    background: "var(--hover)",
   },
   "&:focus-visible": {
-    background: "#262626",
-    outline: "1px solid currentColor",
+    background: "var(--hover)",
+    outline: "1px solid var(--line)",
     outlineOffset: "1px",
   },
 });

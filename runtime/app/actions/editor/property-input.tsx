@@ -16,7 +16,7 @@ type PropertyInputProps = {
   onDelete: () => void;
 };
 
-const borderRadius = "0.25rem";
+const borderRadius = "6px";
 
 const row = css({
   display: "flex",
@@ -28,7 +28,7 @@ const row = css({
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
   borderRadius,
   "&:hover": {
-    background: "#1e1e1e",
+    background: "var(--hover)",
   },
   "& > button": {
     visibility: "hidden",
@@ -36,6 +36,17 @@ const row = css({
   "&:hover > button": {
     visibility: "visible",
   },
+});
+
+const actionLabel = css({
+  width: "auto",
+  height: "auto",
+  maxHeight: "1.25rem",
+  padding: "3px 5px",
+  gap: "3px",
+  fontSize: "10px",
+  fontWeight: 500,
+  lineHeight: 1.35,
 });
 
 const iconButton = css({
@@ -56,10 +67,10 @@ const iconButton = css({
   font: "inherit",
   lineHeight: 1,
   "&:hover": {
-    background: "#333333",
+    background: "var(--hover)",
   },
   "&:focus-visible": {
-    background: "#333333",
+    background: "var(--hover)",
     outline: "1px solid currentColor",
     outlineOffset: "1px",
   },
@@ -95,7 +106,7 @@ const keyLabel = css({
   flexDirection: "row",
   alignItems: "center",
   flex: "0 0 auto",
-  color: "var(--text-light)",
+  color: "var(--text-muted)",
 });
 
 const colorPicker = css({
@@ -115,18 +126,18 @@ const colorPicker = css({
     padding: 0,
   },
   "&::-webkit-color-swatch": {
-    border: "1px solid #3f3f46",
+    border: "1px solid var(--line)",
     borderRadius: 0,
   },
   "&::-moz-color-swatch": {
-    border: "1px solid #3f3f46",
+    border: "1px solid var(--line)",
     borderRadius: 0,
   },
   "&:hover": {
-    background: "#333333",
+    background: "var(--hover)",
   },
   "&:focus-visible": {
-    background: "#333333",
+    background: "var(--hover)",
     outline: "1px solid currentColor",
     outlineOffset: "1px",
   },
@@ -344,7 +355,7 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
               iconButton,
               css({
                 "&:has(:focus-visible)": {
-                  background: "#333333",
+                  background: "var(--hover)",
                   outline: "1px solid currentColor",
                   outlineOffset: "1px",
                 },
@@ -387,6 +398,7 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
           aria-label={`Delete ${name}`}
           mix={[
             iconButton,
+            actionLabel,
             (file || color || bool) && css({ marginLeft: "-0.25rem" }),
             on("click", (event) => {
               event.stopPropagation();
@@ -394,7 +406,8 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
             }),
           ]}
         >
-          <Icon icon={Trash} size={14} />
+          <Icon icon={Trash} size={11} />
+          Delete
         </button>
       </div>
     );

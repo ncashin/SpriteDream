@@ -141,7 +141,7 @@ export function Search(handle: Handle) {
 
     return (
       <div mix={slot}>
-        <div mix={box}>
+        <div mix={[box, open && openBox]}>
           <label mix={field}>
             <Icon icon={SearchIcon} size={14} />
             <input
@@ -266,7 +266,16 @@ const box = css({
   pointerEvents: "auto",
   width: "min(24rem, 100%)",
   "&:hover, &:focus-within": {
-    background: "#262626",
+    background: "var(--hover)",
+  },
+});
+
+const openBox = css({
+  background: "var(--menu)",
+  borderRadius: "10px",
+  boxShadow: "0 4px 42px #0006, 0 0 0 1px #ffffff14",
+  "&:hover, &:focus-within": {
+    background: "var(--menu)",
   },
 });
 
@@ -279,9 +288,9 @@ const field = css({
   color: "inherit",
   display: "flex",
   flexDirection: "row",
-  fontSize: "0.875rem",
+  fontSize: "13px",
   gap: "0.25rem",
-  lineHeight: "1.25rem",
+  lineHeight: 1.35,
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
   width: "100%",
 });
@@ -294,16 +303,16 @@ const inputStyle = css({
   color: "inherit",
   flex: "1 1 auto",
   font: "inherit",
-  fontSize: "0.875rem",
-  lineHeight: "1.25rem",
+  fontSize: "13px",
+  lineHeight: 1.35,
   margin: 0,
   minWidth: 0,
   outline: "none",
   padding: 0,
   width: "100%",
   "&::placeholder": {
-    color: "inherit",
-    opacity: 0.5,
+    color: "var(--text-muted)",
+    opacity: 1,
   },
   "&:focus, &:focus-visible": {
     outline: "none",
@@ -314,11 +323,10 @@ const inputStyle = css({
 });
 
 const kbd = css({
-  color: "inherit",
   flex: "0 0 auto",
   font: "inherit",
   lineHeight: "inherit",
-  opacity: 0.5,
+  color: "var(--text-muted)",
 });
 
 const list = css({
@@ -326,29 +334,29 @@ const list = css({
   margin: 0,
   maxHeight: "16rem",
   overflow: "auto",
-  padding: 0,
+  padding: "0.25rem",
 });
 
 const option = css({
   alignItems: "center",
-  borderRadius: "0.25rem",
+  borderRadius: "6px",
   boxSizing: "border-box",
   cursor: "pointer",
   display: "flex",
-  fontSize: "0.875rem",
+  fontSize: "13px",
   gap: "0.25rem",
-  lineHeight: "1.25rem",
+  lineHeight: 1.35,
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
   width: "100%",
 });
 
 const active = css({
-  background: "#333333",
+  background: "var(--hover)",
 });
 
 const empty = css({
-  fontSize: "0.875rem",
-  lineHeight: "1.25rem",
-  opacity: 0.6,
+  color: "var(--text-muted)",
+  fontSize: "13px",
+  lineHeight: 1.35,
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
 });

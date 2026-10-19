@@ -13,7 +13,7 @@ import {
   selectObjects,
   selectedObjects,
 } from "../../utilities/selected-objects.ts";
-import { parentObject } from "../../utilities/viewport/transform.ts";
+import { parentObject, setObjectParent } from "../../utilities/viewport/transform.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { renameKey } from "./object-tree.tsx";
 import {
@@ -87,6 +87,7 @@ export const HierarchyTree = clientEntry(
 
 function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode }>) {
   let collapsed = false;
+  let wasSelected = false;
   let name = handle.props.node.name;
 
   return () => {
@@ -95,20 +96,40 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode }
     const hasChildren = children.length > 0;
 
     const isSelected = selectedObjects.has(object);
-    const open = !collapsed || isSelected;
+    if (isSelected && !wasSelected && collapsed) collapsed = false;
+    wasSelected = isSelected;
+    const open = !collapsed || forcedOpen.has(name);
+    const position = dropTarget?.name === name ? dropTarget.position : undefined;
     return (
       <>
         <div
+          data-hierarchy-node={name}
           aria-current={isSelected ? "true" : undefined}
           aria-expanded={hasChildren ? open : undefined}
           mix={[
             row,
             hasChildren && expandable,
+            dragSource?.object === object && dragging,
+            position === "before" && dropBefore,
+            position === "inside" && dropInside,
+            position === "after" && dropAfter,
+            on("pointerdown", (event) => {
+              const target = event.target instanceof Element ? event.target : null;
+              if (event.button !== 0 || target?.closest("button, input")) return;
+              trackDrag(event, name, object, root);
+            }),
             on("click", (event) => {
+              if (suppressClick) {
+                suppressClick = false;
+                return;
+              }
               const target = event.target instanceof Element ? event.target : null;
               if (target?.closest("button, input")) return;
               selectObjects([object]);
-              if (isSelected && hasChildren) collapsed = !collapsed;
+              if (isSelected && hasChildren) {
+                collapsed = !collapsed;
+                if (collapsed) forcedOpen.delete(name);
+              }
               handle.update();
             }),
           ]}
@@ -145,7 +166,8 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode }
               }),
             ]}
           >
-            <Icon icon={Trash} size={14} />
+            <Icon icon={Trash} size={11} />
+            Delete
           </button>
         </div>
         {hasChildren && (
@@ -162,6 +184,166 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode }
   };
 }
 
+type DropPosition = "before" | "inside" | "after";
+
+let dragSource: { name: string; object: SceneNode } | null = null;
+let dropTarget: { name: string; position: DropPosition } | null = null;
+let suppressClick = false;
+const forcedOpen = new Set<string>();
+
+function trackDrag(event: PointerEvent, name: string, object: SceneNode, root: SceneNode) {
+  const pointerId = event.pointerId;
+  const originX = event.clientX;
+  const originY = event.clientY;
+  let active = false;
+
+  const move = (next: PointerEvent) => {
+    if (next.pointerId !== pointerId) return;
+    if (!active) {
+      if (Math.hypot(next.clientX - originX, next.clientY - originY) < 4) return;
+      active = true;
+      suppressClick = true;
+      dragSource = { name, object };
+      selectObjects([object]);
+    }
+    dropTarget = dropAt(next.clientX, next.clientY, name, root);
+  };
+
+  const finish = (next: PointerEvent) => {
+    if (next.pointerId !== pointerId) return;
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", finish);
+    window.removeEventListener("pointercancel", finish);
+    if (active && dropTarget) moveNode(root, name, object, dropTarget);
+    dragSource = null;
+    dropTarget = null;
+    if (active) setTimeout(() => {
+      suppressClick = false;
+    }, 0);
+  };
+
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", finish);
+  window.addEventListener("pointercancel", finish);
+}
+
+function dropAt(
+  x: number,
+  y: number,
+  sourceName: string,
+  root: SceneNode,
+): { name: string; position: DropPosition } | null {
+  const hit = document.elementFromPoint(x, y);
+  const row = hit instanceof Element ? hit.closest("[data-hierarchy-node]") : null;
+  const name = row?.getAttribute("data-hierarchy-node");
+  if (!name || name === sourceName || !(row instanceof HTMLElement)) return null;
+  const target = root[name];
+  if (!isObject(target)) return null;
+  const rect = row.getBoundingClientRect();
+  const ratio = rect.height === 0 ? 0.5 : (y - rect.top) / rect.height;
+  const position: DropPosition = ratio < 0.25 ? "before" : ratio > 0.75 ? "after" : "inside";
+  const parent = position === "inside" ? name : parentNameOf(target, root);
+  if (parent && createsCycle(sourceName, parent, root)) return null;
+  return { name, position };
+}
+
+function moveNode(
+  root: SceneNode,
+  name: string,
+  object: SceneNode,
+  target: { name: string; position: DropPosition },
+) {
+  const destination = root[target.name];
+  if (!isObject(destination) || destination === object) return;
+  const parent = target.position === "inside" ? target.name : parentNameOf(destination, root);
+  if (parent && createsCycle(name, parent, root)) return;
+  setObjectParent(object, parent);
+  if (target.position === "inside") forcedOpen.add(target.name);
+  if (target.position === "before") placeKey(root, name, target.name);
+  else placeKey(root, name, undefined, target.position === "after" ? target.name : lastChildKey(root, target.name));
+}
+
+function parentNameOf(object: SceneNode, root: SceneNode) {
+  const parent = parentObject(object, root);
+  if (!parent) return;
+  return Object.entries(root).find(([, value]) => value === parent)?.[0];
+}
+
+function createsCycle(name: string, parent: string, root: SceneNode) {
+  const seen = new Set<string>();
+  let current: string | undefined = parent;
+  while (current && !seen.has(current)) {
+    if (current === name) return true;
+    seen.add(current);
+    const value: unknown = root[current];
+    current = isObject(value) ? parentNameOf(value, root) : undefined;
+  }
+  return false;
+}
+
+function lastChildKey(root: SceneNode, parent: string) {
+  let last = parent;
+  for (const [key, value] of Object.entries(root)) {
+    if (!isObject(value)) continue;
+    if (parentNameOf(value, root) === parent) last = key;
+  }
+  return last;
+}
+
+function placeKey(root: SceneNode, name: string, before?: string, after?: string) {
+  const value = root[name];
+  const entries = Object.entries(root).filter(([key]) => key !== name);
+  let index = entries.length;
+  if (before) {
+    const found = entries.findIndex(([key]) => key === before);
+    if (found >= 0) index = found;
+  } else if (after) {
+    const found = entries.findIndex(([key]) => key === after);
+    if (found >= 0) index = found + 1;
+  }
+  entries.splice(index, 0, [name, value]);
+  for (const key of Object.keys(root)) delete root[key];
+  for (const [key, entry] of entries) root[key] = entry;
+}
+
+const dragging = css({
+  opacity: 0.45,
+});
+
+const dropLine = {
+  content: '""',
+  position: "absolute",
+  left: "0.375rem",
+  right: "0.25rem",
+  height: "2px",
+  background: "currentColor",
+  borderRadius: "1px",
+  pointerEvents: "none",
+} as const;
+
+const dropBefore = css({
+  position: "relative",
+  "&::before": {
+    ...dropLine,
+    top: 0,
+  },
+});
+
+const dropInside = css({
+  background: "var(--hover)",
+  "&[aria-current='true']": {
+    background: "var(--hover)",
+  },
+});
+
+const dropAfter = css({
+  position: "relative",
+  "&::after": {
+    ...dropLine,
+    bottom: 0,
+  },
+});
+
 const newObject = css({
   appearance: "none",
   background: "transparent",
@@ -170,10 +352,10 @@ const newObject = css({
   font: "inherit",
   textAlign: "left",
   "&:hover": {
-    background: "#1e1e1e",
+    background: "var(--hover)",
   },
   "&:focus-visible": {
-    background: "#1e1e1e",
+    background: "var(--hover)",
     outline: "1px solid currentColor",
     outlineOffset: "1px",
   },

@@ -200,6 +200,13 @@ function compose(object: SceneNode): DOMMatrix {
   return compose(parent).multiply(local);
 }
 
+export function setObjectParent(object: SceneNode, parent: string | undefined) {
+  const world = isMatrix(object.transform) ? compose(object) : undefined;
+  if (parent) object.parent = parent;
+  else delete object.parent;
+  if (world) writeLocal(object, world);
+}
+
 function writeLocal(object: SceneNode, world: DOMMatrix) {
   if (!isMatrix(object.transform)) return;
   const parent = parentObject(object);

@@ -3,8 +3,8 @@ import type { Handle } from "remix/component";
 
 import { isObject } from "../../utilities/is-object.ts";
 import { scene, type SceneNode } from "../../utilities/scene.ts";
-import { selectedObjects } from "../../utilities/selected-objects.ts";
-import { ObjectTree } from "./object-tree.tsx";
+import { deselectObject, selectedObjects } from "../../utilities/selected-objects.ts";
+import { ObjectTree, SelectedHeader, renameKey } from "./object-tree.tsx";
 
 export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar(handle: Handle<{ collapsed?: boolean }>) {
   let active: SceneNode | undefined;
@@ -23,19 +23,33 @@ export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar
     const entry = active ? findEntry(scene, active) : undefined;
 
     const collapsed = handle.props.collapsed === true;
+    const selected = active && entry ? { object: active, entry } : undefined;
 
     return (
       <aside id="object-view" inert={collapsed} mix={panel}>
         <div mix={column}>
-          <h2 mix={heading}>Selected Objects</h2>
+          {selected ? (
+            <SelectedHeader
+              name={selected.entry.key}
+              object={selected.object}
+              onRename={(from, to) => {
+                if (Object.hasOwn(selected.entry.parent, to)) return false;
+                renameKey(selected.entry.parent, from, to);
+                for (const value of Object.values(selected.entry.parent)) {
+                  if (isObject(value) && value.parent === from) value.parent = to;
+                }
+                handle.update();
+              }}
+              onDelete={() => {
+                deselectObject(selected.object);
+                delete selected.entry.parent[selected.entry.key];
+                handle.update();
+              }}
+            />
+          ) : null}
           {active ? (
             <div mix={tree}>
-              <ObjectTree
-                key={entry?.key ?? active}
-                object={active}
-                name={entry?.key}
-                parent={entry?.parent}
-              />
+              <ObjectTree key={selected?.entry.key ?? active} object={active} />
             </div>
           ) : null}
         </div>
@@ -58,8 +72,8 @@ const panel = css({
   display: "flex",
   flexDirection: "column",
   flex: "2 1 66.667%",
-  fontSize: "0.875rem",
-  lineHeight: "1.25rem",
+  fontSize: "13px",
+  lineHeight: 1.35,
   minHeight: 0,
   minWidth: 0,
   overflow: "hidden",
@@ -72,16 +86,6 @@ const column = css({
   flexDirection: "column",
   minHeight: 0,
   minWidth: 0,
-});
-
-const heading = css({
-  color: "#f4f4f5",
-  flex: "0 0 auto",
-  fontSize: "0.875rem",
-  fontWeight: 400,
-  lineHeight: "1.25rem",
-  margin: 0,
-  padding: "1rem 1rem 0.25rem",
 });
 
 const tree = css({

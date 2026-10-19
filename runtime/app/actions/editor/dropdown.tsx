@@ -13,7 +13,9 @@ export type DropdownItem = {
   onSelect: () => void;
 };
 
-export function Dropdown(handle: Handle<{ label: string; items: DropdownItem[] }>) {
+export function Dropdown(
+  handle: Handle<{ label: string; text?: string; items: DropdownItem[] }>,
+) {
   let open = false;
   let query = "";
   let button: HTMLButtonElement | null = null;
@@ -45,7 +47,7 @@ export function Dropdown(handle: Handle<{ label: string; items: DropdownItem[] }
   }
 
   return () => {
-    const { label } = handle.props;
+    const { label, text } = handle.props;
     const items = handle.props.items.filter((item) => matches(item.label));
     const itemButtons: HTMLButtonElement[] = [];
 
@@ -57,7 +59,7 @@ export function Dropdown(handle: Handle<{ label: string; items: DropdownItem[] }
           aria-haspopup="menu"
           aria-expanded={open}
           mix={[
-            iconButton,
+            text ? labeledButton : iconButton,
             ref((node) => {
               button = node instanceof HTMLButtonElement ? node : null;
             }),
@@ -73,7 +75,8 @@ export function Dropdown(handle: Handle<{ label: string; items: DropdownItem[] }
             }),
           ]}
         >
-          <Icon icon={Plus} size={14} />
+          <Icon icon={Plus} size={11} />
+          {text}
         </button>
         <div
           popover="auto"
@@ -183,11 +186,44 @@ export function Dropdown(handle: Handle<{ label: string; items: DropdownItem[] }
   };
 }
 
+const labeledButton = css({
+  appearance: "none",
+  background: "transparent",
+  border: "none",
+  borderRadius: "6px",
+  color: "var(--text-muted)",
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flex: "0 0 auto",
+  gap: "3px",
+  marginLeft: "auto",
+  padding: "3px 5px",
+  maxHeight: "1.25rem",
+  font: "inherit",
+  fontSize: "10px",
+  fontWeight: 500,
+  lineHeight: 1.35,
+  whiteSpace: "nowrap",
+  "&:hover": {
+    background: "var(--hover)",
+    color: "var(--text)",
+  },
+  "&:focus-visible": {
+    background: "var(--hover)",
+    color: "var(--text)",
+    outline: "1px solid var(--line)",
+    outlineOffset: "1px",
+  },
+});
+
 const menuStyle = css({
-  background: "canvas",
-  border: "1px solid #3f3f46",
-  borderRadius: "0.25rem",
-  color: "#f4f4f5",
+  background: "var(--menu)",
+  border: "1px solid transparent",
+  borderRadius: "10px",
+  boxShadow: "0 4px 42px #0006, 0 0 0 1px #ffffff14",
+  color: "var(--text)",
   inset: "auto",
   margin: 0,
   minWidth: "12rem",
@@ -216,9 +252,9 @@ const searchField = css({
   color: "inherit",
   display: "flex",
   flexDirection: "row",
-  fontSize: "0.875rem",
+  fontSize: "13px",
   gap: "0.25rem",
-  lineHeight: "1.25rem",
+  lineHeight: 1.35,
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
   width: "100%",
 });
@@ -231,8 +267,8 @@ const searchInput = css({
   color: "inherit",
   flex: "1 1 auto",
   font: "inherit",
-  fontSize: "0.875rem",
-  lineHeight: "1.25rem",
+  fontSize: "13px",
+  lineHeight: 1.35,
   margin: 0,
   minWidth: 0,
   outline: "none",
@@ -251,9 +287,9 @@ const searchInput = css({
 });
 
 const empty = css({
-  fontSize: "0.875rem",
-  lineHeight: "1.25rem",
-  opacity: 0.6,
+  color: "var(--text-muted)",
+  fontSize: "13px",
+  lineHeight: 1.35,
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
 });
 
@@ -262,20 +298,20 @@ const menuItem = css({
   appearance: "none",
   background: "transparent",
   border: "none",
-  borderRadius: "0.25rem",
+  borderRadius: "6px",
   color: "inherit",
   cursor: "pointer",
   display: "flex",
   flexDirection: "row",
   font: "inherit",
-  fontSize: "0.875rem",
+  fontSize: "13px",
   gap: "0.25rem",
-  lineHeight: "1.25rem",
+  lineHeight: 1.35,
   padding: "0.25rem 0.5rem",
   textAlign: "left",
   width: "100%",
   "&:hover, &:focus-visible": {
-    background: "#333333",
+    background: "var(--hover)",
     outline: "none",
   },
 });

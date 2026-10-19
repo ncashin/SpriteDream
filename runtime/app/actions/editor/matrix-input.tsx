@@ -203,7 +203,8 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
               }),
             ]}
           >
-            <Icon icon={Trash} size={14} />
+            <Icon icon={Trash} size={11} />
+            Delete
           </button>
         </div>
         {collapsed ? null : (
@@ -324,7 +325,7 @@ const row = css({
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
   borderRadius,
   "&:hover": {
-    background: "#1e1e1e",
+    background: "var(--hover)",
   },
   "& > button": {
     visibility: "hidden",
@@ -364,16 +365,20 @@ const iconButton = css({
   justifyContent: "center",
   flex: "0 0 auto",
   marginLeft: "auto",
-  padding: 0,
-  width: "1.25rem",
-  height: "1.25rem",
+  padding: "3px 5px",
+  gap: "3px",
+  width: "auto",
+  height: "auto",
+  maxHeight: "1.25rem",
   font: "inherit",
-  lineHeight: 1,
+  fontSize: "10px",
+  fontWeight: 500,
+  lineHeight: 1.35,
   "&:hover": {
-    background: "#333333",
+    background: "var(--hover)",
   },
   "&:focus-visible": {
-    background: "#333333",
+    background: "var(--hover)",
     outline: "1px solid currentColor",
     outlineOffset: "1px",
   },
