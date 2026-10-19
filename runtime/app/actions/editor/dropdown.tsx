@@ -5,6 +5,7 @@ import { css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
+import { Button } from "./button.tsx";
 import { iconButton } from "./tree.ts";
 
 export type DropdownItem = {
@@ -14,7 +15,7 @@ export type DropdownItem = {
 };
 
 export function Dropdown(
-  handle: Handle<{ label: string; text?: string; items: DropdownItem[] }>,
+  handle: Handle<{ label: string; text?: string; size?: "small" | "default"; items: DropdownItem[] }>,
 ) {
   let open = false;
   let query = "";
@@ -47,23 +48,23 @@ export function Dropdown(
   }
 
   return () => {
-    const { label, text } = handle.props;
+    const { label, text, size = "small" } = handle.props;
     const items = handle.props.items.filter((item) => matches(item.label));
     const itemButtons: HTMLButtonElement[] = [];
 
     return (
       <>
-        <button
-          type="button"
-          aria-label={label}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          mix={[
-            text ? labeledButton : iconButton,
-            ref((node) => {
-              button = node instanceof HTMLButtonElement ? node : null;
-            }),
-            on("click", (event) => {
+        {text ? (
+          <Button
+            size={size}
+            muted
+            label={label}
+            popup="menu"
+            expanded={open}
+            buttonRef={(node) => {
+              button = node;
+            }}
+            onClick={(event) => {
               event.stopPropagation();
               if (!menu) return;
               if (menu.matches(":popover-open")) {
@@ -72,12 +73,37 @@ export function Dropdown(
               }
               menu.showPopover();
               place();
-            }),
-          ]}
-        >
-          <Icon icon={Plus} size={11} />
-          {text}
-        </button>
+            }}
+          >
+            <Icon icon={Plus} size={size === "small" ? 11 : 14} />
+            {text}
+          </Button>
+        ) : (
+          <button
+            type="button"
+            aria-label={label}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            mix={[
+              iconButton,
+              ref((node) => {
+                button = node instanceof HTMLButtonElement ? node : null;
+              }),
+              on("click", (event) => {
+                event.stopPropagation();
+                if (!menu) return;
+                if (menu.matches(":popover-open")) {
+                  menu.hidePopover();
+                  return;
+                }
+                menu.showPopover();
+                place();
+              }),
+            ]}
+          >
+            <Icon icon={Plus} size={11} />
+          </button>
+        )}
         <div
           popover="auto"
           role="menu"
@@ -185,38 +211,6 @@ export function Dropdown(
     );
   };
 }
-
-const labeledButton = css({
-  appearance: "none",
-  background: "transparent",
-  border: "none",
-  borderRadius: "6px",
-  color: "var(--text-muted)",
-  cursor: "pointer",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flex: "0 0 auto",
-  gap: "3px",
-  marginLeft: "auto",
-  padding: "3px 5px",
-  maxHeight: "1.25rem",
-  font: "inherit",
-  fontSize: "10px",
-  fontWeight: 500,
-  lineHeight: 1.35,
-  whiteSpace: "nowrap",
-  "&:hover": {
-    background: "var(--hover)",
-    color: "var(--text)",
-  },
-  "&:focus-visible": {
-    background: "var(--hover)",
-    color: "var(--text)",
-    outline: "1px solid var(--line)",
-    outlineOffset: "1px",
-  },
-});
 
 const menuStyle = css({
   background: "var(--menu)",

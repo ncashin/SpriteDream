@@ -17,6 +17,7 @@ import "../../utilities/viewport/draw-image.ts";
 import "../../utilities/viewport/frame.tsx";
 import { createMatrix, isMatrix } from "../../utilities/viewport/transform.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
+import { Button } from "./button.tsx";
 import { Dropdown, type DropdownItem } from "./dropdown.tsx";
 import { PropertyInput } from "./property-input.tsx";
 import {
@@ -25,7 +26,6 @@ import {
   childrenOpen,
   childrenPanel,
   expandable,
-  iconButton,
   iconMotion,
   iconStack,
   indent,
@@ -35,7 +35,7 @@ import {
 
 export const ObjectTree = clientEntry(
   import.meta.url,
-  function ObjectTree(handle: Handle<{ object: SceneNode }>) {
+  function ObjectTree(handle: Handle<{ object: SceneNode; name?: string; parent?: SceneNode }>) {
     if (typeof requestAnimationFrame === "function") {
       let frame = requestAnimationFrame(function tick() {
         if (handle.signal.aborted) return;
@@ -45,7 +45,30 @@ export const ObjectTree = clientEntry(
       handle.signal.addEventListener("abort", () => cancelAnimationFrame(frame));
     }
 
-    return () => <SceneNodeList object={handle.props.object} />;
+    return () => {
+      const { object, name, parent } = handle.props;
+      if (!name || !parent) return <SceneNodeList object={object} />;
+
+      return (
+        <Branch
+          name={name}
+          object={object}
+          onRename={(from, to) => {
+            if (Object.hasOwn(parent, to)) return false;
+            renameKey(parent, from, to);
+            for (const value of Object.values(parent)) {
+              if (isObject(value) && value.parent === from) value.parent = to;
+            }
+            handle.update();
+          }}
+          onDelete={() => {
+            deselectObject(object);
+            delete parent[name];
+            handle.update();
+          }}
+        />
+      );
+    };
   },
 );
 
@@ -135,66 +158,14 @@ function uniqueKey(object: SceneNode, base: string) {
   return key;
 }
 
-export function SelectedHeader(
-  handle: Handle<{
-    name: string;
-    object: SceneNode;
-    onRename: (from: string, to: string) => boolean | void;
-    onDelete: () => void;
-  }>,
-) {
-  return () => {
-    const { name, object, onRename, onDelete } = handle.props;
-    return (
-      <div mix={header}>
-        <div mix={label}>
-          <AutoSizeInput
-            value={name}
-            placeholder="object"
-            label="Selected object"
-            onCommit={(next) => onRename(name, next)}
-          />
-        </div>
-        <Dropdown
-          label={`Add to ${name}`}
-          text="Add"
-          items={addItems(object, () => handle.update())}
-        />
-        <button
-          type="button"
-          aria-label={`Delete ${name}`}
-          mix={[
-            iconButton,
-            on("click", (event) => {
-              event.stopPropagation();
-              onDelete();
-            }),
-          ]}
-        >
-          <Icon icon={Trash} size={11} />
-          Delete
-        </button>
-      </div>
-    );
-  };
-}
-
-const header = css({
+const actions = css({
   alignItems: "center",
-  boxSizing: "border-box",
-  color: "var(--text)",
   display: "flex",
   flex: "0 0 auto",
-  flexDirection: "row",
-  fontSize: "13px",
-  fontWeight: 500,
-  gap: "0.25rem",
-  lineHeight: 1.35,
-  margin: 0,
-  minWidth: 0,
-  padding: "1rem 1rem 0.5rem",
+  gap: 0,
+  marginLeft: "auto",
   "& > button": {
-    visibility: "visible",
+    marginLeft: 0,
   },
 });
 
@@ -240,28 +211,28 @@ function Branch(
               onCommit={(next) => onRename(name, next)}
             />
           </div>
-          <Dropdown
-            label={`Add to ${name}`}
-            text="Add"
-            items={addItems(object, () => {
-              collapsed = false;
-              handle.update();
-            })}
-          />
-          <button
-            type="button"
-            aria-label={`Delete ${name}`}
-            mix={[
-              iconButton,
-              on("click", (event) => {
+          <div mix={actions}>
+            <Dropdown
+              label={`Add to ${name}`}
+              text="Add"
+              items={addItems(object, () => {
+                collapsed = false;
+                handle.update();
+              })}
+            />
+            <Button
+              size="small"
+              muted
+              label={`Delete ${name}`}
+              onClick={(event) => {
                 event.stopPropagation();
                 onDelete();
-              }),
-            ]}
-          >
-            <Icon icon={Trash} size={11} />
-            Delete
-          </button>
+              }}
+            >
+              <Icon icon={Trash} size={11} />
+              Delete
+            </Button>
+          </div>
         </div>
         <div mix={[childrenPanel, !collapsed && childrenOpen]}>
           <div mix={[childrenClip, indent]}>

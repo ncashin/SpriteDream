@@ -7,6 +7,7 @@ import { Icon } from "../../icon.tsx";
 import type { SceneNode } from "../../utilities/scene.ts";
 import { isMatrix, transform } from "../../utilities/viewport/transform.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
+import { Button } from "./button.tsx";
 import { MatrixInput } from "./matrix-input.tsx";
 
 type PropertyInputProps = {
@@ -36,17 +37,6 @@ const row = css({
   "&:hover > button": {
     visibility: "visible",
   },
-});
-
-const actionLabel = css({
-  width: "auto",
-  height: "auto",
-  maxHeight: "1.25rem",
-  padding: "3px 5px",
-  gap: "3px",
-  fontSize: "10px",
-  fontWeight: 500,
-  lineHeight: 1.35,
 });
 
 const iconButton = css({
@@ -393,22 +383,17 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
             />
           </label>
         )}
-        <button
-          type="button"
-          aria-label={`Delete ${name}`}
-          mix={[
-            iconButton,
-            actionLabel,
-            (file || color || bool) && css({ marginLeft: "-0.25rem" }),
-            on("click", (event) => {
-              event.stopPropagation();
-              handle.props.onDelete();
-            }),
-          ]}
+        <Button
+          size="small"
+          label={`Delete ${name}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            handle.props.onDelete();
+          }}
         >
           <Icon icon={Trash} size={11} />
           Delete
-        </button>
+        </Button>
       </div>
     );
   };

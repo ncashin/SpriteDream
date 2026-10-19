@@ -1,6 +1,5 @@
 import Box from "lucide/dist/esm/icons/box.mjs";
 import ChevronRight from "lucide/dist/esm/icons/chevron-right.mjs";
-import Plus from "lucide/dist/esm/icons/plus.mjs";
 import Trash from "lucide/dist/esm/icons/trash.mjs";
 import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
@@ -15,6 +14,7 @@ import {
 } from "../../utilities/selected-objects.ts";
 import { parentObject, setObjectParent } from "../../utilities/viewport/transform.ts";
 import { AutoSizeInput } from "./auto-size-input.tsx";
+import { Button } from "./button.tsx";
 import { renameKey } from "./object-tree.tsx";
 import {
   chevronOpen,
@@ -22,7 +22,6 @@ import {
   childrenOpen,
   childrenPanel,
   expandable,
-  iconButton,
   iconMotion,
   iconStack,
   indent,
@@ -56,26 +55,6 @@ export const HierarchyTree = clientEntry(
 
       return (
         <div>
-          <button
-            type="button"
-            mix={[
-              row,
-              newObject,
-              on("click", () => {
-                const object = {};
-                root[uniqueName(root, "object")] = object;
-                selectObjects([object]);
-                handle.update();
-              }),
-            ]}
-          >
-            <div mix={label}>
-              <span mix={iconStack}>
-                <Icon icon={Plus} size={14} />
-              </span>
-              New Object
-            </div>
-          </button>
           {nodes.map((node) => (
             <HierarchyBranch key={node.name} node={node} root={root} />
           ))}
@@ -154,21 +133,19 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode }
               }}
             />
           </div>
-          <button
-            type="button"
-            aria-label={`Delete ${name}`}
-            mix={[
-              iconButton,
-              on("click", (event) => {
-                event.stopPropagation();
-                removeNode(handle.props.node, root);
-                handle.update();
-              }),
-            ]}
+          <Button
+            size="small"
+            muted
+            label={`Delete ${name}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              removeNode(handle.props.node, root);
+              handle.update();
+            }}
           >
             <Icon icon={Trash} size={11} />
             Delete
-          </button>
+          </Button>
         </div>
         {hasChildren && (
           <div mix={[childrenPanel, open && childrenOpen]}>
@@ -343,30 +320,6 @@ const dropAfter = css({
     bottom: 0,
   },
 });
-
-const newObject = css({
-  appearance: "none",
-  background: "transparent",
-  border: "none",
-  color: "inherit",
-  font: "inherit",
-  textAlign: "left",
-  "&:hover": {
-    background: "var(--hover)",
-  },
-  "&:focus-visible": {
-    background: "var(--hover)",
-    outline: "1px solid currentColor",
-    outlineOffset: "1px",
-  },
-});
-
-function uniqueName(root: SceneNode, base: string) {
-  let name = base;
-  let n = 2;
-  while (Object.hasOwn(root, name)) name = `${base}${n++}`;
-  return name;
-}
 
 function renameNode(root: SceneNode, from: string, to: string) {
   renameKey(root, from, to);

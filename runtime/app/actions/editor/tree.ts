@@ -21,10 +21,10 @@ export const row = css({
   "&[aria-current='true']:hover": {
     background: "var(--selected)",
   },
-  "& > button": {
+  "& > button, & > div > button": {
     visibility: "hidden",
   },
-  "&:hover > button, &:focus-within > button, &:has(:popover-open) > button": {
+  "&:hover > button, &:hover > div > button, &:focus-within > button, &:focus-within > div > button, &:has(:popover-open) > button, &:has(:popover-open) > div > button": {
     visibility: "visible",
   },
 });

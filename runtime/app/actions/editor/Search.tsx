@@ -82,6 +82,10 @@ export function Search(handle: Handle) {
   let current = "Example Scene";
   let input: HTMLInputElement | null = null;
 
+  function setOpen(next: boolean) {
+    open = next;
+  }
+
   function refreshScenes() {
     void fetch(routes.editor.scenes.href()).then(async (response) => {
       if (!response.ok) return;
@@ -96,7 +100,7 @@ export function Search(handle: Handle) {
     let item = matchingItems(scenes, query)[index];
     if (!item) return;
     query = "";
-    open = false;
+    setOpen(false);
     activeIndex = 0;
     input?.blur();
     if (item.kind === "object") {
@@ -116,7 +120,7 @@ export function Search(handle: Handle) {
     let items = matchingItems(scenes, query);
     let currentIndex = items.findIndex((item) => item.kind === "scene" && item.name === current);
     activeIndex = currentIndex === -1 ? 0 : currentIndex;
-    open = true;
+    setOpen(true);
     handle.update();
     input?.focus();
     input?.select();
@@ -141,7 +145,7 @@ export function Search(handle: Handle) {
 
     return (
       <div mix={slot}>
-        <div mix={[box, open && openBox]}>
+        <div mix={box} data-expanded={open ? "" : undefined}>
           <label mix={field}>
             <Icon icon={SearchIcon} size={14} />
             <input
@@ -163,17 +167,17 @@ export function Search(handle: Handle) {
                 }),
                 on("focus", () => {
                   refreshScenes();
-                  open = true;
+                  setOpen(true);
                   handle.update();
                 }),
                 on("blur", () => {
-                  open = false;
+                  setOpen(false);
                   handle.update();
                 }),
                 on("input", (event) => {
                   query = event.currentTarget.value;
                   activeIndex = 0;
-                  open = true;
+                  setOpen(true);
                   handle.update();
                 }),
                 on("keydown", (event) => {
@@ -181,7 +185,7 @@ export function Search(handle: Handle) {
                     event.preventDefault();
                     let count = matchingItems(scenes, query).length;
                     if (count === 0) return;
-                    open = true;
+                    setOpen(true);
                     activeIndex = Math.min(index + 1, count - 1);
                     handle.update();
                     return;
@@ -200,51 +204,54 @@ export function Search(handle: Handle) {
                   if (event.key !== "Escape") return;
                   event.preventDefault();
                   query = "";
-                  open = false;
+                  setOpen(false);
                   activeIndex = 0;
                   event.currentTarget.blur();
                   handle.update();
                 }),
               ]}
             />
-            {query === "" ? (
+            {query === "" && (
               <kbd aria-hidden="true" mix={kbd}>
                 ⌘P
               </kbd>
-            ) : null}
+            )}
           </label>
-          {open ? (
-            <ul id={LIST_ID} role="listbox" aria-label="Search results" mix={list}>
-              {items.length === 0 ? (
-                <li mix={empty}>No matches</li>
-              ) : (
-                items.map((item, itemIndex) => (
-                  <li
-                    id={`${LIST_ID}-${itemIndex}`}
-                    key={item.kind === "scene" ? `scene:${item.name}` : `object:${item.name}`}
-                    role="option"
-                    aria-selected={itemIndex === index}
-                    mix={[
-                      option,
-                      itemIndex === index && active,
-                      on("pointerdown", (event) => {
-                        event.preventDefault();
-                        choose(itemIndex);
-                      }),
-                      on("pointermove", () => {
-                        if (activeIndex === itemIndex) return;
-                        activeIndex = itemIndex;
-                        handle.update();
-                      }),
-                    ]}
-                  >
-                    <Icon icon={item.kind === "scene" ? File : Box} size={14} />
-                    {item.name}
-                  </li>
-                ))
-              )}
-            </ul>
-          ) : null}
+          <div mix={[drawer, open && drawerOpen]}>
+            <div mix={drawerInner}>
+              <div mix={rule} />
+              <ul id={LIST_ID} role="listbox" aria-label="Search results" mix={list}>
+                {items.length === 0 ? (
+                  <li mix={empty}>No matches</li>
+                ) : (
+                  items.map((item, itemIndex) => (
+                    <li
+                      id={`${LIST_ID}-${itemIndex}`}
+                      key={item.kind === "scene" ? `scene:${item.name}` : `object:${item.name}`}
+                      role="option"
+                      aria-selected={itemIndex === index}
+                      mix={[
+                        option,
+                        itemIndex === index && active,
+                        on("pointerdown", (event) => {
+                          event.preventDefault();
+                          choose(itemIndex);
+                        }),
+                        on("pointermove", () => {
+                          if (activeIndex === itemIndex) return;
+                          activeIndex = itemIndex;
+                          handle.update();
+                        }),
+                      ]}
+                    >
+                      <Icon icon={item.kind === "scene" ? File : Box} size={14} />
+                      {item.name}
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -260,22 +267,17 @@ const slot = css({
 });
 
 const box = css({
-  borderRadius: "0.25rem",
+  background: "transparent",
+  borderRadius: "0.6em",
+  fontSize: "13px",
   boxSizing: "border-box",
   minWidth: 0,
+  overflow: "hidden",
   pointerEvents: "auto",
+  position: "relative",
   width: "min(24rem, 100%)",
-  "&:hover, &:focus-within": {
+  "&:hover, &:focus-within, &[data-expanded]": {
     background: "var(--hover)",
-  },
-});
-
-const openBox = css({
-  background: "var(--menu)",
-  borderRadius: "10px",
-  boxShadow: "0 4px 42px #0006, 0 0 0 1px #ffffff14",
-  "&:hover, &:focus-within": {
-    background: "var(--menu)",
   },
 });
 
@@ -283,15 +285,15 @@ const field = css({
   alignItems: "center",
   background: "transparent",
   border: "none",
-  borderRadius: "0.25rem",
+  borderRadius: "0.6em",
   boxSizing: "border-box",
   color: "inherit",
   display: "flex",
   flexDirection: "row",
   fontSize: "13px",
-  gap: "0.25rem",
+  gap: "0.3em",
   lineHeight: 1.35,
-  padding: "0.25rem 0.25rem 0.25rem 0.375rem",
+  padding: "0.45em 0.55em",
   width: "100%",
 });
 
@@ -329,6 +331,24 @@ const kbd = css({
   color: "var(--text-muted)",
 });
 
+const drawer = css({
+  display: "grid",
+  gridTemplateRows: "0fr",
+});
+
+const drawerOpen = css({
+  gridTemplateRows: "1fr",
+});
+
+const drawerInner = css({
+  minHeight: 0,
+  overflow: "hidden",
+});
+
+const rule = css({
+  borderTop: "1px solid var(--line)",
+});
+
 const list = css({
   listStyle: "none",
   margin: 0,
@@ -346,17 +366,17 @@ const option = css({
   fontSize: "13px",
   gap: "0.25rem",
   lineHeight: 1.35,
-  padding: "0.25rem 0.25rem 0.25rem 0.375rem",
+  padding: "0.25rem 0.5rem",
   width: "100%",
 });
 
 const active = css({
-  background: "var(--hover)",
+  background: "#ffffff18",
 });
 
 const empty = css({
   color: "var(--text-muted)",
   fontSize: "13px",
   lineHeight: 1.35,
-  padding: "0.25rem 0.25rem 0.25rem 0.375rem",
+  padding: "0.25rem 0.5rem",
 });

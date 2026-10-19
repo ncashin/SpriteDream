@@ -6,6 +6,7 @@ import { css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
+import { Button } from "./button.tsx";
 
 type MatrixInputProps = {
   name: string;
@@ -192,20 +193,17 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
             <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
           </span>
           {name}
-          <button
-            type="button"
-            aria-label={`Delete ${name}`}
-            mix={[
-              iconButton,
-              on("click", (event) => {
-                event.stopPropagation();
-                onDelete();
-              }),
-            ]}
+          <Button
+            size="small"
+            label={`Delete ${name}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete();
+            }}
           >
             <Icon icon={Trash} size={11} />
             Delete
-          </button>
+          </Button>
         </div>
         {collapsed ? null : (
           <div mix={css({ paddingLeft: "0.75rem" })}>
@@ -351,37 +349,6 @@ const disclosure = css({
 const iconStack = css({
   display: "grid",
   "& > *": { gridArea: "1 / 1" },
-});
-
-const iconButton = css({
-  appearance: "none",
-  background: "transparent",
-  border: "none",
-  borderRadius,
-  color: "inherit",
-  cursor: "pointer",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flex: "0 0 auto",
-  marginLeft: "auto",
-  padding: "3px 5px",
-  gap: "3px",
-  width: "auto",
-  height: "auto",
-  maxHeight: "1.25rem",
-  font: "inherit",
-  fontSize: "10px",
-  fontWeight: 500,
-  lineHeight: 1.35,
-  "&:hover": {
-    background: "var(--hover)",
-  },
-  "&:focus-visible": {
-    background: "var(--hover)",
-    outline: "1px solid currentColor",
-    outlineOffset: "1px",
-  },
 });
 
 const keyLabel = css({

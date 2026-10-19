@@ -1,6 +1,7 @@
 import { css, Frame } from "remix/component";
 import { Document } from "../document.tsx";
 import { routes } from "../../routes.ts";
+import { Header } from "./header.tsx";
 import { Sidebar } from "./sidebar.tsx";
 
 export function Editor() {
@@ -18,6 +19,7 @@ export function Editor() {
         ]}
       >
         <Sidebar />
+        <Header />
         <div
           mix={[
             css({
