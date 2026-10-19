@@ -1,5 +1,4 @@
 import ArrowLeft from "lucide/dist/esm/icons/arrow-left.mjs";
-import ArrowRight from "lucide/dist/esm/icons/arrow-right.mjs";
 import Play from "lucide/dist/esm/icons/play.mjs";
 import Square from "lucide/dist/esm/icons/square.mjs";
 import { clientEntry, css, on } from "remix/component";
@@ -55,19 +54,20 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
         mix={[
           toggle,
           on("click", () => {
-            setCollapsed(!collapsed);
+            setCollapsed(!isCollapsed());
           }),
         ]}
       >
-        <Icon icon={collapsed ? ArrowRight : ArrowLeft} size={14} />
-      </button>
-    <header mix={bar}>
-      <span mix={identity}>
+        <span mix={markStack}>
+          <img src="/favicon.svg" alt="" mix={mark} />
+          <Icon icon={ArrowLeft} size={14} />
+        </span>
         <span mix={sceneName}>
           {name}
           {dirty ? <span aria-label="Unsaved changes" title="Unsaved changes" mix={unsaved} /> : null}
         </span>
-      </span>
+      </button>
+    <header mix={bar}>
       <Search />
       <Button
         size="field"
@@ -113,10 +113,10 @@ const bar = css({
   display: "flex",
   flex: "1 1 auto",
   flexDirection: "row",
-  gap: "0.75rem",
+  gap: "0.5rem",
   justifyContent: "space-between",
   minWidth: 0,
-  padding: "0.75rem 1rem 0.75rem 0",
+  padding: "0.4rem 0.5rem 0.4rem 0",
   pointerEvents: "none",
 });
 
@@ -130,24 +130,27 @@ const unsaved = css({
   width: "0.5rem",
 });
 
-const identity = css({
-  alignItems: "center",
-  display: "inline-flex",
-  flex: "0 1 auto",
-  gap: "0.25rem",
-  maxWidth: "100%",
-  minWidth: 0,
-  pointerEvents: "none",
-});
-
 const sceneName = css({
   fontSize: "13px",
   fontWeight: 400,
   lineHeight: "1.25rem",
   minWidth: 0,
   overflow: "hidden",
-  pointerEvents: "auto",
   textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
+const mark = css({
+  display: "block",
+  height: "14px",
+  objectFit: "contain",
+  width: "14px",
+});
+
+const markStack = css({
+  display: "grid",
+  "& > *": { gridArea: "1 / 1" },
+  "& > :last-child": { visibility: "hidden" },
 });
 
 const toggle = css({
@@ -159,21 +162,27 @@ const toggle = css({
   cursor: "pointer",
   display: "inline-flex",
   alignItems: "center",
-  justifyContent: "center",
-  flex: "0 0 auto",
-  margin: "0 0 0 1rem",
-  padding: "0.45em",
+  justifyContent: "flex-start",
+  gap: "0.4rem",
+  flex: "0 1 auto",
+  maxWidth: "40%",
+  minWidth: 0,
+  margin: "0 0 0 0.5rem",
+  padding: "0.3em 0.5em",
   pointerEvents: "auto",
+  position: "relative",
+  zIndex: 3,
   font: "inherit",
   fontSize: "13px",
   lineHeight: 1.35,
-  "&:hover": {
+  "&:hover, &:focus-visible": {
     background: "var(--hover)",
   },
-  "&:focus-visible": {
-    background: "var(--hover)",
-    outline: "1px solid var(--line)",
-    outlineOffset: "1px",
+  "&:hover span:first-child > :first-child, &:focus-visible span:first-child > :first-child": {
+    visibility: "hidden",
+  },
+  "&:hover span:first-child > :last-child, &:focus-visible span:first-child > :last-child": {
+    visibility: "visible",
   },
 });
 

@@ -78,5 +78,5 @@ const tree = css({
   flex: "1 1 0",
   minHeight: 0,
   overflow: "auto",
-  padding: "0.5rem 0.625rem 1rem",
+  padding: "calc(0.5rem + 0.45em) 0.75rem 1rem",
 });

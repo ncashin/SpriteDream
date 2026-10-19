@@ -267,17 +267,18 @@ const slot = css({
 });
 
 const box = css({
-  background: "transparent",
+  background: "var(--hover)",
   borderRadius: "0.6em",
   fontSize: "13px",
   boxSizing: "border-box",
   minWidth: 0,
-  overflow: "hidden",
   pointerEvents: "auto",
   position: "relative",
   width: "min(24rem, 100%)",
-  "&:hover, &:focus-within, &[data-expanded]": {
-    background: "var(--hover)",
+  zIndex: 1,
+  "&[data-expanded]": {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
   },
 });
 
@@ -334,9 +335,15 @@ const kbd = css({
 const drawer = css({
   display: "grid",
   gridTemplateRows: "0fr",
+  left: 0,
+  position: "absolute",
+  right: 0,
+  top: "100%",
 });
 
 const drawerOpen = css({
+  background: "var(--hover)",
+  borderRadius: "0 0 0.6em 0.6em",
   gridTemplateRows: "1fr",
 });
 
