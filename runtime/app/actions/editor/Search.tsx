@@ -277,6 +277,7 @@ const box = css({
   width: "min(24rem, 100%)",
   zIndex: 1,
   "&[data-expanded]": {
+    background: "#262626",
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
   },
@@ -342,7 +343,7 @@ const drawer = css({
 });
 
 const drawerOpen = css({
-  background: "var(--hover)",
+  background: "#262626",
   borderRadius: "0 0 0.6em 0.6em",
   gridTemplateRows: "1fr",
 });

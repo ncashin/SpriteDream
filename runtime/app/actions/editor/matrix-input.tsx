@@ -1,4 +1,3 @@
-import ChevronDown from "lucide/dist/esm/icons/chevron-down.mjs";
 import ChevronRight from "lucide/dist/esm/icons/chevron-right.mjs";
 import Move from "lucide/dist/esm/icons/move.mjs";
 import Trash from "lucide/dist/esm/icons/trash.mjs";
@@ -7,6 +6,18 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
 import { Button } from "./button.tsx";
+import {
+  chevronOpen,
+  childrenClip,
+  childrenOpen,
+  childrenPanel,
+  expandable,
+  iconMotion,
+  iconStack,
+  indent,
+  label,
+  row,
+} from "./tree.ts";
 
 type MatrixInputProps = {
   name: string;
@@ -179,35 +190,40 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
           aria-expanded={!collapsed}
           mix={[
             row,
-            disclosure,
+            expandable,
             on("click", (event) => {
               const target = event.target instanceof Element ? event.target : null;
-              if (target?.closest("button")) return;
+              if (target?.closest("button, input")) return;
               collapsed = !collapsed;
               handle.update();
             }),
           ]}
         >
-          <span mix={iconStack}>
-            <Icon icon={Move} size={14} />
-            <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
-          </span>
-          {name}
-          <Button
-            size="small"
-            label={`Delete ${name}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onDelete();
-            }}
-          >
-            <Icon icon={Trash} size={11} />
-            Delete
-          </Button>
+          <div mix={label}>
+            <span mix={[iconStack, iconMotion, !collapsed && chevronOpen]}>
+              <Icon icon={Move} size={14} />
+              <Icon icon={ChevronRight} size={14} />
+            </span>
+            {name}
+          </div>
+          <div mix={actions}>
+            <Button
+              size="small"
+              muted
+              label={`Delete ${name}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete();
+              }}
+            >
+              <Icon icon={Trash} size={11} />
+              Delete
+            </Button>
+          </div>
         </div>
-        {collapsed ? null : (
-          <div mix={css({ paddingLeft: "0.75rem" })}>
-            <div mix={row}>
+        <div mix={[childrenPanel, !collapsed && childrenOpen]}>
+          <div mix={[childrenClip, indent]}>
+            <div mix={fieldRow}>
               <span mix={keyLabel}>
                 Position<span aria-hidden="true">:</span>
               </span>
@@ -218,7 +234,7 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
                 setPosition("f", value),
               )}
             </div>
-            <div mix={row}>
+            <div mix={fieldRow}>
               <span mix={keyLabel}>
                 Rotation<span aria-hidden="true">:</span>
               </span>
@@ -230,7 +246,7 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
                 (value) => setLinear({ rotation: value }),
               )}
             </div>
-            <div mix={row}>
+            <div mix={fieldRow}>
               <span mix={keyLabel}>
                 Scale<span aria-hidden="true">:</span>
               </span>
@@ -242,7 +258,7 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
               )}
             </div>
           </div>
-        )}
+        </div>
       </>
     );
   };
@@ -311,9 +327,18 @@ function closestLinear(matrix: DOMMatrix, hint: Linear | null): Linear {
   return linearDistance(flipped, hint) < linearDistance(aligned, hint) ? flipped : aligned;
 }
 
-const borderRadius = "0.25rem";
+const actions = css({
+  alignItems: "center",
+  display: "flex",
+  flex: "0 0 auto",
+  gap: 0,
+  marginLeft: "auto",
+  "& > button": {
+    marginLeft: 0,
+  },
+});
 
-const row = css({
+const fieldRow = css({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
@@ -321,34 +346,10 @@ const row = css({
   width: "100%",
   boxSizing: "border-box",
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
-  borderRadius,
+  borderRadius: "6px",
   "&:hover": {
     background: "var(--hover)",
   },
-  "& > button": {
-    visibility: "hidden",
-  },
-  "&:hover > button": {
-    visibility: "visible",
-  },
-});
-
-const disclosure = css({
-  cursor: "pointer",
-  "& > span > :last-child": {
-    visibility: "hidden",
-  },
-  "&:hover > span > :first-child": {
-    visibility: "hidden",
-  },
-  "&:hover > span > :last-child": {
-    visibility: "visible",
-  },
-});
-
-const iconStack = css({
-  display: "grid",
-  "& > *": { gridArea: "1 / 1" },
 });
 
 const keyLabel = css({
@@ -356,7 +357,7 @@ const keyLabel = css({
   flexDirection: "row",
   alignItems: "center",
   flex: "0 0 auto",
-  color: "var(--text-light)",
+  color: "var(--text-muted)",
 });
 
 const field = css({
@@ -368,7 +369,7 @@ const field = css({
   boxSizing: "border-box",
   color: "inherit",
   display: "block",
-  flex: "1 0 auto",
+  flex: "0 0 auto",
   fieldSizing: "content",
   font: "inherit",
   lineHeight: "inherit",

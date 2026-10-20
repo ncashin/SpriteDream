@@ -177,10 +177,16 @@ function Branch(
     onDelete: () => void;
   }>,
 ) {
-  let collapsed = false;
+  let collapsed = isEmpty(handle.props.object);
+  let empty = collapsed;
 
   return () => {
     const { name, object, onRename, onDelete } = handle.props;
+    const nowEmpty = isEmpty(object);
+    if (nowEmpty !== empty) {
+      collapsed = nowEmpty;
+      empty = nowEmpty;
+    }
 
     const isSelected = selectedObjects.has(object);
     return (
@@ -242,6 +248,10 @@ function Branch(
       </>
     );
   };
+}
+
+function isEmpty(object: SceneNode) {
+  return Object.keys(object).every((key) => key === "__icon");
 }
 
 function iconFor(object: SceneNode): IconNode {

@@ -29,36 +29,47 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
 
   return () => (
     <div data-sidebar="" mix={dock} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
-      <aside inert={collapsed} mix={column}>
-        <div id="scene-tree" mix={[tree, treeOuterPadding]}>
-          <HierarchyTree object={scene} />
-        </div>
-      </aside>
-      <ObjectSidebar collapsed={collapsed} />
+      <div mix={clip}>
+        <aside inert={collapsed} mix={column}>
+          <div id="scene-tree" mix={[tree, treeOuterPadding]}>
+            <HierarchyTree object={scene} />
+          </div>
+        </aside>
+        <ObjectSidebar collapsed={collapsed} />
+      </div>
     </div>
   );
 });
 
 const dock = css({
   boxSizing: "border-box",
-  display: "flex",
-  flexDirection: "column",
   flex: "0 0 auto",
   fontSize: "13px",
   lineHeight: 1.35,
   minHeight: 0,
   minWidth: 0,
-  overflow: "hidden",
-  borderRight: "1px solid var(--line)",
+  position: "relative",
   transition: `width ${SIDEBAR_MOTION}`,
   "@media (prefers-reduced-motion: reduce)": {
     transition: "none",
   },
 });
 
+const clip = css({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  height: "100%",
+  minHeight: 0,
+  overflow: "hidden",
+  "& > *": {
+    width: SIDEBAR_WIDTH,
+    flexShrink: 0,
+  },
+});
+
 const column = css({
   boxSizing: "border-box",
-  borderBottom: "1px solid var(--line)",
   display: "flex",
   flex: "1 1 33.333%",
   flexDirection: "column",
@@ -67,7 +78,7 @@ const column = css({
 });
 
 const treeOuterPadding = css({
-  padding: "calc(0.5rem + 0.45em) 0.75rem 1rem",
+  padding: "calc(0.4rem + 0.45em - 1.5px) 0.75rem 1rem",
 });
 
 const tree = css({

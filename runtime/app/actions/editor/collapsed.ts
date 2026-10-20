@@ -1,5 +1,5 @@
 export const SIDEBAR_WIDTH = "20rem";
-export const SIDEBAR_MOTION = "200ms ease";
+export const SIDEBAR_MOTION = "200ms cubic-bezier(0.4, 0, 0.2, 1)";
 
 const COLLAPSED_KEY = "sidebar-collapsed";
 

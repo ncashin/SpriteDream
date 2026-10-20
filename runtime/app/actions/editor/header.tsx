@@ -1,4 +1,5 @@
 import ArrowLeft from "lucide/dist/esm/icons/arrow-left.mjs";
+import ArrowRight from "lucide/dist/esm/icons/arrow-right.mjs";
 import Play from "lucide/dist/esm/icons/play.mjs";
 import Square from "lucide/dist/esm/icons/square.mjs";
 import { clientEntry, css, on } from "remix/component";
@@ -8,7 +9,7 @@ import { Icon } from "../../icon.tsx";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
 import { currentSceneName } from "../../utilities/scene.ts";
 import { Button } from "./button.tsx";
-import { isCollapsed, onCollapsedChange, setCollapsed, SIDEBAR_MOTION, SIDEBAR_WIDTH } from "./collapsed.ts";
+import { isCollapsed, onCollapsedChange, setCollapsed } from "./collapsed.ts";
 import { joinRoom, syncMode } from "./room.tsx";
 import { Search } from "./Search.tsx";
 
@@ -45,7 +46,7 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
   }
 
   return () => (
-    <div data-sidebar-bar="" mix={shell} style={{ left: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
+    <div data-sidebar-bar="" mix={shell}>
       <button
         type="button"
         aria-expanded={!collapsed}
@@ -60,13 +61,13 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
       >
         <span mix={markStack}>
           <img src="/favicon.svg" alt="" mix={mark} />
-          <Icon icon={ArrowLeft} size={14} />
-        </span>
-        <span mix={sceneName}>
-          {name}
-          {dirty ? <span aria-label="Unsaved changes" title="Unsaved changes" mix={unsaved} /> : null}
+          <Icon icon={collapsed ? ArrowRight : ArrowLeft} size={18} />
         </span>
       </button>
+      <span mix={sceneName}>
+        {name}
+        {dirty ? <span aria-label="Unsaved changes" title="Unsaved changes" mix={unsaved} /> : null}
+      </span>
     <header mix={bar}>
       <Search />
       <Button
@@ -95,15 +96,10 @@ const shell = css({
   display: "flex",
   flexDirection: "row",
   justifyContent: "flex-start",
+  flex: "0 0 auto",
   pointerEvents: "none",
-  position: "absolute",
-  right: 0,
-  top: 0,
-  transition: `left ${SIDEBAR_MOTION}`,
+  position: "relative",
   zIndex: 2,
-  "@media (prefers-reduced-motion: reduce)": {
-    transition: "none",
-  },
 });
 
 const bar = css({
@@ -116,7 +112,7 @@ const bar = css({
   gap: "0.5rem",
   justifyContent: "space-between",
   minWidth: 0,
-  padding: "0.4rem 0.5rem 0.4rem 0",
+  padding: "0.05rem 0.5rem 0.05rem 0",
   pointerEvents: "none",
 });
 
@@ -131,57 +127,64 @@ const unsaved = css({
 });
 
 const sceneName = css({
+  alignItems: "center",
+  color: "var(--text)",
+  display: "inline-flex",
+  flex: "0 1 auto",
   fontSize: "13px",
   fontWeight: 400,
   lineHeight: "1.25rem",
+  maxWidth: "40%",
   minWidth: 0,
   overflow: "hidden",
+  pointerEvents: "none",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
 });
 
 const mark = css({
   display: "block",
-  height: "14px",
+  height: "1.5rem",
   objectFit: "contain",
-  width: "14px",
+  width: "1.5rem",
 });
 
 const markStack = css({
   display: "grid",
+  flex: "0 0 auto",
+  placeItems: "center",
   "& > *": { gridArea: "1 / 1" },
-  "& > :last-child": { visibility: "hidden" },
 });
 
 const toggle = css({
   appearance: "none",
   background: "transparent",
   border: "none",
-  borderRadius: "0.6em",
+  borderRadius: "0.45rem",
+  boxSizing: "border-box",
   color: "inherit",
   cursor: "pointer",
   display: "inline-flex",
   alignItems: "center",
-  justifyContent: "flex-start",
-  gap: "0.4rem",
-  flex: "0 1 auto",
-  maxWidth: "40%",
-  minWidth: 0,
-  margin: "0 0 0 0.5rem",
-  padding: "0.3em 0.5em",
+  justifyContent: "center",
+  flex: "0 0 auto",
+  height: "2.25rem",
+  margin: "0.05rem 0.35rem 0.05rem 0.5rem",
+  padding: 0,
   pointerEvents: "auto",
   position: "relative",
+  width: "2.25rem",
   zIndex: 3,
-  font: "inherit",
-  fontSize: "13px",
-  lineHeight: 1.35,
+  "& span > :last-child": {
+    visibility: "hidden",
+  },
   "&:hover, &:focus-visible": {
     background: "var(--hover)",
   },
-  "&:hover span:first-child > :first-child, &:focus-visible span:first-child > :first-child": {
+  "&:hover span > :first-child, &:focus-visible span > :first-child": {
     visibility: "hidden",
   },
-  "&:hover span:first-child > :last-child, &:focus-visible span:first-child > :last-child": {
+  "&:hover span > :last-child, &:focus-visible span > :last-child": {
     visibility: "visible",
   },
 });
