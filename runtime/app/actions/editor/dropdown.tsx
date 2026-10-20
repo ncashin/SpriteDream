@@ -15,7 +15,7 @@ export type DropdownItem = {
 };
 
 export function Dropdown(
-  handle: Handle<{ label: string; text?: string; size?: "small" | "default"; items: DropdownItem[] }>,
+  handle: Handle<{ label: string; text?: string; icon?: IconNode; size?: "small" | "default"; items: DropdownItem[] }>,
 ) {
   let open = false;
   let query = "";
@@ -48,7 +48,7 @@ export function Dropdown(
   }
 
   return () => {
-    const { label, text, size = "small" } = handle.props;
+    const { label, text, icon = Plus, size = "small" } = handle.props;
     const items = handle.props.items.filter((item) => matches(item.label));
     const itemButtons: HTMLButtonElement[] = [];
 
@@ -75,7 +75,7 @@ export function Dropdown(
               place();
             }}
           >
-            <Icon icon={Plus} size={size === "small" ? 11 : 14} />
+            <Icon icon={icon} size={size === "small" ? 11 : 14} />
             {text}
           </Button>
         ) : (

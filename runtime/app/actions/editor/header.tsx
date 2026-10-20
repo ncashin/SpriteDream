@@ -96,9 +96,12 @@ const shell = css({
   display: "flex",
   flexDirection: "row",
   justifyContent: "flex-start",
-  flex: "0 0 auto",
+  left: 0,
+  paddingTop: "0.35rem",
   pointerEvents: "none",
-  position: "relative",
+  position: "absolute",
+  right: 0,
+  top: 0,
   zIndex: 2,
 });
 

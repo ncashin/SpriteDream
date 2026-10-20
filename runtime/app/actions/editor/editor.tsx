@@ -3,6 +3,7 @@ import { Document } from "../document.tsx";
 import { routes } from "../../routes.ts";
 import { Header } from "./header.tsx";
 import { Sidebar } from "./sidebar.tsx";
+import { Timeline } from "./timeline/timeline.tsx";
 
 export function Editor() {
   return () => (
@@ -16,6 +17,7 @@ export function Editor() {
               <Frame src={routes.game.index.href()} />
             </div>
           </div>
+          <Timeline />
         </div>
       </div>
     </Document>
@@ -26,10 +28,8 @@ const shell = css({
   boxSizing: "border-box",
   display: "flex",
   flexDirection: "row",
-  gap: "0.4rem",
   height: "100vh",
   overflow: "hidden",
-  padding: "0.4rem",
   position: "relative",
 });
 
@@ -51,7 +51,6 @@ const surfaceSlot = css({
   flexDirection: "column",
   minHeight: 0,
   minWidth: 0,
-  padding: "0.35rem 0",
 });
 
 const surface = css({
@@ -61,7 +60,6 @@ const surface = css({
   display: "flex",
   flexDirection: "column",
   background: "#1c1c1e",
-  borderRadius: "0.7rem",
   overflow: "hidden",
   "& > *": {
     flex: "1 1 0",
