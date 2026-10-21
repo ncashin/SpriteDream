@@ -79,6 +79,9 @@ export function Document(handle: Handle<DocumentProps>) {
 }
 
 const SIDEBAR_COLLAPSED_STYLE = `
+html:not([data-ready]) {
+  opacity: 0;
+}
 html[data-sidebar-collapsed] [data-sidebar],
 html[data-sidebar-collapsed] [data-sidebar-bar] {
   transition: none !important;

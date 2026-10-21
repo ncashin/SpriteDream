@@ -2,6 +2,7 @@ import { clientEntry, css, ref } from "remix/component";
 import type { InferOutput } from "remix/data-schema";
 import type { Handle } from "remix/component";
 
+import { blobColor } from "../editor/blobs.tsx";
 import { joinRoom } from "../editor/room.tsx";
 import { contains, lookupBoundingBox } from "../../utilities/bounding-box.ts";
 import {
@@ -27,8 +28,6 @@ import {
   objectAt,
   objectPath,
   scene,
-  restoreScene,
-  snapshotScene,
   type ScenePatch,
 } from "../../utilities/scene.ts";
 import {
@@ -37,8 +36,10 @@ import {
 } from "../../utilities/selected-objects.ts";
 import { playerColor } from "../../utilities/player-color.ts";
 import { createUpdateLoop } from "../../utilities/update-loop.ts";
+import { holdAppReady } from "../../utilities/app-ready.ts";
+import { whenImageReady } from "../../utilities/runtime-assets.ts";
 import { imageTrait } from "../../utilities/viewport/draw-image.ts";
-import { textTrait } from "../../utilities/viewport/draw-text.ts";
+import { prepareFont, textTrait } from "../../utilities/viewport/draw-text.ts";
 import { frameTrait } from "../../utilities/viewport/frame.tsx";
 import { transform } from "../../utilities/viewport/transform.ts";
 import type { WorldPoint } from "../../utilities/viewport/viewport.ts";
@@ -85,6 +86,15 @@ function abortWhenDisconnected(canvas: HTMLCanvasElement) {
 }
 
 export async function createGame(canvas: HTMLCanvasElement) {
+  const release = holdAppReady();
+  try {
+    await mountGame(canvas);
+  } finally {
+    release();
+  }
+}
+
+async function mountGame(canvas: HTMLCanvasElement) {
   const signal = abortWhenDisconnected(canvas);
 
   const updateLoop = createUpdateLoop({ signal });
@@ -138,7 +148,7 @@ export async function createGame(canvas: HTMLCanvasElement) {
     room.send("input", JSON.parse(encoded));
   });
 
-  const playerTemplate = await fetchScene("Player");
+  let playerTemplate: Awaited<ReturnType<typeof fetchScene>> | undefined;
 
   const spawnPlayers = () => {
     const people = Object.values(room.state.people);
@@ -229,16 +239,68 @@ export async function createGame(canvas: HTMLCanvasElement) {
     },
   });
 
-  let patch: ScenePatch = [];
-  let undoPatch: ScenePatch = [];
+  const selectionPaths = () =>
+    [...selectedObjects].flatMap((object) => {
+      const path = objectPath(scene, object);
+      return path ? [path] : [];
+    });
+
+  const selectPaths = (paths: string[][]) => {
+    selectObjects(
+      paths.flatMap((path) => {
+        const object = objectAt(scene, path);
+        return object ? [object] : [];
+      }),
+    );
+  };
+
+  let previousSelection = selectionPaths();
+  let applyingHistory = false;
+  const history = createUndoHistory<HistoryChange>({
+    signal,
+    onUndo(change) {
+      applyingHistory = true;
+      applyScenePatch(change.patch);
+      applyScenePatch(change.patch, previousScene);
+      selectPaths(change.selection);
+      previousSelection = change.selection;
+      room.sendScenePatch(change.patch);
+      applyingHistory = false;
+    },
+    onRedo(change) {
+      applyingHistory = true;
+      applyScenePatch(change.patch);
+      applyScenePatch(change.patch, previousScene);
+      selectPaths(change.selection);
+      previousSelection = change.selection;
+      room.sendScenePatch(change.patch);
+      applyingHistory = false;
+    },
+  });
+
   updateLoop.onUpdate(() => {
-    patch = diffScene(previousScene, scene);
-    undoPatch = patch.length > 0 ? diffScene(scene, previousScene) : [];
-    if (patch.length === 0) return;
+    const patch = diffScene(previousScene, scene);
+    const selection = selectionPaths();
+    if (patch.length === 0) {
+      previousSelection = selection;
+      return;
+    }
+
+    const undoPatch = diffScene(scene, previousScene);
     applyScenePatch(patch, previousScene);
+
+    if (!applyingHistory && room.state.mode !== Mode.Play) {
+      history.pushChange({
+        undo: { patch: undoPatch, selection: previousSelection },
+        redo: { patch, selection },
+      });
+    }
+
+    previousSelection = selection;
     room.sendScenePatch(patch);
   });
 
+  let sentSelection = "";
   const editorViewport = createViewport(canvas, {
     signal,
     onWorldHover(point) {
@@ -278,7 +340,7 @@ export async function createGame(canvas: HTMLCanvasElement) {
     for (const person of Object.values(room.state.people)) {
       if (person.id === room.you) continue;
 
-      const color = playerColor(person.id);
+      const color = blobColor(person.id);
 
       if (person.cursor) editorViewport.drawCursor(person.cursor, person.id);
 
@@ -293,8 +355,20 @@ export async function createGame(canvas: HTMLCanvasElement) {
         });
       }
     }
+
+    room.sendCursor(editorViewport.state.cursorPoint);
+    const paths = selectionPaths();
+    const selection = JSON.stringify(paths);
+    if (selection !== sentSelection) {
+      sentSelection = selection;
+      room.sendSelectedObjects(paths);
+    }
   });
 
+  const images = filterScene(scene, imageTrait).map((image) => whenImageReady(image.image.image));
+  const fonts = filterScene(scene, textTrait).map((text) => prepareFont(text.text.font));
+  playerTemplate = await fetchScene("Player");
+  await Promise.all([document.fonts.ready, ...images, ...fonts]);
   updateLoop.start();
 }
 

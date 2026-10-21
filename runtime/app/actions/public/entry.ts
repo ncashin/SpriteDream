@@ -8,6 +8,7 @@ import { run } from 'remix/component'
 import { isObject } from '../../utilities/is-object.ts'
 import { loadScene, saveSceneHotkey } from '../../utilities/scene.ts'
 import { selectObjects } from '../../utilities/selected-objects.ts'
+import { appReady } from '../../utilities/app-ready.ts'
 import { setAppFrame } from '../../utilities/viewport/draw-component.ts'
 
 await loadScene()
@@ -39,6 +40,13 @@ const app = run({
 })
 
 setAppFrame(app.frames.top)
+
+await app.ready()
+await appReady()
+document.documentElement.dataset.ready = ""
+await new Promise<void>((resolve) => {
+  requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+})
 
 if (import.meta.hot) {
   import.meta.hot.on('server:update', async () => {

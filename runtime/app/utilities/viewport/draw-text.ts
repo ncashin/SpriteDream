@@ -62,11 +62,15 @@ function measureText(text: Text) {
   };
 }
 
-const loadedFonts = new Map<string, string>();
+const loadedFonts = new Map<string, { family: string; ready: Promise<void> }>();
+
+export function prepareFont(source: string): Promise<void> {
+  return loadFont(source)?.ready ?? Promise.resolve();
+}
 
 function fontFace(fontSize: number, fontWeight: number, source: string) {
   const weight = Math.min(1000, Math.max(1, Math.round(fontWeight) || 400));
-  const family = loadFont(source);
+  const family = loadFont(source)?.family;
   return family
     ? `${weight} ${fontSize}px "${family}", sans-serif`
     : `${weight} ${fontSize}px sans-serif`;
@@ -78,12 +82,18 @@ function loadFont(source: string) {
   const ready = loadedFonts.get(path);
   if (ready) return ready;
   const family = `scene-${loadedFonts.size}`;
-  loadedFonts.set(path, family);
   const face = new FontFace(family, `url(${JSON.stringify(path)})`, { weight: "1 1000" });
-  void face.load().then((loaded) => {
-    document.fonts.add(loaded);
-  }).catch(() => {
-    // Keep the entry so a missing file is not requested again every frame.
-  });
-  return family;
+  const entry = {
+    family,
+    ready: face.load().then(
+      (loaded) => {
+        document.fonts.add(loaded);
+      },
+      () => {
+        // Keep the entry so a missing file is not requested again every frame.
+      },
+    ),
+  };
+  loadedFonts.set(path, entry);
+  return entry;
 }
