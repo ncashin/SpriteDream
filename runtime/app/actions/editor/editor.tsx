@@ -59,7 +59,7 @@ const surface = css({
   minHeight: 0,
   display: "flex",
   flexDirection: "column",
-  background: "#1c1c1e",
+  background: "#393939",
   overflow: "hidden",
   "& > *": {
     flex: "1 1 0",

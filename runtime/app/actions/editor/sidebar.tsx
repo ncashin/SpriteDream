@@ -78,7 +78,7 @@ const column = css({
 });
 
 const treeOuterPadding = css({
-  padding: "calc(0.4rem + 0.45em - 1.5px) 0.75rem 1rem",
+  padding: "calc(0.4rem + 0.45em - 1.5px) 0 1rem",
 });
 
 const tree = css({
@@ -86,4 +86,5 @@ const tree = css({
   flex: "1 1 0",
   minHeight: 0,
   overflow: "auto",
+  "--tree-sticky": "#121213",
 });

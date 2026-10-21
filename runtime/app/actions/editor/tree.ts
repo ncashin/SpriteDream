@@ -8,18 +8,19 @@ export const row = css({
   alignItems: "center",
   gap: "0.25rem",
   width: "100%",
+  height: "100%",
   boxSizing: "border-box",
   padding: "0.25rem 0.25rem 0.25rem 0.375rem",
   borderRadius,
   cursor: "pointer",
   "&:hover": {
-    background: "var(--hover)",
+    backgroundColor: "var(--hover)",
   },
   "&[aria-current='true']": {
-    background: "var(--selected)",
+    backgroundColor: "var(--selected)",
   },
   "&[aria-current='true']:hover": {
-    background: "var(--selected)",
+    backgroundColor: "var(--selected)",
   },
   "& > button, & > div > button": {
     visibility: "hidden",
@@ -57,6 +58,14 @@ export const iconStack = css({
 
 export const indent = css({ paddingLeft: "0.75rem" });
 
+export const rowShell = css({
+  boxSizing: "border-box",
+  width: "100%",
+  paddingRight: "0.75rem",
+  paddingLeft: "calc(0.75rem + var(--tree-depth, 0) * 0.75rem)",
+  backgroundColor: "var(--tree-sticky, #121213)",
+});
+
 export const chevronOpen = css({
   "& > :last-child": {
     transform: "rotate(90deg)",
@@ -87,7 +96,15 @@ export const childrenOpen = css({
 
 export const childrenClip = css({
   minHeight: 0,
-  overflow: "hidden",
+  overflow: "clip",
+});
+
+export const stickyHeader = css({
+  "--tree-row": "1.75rem",
+  position: "sticky",
+  top: "calc(var(--tree-pad, 0px) + var(--tree-depth, 0) * var(--tree-row))",
+  height: "var(--tree-row)",
+  zIndex: "calc(12 - var(--tree-depth, 0))",
 });
 
 export const iconButton = css({

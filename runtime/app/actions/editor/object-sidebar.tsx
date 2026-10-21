@@ -29,6 +29,7 @@ export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar
         <div mix={column}>
           {active ? (
             <div mix={tree}>
+              <div aria-hidden="true" mix={topCover} />
               <ObjectTree
                 key={entry?.key ?? active}
                 object={active}
@@ -62,6 +63,8 @@ const panel = css({
   minHeight: 0,
   minWidth: 0,
   overflow: "hidden",
+  background: "#19191b",
+  borderTop: "1px solid var(--line)",
 });
 
 const column = css({
@@ -78,5 +81,17 @@ const tree = css({
   flex: "1 1 0",
   minHeight: 0,
   overflow: "auto",
-  padding: "calc(0.5rem + 0.45em) 0.75rem 1rem",
+  padding: "0 0 1rem",
+  "--tree-sticky": "#19191b",
+  "--tree-pad": "calc(0.5rem + 0.45em)",
+});
+
+const topCover = css({
+  position: "sticky",
+  top: 0,
+  zIndex: 20,
+  height: "var(--tree-pad)",
+  flex: "0 0 auto",
+  background: "var(--tree-sticky)",
+  pointerEvents: "none",
 });

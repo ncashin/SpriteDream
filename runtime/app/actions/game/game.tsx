@@ -4,7 +4,7 @@ import type { Handle } from "remix/component";
 
 import { blobColor } from "../editor/blobs.tsx";
 import { joinRoom } from "../editor/room.tsx";
-import { contains, lookupBoundingBox } from "../../utilities/bounding-box.ts";
+import { center, contains, lookupBoundingBox } from "../../utilities/bounding-box.ts";
 import {
   createCopyAndPaste,
   pasteCopiedObjects,
@@ -340,8 +340,7 @@ async function mountGame(canvas: HTMLCanvasElement) {
 
       const color = blobColor(person.id);
 
-      if (person.cursor) editorViewport.drawCursor(person.cursor, person.id);
-
+      let look: { x: number; y: number } | undefined;
       for (const path of person.selectedObjects ?? []) {
         const object = objectAt(scene, path);
 
@@ -351,7 +350,13 @@ async function mountGame(canvas: HTMLCanvasElement) {
           color,
           handles: false,
         });
+        if (!look) {
+          const bounds = lookupBoundingBox(object);
+          if (bounds) look = center(bounds);
+        }
       }
+
+      if (person.cursor) editorViewport.drawCursor(person.cursor, person.id, look);
     }
 
     room.sendCursor(editorViewport.state.cursorPoint);

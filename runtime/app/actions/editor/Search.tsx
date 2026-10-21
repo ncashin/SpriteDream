@@ -10,8 +10,8 @@ import { hotkeys } from "../../utilities/hotkey.ts";
 import { isObject } from "../../utilities/is-object.ts";
 import { loadScene, saveSceneHotkey, scene, type SceneNode } from "../../utilities/scene.ts";
 import { selectObjects } from "../../utilities/selected-objects.ts";
-
 const LIST_ID = "scene-search-list";
+const SEARCH_FADE = "80ms ease";
 
 type SearchItem =
   | { kind: "scene"; name: string }
@@ -140,7 +140,7 @@ export function Search(handle: Handle) {
   );
 
   return () => {
-    let items = open ? matchingItems(scenes, query) : [];
+    let items = matchingItems(scenes, query);
     let index = items.length === 0 ? 0 : Math.min(activeIndex, items.length - 1);
 
     return (
@@ -217,7 +217,7 @@ export function Search(handle: Handle) {
               </kbd>
             )}
           </label>
-          <div mix={[drawer, open && drawerOpen]}>
+          <div mix={[drawer, open && drawerOpen]} inert={!open} aria-hidden={open ? undefined : true}>
             <div mix={drawerInner}>
               <div mix={rule} />
               <ul id={LIST_ID} role="listbox" aria-label="Search results" mix={list}>
@@ -272,9 +272,6 @@ const slot = css({
 });
 
 const box = css({
-  background: "var(--hover)",
-  backdropFilter: "blur(12px)",
-  borderRadius: "0.6em",
   fontSize: "13px",
   boxSizing: "border-box",
   minWidth: 0,
@@ -282,8 +279,7 @@ const box = css({
   position: "relative",
   width: "min(24rem, 100%)",
   zIndex: 1,
-  "&[data-expanded]": {
-    background: "#262626",
+  "&[data-expanded] > :first-child": {
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
   },
@@ -291,7 +287,8 @@ const box = css({
 
 const field = css({
   alignItems: "center",
-  background: "transparent",
+  background: "var(--hover)",
+  backdropFilter: "blur(12px)",
   border: "none",
   borderRadius: "0.6em",
   boxSizing: "border-box",
@@ -302,7 +299,15 @@ const field = css({
   gap: "0.3em",
   lineHeight: 1.35,
   padding: "0.45em 0.55em",
+  transition: `border-radius ${SEARCH_FADE}`,
   width: "100%",
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+  },
+  "&:focus-within": {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
 });
 
 const inputStyle = css({
@@ -340,23 +345,28 @@ const kbd = css({
 });
 
 const drawer = css({
-  display: "grid",
-  gridTemplateRows: "0fr",
+  background: "var(--hover)",
+  backdropFilter: "blur(12px)",
+  borderRadius: "0 0 0.6em 0.6em",
   left: 0,
+  opacity: 0,
+  pointerEvents: "none",
   position: "absolute",
   right: 0,
   top: "100%",
+  transition: `opacity ${SEARCH_FADE}`,
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+  },
 });
 
 const drawerOpen = css({
-  background: "#262626",
-  borderRadius: "0 0 0.6em 0.6em",
-  gridTemplateRows: "1fr",
+  opacity: 1,
+  pointerEvents: "auto",
 });
 
 const drawerInner = css({
   minHeight: 0,
-  overflow: "hidden",
 });
 
 const rule = css({

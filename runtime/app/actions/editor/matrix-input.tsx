@@ -14,12 +14,14 @@ import {
   expandable,
   iconMotion,
   iconStack,
-  indent,
   label,
   row,
+  rowShell,
+  stickyHeader,
 } from "./tree.ts";
 
 type MatrixInputProps = {
+  depth?: number;
   name: string;
   matrix: DOMMatrix;
   onDelete: () => void;
@@ -184,8 +186,11 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
       );
     }
 
+    const depth = handle.props.depth ?? 0;
+
     return (
       <>
+        <div style={{ "--tree-depth": String(depth) }} mix={[rowShell, stickyHeader]}>
         <div
           aria-expanded={!collapsed}
           mix={[
@@ -221,8 +226,10 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
             </Button>
           </div>
         </div>
+        </div>
         <div mix={[childrenPanel, !collapsed && childrenOpen]}>
-          <div mix={[childrenClip, indent]}>
+          <div mix={childrenClip}>
+            <div mix={rowShell} style={{ "--tree-depth": String(depth + 1) }}>
             <div mix={fieldRow}>
               <span mix={keyLabel}>
                 Position<span aria-hidden="true">:</span>
@@ -234,6 +241,8 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
                 setPosition("f", value),
               )}
             </div>
+            </div>
+            <div mix={rowShell} style={{ "--tree-depth": String(depth + 1) }}>
             <div mix={fieldRow}>
               <span mix={keyLabel}>
                 Rotation<span aria-hidden="true">:</span>
@@ -246,6 +255,8 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
                 (value) => setLinear({ rotation: value }),
               )}
             </div>
+            </div>
+            <div mix={rowShell} style={{ "--tree-depth": String(depth + 1) }}>
             <div mix={fieldRow}>
               <span mix={keyLabel}>
                 Scale<span aria-hidden="true">:</span>
@@ -256,6 +267,7 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
               {numberInput("scaleY", `${name} scale Y`, linear.scaleY, SCALE_STEP, (value) =>
                 setLinear({ scaleY: value }),
               )}
+            </div>
             </div>
           </div>
         </div>

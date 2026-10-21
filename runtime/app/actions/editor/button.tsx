@@ -1,5 +1,5 @@
 import { css, on, ref } from "remix/component";
-import type { Handle, RemixNode } from "remix/component";
+import type { CSSMixinDescriptor, Handle, RemixNode } from "remix/component";
 
 type ButtonProps = {
   size?: "small" | "default" | "field";
@@ -8,6 +8,7 @@ type ButtonProps = {
   popup?: "menu";
   expanded?: boolean;
   pressed?: boolean;
+  mix?: CSSMixinDescriptor;
   buttonRef?: (node: HTMLButtonElement | null) => void;
   onClick?: (event: MouseEvent) => void;
   children?: RemixNode;
@@ -15,7 +16,7 @@ type ButtonProps = {
 
 export function Button(handle: Handle<ButtonProps>) {
   return () => {
-    const { size = "default", muted = false, label, popup, expanded, pressed, buttonRef, onClick, children } = handle.props;
+    const { size = "default", muted = false, label, popup, expanded, pressed, mix: extra, buttonRef, onClick, children } = handle.props;
     return (
       <button
         type="button"
@@ -28,6 +29,7 @@ export function Button(handle: Handle<ButtonProps>) {
           muted && mutedText,
           size === "small" && small,
           size === "field" && field,
+          extra,
           buttonRef &&
             ref((node) => {
               buttonRef(node instanceof HTMLButtonElement ? node : null);

@@ -24,9 +24,10 @@ import {
   expandable,
   iconMotion,
   iconStack,
-  indent,
   label,
   row,
+  rowShell,
+  stickyHeader,
 } from "./tree.ts";
 
 type HierarchyNode = {
@@ -56,7 +57,7 @@ export const HierarchyTree = clientEntry(
       return (
         <div>
           {nodes.map((node) => (
-            <HierarchyBranch key={node.name} node={node} root={root} />
+            <HierarchyBranch key={node.name} node={node} root={root} depth={0} />
           ))}
         </div>
       );
@@ -64,14 +65,14 @@ export const HierarchyTree = clientEntry(
   },
 );
 
-function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode }>) {
+function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode; depth: number }>) {
   let collapsed = false;
   let wasSelected = false;
   let name = handle.props.node.name;
 
   return () => {
     const { object, children } = handle.props.node;
-    const { root } = handle.props;
+    const { root, depth } = handle.props;
     const hasChildren = children.length > 0;
 
     const isSelected = selectedObjects.has(object);
@@ -83,6 +84,10 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode }
       <>
         <div
           data-hierarchy-node={name}
+          style={{ "--tree-depth": String(depth) }}
+          mix={[rowShell, stickyHeader]}
+        >
+        <div
           aria-current={isSelected ? "true" : undefined}
           aria-expanded={hasChildren ? open : undefined}
           mix={[
@@ -147,11 +152,12 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode }
             Delete
           </Button>
         </div>
+        </div>
         {hasChildren && (
           <div mix={[childrenPanel, open && childrenOpen]}>
-            <div mix={[childrenClip, indent]}>
+            <div mix={childrenClip}>
               {children.map((child) => (
-                <HierarchyBranch key={child.name} node={child} root={root} />
+                <HierarchyBranch key={child.name} node={child} root={root} depth={depth + 1} />
               ))}
             </div>
           </div>
@@ -307,9 +313,9 @@ const dropBefore = css({
 });
 
 const dropInside = css({
-  background: "var(--hover)",
+  backgroundColor: "var(--hover)",
   "&[aria-current='true']": {
-    background: "var(--hover)",
+    backgroundColor: "var(--hover)",
   },
 });
 

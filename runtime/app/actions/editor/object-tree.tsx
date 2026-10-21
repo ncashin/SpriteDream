@@ -28,9 +28,10 @@ import {
   expandable,
   iconMotion,
   iconStack,
-  indent,
   label,
   row,
+  rowShell,
+  stickyHeader,
 } from "./tree.ts";
 
 export const ObjectTree = clientEntry(
@@ -51,6 +52,7 @@ export const ObjectTree = clientEntry(
 
       return (
         <Branch
+          depth={0}
           name={name}
           object={object}
           onRename={(from, to) => {
@@ -72,9 +74,9 @@ export const ObjectTree = clientEntry(
   },
 );
 
-function SceneNodeList(handle: Handle<{ object: SceneNode }>) {
+function SceneNodeList(handle: Handle<{ object: SceneNode; depth?: number }>) {
   return () => {
-    const { object } = handle.props;
+    const { object, depth = 0 } = handle.props;
     if (Object.keys(object).length === 0) return null;
 
     return (
@@ -83,6 +85,7 @@ function SceneNodeList(handle: Handle<{ object: SceneNode }>) {
           <div key={name}>
             {name === "__icon" ? null : isObject(value) ? (
               <Branch
+                depth={depth}
                 name={name}
                 object={value}
                 onRename={(from, to) => {
@@ -97,6 +100,7 @@ function SceneNodeList(handle: Handle<{ object: SceneNode }>) {
               />
             ) : (
               <PropertyInput
+                depth={depth}
                 name={name}
                 object={object}
                 onRename={(from, to) => {
@@ -171,6 +175,7 @@ const actions = css({
 
 function Branch(
   handle: Handle<{
+    depth: number;
     name: string;
     object: SceneNode;
     onRename: (from: string, to: string) => boolean | void;
@@ -181,7 +186,7 @@ function Branch(
   let empty = collapsed;
 
   return () => {
-    const { name, object, onRename, onDelete } = handle.props;
+    const { depth, name, object, onRename, onDelete } = handle.props;
     const nowEmpty = isEmpty(object);
     if (nowEmpty !== empty) {
       collapsed = nowEmpty;
@@ -191,6 +196,7 @@ function Branch(
     const isSelected = selectedObjects.has(object);
     return (
       <>
+        <div style={{ "--tree-depth": String(depth) }} mix={[rowShell, stickyHeader]}>
         <div
           aria-current={isSelected ? "true" : undefined}
           aria-expanded={!collapsed}
@@ -240,9 +246,10 @@ function Branch(
             </Button>
           </div>
         </div>
+        </div>
         <div mix={[childrenPanel, !collapsed && childrenOpen]}>
-          <div mix={[childrenClip, indent]}>
-            <SceneNodeList object={object} />
+          <div mix={childrenClip}>
+            <SceneNodeList object={object} depth={depth + 1} />
           </div>
         </div>
       </>

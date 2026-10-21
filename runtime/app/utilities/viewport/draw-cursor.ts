@@ -1,4 +1,4 @@
-import { blobColor, blobPath, ink, leftEye, rightEye, smile } from "../../actions/editor/blobs.tsx";
+import { blobBody, blobColor, blinkPhase, blinkScale, clampGaze, cursorEyeLeft, cursorEyeRight, cursorSymbol, GAZE_LOOK, ink } from "../../actions/editor/blobs.tsx";
 import type { WorldPoint } from "./viewport.ts";
 import type { ViewportWithTransforms } from "./viewportTransforms.ts";
 
@@ -6,14 +6,18 @@ const CURSOR_PATH = "M0 0 L0 17 L4 13 L7 20 L10 19 L7 12 L13 12 Z";
 const LABEL = "ncashin";
 const LABEL_X = 16;
 const LABEL_Y = 10;
-const FACE_WIDTH = 18;
-const FACE_HEIGHT = 18;
+const LABEL_HEIGHT = 16;
+const FACE_WIDTH = 22;
+const FACE_HEIGHT = 22;
+const FACE_TOP = LABEL_Y - 2;
+const LABEL_TOP = FACE_TOP + (FACE_HEIGHT - LABEL_HEIGHT) / 2;
 const CURSOR_SCALE = 0.8;
+const GAZE_MOVE = 18;
 
 const svgNS = "http://www.w3.org/2000/svg";
 
 export type DrawCursor = {
-  (viewport: ViewportWithTransforms, point: WorldPoint, id: string): void;
+  (viewport: ViewportWithTransforms, point: WorldPoint, id: string, look?: WorldPoint): void;
   dispose(): void;
 };
 
@@ -62,39 +66,37 @@ export function createDrawCursor(canvas: HTMLCanvasElement): DrawCursor {
     path.setAttribute("paint-order", "stroke fill");
     svg.append(path);
     const face = canvas.ownerDocument.createElementNS(svgNS, "svg");
-    face.setAttribute("viewBox", "0 0 64 64");
+    face.dataset.face = "";
+    face.setAttribute("viewBox", "0 0 100 100");
     face.setAttribute("width", String(FACE_WIDTH));
     face.setAttribute("height", String(FACE_HEIGHT));
     face.style.position = "absolute";
     face.style.left = `${LABEL_X / CURSOR_SCALE}px`;
-    face.style.top = `${(LABEL_Y - 2) / CURSOR_SCALE}px`;
+    face.style.top = `${FACE_TOP / CURSOR_SCALE}px`;
     face.style.overflow = "visible";
     face.style.pointerEvents = "none";
-    face.style.transformOrigin = "0 0";
+    face.style.transformOrigin = "50% 50%";
     face.style.transform = `scale(${1 / CURSOR_SCALE})`;
     const body = canvas.ownerDocument.createElementNS(svgNS, "path");
     body.dataset.blob = "";
     body.setAttribute("fill", "#fff");
-    for (const eye of [leftEye, rightEye]) {
-      const pupil = canvas.ownerDocument.createElementNS(svgNS, "path");
-      pupil.setAttribute("d", eye);
-      pupil.setAttribute("fill", ink);
-      face.append(pupil);
+    const gaze = canvas.ownerDocument.createElementNS(svgNS, "g");
+    gaze.dataset.gaze = "";
+    for (const shift of [cursorEyeLeft, cursorEyeRight]) {
+      const eye = canvas.ownerDocument.createElementNS(svgNS, "path");
+      eye.dataset.eye = "";
+      eye.setAttribute("fill", ink);
+      eye.setAttribute("fill-rule", "evenodd");
+      eye.setAttribute("transform", shift);
+      gaze.append(eye);
     }
-    const mouth = canvas.ownerDocument.createElementNS(svgNS, "path");
-    mouth.setAttribute("d", smile);
-    mouth.setAttribute("fill", "none");
-    mouth.setAttribute("stroke", ink);
-    mouth.setAttribute("stroke-width", "7");
-    mouth.setAttribute("stroke-linecap", "round");
-    face.append(mouth);
-    face.prepend(body);
+    face.append(body, gaze);
     const label = canvas.ownerDocument.createElementNS(svgNS, "svg");
     label.setAttribute("width", "72");
-    label.setAttribute("height", "16");
+    label.setAttribute("height", String(LABEL_HEIGHT));
     label.style.position = "absolute";
     label.style.left = `${(LABEL_X + FACE_WIDTH + 4) / CURSOR_SCALE}px`;
-    label.style.top = `${LABEL_Y / CURSOR_SCALE}px`;
+    label.style.top = `${LABEL_TOP / CURSOR_SCALE}px`;
     label.style.overflow = "visible";
     label.style.pointerEvents = "none";
     label.style.transformOrigin = "0 0";
@@ -114,7 +116,8 @@ export function createDrawCursor(canvas: HTMLCanvasElement): DrawCursor {
     const text = canvas.ownerDocument.createElementNS(svgNS, "text");
     text.textContent = LABEL;
     text.setAttribute("x", "0");
-    text.setAttribute("y", "12");
+    text.setAttribute("y", String(LABEL_HEIGHT / 2));
+    text.setAttribute("dominant-baseline", "central");
     text.setAttribute("fill", `url(#${gradientId})`);
     text.setAttribute("font-size", "12");
     text.setAttribute("font-family", "sans-serif");
@@ -125,7 +128,7 @@ export function createDrawCursor(canvas: HTMLCanvasElement): DrawCursor {
     return holder;
   }
 
-  function drawCursor(viewport: ViewportWithTransforms, point: WorldPoint, id: string) {
+  function drawCursor(viewport: ViewportWithTransforms, point: WorldPoint, id: string, look?: WorldPoint) {
     if (disposed) return;
     if (!open) {
       open = true;
@@ -146,12 +149,58 @@ export function createDrawCursor(canvas: HTMLCanvasElement): DrawCursor {
     const body = cursor.querySelector("[data-blob]");
     if (body && cursor.dataset.person !== id) {
       cursor.dataset.person = id;
-      body.setAttribute("d", blobPath(id));
+      const shape = blobBody(id);
+      body.setAttribute("d", shape);
       body.setAttribute("fill", blobColor(id));
+      cursor.dataset.phase = String(blinkPhase(id));
+      const symbol = cursorSymbol(id);
+      for (const eye of cursor.querySelectorAll("[data-eye]")) eye.setAttribute("d", symbol);
+    }
+    const previousX = Number(cursor.dataset.x ?? screen.x);
+    const previousY = Number(cursor.dataset.y ?? screen.y);
+    cursor.dataset.x = String(screen.x);
+    cursor.dataset.y = String(screen.y);
+    let aimX = Number(cursor.dataset.aimX ?? 0);
+    let aimY = Number(cursor.dataset.aimY ?? 0);
+    let driftX = Number(cursor.dataset.driftX ?? 0);
+    let driftY = Number(cursor.dataset.driftY ?? 0);
+    if (look) {
+      const target = viewport.worldToScreen(look.x, look.y);
+      const aim = clampGaze(target.x - screen.x, target.y - screen.y, GAZE_LOOK);
+      driftX = aim.x;
+      driftY = aim.y;
+    } else {
+      const movedX = screen.x - previousX;
+      const movedY = screen.y - previousY;
+      if (Math.hypot(movedX, movedY) >= 0.5) {
+        const aim = clampGaze(movedX, movedY, GAZE_MOVE);
+        driftX = aim.x;
+        driftY = aim.y;
+      } else {
+        driftX *= 0.994;
+        driftY *= 0.994;
+      }
+    }
+    const follow = driftY < aimY ? 0.28 : 0.08;
+    aimX += (driftX - aimX) * follow;
+    aimY += (driftY - aimY) * follow;
+    cursor.dataset.driftX = String(driftX);
+    cursor.dataset.driftY = String(driftY);
+    cursor.dataset.aimX = String(aimX);
+    cursor.dataset.aimY = String(aimY);
+    const time = performance.now() / 1000;
+    const phase = Number(cursor.dataset.phase ?? 0);
+    const gaze = cursor.querySelector("[data-gaze]");
+    if (gaze) {
+      const blink = blinkScale(time, phase);
+      gaze.setAttribute(
+        "transform",
+        `translate(${aimX.toFixed(2)} ${aimY.toFixed(2)}) translate(50 52) scale(1 ${blink}) translate(-50 -52)`,
+      );
     }
     const text = cursor.querySelector("text");
     const labelX = screen.x + LABEL_X + FACE_WIDTH + 4;
-    if (text) contrastLabel(canvas, text, labelX, screen.y + LABEL_Y);
+    if (text) contrastLabel(canvas, text, labelX, screen.y + LABEL_TOP);
     cursor.style.visibility = "visible";
     cursor.style.transform = `translate(${screen.x}px, ${screen.y}px) scale(${CURSOR_SCALE})`;
   }

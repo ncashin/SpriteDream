@@ -536,6 +536,7 @@ const timelineCollapsed = css({
 const markStack = css({
   display: "grid",
   flex: "0 0 auto",
+  paddingTop: "0.25rem",
   placeItems: "center",
   "& > *": { gridArea: "1 / 1" },
 });

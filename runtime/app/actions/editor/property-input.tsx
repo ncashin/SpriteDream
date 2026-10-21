@@ -10,8 +10,10 @@ import { AutoSizeInput } from "./auto-size-input.tsx";
 import { Button } from "./button.tsx";
 import { ColorInput, parseHexColor } from "./input/color-input.tsx";
 import { MatrixInput } from "./matrix-input.tsx";
+import { rowShell } from "./tree.ts";
 
 type PropertyInputProps = {
+  depth?: number;
   name: string;
   object: SceneNode;
   onRename: (from: string, to: string) => void;
@@ -202,6 +204,7 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
       if (!matrix) return null;
       return (
         <MatrixInput
+          depth={handle.props.depth ?? 0}
           name={name}
           matrix={matrix}
           onDelete={() => handle.props.onDelete()}
@@ -215,6 +218,7 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
     let file = parseFile(value);
 
     return (
+      <div mix={rowShell} style={{ "--tree-depth": String(handle.props.depth ?? 0) }}>
       <div mix={row}>
         <span mix={keyLabel}>
           <AutoSizeInput
@@ -345,6 +349,7 @@ export function PropertyInput(handle: Handle<PropertyInputProps>) {
           <Icon icon={Trash} size={11} />
           Delete
         </Button>
+      </div>
       </div>
     );
   };

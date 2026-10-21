@@ -112,8 +112,8 @@ export function createViewport(canvas: HTMLCanvasElement, options?: ViewportOpti
     drawPhysicsCollider(object: Collider) {
       drawPhysicsCollider(viewport, object);
     },
-    drawCursor(point: WorldPoint, id: string) {
-      drawCursor(viewport, point, id);
+    drawCursor(point: WorldPoint, id: string, look?: WorldPoint) {
+      drawCursor(viewport, point, id, look);
     },
   };
 }
