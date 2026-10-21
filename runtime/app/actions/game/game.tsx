@@ -331,10 +331,8 @@ async function mountGame(canvas: HTMLCanvasElement) {
       editorViewport.drawPhysicsCollider(collider);
     }
 
-    if (room.state.mode !== Mode.Play) {
-      for (const object of selectedObjects) {
-        editorViewport.drawBoundingBox(object);
-      }
+    for (const object of selectedObjects) {
+      editorViewport.drawBoundingBox(object);
     }
 
     for (const person of Object.values(room.state.people)) {

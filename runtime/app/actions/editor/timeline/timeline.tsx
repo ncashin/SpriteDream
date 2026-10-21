@@ -92,7 +92,17 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
   }, handle.signal);
   let lastStamp = 0;
   let frame = 0;
+  let overSheet = false;
   const room = typeof window !== "undefined" ? joinRoom(handle.signal) : undefined;
+
+  if (typeof window !== "undefined") {
+    const release = (event: PointerEvent) => {
+      const sheet = document.getElementById("animation-sheet");
+      overSheet = event.target instanceof Node && !!sheet?.contains(event.target);
+    };
+    window.addEventListener("pointerup", release, { signal: handle.signal });
+    window.addEventListener("pointercancel", release, { signal: handle.signal });
+  }
 
   function stopPlayback() {
     playing = false;
@@ -142,7 +152,7 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
         play();
       },
     },
-    { signal: handle.signal },
+    { signal: handle.signal, when: () => overSheet },
   );
 
   function publish() {
@@ -222,6 +232,12 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
         mix={[
           sheet,
           scrubbing && scrub,
+          on("pointerenter", () => {
+            overSheet = true;
+          }),
+          on("pointerleave", (event) => {
+            overSheet = event.buttons !== 0;
+          }),
           on("pointerdown", (event) => {
             if (event.button !== 0) return;
             const sheet = event.currentTarget;

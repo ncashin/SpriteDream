@@ -144,7 +144,7 @@ export function Search(handle: Handle) {
     let index = items.length === 0 ? 0 : Math.min(activeIndex, items.length - 1);
 
     return (
-      <div mix={slot}>
+      <div mix={slot} data-open={open ? "" : undefined}>
         <div mix={box} data-expanded={open ? "" : undefined}>
           <label mix={field}>
             <Icon icon={SearchIcon} size={14} />
@@ -264,10 +264,16 @@ const slot = css({
   justifyContent: "center",
   minWidth: 0,
   pointerEvents: "none",
+  "@container header-bar (max-width: 30rem)": {
+    "&:not([data-open])": {
+      display: "none",
+    },
+  },
 });
 
 const box = css({
   background: "var(--hover)",
+  backdropFilter: "blur(12px)",
   borderRadius: "0.6em",
   fontSize: "13px",
   boxSizing: "border-box",

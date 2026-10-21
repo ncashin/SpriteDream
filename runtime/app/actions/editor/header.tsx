@@ -109,6 +109,8 @@ const bar = css({
   alignItems: "center",
   background: "transparent",
   color: "var(--text)",
+  containerName: "header-bar",
+  containerType: "inline-size",
   display: "flex",
   flex: "1 1 auto",
   flexDirection: "row",
