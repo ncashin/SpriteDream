@@ -1,3 +1,4 @@
+import { isObject } from "./is-object.ts";
 import type { SceneNode } from "./scene.ts";
 import { transform } from "./viewport/transform.ts";
 
@@ -16,8 +17,7 @@ export function addBoundingBoxLookup(lookup: BoundingBoxLookup) {
 }
 
 export function lookupBoundingBox(object: SceneNode): Bounds | undefined {
-  const matrix = transform(object)?.matrix;
-  if (!matrix) return;
+  if (!isObject(object)) return;
   const sizes: BoundingBoxSize[] = [];
   for (const lookup of lookups) {
     const size = lookup(object);
@@ -25,6 +25,8 @@ export function lookupBoundingBox(object: SceneNode): Bounds | undefined {
   }
   const size = sizes[0];
   if (!size) return;
+  const matrix = transform(object).matrix;
+  if (!matrix) return;
   const callbacks = sizes.flatMap((match) => (match.resizeCallback ? [match.resizeCallback] : []));
   return {
     transform: matrix,

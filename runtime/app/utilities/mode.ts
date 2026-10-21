@@ -4,14 +4,12 @@ export enum Mode {
 }
 
 export let mode = Mode.Edit;
-export let simulating = false;
 
 const listeners = new Set<(mode: Mode) => void>();
 
-export function setMode(next: Mode, nextSimulating = simulating) {
-  if (mode === next && simulating === nextSimulating) return;
+export function setMode(next: Mode) {
+  if (mode === next) return;
   mode = next;
-  simulating = nextSimulating;
   for (const listener of listeners) listener(mode);
 }
 

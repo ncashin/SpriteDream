@@ -1,6 +1,6 @@
-import ChevronDown from "lucide/dist/esm/icons/chevron-down.mjs";
-import ChevronUp from "lucide/dist/esm/icons/chevron-up.mjs";
-import Clapperboard from "lucide/dist/esm/icons/clapperboard.mjs";
+import ArrowDown from "lucide/dist/esm/icons/arrow-down.mjs";
+import ArrowUp from "lucide/dist/esm/icons/arrow-up.mjs";
+import Spline from "lucide/dist/esm/icons/spline.mjs";
 import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 import { hotkeys } from "../../../utilities/hotkey.ts";
@@ -195,7 +195,7 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
   return () => (
     <div mix={[timeline, collapsed && timelineCollapsed]}>
       {false && <header>
-        <Icon icon={Clapperboard} size={12} />
+        <Icon icon={Spline} size={12} />
         Animation Name
       </header>}
       <button
@@ -212,9 +212,10 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
         ]}
       >
         <span mix={markStack}>
-          <span>Animation</span>
-          <Icon icon={collapsed ? ChevronUp : ChevronDown} size={18} />
+          <Icon icon={Spline} size={14} />
+          <Icon icon={collapsed ? ArrowUp : ArrowDown} size={14} />
         </span>
+        Animation
       </button>
       {collapsed ? null : <div
         id="animation-sheet"
@@ -528,24 +529,31 @@ const hideToggle = css({
   alignItems: "center",
   background: "transparent",
   border: "none",
-  borderRadius: "0.45rem",
+  borderRadius: "0.6em",
   bottom: "calc(100% + 0.35rem)",
   boxSizing: "border-box",
   color: "var(--text)",
   cursor: "pointer",
   display: "inline-flex",
+  font: "inherit",
   fontSize: "13px",
-  height: "2.25rem",
+  fontWeight: 500,
+  gap: "0.3em",
   justifyContent: "center",
-  left: "0.5rem",
-  padding: "0 0.6rem",
+  lineHeight: 1.35,
+  padding: "0.45em 0.55em",
   position: "absolute",
+  left: "0.5rem",
   zIndex: 3,
   "& span > :last-child": {
     visibility: "hidden",
   },
   "&:hover, &:focus-visible": {
     background: "var(--hover)",
+  },
+  "&:focus-visible": {
+    outline: "1px solid var(--line)",
+    outlineOffset: "1px",
   },
   "&:hover span > :first-child, &:focus-visible span > :first-child": {
     visibility: "hidden",

@@ -36,7 +36,7 @@ export type ViewportState = {
   cursorPoint: WorldPoint;
 };
 
-export function viewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
+export function createViewport(canvas: HTMLCanvasElement, options?: ViewportOptions) {
   const context = canvas.getContext("2d");
   if (!context) throw new Error("2D canvas context is unavailable");
 

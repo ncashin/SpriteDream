@@ -5,6 +5,7 @@ import { defaulted, object, string } from "remix/data-schema";
 import { number } from "remix/data-schema/coerce";
 
 import { addBoundingBoxLookup } from "../bounding-box.ts";
+import { Mode, mode } from "../mode.ts";
 import { objectPath, scene } from "../scene.ts";
 import { defineTrait } from "../trait/trait.ts";
 import { transform } from "./transform.ts";
@@ -49,11 +50,13 @@ export function drawFrame(
 
   const { width, height } = frame.frame;
   const placed = new DOMMatrix().translate(-width / 2, -height / 2);
+  const playing = mode === Mode.Play;
   viewport.drawComponent(
     drawComponentKey(frame, "frame"),
     worldMatrix.multiply(placed),
     <div
       data-scene-object={path}
+      data-frame-passthrough={playing ? undefined : ""}
       mix={[
         css({
           boxSizing: "border-box",
@@ -63,7 +66,7 @@ export function drawFrame(
           maxHeight: `${height}px`,
           overflow: "hidden",
           contain: "size",
-          pointerEvents: "auto",
+          pointerEvents: playing ? "auto" : "none",
         }),
       ]}
     >

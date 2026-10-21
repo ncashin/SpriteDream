@@ -1,6 +1,6 @@
 import type * as http from 'node:http'
 import { randomUUID } from 'node:crypto'
-import { any, array, boolean, defaulted, enum_, literal, number, object, optional, parseSafe, record, string, union } from 'remix/data-schema'
+import { any, array, boolean, defaulted, enum_, literal, number, object, optional, parseSafe, string, union } from 'remix/data-schema'
 import { WebSocketServer, type WebSocket } from 'ws'
 
 import { readSceneFile } from './scene-file.ts'
@@ -26,8 +26,9 @@ const roomMessage = union([
     selectedObjects: array(array(string())),
   }),
   object({
-    type: defaulted(literal('inputUpdate'), 'inputUpdate'),
-    input: record(string(), union([number(), boolean()])),
+    type: defaulted(literal('message'), 'message'),
+    name: string(),
+    data: any(),
   }),
 ])
 
@@ -36,7 +37,6 @@ type Person = {
   socket: WebSocket
   cursor?: WorldPoint
   selectedObjects: ScenePath[]
-  input: Record<string, number | boolean>
   quiet: boolean
 }
 
@@ -92,7 +92,6 @@ export async function attachRoom(server: http.Server) {
       id: randomUUID(),
       socket,
       selectedObjects: [],
-      input: {},
       quiet: false,
     }
     roomState.people[person.id] = person
@@ -130,10 +129,19 @@ export async function attachRoom(server: http.Server) {
             current.selectedObjects = message.selectedObjects
             broadcast()
             break
-          case 'inputUpdate':
-            current.input = message.input
-            broadcast()
+          case 'message': {
+            const relay = JSON.stringify({
+              type: 'message',
+              name: message.name,
+              from: current.id,
+              data: message.data,
+            })
+            for (const other of Object.values(roomState.people)) {
+              if (other.socket !== socket && other.socket.readyState === other.socket.OPEN)
+                other.socket.send(relay)
+            }
             break
+          }
         }
       } catch {
         // Ignore a pointer frame that is not JSON.

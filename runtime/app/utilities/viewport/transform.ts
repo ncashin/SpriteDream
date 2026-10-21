@@ -51,8 +51,8 @@ export function isMatrix(value: unknown): value is string {
   return typeof value === "string" && (value.startsWith("matrix(") || value.startsWith("matrix3d("));
 }
 
-export function transform(object: SceneNode): Transform | undefined {
-  if (!isMatrix(object.transform)) return;
+export function transform(object: SceneNode): Transform {
+  if (!isMatrix(object.transform)) object.transform = createMatrix();
   return view(object);
 }
 
@@ -208,7 +208,6 @@ export function setObjectParent(object: SceneNode, parent: string | undefined) {
 }
 
 function writeLocal(object: SceneNode, world: DOMMatrix) {
-  if (!isMatrix(object.transform)) return;
   const parent = parentObject(object);
   if (!parent) {
     object.transform = world.toString();

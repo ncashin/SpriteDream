@@ -49,7 +49,7 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
   canvas.after(layer);
 
   const passthrough = canvas.ownerDocument.createElement("style");
-  passthrough.textContent = `[data-alt-pointer-passthrough], [data-alt-pointer-passthrough] * { pointer-events: none !important; }`;
+  passthrough.textContent = `[data-alt-pointer-passthrough], [data-alt-pointer-passthrough] *, [data-frame-passthrough], [data-frame-passthrough] * { pointer-events: none !important; }`;
   canvas.ownerDocument.head.append(passthrough);
 
   function setAltPassthrough(active: boolean) {

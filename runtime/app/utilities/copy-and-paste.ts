@@ -102,7 +102,7 @@ export type ClipboardContent =
 
 type ClipboardHandler = (content: ClipboardContent, event: ClipboardEvent) => void;
 
-export function copyAndPaste(options: {
+export function createCopyAndPaste(options: {
   signal?: AbortSignal;
   onCopy?: ClipboardHandler;
   onPaste?: ClipboardHandler;

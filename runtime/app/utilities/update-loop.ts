@@ -10,7 +10,7 @@ export type UpdateLoop = {
   listeners: Set<UpdateCallback>;
 };
 
-export const updateLoop = (): UpdateLoop => {
+export const createUpdateLoop = (options?: { signal?: AbortSignal }): UpdateLoop => {
   const listeners = new Set<UpdateCallback>();
   let running = false;
   let lastTimestamp = 0;
@@ -54,6 +54,8 @@ export const updateLoop = (): UpdateLoop => {
   const removeUpdate = (listener: UpdateCallback) => {
     listeners.delete(listener);
   };
+
+  options?.signal?.addEventListener("abort", stop);
 
   return { start, stop, onUpdate, removeUpdate, listeners };
 };

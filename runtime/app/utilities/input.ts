@@ -1,12 +1,29 @@
+import { boolean, number, object } from "remix/data-schema";
+import type { Schema } from "remix/data-schema";
+
 import { isTyping } from "./hotkey.ts";
 
 const MOUSE_BUTTONS = ["mouseleft", "mousemiddle", "mouseright", "mouseback", "mouseforward"];
+
+const buttonState = object({
+  down: boolean(),
+  pressed: boolean(),
+  released: boolean(),
+});
 
 export type ButtonState = {
   readonly down: boolean;
   readonly pressed: boolean;
   readonly released: boolean;
 };
+
+type InputSchema<
+  Buttons extends Record<string, readonly string[]>,
+  Axes extends Record<string, AxisBinding>,
+> = Schema<{
+  buttons: { [Name in keyof Buttons]: ButtonState };
+  axes: { [Name in keyof Axes]: number };
+}>;
 
 export type AxisBinding = {
   positive: readonly string[];
@@ -19,6 +36,7 @@ export type InputMap<
 > = {
   readonly buttons: { readonly [Name in keyof Buttons]: ButtonState };
   readonly axes: { readonly [Name in keyof Axes]: number };
+  readonly schema: InputSchema<Buttons, Axes>;
   update(): void;
 };
 
@@ -40,7 +58,7 @@ const mouseIds = (button: number) => {
   return name === undefined ? [`mouse${button}`] : [`mouse${button}`, name];
 };
 
-export const inputMap = <
+export const createInputMap = <
   const Buttons extends Record<string, readonly string[]>,
   const Axes extends Record<string, AxisBinding>,
 >(
@@ -171,5 +189,10 @@ export const inputMap = <
     window.addEventListener("blur", onBlur, { signal });
   }
 
-  return { buttons, axes, update };
+  const schema = object({
+    buttons: object(Object.fromEntries(buttonNames.map((name) => [name, buttonState]))),
+    axes: object(Object.fromEntries(axisNames.map((name) => [name, number()]))),
+  }) as InputSchema<Buttons, Axes>;
+
+  return { buttons, axes, schema, update };
 };

@@ -97,7 +97,7 @@ export type PhysicsContact = {
   touching: boolean;
 };
 
-export function physics() {
+export function createPhysics() {
   const world = new World(Vec2(0, 0));
   const simulated = new Map<SceneNode, Body>();
   const hostedFixtures = new Map<SceneNode, HostedFixtures>();
