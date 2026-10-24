@@ -130,11 +130,13 @@ async function mountGame(canvas: HTMLCanvasElement) {
     onPersonLeave(person) {
       delete playerInputs[person.id];
     },
-    onScene(next) {
-      applyScenePatch(next);
-      applyScenePatch(next, previousScene);
+    onScenePatch(patch) {
+      applyScenePatch(patch, scene);
+      applyScenePatch(patch, previousScene);
     },
-    onModeChange: setMode,
+    onModeChange(next) {
+      setMode(next);
+    },
   });
 
   let sentInput = "";
@@ -255,27 +257,19 @@ async function mountGame(canvas: HTMLCanvasElement) {
   };
 
   let previousSelection = selectionPaths();
-  let applyingHistory = false;
+
+  const applyHistoryChange = (change: HistoryChange) => {
+    applyScenePatch(change.patch, scene);
+    applyScenePatch(change.patch, previousScene);
+    selectPaths(change.selection);
+    previousSelection = change.selection;
+    room.sendScenePatch(change.patch);
+  };
+
   const history = createUndoHistory<HistoryChange>({
     signal,
-    onUndo(change) {
-      applyingHistory = true;
-      applyScenePatch(change.patch);
-      applyScenePatch(change.patch, previousScene);
-      selectPaths(change.selection);
-      previousSelection = change.selection;
-      room.sendScenePatch(change.patch);
-      applyingHistory = false;
-    },
-    onRedo(change) {
-      applyingHistory = true;
-      applyScenePatch(change.patch);
-      applyScenePatch(change.patch, previousScene);
-      selectPaths(change.selection);
-      previousSelection = change.selection;
-      room.sendScenePatch(change.patch);
-      applyingHistory = false;
-    },
+    onUndo: applyHistoryChange,
+    onRedo: applyHistoryChange,
   });
 
   updateLoop.onUpdate(() => {
@@ -286,16 +280,14 @@ async function mountGame(canvas: HTMLCanvasElement) {
       return;
     }
 
-    const undoPatch = diffScene(scene, previousScene);
-    applyScenePatch(patch, previousScene);
-
-    if (!applyingHistory && room.state.mode !== Mode.Play) {
+    if (room.state.mode !== Mode.Play) {
       history.pushChange({
-        undo: { patch: undoPatch, selection: previousSelection },
+        undo: { patch: diffScene(scene, previousScene), selection: previousSelection },
         redo: { patch, selection },
       });
     }
 
+    applyScenePatch(patch, previousScene);
     previousSelection = selection;
     room.sendScenePatch(patch);
   });

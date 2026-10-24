@@ -1,6 +1,6 @@
 import { createController } from "remix/router";
 
-import { noteSceneSaved } from "../../room.ts";
+import { noteSceneSaved, sceneForSave } from "../../room.ts";
 import { listSceneFiles, readSceneFile, writeSceneFile } from "../../scene-file.ts";
 import { isObject } from "../../utilities/is-object.ts";
 import { routes } from "../../routes.ts";
@@ -17,10 +17,11 @@ export default createController(routes.editor, {
     },
     async saveScene(context) {
       const body: unknown = await context.request.json().catch(() => undefined);
-      if (!isObject(body) || !(await writeSceneFile(context.params.name, body))) {
+      const value = sceneForSave() ?? body;
+      if (!isObject(value) || !(await writeSceneFile(context.params.name, value))) {
         return new Response("Not Found", { status: 404 });
       }
-      noteSceneSaved(body);
+      noteSceneSaved(value);
       return new Response(null, { status: 204 });
     },
   },

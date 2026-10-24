@@ -35,11 +35,10 @@ export function loadScene(name = "Example Scene") {
 }
 
 export function saveScene() {
-  const body = snapshot ?? scene;
   return fetch(routes.editor.saveScene.href({ name: sceneName }), {
     method: "PUT",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(scene),
   });
 }
 
@@ -59,7 +58,7 @@ export function saveSceneHotkey(signal?: AbortSignal) {
 export type ScenePatch = { path: ScenePath; value?: unknown }[];
 
 
-export function applyScenePatch(patch: ScenePatch, root: SceneNode = scene) {
+export function applyScenePatch(patch: ScenePatch, root: SceneNode) {
   for (const change of patch) {
     let parent: unknown = root;
     for (let index = 0; index < change.path.length - 1; index++) {
@@ -101,21 +100,6 @@ function revive(value: unknown): unknown {
   const copy: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(value)) copy[key] = revive(child);
   return copy;
-}
-
-let snapshot: SceneNode | undefined;
-
-export function snapshotScene() {
-  if (snapshot) return;
-  snapshot = structuredClone(scene);
-}
-
-export function restoreScene() {
-  if (!snapshot) return false;
-  for (const key of Object.keys(scene)) delete scene[key];
-  Object.assign(scene, structuredClone(snapshot));
-  snapshot = undefined;
-  return true;
 }
 
 export function objectPath(root: object, target: object): string[] | undefined {

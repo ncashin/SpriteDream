@@ -52,6 +52,12 @@ const roomState: RoomState = { mode: 'edit', host: '', dirty: false, people: {} 
 const roomScene: SceneNode = {}
 let savedScene = "{}"
 let exampleScene: SceneNode = {}
+let editSnapshot: SceneNode | undefined
+
+export function sceneForSave(): SceneNode | undefined {
+  if (!editSnapshot) return
+  return structuredClone(editSnapshot)
+}
 
 export function noteSceneSaved(value: SceneNode) {
   savedScene = JSON.stringify(value)
@@ -118,6 +124,17 @@ export async function attachRoom(server: http.Server) {
             break
           case 'modeChange':
             if (message.claim) roomState.host = current.id
+            if (message.mode === 'play' && !editSnapshot) editSnapshot = structuredClone(roomScene)
+            if (message.mode === 'edit' && editSnapshot) {
+              const patch = diffScene(roomScene, editSnapshot)
+              applyScenePatch(patch, roomScene)
+              editSnapshot = undefined
+              const restore = JSON.stringify({ type: 'scenePatch', scene: patch })
+              for (const other of Object.values(roomState.people)) {
+                if (other.socket.readyState === other.socket.OPEN) other.socket.send(restore)
+              }
+              setDirty(JSON.stringify(roomScene) !== savedScene)
+            }
             roomState.mode = message.mode
             broadcast()
             break

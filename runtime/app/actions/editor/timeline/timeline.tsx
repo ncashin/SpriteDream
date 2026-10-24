@@ -2,7 +2,7 @@ import Spline from "lucide/dist/esm/icons/spline.mjs";
 import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 import { hotkeys } from "../../../utilities/hotkey.ts";
-import { applyScenePatch, type ScenePatch } from "../../../utilities/scene.ts";
+import { applyScenePatch, scene, type ScenePatch } from "../../../utilities/scene.ts";
 import { Icon } from "../../../icon.tsx";
 import { isTimelineCollapsed, onTimelineCollapsedChange } from "./collapsed.ts";
 import { joinRoom } from "../room.tsx";
@@ -157,7 +157,7 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
     const patch = samplePatch(time);
     const encoded = JSON.stringify(patch);
     if (encoded === applied) return;
-    applyScenePatch(patch);
+    applyScenePatch(patch, scene);
     if (!room || room.socket.readyState !== WebSocket.OPEN) return;
     room.sendScenePatch(patch);
     applied = encoded;

@@ -302,16 +302,16 @@ function childOwners(container: SceneNode, name: string): { name: string; value:
   return children;
 }
 
+function isSceneNode(value: unknown): value is SceneNode {
+  return isObject(value);
+}
+
 function pastedRoots(pasted: { parent: SceneNode; copy: SceneNode }[]) {
   const copies = new Set(pasted.map((entry) => entry.copy));
   return pasted.flatMap(({ parent, copy }) => {
     const owner = typeof copy.parent === "string" ? parent[copy.parent] : undefined;
     return copies.has(owner as SceneNode) ? [] : [copy];
   });
-}
-
-function isSceneNode(value: unknown): value is SceneNode {
-  return isObject(value);
 }
 
 function isAttached(root: SceneNode, target: SceneNode): boolean {

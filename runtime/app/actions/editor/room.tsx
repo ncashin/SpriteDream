@@ -45,7 +45,7 @@ type RoomState = {
 export type RoomHandlers = {
   onOtherPlayerJoin?: (person: Person) => void;
   onPersonLeave?: (person: Person) => void;
-  onScene?: (scene: ScenePatch) => void;
+  onScenePatch?: (patch: ScenePatch) => void;
   onModeChange?: (mode: Mode) => void;
   onHostChange?: (host: string) => void;
   onDirtyChange?: (dirty: boolean) => void;
@@ -153,7 +153,7 @@ export function joinRoom<M extends MessageSchemas = {}>(
       const previous = next.state;
       next.you = message.you;
       next.state = { mode: message.mode, host: message.host, dirty: message.dirty, people: message.people };
-      if (message.scene) dispatch(next, (entry) => entry.onScene?.(message.scene as ScenePatch));
+      if (message.scene) dispatch(next, (entry) => entry.onScenePatch?.(message.scene as ScenePatch));
       if (previous.mode !== message.mode) dispatch(next, (entry) => entry.onModeChange?.(message.mode));
       if (previous.host !== message.host) dispatch(next, (entry) => entry.onHostChange?.(message.host));
       if (previous.dirty !== message.dirty) dispatch(next, (entry) => entry.onDirtyChange?.(message.dirty));
@@ -168,7 +168,7 @@ export function joinRoom<M extends MessageSchemas = {}>(
       return;
     }
     if ("scene" in message) {
-      dispatch(next, (entry) => entry.onScene?.(message.scene as ScenePatch));
+      dispatch(next, (entry) => entry.onScenePatch?.(message.scene as ScenePatch));
       return;
     }
     const schema = next.schemas[message.name];
