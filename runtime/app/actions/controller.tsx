@@ -11,7 +11,11 @@ export default createController(routes, {
       return (await assets.fetch(context.request)) ?? new Response('Not Found', { status: 404 })
     },
     home(context) {
-      return context.render(<Editor />)
+      return context.render(
+        <Document>
+          <Editor />
+        </Document>,
+      )
     },
     mario(context) {
       return context.render(

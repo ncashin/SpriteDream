@@ -151,7 +151,7 @@
     }
   },
   "Rectangle": {
-    "transform": "matrix(1, 0, 0, 1, 207.45418480046217, 438.0218467685329)",
+    "transform": "matrix(0.9777383001954069, -0.20982806373551766, 0.20982806373551766, 0.9777383001954069, 211.33266465210565, 508.07787635421283)",
     "image": {
       "__icon": [
         [
@@ -210,12 +210,12 @@
         ]
       ],
       "body": "dynamic",
-      "density": "1",
-      "fixedRotation": "false",
-      "gravity": "9.8",
+      "density": 1,
+      "fixedRotation": false,
+      "gravity": 9.8,
       "velocity": {
-        "x": "0",
-        "y": "0"
+        "x": 1.0878208983122587e-15,
+        "y": 5.5220263365470826e-30
       }
     },
     "collider": {
@@ -297,7 +297,7 @@
     "parent": "Rectangle"
   },
   "TestImage": {
-    "transform": "matrix(1, 0, 0, 1, 180, 221)",
+    "transform": "matrix(1, 0, 0, 1, 201.6484375, 347.34765625)",
     "image": {
       "__icon": [
         [

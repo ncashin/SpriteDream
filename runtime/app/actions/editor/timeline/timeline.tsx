@@ -1,12 +1,10 @@
-import ArrowDown from "lucide/dist/esm/icons/arrow-down.mjs";
-import ArrowUp from "lucide/dist/esm/icons/arrow-up.mjs";
 import Spline from "lucide/dist/esm/icons/spline.mjs";
 import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 import { hotkeys } from "../../../utilities/hotkey.ts";
 import { applyScenePatch, type ScenePatch } from "../../../utilities/scene.ts";
 import { Icon } from "../../../icon.tsx";
-import { isTimelineCollapsed, onTimelineCollapsedChange, setTimelineCollapsed } from "./collapsed.ts";
+import { isTimelineCollapsed, onTimelineCollapsedChange } from "./collapsed.ts";
 import { joinRoom } from "../room.tsx";
 import { blendAt, blendDefaults, type Keyframe } from "./blend.ts";
 import { BlendLine } from "./BlendLine.tsx";
@@ -208,25 +206,6 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
         <Icon icon={Spline} size={12} />
         Animation Name
       </header>}
-      <button
-        type="button"
-        aria-expanded={!collapsed}
-        aria-controls="animation-sheet"
-        aria-label={collapsed ? "Show animation" : "Hide animation"}
-        mix={[
-          hideToggle,
-          collapsed && hideToggleCollapsed,
-          on("click", () => {
-            setTimelineCollapsed(!isTimelineCollapsed());
-          }),
-        ]}
-      >
-        <span mix={markStack}>
-          <Icon icon={Spline} size={14} />
-          <Icon icon={collapsed ? ArrowUp : ArrowDown} size={14} />
-        </span>
-        Animation
-      </button>
       {collapsed ? null : <div
         id="animation-sheet"
         mix={[
@@ -531,57 +510,6 @@ const timeline = css({
 const timelineCollapsed = css({
   flex: "0 0 0",
   minHeight: 0,
-});
-
-const markStack = css({
-  display: "grid",
-  flex: "0 0 auto",
-  paddingTop: "0.25rem",
-  placeItems: "center",
-  "& > *": { gridArea: "1 / 1" },
-});
-
-const hideToggle = css({
-  appearance: "none",
-  alignItems: "center",
-  background: "transparent",
-  border: "none",
-  borderRadius: "0.6em",
-  bottom: "calc(100% + 0.35rem)",
-  boxSizing: "border-box",
-  color: "var(--text)",
-  cursor: "pointer",
-  display: "inline-flex",
-  font: "inherit",
-  fontSize: "13px",
-  fontWeight: 500,
-  gap: "0.3em",
-  justifyContent: "center",
-  lineHeight: 1.35,
-  padding: "0.45em 0.55em",
-  position: "absolute",
-  left: "0.5rem",
-  zIndex: 3,
-  "& span > :last-child": {
-    visibility: "hidden",
-  },
-  "&:hover, &:focus-visible": {
-    background: "var(--hover)",
-  },
-  "&:focus-visible": {
-    outline: "1px solid var(--line)",
-    outlineOffset: "1px",
-  },
-  "&:hover span > :first-child, &:focus-visible span > :first-child": {
-    visibility: "hidden",
-  },
-  "&:hover span > :last-child, &:focus-visible span > :last-child": {
-    visibility: "visible",
-  },
-});
-
-const hideToggleCollapsed = css({
-  bottom: "0.4rem",
 });
 
 const scrub = css({

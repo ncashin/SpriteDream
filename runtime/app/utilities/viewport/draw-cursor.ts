@@ -1,8 +1,7 @@
-import { blobBody, blobColor, blinkPhase, blinkScale, clampGaze, cursorEyeLeft, cursorEyeRight, cursorSymbol, GAZE_LOOK, ink } from "../../actions/editor/blobs.tsx";
+import { blobBody, blobColor, blinkPhase, blinkScale, clampGaze, cursorEyeLeft, cursorEyeRight, cursorSymbol, GAZE_LOOK, gazePivot, gazePivotBack, ink } from "../../actions/editor/blobs.tsx";
 import type { WorldPoint } from "./viewport.ts";
 import type { ViewportWithTransforms } from "./viewportTransforms.ts";
 
-const CURSOR_PATH = "M0 0 L0 17 L4 13 L7 20 L10 19 L7 12 L13 12 Z";
 const LABEL = "ncashin";
 const LABEL_X = 16;
 const LABEL_Y = 10;
@@ -48,23 +47,14 @@ export function createDrawCursor(canvas: HTMLCanvasElement): DrawCursor {
     holder.style.overflow = "visible";
     holder.style.pointerEvents = "none";
     holder.style.transformOrigin = "0 0";
-    const svg = canvas.ownerDocument.createElementNS(svgNS, "svg");
-    svg.setAttribute("width", "13");
-    svg.setAttribute("height", "18");
-    svg.setAttribute("viewBox", "-1.5 -1.5 16 23");
-    svg.style.display = "block";
-    svg.style.overflow = "visible";
-    svg.style.pointerEvents = "none";
-    const path = canvas.ownerDocument.createElementNS(svgNS, "path");
-    path.setAttribute("d", CURSOR_PATH);
-    path.setAttribute("fill", "#000");
-    path.setAttribute("stroke", "#fff");
-    path.setAttribute("stroke-width", "2");
-    path.setAttribute("stroke-linejoin", "miter");
-    path.setAttribute("stroke-miterlimit", "10");
-    path.setAttribute("vector-effect", "non-scaling-stroke");
-    path.setAttribute("paint-order", "stroke fill");
-    svg.append(path);
+    const arrow = canvas.ownerDocument.createElement("img");
+    arrow.src = "/cursors/default.svg";
+    arrow.alt = "";
+    arrow.draggable = false;
+    arrow.width = 13;
+    arrow.height = 18;
+    arrow.style.display = "block";
+    arrow.style.pointerEvents = "none";
     const face = canvas.ownerDocument.createElementNS(svgNS, "svg");
     face.dataset.face = "";
     face.setAttribute("viewBox", "0 0 100 100");
@@ -122,7 +112,7 @@ export function createDrawCursor(canvas: HTMLCanvasElement): DrawCursor {
     text.setAttribute("font-size", "12");
     text.setAttribute("font-family", "sans-serif");
     label.append(defs, text);
-    holder.append(svg, face, label);
+    holder.append(arrow, face, label);
     layer.append(holder);
     cursors[index] = holder;
     return holder;
@@ -166,7 +156,9 @@ export function createDrawCursor(canvas: HTMLCanvasElement): DrawCursor {
     let driftY = Number(cursor.dataset.driftY ?? 0);
     if (look) {
       const target = viewport.worldToScreen(look.x, look.y);
-      const aim = clampGaze(target.x - screen.x, target.y - screen.y, GAZE_LOOK);
+      const faceX = screen.x + LABEL_X + (FACE_WIDTH / 2) * CURSOR_SCALE;
+      const faceY = screen.y + FACE_TOP + (FACE_HEIGHT / 2) * CURSOR_SCALE;
+      const aim = clampGaze(target.x - faceX, target.y - faceY, GAZE_LOOK);
       driftX = aim.x;
       driftY = aim.y;
     } else {
@@ -195,7 +187,7 @@ export function createDrawCursor(canvas: HTMLCanvasElement): DrawCursor {
       const blink = blinkScale(time, phase);
       gaze.setAttribute(
         "transform",
-        `translate(${aimX.toFixed(2)} ${aimY.toFixed(2)}) translate(50 52) scale(1 ${blink}) translate(-50 -52)`,
+        `translate(${aimX.toFixed(2)} ${aimY.toFixed(2)}) ${gazePivot} scale(1 ${blink}) ${gazePivotBack}`,
       );
     }
     const text = cursor.querySelector("text");

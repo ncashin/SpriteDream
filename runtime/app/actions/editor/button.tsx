@@ -8,7 +8,7 @@ type ButtonProps = {
   popup?: "menu";
   expanded?: boolean;
   pressed?: boolean;
-  mix?: CSSMixinDescriptor;
+  mix?: CSSMixinDescriptor | CSSMixinDescriptor[];
   buttonRef?: (node: HTMLButtonElement | null) => void;
   onClick?: (event: MouseEvent) => void;
   children?: RemixNode;
@@ -29,7 +29,7 @@ export function Button(handle: Handle<ButtonProps>) {
           muted && mutedText,
           size === "small" && small,
           size === "field" && field,
-          extra,
+          ...(Array.isArray(extra) ? extra : [extra]),
           buttonRef &&
             ref((node) => {
               buttonRef(node instanceof HTMLButtonElement ? node : null);
@@ -89,4 +89,22 @@ const small = css({
 
 const field = css({
   padding: "0.45em 0.55em",
+});
+
+export const bouncy = css({
+  transformOrigin: "center",
+  transition: "transform 180ms cubic-bezier(0.2, 0, 0, 1)",
+  "&:hover": {
+    transform: "scale(1.008)",
+  },
+  "&:active": {
+    transform: "scale(0.992)",
+    transitionDuration: "60ms",
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+    "&:hover, &:active": {
+      transform: "none",
+    },
+  },
 });

@@ -6,12 +6,12 @@ import type { Handle } from "remix/component";
 import { Icon } from "../../icon.tsx";
 import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
 import { currentSceneName } from "../../utilities/scene.ts";
-import { blinkPhase, blinkScale, clampGaze, faceFor, GAZE_LOOK } from "./blobs.tsx";
+import { blinkPhase, blinkScale, clampGaze, faceFor, GAZE_LOOK, gazePivot, gazePivotBack } from "./blobs.tsx";
 import { Button } from "./button.tsx";
-import { isCollapsed, onCollapsedChange, setCollapsed } from "./collapsed.ts";
+import { isEditorHidden, onEditorHidden } from "./chrome.ts";
+import { isCollapsed, onCollapsedChange, setCollapsed, SIDEBAR_MOTION } from "./collapsed.ts";
 import { joinRoom, syncMode } from "./room.tsx";
 import { Search } from "./Search.tsx";
-import { Settings } from "./settings.tsx";
 
 export const Header = clientEntry(import.meta.url, function Header(handle: Handle) {
   let collapsed = isCollapsed();
@@ -20,6 +20,7 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
     handle.update();
   }, handle.signal);
   onModeChange(() => handle.update(), handle.signal);
+  onEditorHidden(() => handle.update(), handle.signal);
   let dirty = false;
   let you = "";
   let name = currentSceneName();
@@ -85,7 +86,7 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
         const blink = blinkScale(performance.now() / 1000, phase);
         gaze.setAttribute(
           "transform",
-          `translate(${aimX.toFixed(2)} ${aimY.toFixed(2)}) translate(50 52) scale(1 ${blink.toFixed(3)}) translate(-50 -52)`,
+          `translate(${aimX.toFixed(2)} ${aimY.toFixed(2)}) ${gazePivot} scale(1 ${blink.toFixed(3)}) ${gazePivotBack}`,
         );
       }
       frame = requestAnimationFrame(tick);
@@ -93,8 +94,12 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
     handle.signal.addEventListener("abort", () => cancelAnimationFrame(frame));
   }
 
-  return () => (
+  return () => {
+    const concealed = isEditorHidden();
+    const playing = mode === Mode.Play;
+    return (
     <div data-sidebar-bar="" mix={shell}>
+      <div inert={concealed} data-chrome-hidden={concealed || undefined} mix={editorChrome}>
       <button
         type="button"
         aria-expanded={!collapsed}
@@ -126,43 +131,100 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
       </div>
       <Search />
       <div mix={actions}>
-      <Settings />
+        <span aria-hidden="true" mix={playSpacer}>
+          <Button size="field" mix={playButton}>
+            <PlayLabel playing={false} />
+          </Button>
+        </span>
+      </div>
+    </header>
+      </div>
+      <div inert={concealed} data-chrome-hidden={concealed || undefined} mix={playSlot}>
       <Button
         size="field"
         mix={playButton}
-        pressed={mode === Mode.Play}
-        label={mode === Mode.Play ? "Stop" : "Play"}
+        pressed={playing}
+        label={playing ? "Stop" : "Play"}
         onClick={() => {
-          const next = mode === Mode.Play ? Mode.Edit : Mode.Play;
-          syncMode(next);
+          syncMode(playing ? Mode.Edit : Mode.Play);
           handle.update();
         }}
       >
-        <span mix={label}>
-          <span aria-hidden="true" mix={sizer}>
-            Stop
-            <svg viewBox="0 0 12 12" mix={glyph}>
-              <path d="M1.6 1.6h8.8v8.8H1.6Z" fill="currentColor" />
-            </svg>
-          </span>
-          <span style={{ visibility: mode === Mode.Play ? "hidden" : "visible" }}>
-            Play
-            <svg viewBox="0 0 12 12" aria-hidden="true" mix={glyph}>
-              <path d="M1.7 1 11 6 1.7 11Z" fill="currentColor" />
-            </svg>
-          </span>
-          <span style={{ visibility: mode === Mode.Play ? "visible" : "hidden" }}>
-            Stop
-            <svg viewBox="0 0 12 12" aria-hidden="true" mix={glyph}>
-              <path d="M1.6 1.6h8.8v8.8H1.6Z" fill="currentColor" />
-            </svg>
-          </span>
-        </span>
+        <PlayLabel playing={playing} />
       </Button>
       </div>
-    </header>
     </div>
-  );
+    );
+  };
+});
+
+function PlayLabel(handle: Handle<{ playing: boolean }>) {
+  return () => {
+    const { playing } = handle.props;
+    return (
+      <span mix={label}>
+        <span aria-hidden="true" mix={sizer}>
+          Stop
+          <svg viewBox="0 0 12 12" mix={glyph}>
+            <path d="M1.6 1.6h8.8v8.8H1.6Z" fill="currentColor" />
+          </svg>
+        </span>
+        <span style={{ visibility: playing ? "hidden" : "visible" }}>
+          Play
+          <svg viewBox="0 0 12 12" aria-hidden="true" mix={glyph}>
+            <path d="M1.7 1 11 6 1.7 11Z" fill="currentColor" />
+          </svg>
+        </span>
+        <span style={{ visibility: playing ? "visible" : "hidden" }}>
+          Stop
+          <svg viewBox="0 0 12 12" aria-hidden="true" mix={glyph}>
+            <path d="M1.6 1.6h8.8v8.8H1.6Z" fill="currentColor" />
+          </svg>
+        </span>
+      </span>
+    );
+  };
+}
+
+const editorChrome = css({
+  alignItems: "flex-start",
+  display: "flex",
+  flex: "1 1 auto",
+  flexDirection: "row",
+  minWidth: 0,
+  "& > button, & > header > :first-child, & > header > :last-child": {
+    opacity: 1,
+    transition: `opacity ${SIDEBAR_MOTION}`,
+  },
+  "&[data-chrome-hidden] > button, &[data-chrome-hidden] > header > :first-child, &[data-chrome-hidden] > header > :last-child": {
+    opacity: 0,
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    "& > button, & > header > :first-child, & > header > :last-child": {
+      transition: "none",
+    },
+  },
+});
+
+const playSpacer = css({
+  visibility: "hidden",
+});
+
+const playSlot = css({
+  opacity: 1,
+  pointerEvents: "auto",
+  position: "absolute",
+  right: "1rem",
+  top: "calc(0.8rem + 0.05rem)",
+  transition: `opacity ${SIDEBAR_MOTION}`,
+  zIndex: 3,
+  "&[data-chrome-hidden]": {
+    opacity: 0,
+    pointerEvents: "none",
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+  },
 });
 
 const shell = css({
@@ -188,13 +250,11 @@ const bar = css({
   display: "flex",
   flex: "1 1 auto",
   flexDirection: "row",
+  justifyContent: "space-between",
   gap: "0.5rem",
   minWidth: 0,
   padding: "0.05rem 1rem 0.05rem 0",
   pointerEvents: "none",
-  "& > :nth-child(2)": {
-    flex: "0 1 auto",
-  },
 });
 
 const titleSlot = css({
@@ -221,6 +281,9 @@ const playButton = css({
   fontWeight: 450,
   marginLeft: 0,
   padding: "0.25em 0.5em 0.25em 0.65em",
+  "&:hover, &:focus, &:focus-visible, &:active, &[aria-pressed='true']": {
+    background: "var(--hover)",
+  },
 });
 
 const unsaved = css({

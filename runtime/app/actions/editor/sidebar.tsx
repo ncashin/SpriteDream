@@ -45,9 +45,9 @@ const dock = css({
   boxSizing: "border-box",
   flex: "0 0 auto",
   fontSize: "13px",
+  height: "100%",
   lineHeight: 1.35,
   minHeight: 0,
-  minWidth: 0,
   position: "relative",
   transition: `width ${SIDEBAR_MOTION}`,
   "@media (prefers-reduced-motion: reduce)": {

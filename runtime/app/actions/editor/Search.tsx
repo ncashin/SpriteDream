@@ -6,6 +6,8 @@ import type { Handle } from "remix/component";
 
 import { routes } from "../../routes.ts";
 import { Icon } from "../../icon.tsx";
+import { isEditorHidden, onEditorHidden } from "./chrome.ts";
+import { SIDEBAR_MOTION } from "./collapsed.ts";
 import { hotkeys } from "../../utilities/hotkey.ts";
 import { isObject } from "../../utilities/is-object.ts";
 import { loadScene, saveSceneHotkey, scene, type SceneNode } from "../../utilities/scene.ts";
@@ -127,6 +129,7 @@ export function Search(handle: Handle) {
   }
 
   saveSceneHotkey(handle.signal);
+  onEditorHidden(() => handle.update(), handle.signal);
 
   hotkeys(
     {
@@ -143,10 +146,11 @@ export function Search(handle: Handle) {
     let items = matchingItems(scenes, query);
     let index = items.length === 0 ? 0 : Math.min(activeIndex, items.length - 1);
 
+    const concealed = isEditorHidden();
     return (
-      <div mix={slot} data-open={open ? "" : undefined}>
+      <div inert={concealed} mix={slot} data-open={open ? "" : undefined} data-chrome-hidden={concealed || undefined}>
         <div mix={box} data-expanded={open ? "" : undefined}>
-          <label mix={field}>
+          <label data-chrome-hidden={concealed || undefined} mix={[field, chromeFade]}>
             <Icon icon={SearchIcon} size={14} />
             <input
               type="text"
@@ -217,7 +221,7 @@ export function Search(handle: Handle) {
               </kbd>
             )}
           </label>
-          <div mix={[drawer, open && drawerOpen]} inert={!open} aria-hidden={open ? undefined : true}>
+          <div mix={[drawer, open && !concealed && drawerOpen]} inert={!open || concealed} aria-hidden={open && !concealed ? undefined : true}>
             <div mix={drawerInner}>
               <div mix={rule} />
               <ul id={LIST_ID} role="listbox" aria-label="Search results" mix={list}>
@@ -260,14 +264,30 @@ export function Search(handle: Handle) {
 
 const slot = css({
   display: "flex",
-  flex: "1 1 auto",
+  flex: "0 0 28rem",
   justifyContent: "center",
-  minWidth: 0,
   pointerEvents: "none",
+  position: "relative",
+  width: "28rem",
+  zIndex: 4,
+  "&[data-chrome-hidden]": {
+    pointerEvents: "none",
+  },
   "@container header-bar (max-width: 30rem)": {
     "&:not([data-open])": {
       display: "none",
     },
+  },
+});
+
+const chromeFade = css({
+  opacity: 1,
+  transition: `opacity ${SIDEBAR_MOTION}`,
+  "&[data-chrome-hidden]": {
+    opacity: 0,
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
   },
 });
 
@@ -277,7 +297,7 @@ const box = css({
   minWidth: 0,
   pointerEvents: "auto",
   position: "relative",
-  width: "min(24rem, 100%)",
+  width: "28rem",
   zIndex: 1,
   "&[data-expanded] > :first-child": {
     borderBottomLeftRadius: 0,
