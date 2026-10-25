@@ -4,8 +4,8 @@ import Trash from "lucide/dist/esm/icons/trash.mjs";
 import { css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { Icon } from "../../icon.tsx";
-import { Button } from "./button.tsx";
+import { Icon } from "../../../../icon.tsx";
+import { Button } from "../button.tsx";
 import {
   chevronOpen,
   childrenClip,

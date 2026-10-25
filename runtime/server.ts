@@ -2,7 +2,7 @@ import 'geometry-interfaces'
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
-import { attachRoom } from './app/room.ts'
+import { attachRoom } from './app/room/server.ts'
 import { router } from './app/router.ts'
 
 const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 44100

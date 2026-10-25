@@ -3,38 +3,30 @@ import ArrowRight from "lucide/dist/esm/icons/arrow-right.mjs";
 import { clientEntry, css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { Icon } from "../../icon.tsx";
-import { Mode, mode, onModeChange } from "../../utilities/mode.ts";
-import { currentSceneName } from "../../utilities/scene.ts";
+import { Icon } from "../../../icon.tsx";
+import { Mode, mode, onModeChange, setMode } from "../../../utilities/mode.ts";
+import { currentSceneName } from "../../../utilities/scene.ts";
 import { blinkPhase, blinkScale, clampGaze, faceFor, GAZE_LOOK, gazePivot, gazePivotBack } from "./blobs.tsx";
 import { Button } from "./button.tsx";
-import { isEditorHidden, onEditorHidden } from "./chrome.ts";
-import { isCollapsed, onCollapsedChange, setCollapsed, SIDEBAR_MOTION } from "./collapsed.ts";
-import { joinRoom, syncMode } from "./room.tsx";
+import { getRoom } from "../../../room/room-module.ts";
 import { Search } from "./Search.tsx";
 
 export const Header = clientEntry(import.meta.url, function Header(handle: Handle) {
-  let collapsed = isCollapsed();
-  onCollapsedChange(() => {
-    collapsed = isCollapsed();
-    handle.update();
-  }, handle.signal);
+  let collapsed = false;
+  if (typeof window !== "undefined") {
+    window.addEventListener(
+      "toggle-sidebars",
+      () => {
+        collapsed = !collapsed;
+        handle.update();
+      },
+      { signal: handle.signal },
+    );
+  }
   onModeChange(() => handle.update(), handle.signal);
-  onEditorHidden(() => handle.update(), handle.signal);
   let dirty = false;
   let you = "";
   let name = currentSceneName();
-  const room = typeof window === "undefined" ? undefined : joinRoom(handle.signal, {
-    onDirtyChange(next) {
-      if (dirty === next) return;
-      dirty = next;
-      handle.update();
-    },
-  });
-  if (room) {
-    dirty = room.state.dirty;
-    you = room.you;
-  }
   let stack: HTMLElement | undefined;
   let aimX = 0;
   let aimY = 0;
@@ -44,6 +36,16 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
   let lookY = 0;
   let tracking = false;
   let phase = blinkPhase(you);
+  if (typeof window !== "undefined") {
+    void getRoom()
+      .then((room) => {
+        if (handle.signal.aborted) return;
+        you = room.you.id;
+        phase = blinkPhase(you);
+        handle.update();
+      })
+      .catch(() => {});
+  }
   if (typeof requestAnimationFrame === "function") {
     window.addEventListener(
       "pointermove",
@@ -57,11 +59,8 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
     let frame = requestAnimationFrame(function tick() {
       if (handle.signal.aborted) return;
       const nextName = currentSceneName();
-      const nextYou = room?.you ?? "";
-      if (nextName !== name || nextYou !== you) {
+      if (nextName !== name) {
         name = nextName;
-        you = nextYou;
-        phase = blinkPhase(you);
         handle.update();
       }
       const gaze = stack?.querySelector("[data-gaze]");
@@ -95,11 +94,10 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
   }
 
   return () => {
-    const concealed = isEditorHidden();
     const playing = mode === Mode.Play;
     return (
-    <div data-sidebar-bar="" mix={shell}>
-      <div inert={concealed} data-chrome-hidden={concealed || undefined} mix={editorChrome}>
+    <div mix={shell}>
+      <div mix={editorChrome}>
       <button
         type="button"
         aria-expanded={!collapsed}
@@ -108,7 +106,7 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
         mix={[
           toggle,
           on("click", () => {
-            setCollapsed(!isCollapsed());
+            window.dispatchEvent(new Event("toggle-sidebars"));
           }),
         ]}
       >
@@ -139,14 +137,14 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
       </div>
     </header>
       </div>
-      <div inert={concealed} data-chrome-hidden={concealed || undefined} mix={playSlot}>
+      <div mix={playSlot}>
       <Button
         size="field"
         mix={playButton}
         pressed={playing}
         label={playing ? "Stop" : "Play"}
         onClick={() => {
-          syncMode(playing ? Mode.Edit : Mode.Play);
+          setMode(playing ? Mode.Edit : Mode.Play);
           handle.update();
         }}
       >
@@ -192,18 +190,6 @@ const editorChrome = css({
   flex: "1 1 auto",
   flexDirection: "row",
   minWidth: 0,
-  "& > button, & > header > :first-child, & > header > :last-child": {
-    opacity: 1,
-    transition: `opacity ${SIDEBAR_MOTION}`,
-  },
-  "&[data-chrome-hidden] > button, &[data-chrome-hidden] > header > :first-child, &[data-chrome-hidden] > header > :last-child": {
-    opacity: 0,
-  },
-  "@media (prefers-reduced-motion: reduce)": {
-    "& > button, & > header > :first-child, & > header > :last-child": {
-      transition: "none",
-    },
-  },
 });
 
 const playSpacer = css({
@@ -211,20 +197,11 @@ const playSpacer = css({
 });
 
 const playSlot = css({
-  opacity: 1,
   pointerEvents: "auto",
   position: "absolute",
   right: "1rem",
   top: "calc(0.8rem + 0.05rem)",
-  transition: `opacity ${SIDEBAR_MOTION}`,
   zIndex: 3,
-  "&[data-chrome-hidden]": {
-    opacity: 0,
-    pointerEvents: "none",
-  },
-  "@media (prefers-reduced-motion: reduce)": {
-    transition: "none",
-  },
 });
 
 const shell = css({

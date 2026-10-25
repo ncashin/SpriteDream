@@ -1,4 +1,4 @@
-import { blobBody, blobColor, blinkPhase, blinkScale, clampGaze, cursorEyeLeft, cursorEyeRight, cursorSymbol, GAZE_LOOK, gazePivot, gazePivotBack, ink } from "../../actions/editor/blobs.tsx";
+import { blobBody, blobColor, blinkPhase, blinkScale, clampGaze, cursorEyeLeft, cursorEyeRight, cursorSymbol, GAZE_LOOK, gazePivot, gazePivotBack, ink } from "../../actions/editor/ui/blobs.tsx";
 import type { WorldPoint } from "./viewport.ts";
 import type { ViewportWithTransforms } from "./viewportTransforms.ts";
 

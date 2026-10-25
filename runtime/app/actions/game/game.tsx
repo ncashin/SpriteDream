@@ -2,16 +2,9 @@ import { clientEntry, css, ref } from "remix/component";
 import type { InferOutput } from "remix/data-schema";
 import type { Handle } from "remix/component";
 
-import { blobColor } from "../editor/blobs.tsx";
-import { joinRoom } from "../editor/room.tsx";
+import { blobColor } from "../editor/ui/blobs.tsx";
+import { joinRoom } from "../../room/room.tsx";
 import { center, contains, lookupBoundingBox } from "../../utilities/bounding-box.ts";
-import {
-  createCopyAndPaste,
-  pasteCopiedObjects,
-  pasteImage,
-  pasteText,
-} from "../../utilities/copy-and-paste.ts";
-import { createUndoHistory } from "../../utilities/undo-history.ts";
 import { createInputMap } from "../../utilities/input.ts";
 import { isObject } from "../../utilities/is-object.ts";
 import { Mode, setMode } from "../../utilities/mode.ts";
@@ -28,7 +21,6 @@ import {
   objectAt,
   objectPath,
   scene,
-  type ScenePatch,
 } from "../../utilities/scene.ts";
 import {
   selectObjects,
@@ -48,11 +40,6 @@ import { createViewport } from "../../utilities/viewport/viewport.ts";
 const RUN_SPEED = 280;
 const JUMP_SPEED = -560;
 const PLAYER_GAP = 40;
-
-type HistoryChange = {
-  patch: ScenePatch;
-  selection: string[][];
-};
 
 function playerKey(id: string) {
   return `player:${id}`;
@@ -224,53 +211,13 @@ async function mountGame(canvas: HTMLCanvasElement) {
     physics.endFrame();
   });
 
-  createCopyAndPaste({
-    signal,
-    onPaste(content) {
-      switch (content.type) {
-        case "objects":
-          pasteCopiedObjects();
-          break;
-        case "image":
-          pasteImage(content.file);
-          break;
-        case "text":
-          pasteText(content.text);
-          break;
-      }
-    },
-  });
-
   const selectionPaths = () =>
     [...selectedObjects].flatMap((object) => {
       const path = objectPath(scene, object);
       return path ? [path] : [];
     });
 
-  const selectPaths = (paths: string[][]) => {
-    selectObjects(
-      paths.flatMap((path) => {
-        const object = objectAt(scene, path);
-        return object ? [object] : [];
-      }),
-    );
-  };
-
   let previousSelection = selectionPaths();
-
-  const applyHistoryChange = (change: HistoryChange) => {
-    applyScenePatch(change.patch, scene);
-    applyScenePatch(change.patch, previousScene);
-    selectPaths(change.selection);
-    previousSelection = change.selection;
-    room.sendScenePatch(change.patch);
-  };
-
-  const history = createUndoHistory<HistoryChange>({
-    signal,
-    onUndo: applyHistoryChange,
-    onRedo: applyHistoryChange,
-  });
 
   updateLoop.onUpdate(() => {
     const patch = diffScene(previousScene, scene);
@@ -278,13 +225,6 @@ async function mountGame(canvas: HTMLCanvasElement) {
     if (patch.length === 0) {
       previousSelection = selection;
       return;
-    }
-
-    if (room.state.mode !== Mode.Play) {
-      history.pushChange({
-        undo: { patch: diffScene(scene, previousScene), selection: previousSelection },
-        redo: { patch, selection },
-      });
     }
 
     applyScenePatch(patch, previousScene);

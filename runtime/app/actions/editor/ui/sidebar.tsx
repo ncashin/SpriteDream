@@ -1,34 +1,28 @@
 import { clientEntry, css } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { scene } from "../../utilities/scene.ts";
-import { isCollapsed, onCollapsedChange, SIDEBAR_MOTION, SIDEBAR_WIDTH } from "./collapsed.ts";
-import { HierarchyTree } from "./hierarchy-tree.tsx";
+import { scene } from "../../../utilities/scene.ts";
+import { HierarchyTree } from "./tree/hierarchy-tree.tsx";
 import { ObjectSidebar } from "./object-sidebar.tsx";
 
-function releaseInitialCollapse() {
-  const release = () => {
-    const panels = document.querySelectorAll<HTMLElement>("[data-sidebar]");
-    const ready = panels.length >= 1 && [...panels].every((panel) => panel.style.width === "0rem");
-    if (!ready) {
-      requestAnimationFrame(release);
-      return;
-    }
-    delete document.documentElement.dataset.sidebarCollapsed;
-  };
-  requestAnimationFrame(release);
-}
+const SIDEBAR_WIDTH = "20rem";
+const SIDEBAR_MOTION = "200ms cubic-bezier(0.4, 0, 0.2, 1)";
 
 export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Handle) {
-  let collapsed = isCollapsed();
-  if (collapsed) releaseInitialCollapse();
-  onCollapsedChange(() => {
-    collapsed = isCollapsed();
-    handle.update();
-  }, handle.signal);
+  let collapsed = false;
+  if (typeof window !== "undefined") {
+    window.addEventListener(
+      "toggle-sidebars",
+      () => {
+        collapsed = !collapsed;
+        handle.update();
+      },
+      { signal: handle.signal },
+    );
+  }
 
   return () => (
-    <div data-sidebar="" mix={dock} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
+    <div mix={dock} style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}>
       <div mix={clip}>
         <aside inert={collapsed} mix={column}>
           <div id="scene-tree" mix={[tree, treeOuterPadding]}>

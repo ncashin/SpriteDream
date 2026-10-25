@@ -4,17 +4,17 @@ import Trash from "lucide/dist/esm/icons/trash.mjs";
 import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { Icon } from "../../icon.tsx";
-import { isObject } from "../../utilities/is-object.ts";
-import type { SceneNode } from "../../utilities/scene.ts";
+import { Icon } from "../../../../icon.tsx";
+import { isObject } from "../../../../utilities/is-object.ts";
+import type { SceneNode } from "../../../../utilities/scene.ts";
 import {
   deselectObject,
   selectObjects,
   selectedObjects,
-} from "../../utilities/selected-objects.ts";
-import { parentObject, setObjectParent } from "../../utilities/viewport/transform.ts";
+} from "../../../../utilities/selected-objects.ts";
+import { parentObject, setObjectParent } from "../../../../utilities/viewport/transform.ts";
+import { Button } from "../button.tsx";
 import { AutoSizeInput } from "./auto-size-input.tsx";
-import { Button } from "./button.tsx";
 import { renameKey } from "./object-tree.tsx";
 import {
   chevronOpen,

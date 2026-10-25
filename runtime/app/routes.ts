@@ -8,6 +8,7 @@ export const routes = route({
     index: get('/'),
     panel: get('/panel'),
   }),
+  // Scene routes stay here for hrefs. They are temporarily not mounted.
   editor: route('/editor', {
     scenes: get('/scenes'),
     scene: get('/scenes/:name'),

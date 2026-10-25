@@ -2,11 +2,11 @@ export type HotkeyOptions = {
   signal?: AbortSignal;
   capture?: boolean;
   /** Run the shortcut while focus is in a text field. */
-  typing?: boolean;
+  allowWhileTyping?: boolean;
   /** Run the shortcut on key repeat. */
-  repeat?: boolean;
+  allowKeyRepeat?: boolean;
   /** Extra guard checked before any binding. */
-  when?: (event: KeyboardEvent) => boolean;
+  enabledWhen?: (event: KeyboardEvent) => boolean;
 };
 
 type Combo = {
@@ -16,7 +16,9 @@ type Combo = {
   alt: boolean;
 };
 
-const MODIFIERS = new Set(["mod", "meta", "ctrl", "control", "shift", "alt"]);
+type Binding = readonly [Combo, (event: KeyboardEvent) => void];
+
+const MODIFIER_NAMES = new Set(["mod", "meta", "ctrl", "control", "shift", "alt"]);
 
 export function isTyping(target: EventTarget | null) {
   if (target instanceof HTMLInputElement) return true;
@@ -25,30 +27,47 @@ export function isTyping(target: EventTarget | null) {
   return target instanceof HTMLElement && target.isContentEditable;
 }
 
-export function hotkeys(
+export function createHotkey(
   bindings: Record<string, (event: KeyboardEvent) => void>,
   options?: HotkeyOptions,
 ) {
   if (typeof window === "undefined") return;
 
-  const entries = Object.entries(bindings).flatMap(([combo, action]) =>
-    combo.split(",").map((part) => [parseCombo(part), action] as const),
-  );
+  const entries = expandBindings(bindings);
 
-  window.addEventListener(
-    "keydown",
-    (event) => {
-      if (!options?.repeat && event.repeat) return;
-      if (!options?.typing && isTyping(event.target)) return;
-      if (options?.when && !options.when(event)) return;
-      for (const [combo, action] of entries) {
-        if (!matches(event, combo)) continue;
-        action(event);
-        return;
-      }
-    },
-    { capture: options?.capture ?? true, signal: options?.signal },
-  );
+  window.addEventListener("keydown", (event) => handleKeydown(event, entries, options), {
+    capture: options?.capture ?? true,
+    signal: options?.signal,
+  });
+}
+
+function expandBindings(bindings: Record<string, (event: KeyboardEvent) => void>): Binding[] {
+  const entries: Binding[] = [];
+
+  for (const [combo, action] of Object.entries(bindings)) {
+    for (const part of combo.split(",")) {
+      entries.push([parseCombo(part), action]);
+    }
+  }
+
+  return entries;
+}
+
+function handleKeydown(event: KeyboardEvent, entries: Binding[], options?: HotkeyOptions) {
+  if (shouldIgnore(event, options)) return;
+
+  for (const [combo, action] of entries) {
+    if (!matches(event, combo)) continue;
+    action(event);
+    return;
+  }
+}
+
+function shouldIgnore(event: KeyboardEvent, options?: HotkeyOptions) {
+  if (!options?.allowKeyRepeat && event.repeat) return true;
+  if (!options?.allowWhileTyping && isTyping(event.target)) return true;
+  if (options?.enabledWhen && !options.enabledWhen(event)) return true;
+  return false;
 }
 
 function parseCombo(combo: string): Combo {
@@ -57,24 +76,44 @@ function parseCombo(combo: string): Combo {
     .split("+")
     .map((part) => part.trim())
     .filter(Boolean);
-  const key = parts.find((part) => !MODIFIERS.has(part));
-  if (!key || parts.filter((part) => !MODIFIERS.has(part)).length !== 1) {
+
+  const keys = parts.filter((part) => !MODIFIER_NAMES.has(part));
+  const key = keys[0];
+  if (!key || keys.length !== 1) {
     throw new Error(`Invalid hotkey: ${combo}`);
   }
+
   const modifiers = new Set(parts.filter((part) => part !== key));
+
   return {
     key,
-    mod: modifiers.has("mod") || modifiers.has("meta") || modifiers.has("ctrl") || modifiers.has("control"),
+    mod: wantsMod(modifiers),
     shift: modifiers.has("shift"),
     alt: modifiers.has("alt"),
   };
 }
 
+function wantsMod(modifiers: Set<string>) {
+  return (
+    modifiers.has("mod") ||
+    modifiers.has("meta") ||
+    modifiers.has("ctrl") ||
+    modifiers.has("control")
+  );
+}
+
 function matches(event: KeyboardEvent, combo: Combo) {
-  const key = event.key.toLowerCase();
-  if (key !== combo.key && event.code.toLowerCase() !== combo.key) return false;
-  if ((event.metaKey || event.ctrlKey) !== combo.mod) return false;
+  if (!sameKey(event, combo.key)) return false;
+  if (pressedMod(event) !== combo.mod) return false;
   if (event.shiftKey !== combo.shift) return false;
   if (event.altKey !== combo.alt) return false;
   return true;
+}
+
+function sameKey(event: KeyboardEvent, key: string) {
+  return event.key.toLowerCase() === key || event.code.toLowerCase() === key;
+}
+
+function pressedMod(event: KeyboardEvent) {
+  return event.metaKey || event.ctrlKey;
 }

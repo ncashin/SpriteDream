@@ -1,8 +1,7 @@
-import { syncMode } from "../actions/editor/room.tsx";
 import { routes } from "../routes.ts";
-import { hotkeys } from "./hotkey.ts";
+import { createHotkey } from "./hotkey.ts";
 import { isObject } from "./is-object.ts";
-import { Mode } from "./mode.ts";
+import { Mode, setMode } from "./mode.ts";
 
 export type ScenePath = string[];
 export type SceneNode = { [key in PropertyKey]: any };
@@ -30,7 +29,7 @@ export function loadScene(name = "Example Scene") {
     for (const key of Object.keys(scene)) delete scene[key];
     Object.assign(scene, next);
     sceneName = name;
-    syncMode(Mode.Edit);
+    setMode(Mode.Edit);
   });
 }
 
@@ -43,17 +42,17 @@ export function saveScene() {
 }
 
 export function saveSceneHotkey(signal?: AbortSignal) {
-  hotkeys(
+  createHotkey(
     {
       "mod+s": (event) => {
         event.preventDefault();
-        event.stopPropagation();
         void saveScene();
       },
     },
-    { signal, typing: true },
+    { signal },
   );
 }
+
 
 export type ScenePatch = { path: ScenePath; value?: unknown }[];
 
@@ -70,7 +69,7 @@ export function applyScenePatch(patch: ScenePatch, root: SceneNode) {
     }
     const key = change.path[change.path.length - 1];
     if (!isObject(parent) || key === undefined) continue;
-    if ("value" in change) parent[key] = revive(change.value);
+    if ("value" in change) parent[key] = structuredClone(change.value);
     else delete parent[key];
   }
 }
@@ -83,23 +82,23 @@ export function diffScene(previous: unknown, next: unknown): ScenePatch {
 
 function walk(previous: unknown, next: unknown, path: ScenePath, patch: ScenePatch) {
   if (JSON.stringify(previous) === JSON.stringify(next)) return;
-  if (isObject(previous) && isObject(next)) {
-    for (const key of new Set([...Object.keys(previous), ...Object.keys(next)])) {
-      if (!Object.hasOwn(next, key)) patch.push({ path: [...path, key] });
-      else if (!Object.hasOwn(previous, key)) patch.push({ path: [...path, key], value: JSON.parse(JSON.stringify(next[key])) });
-      else walk(previous[key], next[key], [...path, key], patch);
-    }
+
+  if (!isObject(previous) || !isObject(next)) {
+    patch.push({ path, value: structuredClone(next) });
     return;
   }
-  patch.push({ path, value: JSON.parse(JSON.stringify(next) ?? "null") });
-}
 
-function revive(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(revive);
-  if (!isObject(value)) return value;
-  const copy: Record<string, unknown> = {};
-  for (const [key, child] of Object.entries(value)) copy[key] = revive(child);
-  return copy;
+  const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
+  for (const key of keys) {
+    const childPath = [...path, key];
+    if (!Object.hasOwn(next, key)) {
+      patch.push({ path: childPath });
+    } else if (!Object.hasOwn(previous, key)) {
+      patch.push({ path: childPath, value: structuredClone(next[key]) });
+    } else {
+      walk(previous[key], next[key], childPath, patch);
+    }
+  }
 }
 
 export function objectPath(root: object, target: object): string[] | undefined {

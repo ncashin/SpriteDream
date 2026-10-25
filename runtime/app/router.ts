@@ -3,7 +3,7 @@ import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 
 import controller from './actions/controller.tsx'
-import editorController from './actions/editor/controller.tsx'
+import editorController, { editorRoutes } from './actions/editor/controller.tsx'
 import gameController from './actions/game/controller.tsx'
 import { assets } from './assets.ts'
 import { routes } from './routes.ts'
@@ -23,4 +23,4 @@ export const router = createRouter<AppContext>({
 
 router.map(routes, controller)
 router.map(routes.game, gameController)
-router.map(routes.editor, editorController)
+router.map(editorRoutes, editorController)

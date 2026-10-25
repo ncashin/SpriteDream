@@ -3,11 +3,11 @@ import Trash from "lucide/dist/esm/icons/trash.mjs";
 import { css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { Icon } from "../../icon.tsx";
-import type { SceneNode } from "../../utilities/scene.ts";
-import { isMatrix, transform } from "../../utilities/viewport/transform.ts";
+import { Icon } from "../../../../icon.tsx";
+import type { SceneNode } from "../../../../utilities/scene.ts";
+import { isMatrix, transform } from "../../../../utilities/viewport/transform.ts";
+import { Button } from "../button.tsx";
 import { AutoSizeInput } from "./auto-size-input.tsx";
-import { Button } from "./button.tsx";
 import { ColorInput, parseHexColor } from "./input/color-input.tsx";
 import { MatrixInput } from "./matrix-input.tsx";
 import { rowShell } from "./tree.ts";

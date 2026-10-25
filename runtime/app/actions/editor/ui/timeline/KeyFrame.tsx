@@ -3,7 +3,7 @@ import Volume2 from "lucide/dist/esm/icons/volume-2.mjs";
 import { css } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { Icon } from "../../../icon.tsx";
+import { Icon } from "../../../../icon.tsx";
 
 export type KeyFrameType = "color" | "transform" | "sound";
 

@@ -1,11 +1,10 @@
 import Spline from "lucide/dist/esm/icons/spline.mjs";
 import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
-import { hotkeys } from "../../../utilities/hotkey.ts";
-import { applyScenePatch, scene, type ScenePatch } from "../../../utilities/scene.ts";
-import { Icon } from "../../../icon.tsx";
+import { createHotkey } from "../../../../utilities/hotkey.ts";
+import { applyScenePatch, scene, type ScenePatch } from "../../../../utilities/scene.ts";
+import { Icon } from "../../../../icon.tsx";
 import { isTimelineCollapsed, onTimelineCollapsedChange } from "./collapsed.ts";
-import { joinRoom } from "../room.tsx";
 import { blendAt, blendDefaults, type Keyframe } from "./blend.ts";
 import { BlendLine } from "./BlendLine.tsx";
 import { BlendOptions } from "./BlendOptions.tsx";
@@ -91,8 +90,6 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
   let lastStamp = 0;
   let frame = 0;
   let overSheet = false;
-  const room = typeof window !== "undefined" ? joinRoom(handle.signal) : undefined;
-
   if (typeof window !== "undefined") {
     const release = (event: PointerEvent) => {
       const sheet = document.getElementById("animation-sheet");
@@ -138,7 +135,7 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
 
   handle.signal.addEventListener("abort", stopPlayback);
 
-  hotkeys(
+  createHotkey(
     {
       space: (event) => {
         event.preventDefault();
@@ -150,7 +147,7 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
         play();
       },
     },
-    { signal: handle.signal, when: () => overSheet },
+    { signal: handle.signal, enabledWhen: () => overSheet },
   );
 
   function publish() {
@@ -158,8 +155,6 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
     const encoded = JSON.stringify(patch);
     if (encoded === applied) return;
     applyScenePatch(patch, scene);
-    if (!room || room.socket.readyState !== WebSocket.OPEN) return;
-    room.sendScenePatch(patch);
     applied = encoded;
   }
 

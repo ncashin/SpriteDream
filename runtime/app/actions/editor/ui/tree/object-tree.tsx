@@ -6,19 +6,19 @@ import Trash from "lucide/dist/esm/icons/trash.mjs";
 import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { Icon } from "../../icon.tsx";
-import { isObject } from "../../utilities/is-object.ts";
-import type { SceneNode } from "../../utilities/scene.ts";
-import { deselectObject, selectedObjects } from "../../utilities/selected-objects.ts";
-import { applyTrait, traits } from "../../utilities/trait/trait.ts";
-import { textTrait } from "../../utilities/viewport/draw-text.ts";
-import "../../utilities/physics.ts";
-import "../../utilities/viewport/draw-image.ts";
-import "../../utilities/viewport/frame.tsx";
-import { createMatrix, isMatrix } from "../../utilities/viewport/transform.ts";
+import { Icon } from "../../../../icon.tsx";
+import { isObject } from "../../../../utilities/is-object.ts";
+import type { SceneNode } from "../../../../utilities/scene.ts";
+import { deselectObject, selectedObjects } from "../../../../utilities/selected-objects.ts";
+import { applyTrait, traits } from "../../../../utilities/trait/trait.ts";
+import { textTrait } from "../../../../utilities/viewport/draw-text.ts";
+import "../../../../utilities/physics.ts";
+import "../../../../utilities/viewport/draw-image.ts";
+import "../../../../utilities/viewport/frame.tsx";
+import { createMatrix, isMatrix } from "../../../../utilities/viewport/transform.ts";
+import { Button } from "../button.tsx";
+import { Dropdown, type DropdownItem } from "../dropdown.tsx";
 import { AutoSizeInput } from "./auto-size-input.tsx";
-import { Button } from "./button.tsx";
-import { Dropdown, type DropdownItem } from "./dropdown.tsx";
 import { PropertyInput } from "./property-input.tsx";
 import {
   chevronOpen,

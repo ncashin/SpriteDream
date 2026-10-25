@@ -4,14 +4,12 @@ import SearchIcon from "lucide/dist/esm/icons/search.mjs";
 import { css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { routes } from "../../routes.ts";
-import { Icon } from "../../icon.tsx";
-import { isEditorHidden, onEditorHidden } from "./chrome.ts";
-import { SIDEBAR_MOTION } from "./collapsed.ts";
-import { hotkeys } from "../../utilities/hotkey.ts";
-import { isObject } from "../../utilities/is-object.ts";
-import { loadScene, saveSceneHotkey, scene, type SceneNode } from "../../utilities/scene.ts";
-import { selectObjects } from "../../utilities/selected-objects.ts";
+import { routes } from "../../../routes.ts";
+import { Icon } from "../../../icon.tsx";
+import { createHotkey } from "../../../utilities/hotkey.ts";
+import { isObject } from "../../../utilities/is-object.ts";
+import { loadScene, saveSceneHotkey, scene, type SceneNode } from "../../../utilities/scene.ts";
+import { selectObjects } from "../../../utilities/selected-objects.ts";
 const LIST_ID = "scene-search-list";
 const SEARCH_FADE = "80ms ease";
 
@@ -129,9 +127,8 @@ export function Search(handle: Handle) {
   }
 
   saveSceneHotkey(handle.signal);
-  onEditorHidden(() => handle.update(), handle.signal);
 
-  hotkeys(
+  createHotkey(
     {
       "mod+p": (event) => {
         event.preventDefault();
@@ -146,11 +143,10 @@ export function Search(handle: Handle) {
     let items = matchingItems(scenes, query);
     let index = items.length === 0 ? 0 : Math.min(activeIndex, items.length - 1);
 
-    const concealed = isEditorHidden();
     return (
-      <div inert={concealed} mix={slot} data-open={open ? "" : undefined} data-chrome-hidden={concealed || undefined}>
+      <div mix={slot} data-open={open ? "" : undefined}>
         <div mix={box} data-expanded={open ? "" : undefined}>
-          <label data-chrome-hidden={concealed || undefined} mix={[field, chromeFade]}>
+          <label mix={field}>
             <Icon icon={SearchIcon} size={14} />
             <input
               type="text"
@@ -221,7 +217,7 @@ export function Search(handle: Handle) {
               </kbd>
             )}
           </label>
-          <div mix={[drawer, open && !concealed && drawerOpen]} inert={!open || concealed} aria-hidden={open && !concealed ? undefined : true}>
+          <div mix={[drawer, open && drawerOpen]} inert={!open} aria-hidden={open ? undefined : true}>
             <div mix={drawerInner}>
               <div mix={rule} />
               <ul id={LIST_ID} role="listbox" aria-label="Search results" mix={list}>
@@ -270,24 +266,10 @@ const slot = css({
   position: "relative",
   width: "28rem",
   zIndex: 4,
-  "&[data-chrome-hidden]": {
-    pointerEvents: "none",
-  },
   "@container header-bar (max-width: 30rem)": {
     "&:not([data-open])": {
       display: "none",
     },
-  },
-});
-
-const chromeFade = css({
-  opacity: 1,
-  transition: `opacity ${SIDEBAR_MOTION}`,
-  "&[data-chrome-hidden]": {
-    opacity: 0,
-  },
-  "@media (prefers-reduced-motion: reduce)": {
-    transition: "none",
   },
 });
 

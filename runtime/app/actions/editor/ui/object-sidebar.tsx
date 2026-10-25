@@ -1,10 +1,10 @@
 import { clientEntry, css } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { isObject } from "../../utilities/is-object.ts";
-import { scene, type SceneNode } from "../../utilities/scene.ts";
-import { selectedObjects } from "../../utilities/selected-objects.ts";
-import { ObjectTree } from "./object-tree.tsx";
+import { isObject } from "../../../utilities/is-object.ts";
+import { scene, type SceneNode } from "../../../utilities/scene.ts";
+import { selectedObjects } from "../../../utilities/selected-objects.ts";
+import { ObjectTree } from "./tree/object-tree.tsx";
 
 export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar(handle: Handle<{ collapsed?: boolean }>) {
   let active: SceneNode | undefined;

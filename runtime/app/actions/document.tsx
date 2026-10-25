@@ -36,8 +36,7 @@ export function Document(handle: Handle<DocumentProps>) {
             rel="stylesheet"
           />
           <title>{title}</title>
-          <style>{SIDEBAR_COLLAPSED_STYLE}</style>
-          <script>{SIDEBAR_COLLAPSED_SCRIPT}</script>
+          <style>{READY_STYLE}</style>
           {head}
           <ImportMap value={importMap} />
           {preloads.map((preloadHref) => (
@@ -78,28 +77,10 @@ export function Document(handle: Handle<DocumentProps>) {
   }
 }
 
-const SIDEBAR_COLLAPSED_STYLE = `
+const READY_STYLE = `
 html:not([data-ready]) {
   opacity: 0;
 }
-html[data-sidebar-collapsed] [data-sidebar],
-html[data-sidebar-collapsed] [data-sidebar-bar] {
-  transition: none !important;
-}
-html[data-sidebar-collapsed] [data-sidebar] {
-  width: 0 !important;
-}
-html[data-sidebar-collapsed] [data-sidebar-bar] {
-  left: 0 !important;
-}
-`
-
-const SIDEBAR_COLLAPSED_SCRIPT = `
-try {
-  if (localStorage.getItem("sidebar-collapsed") === "1") {
-    document.documentElement.dataset.sidebarCollapsed = "";
-  }
-} catch (e) {}
 `
 
 function readAppDisplayName(value: string): string {
