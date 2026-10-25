@@ -1,11 +1,13 @@
 import { css, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
+import type { Room } from "../../room/room.tsx";
 import type { SceneNode, ScenePatch } from "../../utilities/scene.ts";
 
 export type SceneContext = {
   canvas: HTMLCanvasElement;
   scene: SceneNode;
+  room: Room;
   signal: AbortSignal;
   onPatch: (patch: ScenePatch) => void;
 };
@@ -13,6 +15,7 @@ export type SceneContext = {
 export function SceneViewer(
   handle: Handle<{
     scene: SceneNode;
+    room: Room;
     onMount: (context: SceneContext) => void | Promise<void>;
     onPatch: (patch: ScenePatch) => void;
   }>,
@@ -37,6 +40,7 @@ export function SceneViewer(
           void handle.props.onMount({
             canvas: node,
             scene: handle.props.scene,
+            room: handle.props.room,
             signal,
             onPatch: handle.props.onPatch,
           });

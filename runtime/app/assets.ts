@@ -16,7 +16,6 @@ export const assets = createAssetServer({
     "app/actions/editor/**",
     "app/room/protocol.ts",
     "app/room/room.tsx",
-    "app/room/room-module.ts",
     "app/icon.tsx",
     "app/**/public/**",
   ],

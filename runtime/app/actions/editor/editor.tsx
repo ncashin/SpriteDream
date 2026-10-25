@@ -4,7 +4,7 @@ import { on, type Handle } from "remix/component";
 import { parse } from "remix/data-schema";
 
 import { routes } from "../../routes.ts";
-import { getRoom, type Room } from "../../room/room-module.ts";
+import { joinRoom, type Room } from "../../room/room.tsx";
 import { createHotkey } from "../../utilities/hotkey.ts";
 import { projectFiles } from "./routes.ts";
 import { FileViewer } from "./file-viewer.tsx";
@@ -76,7 +76,7 @@ export const Editor = clientEntry(
     handle.queueTask(async () => {
       if (handle.signal.aborted) return;
 
-      room = await getRoom();
+      room = await joinRoom(handle.signal);
 
       room.onPersonJoin(() => {
         handle.update();
@@ -221,6 +221,7 @@ export const Editor = clientEntry(
                 <FileViewer
                   key={selectedTab.path}
                   file={selectedTab}
+                  room={room}
                   onEdit={() => handle.update()}
                 />
               </div>

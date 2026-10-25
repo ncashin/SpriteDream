@@ -10,7 +10,7 @@ import { textTrait } from "../../utilities/viewport/draw-text.ts";
 import { frameTrait } from "../../utilities/viewport/frame.tsx";
 import { createViewport } from "../../utilities/viewport/viewport.ts";
 
-export function game({ canvas, scene, signal, onPatch }: SceneContext) {
+export function game({ canvas, scene, room, signal, onPatch }: SceneContext) {
   if (!scene || signal.aborted) return;
 
   let previous = structuredClone(scene);
