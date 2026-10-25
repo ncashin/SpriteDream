@@ -1,5 +1,5 @@
 import { clientEntry, css } from "remix/component";
-import { on, type Handle } from "remix/component";
+import { on, type Handle, Frame } from "remix/component";
 
 import { parse } from "remix/data-schema";
 
@@ -46,27 +46,29 @@ export const Editor = clientEntry(
 
       return (
         <div
-          mix={[
-            css({
-              display: "flex",
-              flexDirection: "column",
-              height: "100vh",
-              overflow: "hidden",
-            }),
-          ]}
+          mix={css({
+            display: "grid",
+            gridTemplateColumns: "24rem minmax(0, 1fr)",
+            gridTemplateRows: "auto auto minmax(0, 1fr)",
+            gridTemplateAreas: `
+              "header header"
+              "files tabs"
+              "files tabContent"
+            `,
+            height: "100vh",
+            overflow: "hidden",
+          })}
         >
           <header
-            mix={[
-              css({
-                display: "flex",
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                overflow: "hidden",
-                width: "full",
-                padding: "1rem 1rem",
-              }),
-            ]}
+            mix={css({
+              gridArea: "header",
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              overflow: "hidden",
+              padding: "1rem",
+            })}
           >
             <span>Left</span>
             <span>Search</span>
@@ -86,77 +88,81 @@ export const Editor = clientEntry(
 
           <div
             mix={css({
+              gridArea: "files",
               display: "flex",
-              flexDirection: "row",
+              flexDirection: "column",
+              minHeight: 0,
               overflow: "auto",
+              padding: "1rem",
             })}
           >
-            <div
-              mix={[
-                css({
-                  width: "24rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  overflow: "auto",
-                  padding: "1rem",
-                }),
-              ]}
-            >
-              {files.map((file) => (
-                <button
-                  mix={[
-                    treeRow,
-                    on("click", () => {
-                      tabs.push(file);
-                      handle.update();
-                    }),
-                  ]}
-                >
-                  <Icon icon={File} />
-                  {file}
-                </button>
-              ))}
-            </div>
-
-            <div
-              mix={[
-                css({
-                  display: "flex",
-                  flexDirection: "column",
-                  overflow: "auto",
-                  height: "min",
-                }),
-              ]}
-            >
-              <div
+            {files.map((file) => (
+              <button
                 mix={[
-                  css({
-                    display: "flex",
-                    flexDirection: "row",
-                    overflow: "auto",
-                    padding: "1rem",
-                    height: "min",
+                  treeRow,
+                  on("click", () => {
+                    if (!tabs.includes(file)) tabs.push(file);
+                    selectedTab = file;
+                    handle.update();
                   }),
                 ]}
               >
-                {tabs.map((tab) => (
-                  <button
-                    aria-current={selectedTab === tab && "true"}
-                    mix={[
-                      treeRow,
-                      on("click", () => {
-                        if (selectedTab === tab) return;
-                        selectedTab = tab;
-                        handle.update();
-                      }),
-                    ]}
-                  >
-                    <Icon icon={File} />
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            </div>
+                <Icon icon={File} />
+                {file}
+              </button>
+            ))}
+          </div>
+
+          <div
+            mix={css({
+              gridArea: "tabs",
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              minWidth: 0,
+              position: "relative",
+              zIndex: 1,
+              overflow: "auto",
+              padding: "1rem",
+              background: "#121213",
+              gap: "0.35rem",
+            })}
+          >
+            {tabs.map((tab) => (
+              <button
+                aria-current={selectedTab === tab && "true"}
+                mix={[
+                  treeRow,
+                  css({
+                    width: "auto",
+                    flex: "0 0 auto",
+                    minHeight: "min-content",
+                  }),
+                  on("click", () => {
+                    if (selectedTab === tab) return;
+                    selectedTab = tab;
+                    handle.update();
+                  }),
+                ]}
+              >
+                <Icon icon={File} />
+                {tab}
+              </button>
+            ))}
+          </div>
+          <div
+            mix={css({
+              gridArea: "tabContent",
+              position: "relative",
+              minWidth: 0,
+              minHeight: 0,
+              overflow: "hidden",
+              isolation: "isolate",
+            })}
+          >
+            {selectedTab && (
+              <Frame src={routes.editor.file.href({ filePath: selectedTab })} />
+            )}
           </div>
         </div>
       );

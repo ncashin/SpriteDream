@@ -5,4 +5,5 @@ export const projectFiles = array(string());
 
 export const editorRoutes = route({
   listFiles: get("/files"),
+  file: get("/file/*filePath"),
 });
