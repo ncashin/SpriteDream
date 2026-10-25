@@ -24,6 +24,15 @@ function broadcast(message: RoomMessage, except?: WebSocket) {
   }
 }
 
+const roomMessageTypes = new Set(["onRoomJoin", "onPersonJoin", "onPersonLeave"]);
+
+function broadcastRaw(data: string, except?: WebSocket) {
+  for (const person of people.values()) {
+    if (person.socket === except) continue;
+    person.socket.send(data);
+  }
+}
+
 setInterval(() => {
   for (const person of people.values()) {
     if (person.quiet) {
@@ -72,8 +81,22 @@ export async function attachRoom(server: http.Server) {
 
     broadcast({ messageType: "onPersonJoin", id: person.id }, socket);
 
-    socket.on("message", () => {
+    socket.on("message", (raw) => {
       person.quiet = false;
+
+      const text = raw.toString();
+      let json: unknown;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        return;
+      }
+      if (typeof json !== "object" || json === null || Array.isArray(json)) return;
+
+      const messageType = (json as { messageType?: unknown }).messageType;
+      if (typeof messageType !== "string" || roomMessageTypes.has(messageType)) return;
+
+      broadcastRaw(text, socket);
     });
 
     socket.on("pong", () => {

@@ -9,6 +9,11 @@ const isHMR = Boolean(isDevelopment && process.env.REMIX_NODE_HMR);
 export const assets = createAssetServer({
   basePath: "/assets",
   rootDir,
+  mounts: {
+    app: "app",
+    npm: "node_modules",
+    game: "game",
+  },
 
   allowFiles: [
     "app/routes.ts",
@@ -18,6 +23,7 @@ export const assets = createAssetServer({
     "app/room/room.tsx",
     "app/icon.tsx",
     "app/**/public/**",
+    "game/**",
   ],
   allowPackages: ["remix", "lucide", "planck"],
   denyFiles: ["app/**/*.test.*"],

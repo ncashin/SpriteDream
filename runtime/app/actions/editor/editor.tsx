@@ -4,7 +4,9 @@ import { on, type Handle } from "remix/component";
 import { parse } from "remix/data-schema";
 
 import { routes } from "../../routes.ts";
-import { joinRoom, type Room } from "../../room/room.tsx";
+import { gameMessage } from "../../../game/protocol.ts";
+import { joinRoom } from "../../room/room.tsx";
+import type { SceneRoom } from "./scene-viewer.tsx";
 import { createHotkey } from "../../utilities/hotkey.ts";
 import { projectFiles } from "./routes.ts";
 import { FileViewer } from "./file-viewer.tsx";
@@ -20,8 +22,30 @@ import Plus from "lucide/dist/esm/icons/plus.mjs";
 export const Editor = clientEntry(
   import.meta.url,
   function Editor(handle: Handle) {
-    let room: Room;
+    let room: SceneRoom;
+    handle.queueTask(async () => {
+      if (handle.signal.aborted) return;
+
+      room = await joinRoom(handle.signal, gameMessage);
+
+      room.onMessageType("onPersonJoin", () => {
+        handle.update();
+      });
+
+      room.onMessageType("onPersonLeave", () => {
+        handle.update();
+      });
+
+      handle.update();
+    });
+
     let files: string[] = [];
+    handle.queueTask(async () => {
+      let response = await fetch(routes.editor.listFiles.href());
+      files = parse(projectFiles, await response.json());
+
+      handle.update();
+    });
 
     let openFiles: OpenFile[] = [];
     let selectedTab: OpenFile | undefined;
@@ -54,7 +78,9 @@ export const Editor = clientEntry(
         {
           method: "PUT",
           body: file.file,
-          headers: { "content-type": file.file.type || "application/octet-stream" },
+          headers: {
+            "content-type": file.file.type || "application/octet-stream",
+          },
         },
       );
 
@@ -66,31 +92,12 @@ export const Editor = clientEntry(
     createHotkey(
       {
         "mod+s": () => {
-          if(!selectedTab) return;
+          if (!selectedTab) return;
           save(selectedTab);
         },
       },
       { signal: handle.signal, allowWhileTyping: true },
     );
-
-    handle.queueTask(async () => {
-      if (handle.signal.aborted) return;
-
-      room = await joinRoom(handle.signal);
-
-      room.onPersonJoin(() => {
-        handle.update();
-      });
-
-      room.onPersonLeave(() => {
-        handle.update();
-      });
-
-      let response = await fetch(routes.editor.listFiles.href());
-      files = parse(projectFiles, await response.json());
-
-      handle.update();
-    });
 
     return () => {
       if (!room || !files) return <p role="status">Loading…</p>;

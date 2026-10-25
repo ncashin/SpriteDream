@@ -8,6 +8,7 @@ import { Mode, mode, onModeChange, setMode } from "../../../utilities/mode.ts";
 import { blinkPhase, blinkScale, clampGaze, faceFor, GAZE_LOOK, gazePivot, gazePivotBack } from "./blobs.tsx";
 import { Button } from "./button.tsx";
 import { joinRoom } from "../../../room/room.tsx";
+import { roomMessage } from "../../../room/protocol.ts";
 import { Search } from "./Search.tsx";
 
 export const Header = clientEntry(import.meta.url, function Header(handle: Handle) {
@@ -36,7 +37,7 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
   let tracking = false;
   let phase = blinkPhase(you);
   if (typeof window !== "undefined") {
-    void joinRoom(handle.signal)
+    void joinRoom(handle.signal, roomMessage)
       .then((room) => {
         if (handle.signal.aborted) return;
         you = room.you.id;

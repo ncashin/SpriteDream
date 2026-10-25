@@ -3,10 +3,9 @@ import type { Handle } from "remix/component";
 import { enum_, parseSafe } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 
-import type { Room } from "../../room/room.tsx";
 import type { SceneNode, ScenePatch } from "../../utilities/scene.ts";
-import { game } from "./game.ts";
-import { SceneViewer } from "./scene-viewer.tsx";
+import { game } from "../../../game/game.ts";
+import { SceneViewer, type SceneRoom } from "./scene-viewer.tsx";
 
 export const supportedFileType = enum_([
   "scene",
@@ -33,7 +32,7 @@ function write(file: OpenFile, contents: BlobPart[]) {
   file.dirtyFlag = true;
 }
 
-export function FileViewer(handle: Handle<{ file: OpenFile; room: Room; onEdit?: (patch?: ScenePatch) => void }>) {
+export function FileViewer(handle: Handle<{ file: OpenFile; room: SceneRoom; onEdit?: (patch?: ScenePatch) => void }>) {
   const { file, onEdit } = handle.props;
   const extension = file.path.split(".").pop()?.toLowerCase();
   const fileType = parseSafe(supportedFileType, extension);
@@ -56,6 +55,7 @@ export function FileViewer(handle: Handle<{ file: OpenFile; room: Room; onEdit?:
             key={file.path}
             scene={scene}
             room={handle.props.room}
+            sceneKey={file.path}
             onMount={game}
             onPatch={(patch) => {
               write(file, [`${JSON.stringify(scene, null, 2)}\n`]);

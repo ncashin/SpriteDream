@@ -1,13 +1,18 @@
 import { css, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
+import type { GameMessage } from "../../../game/protocol.ts";
+import type { RoomMessage } from "../../room/protocol.ts";
 import type { Room } from "../../room/room.tsx";
 import type { SceneNode, ScenePatch } from "../../utilities/scene.ts";
+
+export type SceneRoom = Room<RoomMessage | GameMessage>;
 
 export type SceneContext = {
   canvas: HTMLCanvasElement;
   scene: SceneNode;
-  room: Room;
+  room: SceneRoom;
+  sceneKey: string;
   signal: AbortSignal;
   onPatch: (patch: ScenePatch) => void;
 };
@@ -15,7 +20,8 @@ export type SceneContext = {
 export function SceneViewer(
   handle: Handle<{
     scene: SceneNode;
-    room: Room;
+    room: SceneRoom;
+    sceneKey: string;
     onMount: (context: SceneContext) => void | Promise<void>;
     onPatch: (patch: ScenePatch) => void;
   }>,
@@ -41,6 +47,7 @@ export function SceneViewer(
             canvas: node,
             scene: handle.props.scene,
             room: handle.props.room,
+            sceneKey: handle.props.sceneKey,
             signal,
             onPatch: handle.props.onPatch,
           });
