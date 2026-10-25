@@ -8,9 +8,10 @@ import { getRoom, type Room } from "../../room/room-module.ts";
 import { projectFiles } from "./routes.ts";
 import { Search } from "./search.tsx";
 import { faceFor } from "./ui/blobs.tsx";
-import { treeRow } from "./styles.tsx";
+import { lightText, treeRow } from "./styles.tsx";
 import { Icon } from "../../icon.tsx";
 import Park from "lucide/dist/esm/icons/park.mjs";
+import Plus from "lucide/dist/esm/icons/plus.mjs";
 
 export const Editor = clientEntry(
   import.meta.url,
@@ -106,7 +107,7 @@ export const Editor = clientEntry(
               overflow: "auto",
               background: "#121213",
               padding: "0rem 0rem 0.5rem 0.5rem",
-              gap: "0.25rem"
+              gap: "0.25rem",
             })}
           >
             {tabs.map((tab) => (
@@ -120,7 +121,7 @@ export const Editor = clientEntry(
                     minHeight: "min-content",
                     paddingRight: "0.5rem",
                     "&[aria-current='true']": {
-                      fontVariationSettings: '"GRAD" 150',
+                      fontVariationSettings: '"GRAD" 400',
                     },
                   }),
                   on("click", () => {
@@ -134,6 +135,23 @@ export const Editor = clientEntry(
                 {tab}
               </button>
             ))}
+            <button
+              type="button"
+              aria-label="Open File"
+              mix={[
+                treeRow,
+                lightText,
+                css({
+                  width: "auto",
+                  flex: "0 0 auto",
+                  minHeight: "min-content",
+                  paddingRight: "0.375rem",
+                }),
+              ]}
+            >
+              Open File
+              <Icon icon={Plus} />
+            </button>
           </div>
           <div
             mix={css({
@@ -146,9 +164,19 @@ export const Editor = clientEntry(
               borderTop: "1px solid var(--line)",
             })}
           >
-            {selectedTab && (
-              <Frame src={routes.editor.file.href({ filePath: selectedTab })} />
-            )}
+            {tabs.map((tab) => (
+              <div
+                key={tab}
+                mix={css({
+                  position: "absolute",
+                  inset: 0,
+                  visibility: selectedTab === tab ? "visible" : "hidden",
+                  pointerEvents: selectedTab === tab ? "auto" : "none",
+                })}
+              >
+                <Frame src={routes.editor.file.href({ filePath: tab })} />
+              </div>
+            ))}
           </div>
         </div>
       );

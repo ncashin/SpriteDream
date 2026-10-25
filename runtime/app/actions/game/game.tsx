@@ -1,7 +1,8 @@
-import { clientEntry, css, ref } from "remix/component";
+import { clientEntry } from "remix/component";
 import type { InferOutput } from "remix/data-schema";
 import type { Handle } from "remix/component";
 
+import { SceneViewer } from "../editor/scene-viewer.tsx";
 import { blobColor } from "../editor/ui/blobs.tsx";
 import { joinRoom } from "../../room/room.tsx";
 import { center, contains, lookupBoundingBox } from "../../utilities/bounding-box.ts";
@@ -28,7 +29,6 @@ import {
 } from "../../utilities/selected-objects.ts";
 import { playerColor } from "../../utilities/player-color.ts";
 import { createUpdateLoop } from "../../utilities/update-loop.ts";
-import { holdAppReady } from "../../utilities/app-ready.ts";
 import { whenImageReady } from "../../utilities/runtime-assets.ts";
 import { imageTrait } from "../../utilities/viewport/draw-image.ts";
 import { prepareFont, textTrait } from "../../utilities/viewport/draw-text.ts";
@@ -70,15 +70,6 @@ function abortWhenDisconnected(canvas: HTMLCanvasElement) {
   observer.observe(parent, { childList: true });
   controller.signal.addEventListener("abort", () => observer.disconnect());
   return controller.signal;
-}
-
-export async function createGame(canvas: HTMLCanvasElement) {
-  const release = holdAppReady();
-  try {
-    await mountGame(canvas);
-  } finally {
-    release();
-  }
 }
 
 async function mountGame(canvas: HTMLCanvasElement) {
@@ -308,24 +299,5 @@ async function mountGame(canvas: HTMLCanvasElement) {
 }
 
 export const Game = clientEntry(import.meta.url, function Game(_handle: Handle) {
-  return () => (
-      <canvas
-        aria-label="Game view"
-        tabIndex={-1}
-        mix={[
-          css({
-            display: "block",
-            width: "100%",
-            height: "100%",
-            touchAction: "none",
-            background: "#1c1c1e",
-            outline: "none",
-          }),
-          ref((node) => {
-            if (!(node instanceof HTMLCanvasElement)) return;
-            createGame(node);
-          }),
-        ]}
-      />
-  );
+  return () => <SceneViewer onMount={(canvas) => void mountGame(canvas)} />;
 });

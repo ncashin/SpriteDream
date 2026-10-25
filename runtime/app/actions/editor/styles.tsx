@@ -1,5 +1,9 @@
 import { css } from "remix/component";
 
+export const lightText = css({
+  color: "var(--text-muted)",
+});
+
 export const treeRow = css({
   display: "flex",
   flexDirection: "row",
