@@ -4,11 +4,10 @@ import SearchIcon from "lucide/dist/esm/icons/search.mjs";
 import { css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { routes } from "../../../routes.ts";
 import { Icon } from "../../../icon.tsx";
 import { createHotkey } from "../../../utilities/hotkey.ts";
 import { isObject } from "../../../utilities/is-object.ts";
-import { loadScene, saveSceneHotkey, scene, type SceneNode } from "../../../utilities/scene.ts";
+import { scene, type SceneNode } from "../../../utilities/scene.ts";
 import { selectObjects } from "../../../utilities/selected-objects.ts";
 const LIST_ID = "scene-search-list";
 const SEARCH_FADE = "80ms ease";
@@ -86,16 +85,6 @@ export function Search(handle: Handle) {
     open = next;
   }
 
-  function refreshScenes() {
-    void fetch(routes.editor.scenes.href()).then(async (response) => {
-      if (!response.ok) return;
-      let next: unknown = await response.json();
-      if (!Array.isArray(next)) return;
-      scenes = next.filter((name): name is string => typeof name === "string");
-      handle.update();
-    });
-  }
-
   function choose(index: number) {
     let item = matchingItems(scenes, query)[index];
     if (!item) return;
@@ -110,13 +99,11 @@ export function Search(handle: Handle) {
     }
     current = item.name;
     selectObjects([]);
-    void loadScene(item.name);
     openInFrames(item.name);
     handle.update();
   }
 
   function focusSearch() {
-    refreshScenes();
     let items = matchingItems(scenes, query);
     let currentIndex = items.findIndex((item) => item.kind === "scene" && item.name === current);
     activeIndex = currentIndex === -1 ? 0 : currentIndex;
@@ -125,8 +112,6 @@ export function Search(handle: Handle) {
     input?.focus();
     input?.select();
   }
-
-  saveSceneHotkey(handle.signal);
 
   createHotkey(
     {

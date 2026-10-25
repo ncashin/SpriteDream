@@ -32,9 +32,6 @@ export const FileViewer = clientEntry(
             <SceneViewer
               key={file.path}
               scene={parsedContent}
-              onSave={(next) => {
-                content = next;
-              }}
               onMount={game}
             />
           );

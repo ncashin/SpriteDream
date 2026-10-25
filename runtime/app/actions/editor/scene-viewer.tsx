@@ -3,14 +3,16 @@ import type { Handle } from "remix/component";
 
 import type { SceneNode } from "../../utilities/scene.ts";
 
+export type SceneContext = {
+  canvas: HTMLCanvasElement;
+  scene: SceneNode;
+  signal: AbortSignal;
+};
+
 export function SceneViewer(
   handle: Handle<{
-    scene?: SceneNode;
-    onSave?: (content: string) => void;
-    onMount: (
-      canvas: HTMLCanvasElement,
-      scene?: SceneNode,
-    ) => void | (() => void) | Promise<void | (() => void)>;
+    scene: SceneNode;
+    onMount: (context: SceneContext) => void | Promise<void>;
   }>,
 ) {
   return () => (
@@ -30,11 +32,7 @@ export function SceneViewer(
           if (!(node instanceof HTMLCanvasElement)) return;
           if (node.dataset.mounted === "true") return;
           node.dataset.mounted = "true";
-          void Promise.resolve(handle.props.onMount(node, handle.props.scene)).then((cleanup) => {
-            if (typeof cleanup !== "function") return;
-            if (signal.aborted) cleanup();
-            else signal.addEventListener("abort", cleanup, { once: true });
-          });
+          void handle.props.onMount({ canvas: node, scene: handle.props.scene, signal });
         }),
       ]}
     />

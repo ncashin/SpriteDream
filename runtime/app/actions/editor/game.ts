@@ -1,5 +1,8 @@
-import { filterScene, type SceneNode } from "../../utilities/scene.ts";
-import { selectedObjects } from "../../utilities/selected-objects.ts";
+import { contains, lookupBoundingBox } from "../../utilities/bounding-box.ts";
+import { isObject } from "../../utilities/is-object.ts";
+import { filterScene } from "../../utilities/scene.ts";
+import type { SceneContext } from "./scene-viewer.tsx";
+import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
 import { colliderTrait } from "../../utilities/physics.ts";
 import { createUpdateLoop } from "../../utilities/update-loop.ts";
 import { imageTrait } from "../../utilities/viewport/draw-image.ts";
@@ -7,11 +10,24 @@ import { textTrait } from "../../utilities/viewport/draw-text.ts";
 import { frameTrait } from "../../utilities/viewport/frame.tsx";
 import { createViewport } from "../../utilities/viewport/viewport.ts";
 
-export function game(canvas: HTMLCanvasElement, scene?: SceneNode) {
-  if (!scene) return;
+export function game({ canvas, scene, signal }: SceneContext) {
+  if (!scene || signal.aborted) return;
 
   const updateLoop = createUpdateLoop();
-  const viewport = createViewport(canvas);
+  const viewport = createViewport(canvas, {
+    onWorldClick(point) {
+      const hit = Object.values(scene).findLast((object) => {
+        if (!isObject(object)) return false;
+        const bounds = lookupBoundingBox(object);
+        return bounds !== undefined && contains(bounds, point);
+      });
+      selectObjects(hit ? [hit] : []);
+    },
+  });
+  signal.addEventListener("abort", () => {
+    updateLoop.destroy();
+    viewport.destroy();
+  });
 
   updateLoop.onUpdate(() => {
     viewport.beginDrawing();
@@ -38,8 +54,4 @@ export function game(canvas: HTMLCanvasElement, scene?: SceneNode) {
   });
 
   updateLoop.start();
-  return () => {
-    updateLoop.destroy();
-    viewport.destroy();
-  };
 }

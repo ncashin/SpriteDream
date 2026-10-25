@@ -13,8 +13,6 @@ export const assets = createAssetServer({
   allowFiles: [
     "app/routes.ts",
     "app/utilities/**",
-    "app/actions/game/game.tsx",
-    "app/actions/game/panel.tsx",
     "app/actions/editor/**",
     "app/room/protocol.ts",
     "app/room/room.tsx",

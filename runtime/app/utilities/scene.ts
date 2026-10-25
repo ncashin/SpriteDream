@@ -1,7 +1,4 @@
-import { routes } from "../routes.ts";
-import { createHotkey } from "./hotkey.ts";
 import { isObject } from "./is-object.ts";
-import { Mode, setMode } from "./mode.ts";
 
 export type ScenePath = string[];
 export type SceneNode = { [key in PropertyKey]: any };
@@ -13,46 +10,6 @@ let sceneName = "Example Scene";
 export function currentSceneName() {
   return sceneName;
 }
-
-export function fetchScene(name: string): Promise<SceneNode | undefined> {
-  return fetch(routes.editor.scene.href({ name })).then(async (response) => {
-    if (!response.ok) return;
-    const next: unknown = await response.json();
-    if (!isObject(next)) return;
-    return next;
-  });
-}
-
-export function loadScene(name = "Example Scene") {
-  return fetchScene(name).then((next) => {
-    if (!next) return;
-    for (const key of Object.keys(scene)) delete scene[key];
-    Object.assign(scene, next);
-    sceneName = name;
-    setMode(Mode.Edit);
-  });
-}
-
-export function saveScene() {
-  return fetch(routes.editor.saveScene.href({ name: sceneName }), {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(scene),
-  });
-}
-
-export function saveSceneHotkey(signal?: AbortSignal) {
-  createHotkey(
-    {
-      "mod+s": (event) => {
-        event.preventDefault();
-        void saveScene();
-      },
-    },
-    { signal },
-  );
-}
-
 
 export type ScenePatch = { path: ScenePath; value?: unknown }[];
 
