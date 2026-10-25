@@ -8,9 +8,11 @@ const iconStyle = css({
   flex: "0 0 auto",
 });
 
-export function Icon(handle: Handle<{ icon: IconNode; size?: number }>) {
+export function Icon(handle: Handle<{ icon: IconNode; size?: number | string }>) {
   return () => {
-    let { icon, size = 16 } = handle.props;
+    // Lucide draws on a 24 grid with 2px padding, so the ink is 20/24 of the box.
+    // 1.2cap makes that ink match the font's cap height.
+    let { icon, size = "1.2cap" } = handle.props;
 
     return (
       <svg

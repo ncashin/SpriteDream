@@ -58,6 +58,8 @@ function handleKeydown(event: KeyboardEvent, entries: Binding[], options?: Hotke
 
   for (const [combo, action] of entries) {
     if (!matches(event, combo)) continue;
+    event.preventDefault();
+    event.stopPropagation();
     action(event);
     return;
   }

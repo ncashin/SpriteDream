@@ -5,7 +5,6 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../../icon.tsx";
 import { Mode, mode, onModeChange, setMode } from "../../../utilities/mode.ts";
-import { currentSceneName } from "../../../utilities/scene.ts";
 import { blinkPhase, blinkScale, clampGaze, faceFor, GAZE_LOOK, gazePivot, gazePivotBack } from "./blobs.tsx";
 import { Button } from "./button.tsx";
 import { getRoom } from "../../../room/room-module.ts";
@@ -26,7 +25,7 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
   onModeChange(() => handle.update(), handle.signal);
   let dirty = false;
   let you = "";
-  let name = currentSceneName();
+  let name = "";
   let stack: HTMLElement | undefined;
   let aimX = 0;
   let aimY = 0;
@@ -58,11 +57,6 @@ export const Header = clientEntry(import.meta.url, function Header(handle: Handl
     );
     let frame = requestAnimationFrame(function tick() {
       if (handle.signal.aborted) return;
-      const nextName = currentSceneName();
-      if (nextName !== name) {
-        name = nextName;
-        handle.update();
-      }
       const gaze = stack?.querySelector("[data-gaze]");
       if (gaze instanceof SVGElement) {
         const box = gaze.ownerSVGElement?.getBoundingClientRect();

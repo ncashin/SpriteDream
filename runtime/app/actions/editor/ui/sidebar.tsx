@@ -1,14 +1,14 @@
 import { clientEntry, css } from "remix/component";
 import type { Handle } from "remix/component";
 
-import { scene } from "../../../utilities/scene.ts";
+import type { SceneNode } from "../../../utilities/scene.ts";
 import { HierarchyTree } from "./tree/hierarchy-tree.tsx";
 import { ObjectSidebar } from "./object-sidebar.tsx";
 
 const SIDEBAR_WIDTH = "20rem";
 const SIDEBAR_MOTION = "200ms cubic-bezier(0.4, 0, 0.2, 1)";
 
-export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Handle) {
+export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Handle<{ scene: SceneNode }>) {
   let collapsed = false;
   if (typeof window !== "undefined") {
     window.addEventListener(
@@ -26,10 +26,10 @@ export const Sidebar = clientEntry(import.meta.url, function Sidebar(handle: Han
       <div mix={clip}>
         <aside inert={collapsed} mix={column}>
           <div id="scene-tree" mix={[tree, treeOuterPadding]}>
-            <HierarchyTree object={scene} />
+            <HierarchyTree object={handle.props.scene} />
           </div>
         </aside>
-        <ObjectSidebar collapsed={collapsed} />
+        <ObjectSidebar collapsed={collapsed} scene={handle.props.scene} />
       </div>
     </div>
   );

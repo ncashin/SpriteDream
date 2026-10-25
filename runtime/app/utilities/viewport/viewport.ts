@@ -99,8 +99,8 @@ export function createViewport(canvas: HTMLCanvasElement, options?: ViewportOpti
     drawText(text: Text) {
       drawText(viewport, text);
     },
-    drawFrame(frame: FrameObject) {
-      drawFrame(viewport, frame);
+    drawFrame(frame: FrameObject, root?: SceneNode) {
+      drawFrame(viewport, frame, root);
     },
     drawBoundingBox(
       object: SceneNode,

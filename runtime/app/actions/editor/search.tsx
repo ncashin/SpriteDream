@@ -33,7 +33,6 @@ export function Search(handle: Handle<{ items: string[]; onSelect: (item: string
     createHotkey(
       {
         "mod+p": (event) => {
-          event.preventDefault();
           event.stopImmediatePropagation();
           focusSearch();
         },

@@ -41,7 +41,7 @@ export function game({ canvas, scene, signal }: SceneContext) {
     }
 
     for (const frame of filterScene(scene, frameTrait)) {
-      viewport.drawFrame(frame);
+      viewport.drawFrame(frame, scene);
     }
 
     for (const collider of filterScene(scene, colliderTrait)) {

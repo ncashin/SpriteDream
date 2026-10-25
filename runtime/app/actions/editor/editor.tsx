@@ -1,14 +1,27 @@
 import { clientEntry, css } from "remix/component";
-import { on, type Handle, Frame } from "remix/component";
+import { on, type Handle } from "remix/component";
 
 import { parse } from "remix/data-schema";
 
 import { routes } from "../../routes.ts";
 import { getRoom, type Room } from "../../room/room-module.ts";
+import { createHotkey } from "../../utilities/hotkey.ts";
 import { projectFiles } from "./routes.ts";
+import { FileViewer, fileBody, fileUnsaved } from "./file-viewer.tsx";
+import type { OpenFile } from "./file-viewer.tsx";
 import { Search } from "./search.tsx";
 import { faceFor } from "./ui/blobs.tsx";
 import { lightText, treeRow } from "./styles.tsx";
+
+const dirtyMark = css({
+  color: "color-mix(in srgb, var(--text) 55%, transparent)",
+  fontSize: "11px",
+  fontWeight: 450,
+});
+
+const dirtyMarkHidden = css({
+  display: "none",
+});
 import { Icon } from "../../icon.tsx";
 import Park from "lucide/dist/esm/icons/park.mjs";
 import Plus from "lucide/dist/esm/icons/plus.mjs";
@@ -19,8 +32,52 @@ export const Editor = clientEntry(
     let room: Room;
     let files: string[] = [];
 
-    let tabs: string[] = [];
-    let selectedTab: string | undefined;
+    let openFiles: OpenFile[] = [];
+    let selectedTab: OpenFile | undefined;
+
+    async function openFile(path: string) {
+      const existing = openFiles.find((tab) => tab.path === path);
+      if (existing) {
+        selectedTab = existing;
+        handle.update();
+        return;
+      }
+
+      const response = await fetch(routes.editor.file.href({ filePath: path }), {
+        headers: { accept: "text/plain" },
+      });
+      if (!response.ok) return;
+      const text = await response.text();
+      const file: OpenFile = { path, saved: text, text };
+      if (path.endsWith(".scene")) {
+        file.scene = JSON.parse(text);
+        file.saved = JSON.stringify(file.scene);
+      }
+      openFiles.push(file);
+      selectedTab = file;
+      handle.update();
+    }
+
+    async function save(file: OpenFile | undefined) {
+      if (!file) return;
+      const response = await fetch(routes.editor.saveFile.href({ filePath: file.path }), {
+        method: "PUT",
+        body: fileBody(file),
+        headers: { "content-type": "text/plain;charset=utf-8" },
+      });
+      if (!response.ok) return;
+      file.saved = file.scene ? JSON.stringify(file.scene) : file.text;
+      handle.update();
+    }
+
+    createHotkey(
+      {
+        "mod+s": () => {
+          void save(selectedTab);
+        },
+      },
+      { signal: handle.signal, allowWhileTyping: true },
+    );
 
     handle.queueTask(async () => {
       if (handle.signal.aborted) return;
@@ -76,9 +133,7 @@ export const Editor = clientEntry(
             <Search
               items={files}
               onSelect={(file) => {
-                if (!tabs.includes(file)) tabs.push(file);
-                selectedTab = file;
-                handle.update();
+                void openFile(file);
               }}
             />
             <div
@@ -110,9 +165,9 @@ export const Editor = clientEntry(
               gap: "0.25rem",
             })}
           >
-            {tabs.map((tab) => (
+            {openFiles.map((tab) => (
               <button
-                aria-current={selectedTab === tab && "true"}
+                aria-current={selectedTab === tab ? "true" : undefined}
                 mix={[
                   treeRow,
                   css({
@@ -132,7 +187,13 @@ export const Editor = clientEntry(
                 ]}
               >
                 <Icon icon={Park} />
-                {tab}
+                {tab.path}
+                <span
+                  aria-hidden={fileUnsaved(tab) ? undefined : true}
+                  mix={[dirtyMark, !fileUnsaved(tab) && dirtyMarkHidden]}
+                >
+                  Unsaved
+                </span>
               </button>
             ))}
             <button
@@ -164,9 +225,9 @@ export const Editor = clientEntry(
               borderTop: "1px solid var(--line)",
             })}
           >
-            {tabs.map((tab) => (
+            {openFiles.map((tab) => (
               <div
-                key={tab}
+                key={tab.path}
                 mix={css({
                   position: "absolute",
                   inset: 0,
@@ -174,7 +235,7 @@ export const Editor = clientEntry(
                   pointerEvents: selectedTab === tab ? "auto" : "none",
                 })}
               >
-                <Frame src={routes.editor.file.href({ filePath: tab })} />
+                <FileViewer file={tab} onEdit={() => handle.update()} />
               </div>
             ))}
           </div>

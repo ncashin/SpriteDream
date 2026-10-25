@@ -6,7 +6,7 @@ import { boolean, number } from "remix/data-schema/coerce";
 
 import { addBoundingBoxLookup } from "./bounding-box.ts";
 import { isObject } from "./is-object.ts";
-import { filterScene, scene, type SceneNode } from "./scene.ts";
+import { filterScene, type SceneNode } from "./scene.ts";
 import { defineTrait } from "./trait/trait.ts";
 import "./viewport/draw-image.ts";
 import { parentObject, transform } from "./viewport/transform.ts";
@@ -97,7 +97,7 @@ export type PhysicsContact = {
   touching: boolean;
 };
 
-export function createPhysics() {
+export function createPhysics(scene: SceneNode) {
   const world = new World(Vec2(0, 0));
   const simulated = new Map<SceneNode, Body>();
   const hostedFixtures = new Map<SceneNode, HostedFixtures>();
@@ -274,7 +274,7 @@ function hostedCollider(object: SceneNode) {
 }
 
 function collisionHost(object: SceneNode): SceneNode | undefined {
-  const parent = parentObject(object);
+  const parent = parentObject(object, scene);
   if (!parent) return;
   const higher = collisionHost(parent);
   if (higher) return higher;
@@ -282,23 +282,23 @@ function collisionHost(object: SceneNode): SceneNode | undefined {
 }
 
 function separatedCollider(object: SceneNode) {
-  return Boolean(colliderTrait(object) && !physicsBodyTrait(object) && parentObject(object) && !hostedCollider(object));
+  return Boolean(colliderTrait(object) && !physicsBodyTrait(object) && parentObject(object, scene) && !hostedCollider(object));
 }
 
 function carrierBody(object: SceneNode) {
   const seen = new Set<SceneNode>();
-  let current = parentObject(object);
+  let current = parentObject(object, scene);
   while (current && !seen.has(current)) {
     const body = simulated.get(current);
     if (body) return body;
     seen.add(current);
-    current = parentObject(current);
+    current = parentObject(current, scene);
   }
 }
 
 function sceneLocalPose(object: SceneNode) {
   const placement = transform(object);
-  const parent = parentObject(object);
+  const parent = parentObject(object, scene);
   const parentPlacement = parent ? transform(parent) : undefined;
   if (!placement || !parentPlacement) return;
   const local = bodyLocal(parentPlacement, placement);
@@ -458,11 +458,11 @@ function applySeparatedGravity(object: SceneNode) {
 
 function carrierObject(object: SceneNode) {
   const seen = new Set<SceneNode>();
-  let current = parentObject(object);
+  let current = parentObject(object, scene);
   while (current && !seen.has(current)) {
     if (simulated.has(current)) return current;
     seen.add(current);
-    current = parentObject(current);
+    current = parentObject(current, scene);
   }
 }
 

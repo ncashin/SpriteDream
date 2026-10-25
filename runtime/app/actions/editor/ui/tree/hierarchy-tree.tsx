@@ -240,7 +240,7 @@ function moveNode(
   if (!isObject(destination) || destination === object) return;
   const parent = target.position === "inside" ? target.name : parentNameOf(destination, root);
   if (parent && createsCycle(name, parent, root)) return;
-  setObjectParent(object, parent);
+  setObjectParent(object, parent, root);
   if (target.position === "inside") forcedOpen.add(target.name);
   if (target.position === "before") placeKey(root, name, target.name);
   else placeKey(root, name, undefined, target.position === "after" ? target.name : lastChildKey(root, target.name));

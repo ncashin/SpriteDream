@@ -1,8 +1,7 @@
 import { parseSafe } from "remix/data-schema";
 import { createController } from "remix/router";
 
-import { Document } from "../document.tsx";
-import { FileViewer, supportedFileType } from "./file-viewer.tsx";
+import { supportedFileType } from "./file-viewer.tsx";
 import { editorRoutes } from "./routes.ts";
 
 const skip = new Set(["node_modules", ".git"]);
@@ -49,6 +48,21 @@ async function readProjectFile(filePath: string) {
   return readFile(target, "utf8");
 }
 
+async function writeProjectFile(filePath: string, content: string) {
+  const { writeFile } = await import("node:fs/promises");
+  const { relative, resolve, sep } = await import("node:path");
+  const root = resolve(".");
+  const target = resolve(root, filePath);
+  const fromRoot = relative(root, target);
+
+  if (fromRoot.startsWith("..") || fromRoot === "" || fromRoot.split(sep).includes("..")) {
+    return false;
+  }
+
+  await writeFile(target, content, "utf8");
+  return true;
+}
+
 export default createController(editorRoutes, {
   actions: {
     async listFiles() {
@@ -69,14 +83,30 @@ export default createController(editorRoutes, {
       }
 
       const extension = filePath.split(".").pop();
-      const type = parseSafe(supportedFileType, extension);
-      if (!type.success) return new Response("Unsupported File Type", { status: 415 });
+      if (!parseSafe(supportedFileType, extension).success) {
+        return new Response("Unsupported File Type", { status: 415 });
+      }
 
-      const content = <FileViewer file={{ type: type.value, path: filePath, content: text }} />;
-      const isFrameRequest = context.request.headers.get("X-Remix-Frame") === "true";
-      if (isFrameRequest) return context.render(content);
+      return new Response(text, { headers: { "content-type": "text/plain;charset=utf-8" } });
+    },
+    async saveFile(context) {
+      const param = context.params.filePath;
+      const filePath = Array.isArray(param) ? param.join("/") : param;
+      if (!filePath) return new Response("Not Found", { status: 404 });
 
-      return context.render(<Document title={filePath}>{content}</Document>);
+      const extension = filePath.split(".").pop();
+      if (!parseSafe(supportedFileType, extension).success) {
+        return new Response("Unsupported File Type", { status: 415 });
+      }
+
+      try {
+        const written = await writeProjectFile(filePath, await context.request.text());
+        if (!written) return new Response("Not Found", { status: 404 });
+      } catch {
+        return new Response("Not Found", { status: 404 });
+      }
+
+      return new Response(null, { status: 204 });
     },
   },
 });

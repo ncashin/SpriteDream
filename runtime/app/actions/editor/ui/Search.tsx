@@ -7,7 +7,7 @@ import type { Handle } from "remix/component";
 import { Icon } from "../../../icon.tsx";
 import { createHotkey } from "../../../utilities/hotkey.ts";
 import { isObject } from "../../../utilities/is-object.ts";
-import { scene, type SceneNode } from "../../../utilities/scene.ts";
+import type { SceneNode } from "../../../utilities/scene.ts";
 import { selectObjects } from "../../../utilities/selected-objects.ts";
 const LIST_ID = "scene-search-list";
 const SEARCH_FADE = "80ms ease";
@@ -16,8 +16,8 @@ type SearchItem =
   | { kind: "scene"; name: string }
   | { kind: "object"; name: string; object: SceneNode };
 
-function sceneObjects(): SearchItem[] {
-  return Object.entries(scene).flatMap(([name, value]) =>
+function sceneObjects(root: SceneNode): SearchItem[] {
+  return Object.entries(root).flatMap(([name, value]) =>
     isObject(value) ? [{ kind: "object" as const, name, object: value }] : [],
   );
 }
@@ -48,10 +48,10 @@ function fuzzyScore(text: string, query: string) {
   return score;
 }
 
-function matchingItems(scenes: string[], query: string): SearchItem[] {
+function matchingItems(scenes: string[], query: string, root: SceneNode): SearchItem[] {
   let items: SearchItem[] = [
     ...scenes.map((name) => ({ kind: "scene" as const, name })),
-    ...sceneObjects(),
+    ...sceneObjects(root),
   ];
   return items
     .map((item) => ({ item, score: fuzzyScore(item.name, query) }))
@@ -73,7 +73,8 @@ function openInFrames(name: string, target: Window = window) {
   }
 }
 
-export function Search(handle: Handle) {
+export function Search(handle: Handle<{ scene?: SceneNode }>) {
+  const root = handle.props.scene ?? {};
   let query = "";
   let open = false;
   let activeIndex = 0;
@@ -86,7 +87,7 @@ export function Search(handle: Handle) {
   }
 
   function choose(index: number) {
-    let item = matchingItems(scenes, query)[index];
+    let item = matchingItems(scenes, query, root)[index];
     if (!item) return;
     query = "";
     setOpen(false);
@@ -104,7 +105,7 @@ export function Search(handle: Handle) {
   }
 
   function focusSearch() {
-    let items = matchingItems(scenes, query);
+    let items = matchingItems(scenes, query, root);
     let currentIndex = items.findIndex((item) => item.kind === "scene" && item.name === current);
     activeIndex = currentIndex === -1 ? 0 : currentIndex;
     setOpen(true);
@@ -115,9 +116,7 @@ export function Search(handle: Handle) {
 
   createHotkey(
     {
-      "mod+p": (event) => {
-        event.preventDefault();
-        event.stopPropagation();
+      "mod+p": () => {
         focusSearch();
       },
     },
@@ -125,7 +124,7 @@ export function Search(handle: Handle) {
   );
 
   return () => {
-    let items = matchingItems(scenes, query);
+    let items = matchingItems(scenes, query, root);
     let index = items.length === 0 ? 0 : Math.min(activeIndex, items.length - 1);
 
     return (
@@ -168,7 +167,7 @@ export function Search(handle: Handle) {
                 on("keydown", (event) => {
                   if (event.key === "ArrowDown") {
                     event.preventDefault();
-                    let count = matchingItems(scenes, query).length;
+                    let count = matchingItems(scenes, query, root).length;
                     if (count === 0) return;
                     setOpen(true);
                     activeIndex = Math.min(index + 1, count - 1);

@@ -6,7 +6,6 @@ import { number } from "remix/data-schema/coerce";
 
 import { addBoundingBoxLookup } from "../bounding-box.ts";
 import { Mode, mode } from "../mode.ts";
-import { objectPath, scene } from "../scene.ts";
 import { defineTrait } from "../trait/trait.ts";
 import { transform } from "./transform.ts";
 import { drawComponentKey } from "./draw-component.ts";
@@ -44,7 +43,6 @@ export function drawFrame(
   frame: FrameObject,
 ) {
   const source = frame.frame.frameSource;
-  const path = objectPath(scene, frame)?.join(".");
   const worldMatrix = transform(frame)?.matrix;
   if (!source || !worldMatrix) return;
 

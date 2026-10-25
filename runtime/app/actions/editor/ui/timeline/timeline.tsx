@@ -2,7 +2,7 @@ import Spline from "lucide/dist/esm/icons/spline.mjs";
 import { clientEntry, css, on } from "remix/component";
 import type { Handle } from "remix/component";
 import { createHotkey } from "../../../../utilities/hotkey.ts";
-import { applyScenePatch, scene, type ScenePatch } from "../../../../utilities/scene.ts";
+import { applyScenePatch, type SceneNode, type ScenePatch } from "../../../../utilities/scene.ts";
 import { Icon } from "../../../../icon.tsx";
 import { isTimelineCollapsed, onTimelineCollapsedChange } from "./collapsed.ts";
 import { blendAt, blendDefaults, type Keyframe } from "./blend.ts";
@@ -77,7 +77,7 @@ function cueSounds(from: number, to: number) {
   }
 }
 
-export const Timeline = clientEntry(import.meta.url, function Timeline(handle: Handle) {
+export const Timeline = clientEntry(import.meta.url, function Timeline(handle: Handle<{ scene: SceneNode }>) {
   let time = 0;
   let applied = "";
   let scrubbing = false;
@@ -137,8 +137,7 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
 
   createHotkey(
     {
-      space: (event) => {
-        event.preventDefault();
+      space: () => {
         if (playing) {
           stopPlayback();
           handle.update();
@@ -154,7 +153,7 @@ export const Timeline = clientEntry(import.meta.url, function Timeline(handle: H
     const patch = samplePatch(time);
     const encoded = JSON.stringify(patch);
     if (encoded === applied) return;
-    applyScenePatch(patch, scene);
+    applyScenePatch(patch, handle.props.scene);
     applied = encoded;
   }
 
