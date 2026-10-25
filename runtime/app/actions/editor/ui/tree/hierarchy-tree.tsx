@@ -13,6 +13,7 @@ import {
   selectedObjects,
 } from "../../../../utilities/selected-objects.ts";
 import { parentObject, setObjectParent } from "../../../../utilities/viewport/transform.ts";
+import { treeRow } from "../../styles.tsx";
 import { Button } from "../button.tsx";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { renameKey } from "./object-tree.tsx";
@@ -25,7 +26,6 @@ import {
   iconMotion,
   iconStack,
   label,
-  row,
   rowShell,
   stickyHeader,
 } from "./tree.ts";
@@ -91,7 +91,7 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode; 
           aria-current={isSelected ? "true" : undefined}
           aria-expanded={hasChildren ? open : undefined}
           mix={[
-            row,
+            treeRow,
             hasChildren && expandable,
             dragSource?.object === object && dragging,
             position === "before" && dropBefore,

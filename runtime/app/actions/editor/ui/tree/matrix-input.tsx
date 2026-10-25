@@ -5,6 +5,7 @@ import { css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../../../icon.tsx";
+import { treeRow } from "../../styles.tsx";
 import { Button } from "../button.tsx";
 import {
   chevronOpen,
@@ -15,7 +16,6 @@ import {
   iconMotion,
   iconStack,
   label,
-  row,
   rowShell,
   stickyHeader,
 } from "./tree.ts";
@@ -194,7 +194,7 @@ export function MatrixInput(handle: Handle<MatrixInputProps>) {
         <div
           aria-expanded={!collapsed}
           mix={[
-            row,
+            treeRow,
             expandable,
             on("click", (event) => {
               const target = event.target instanceof Element ? event.target : null;

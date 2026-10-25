@@ -26,7 +26,7 @@ export function Icon(handle: Handle<{ icon: IconNode; size?: number }>) {
         aria-hidden="true"
         mix={iconStyle}
       >
-        {icon.map(([tag, attrs], index) => jsx(tag, { ...attrs }, index))}
+        {icon.map(([tag, attributes], index) => jsx(tag, { ...attributes }, index))}
       </svg>
     );
   };

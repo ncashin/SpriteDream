@@ -17,6 +17,7 @@ import "../../../../utilities/viewport/draw-image.ts";
 import "../../../../utilities/viewport/frame.tsx";
 import { createMatrix, isMatrix } from "../../../../utilities/viewport/transform.ts";
 import { Button } from "../button.tsx";
+import { treeRow } from "../../styles.tsx";
 import { Dropdown, type DropdownItem } from "../dropdown.tsx";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { PropertyInput } from "./property-input.tsx";
@@ -29,7 +30,6 @@ import {
   iconMotion,
   iconStack,
   label,
-  row,
   rowShell,
   stickyHeader,
 } from "./tree.ts";
@@ -201,6 +201,7 @@ function Branch(
           aria-current={isSelected ? "true" : undefined}
           aria-expanded={!collapsed}
           mix={[
+            treeRow,
             row,
             expandable,
             on("click", (event) => {
