@@ -6,10 +6,11 @@ import { parse } from "remix/data-schema";
 import { routes } from "../../routes.ts";
 import { getRoom, type Room } from "../../room/room-module.ts";
 import { projectFiles } from "./routes.ts";
+import { Search } from "./search.tsx";
 import { faceFor } from "./ui/blobs.tsx";
 import { treeRow } from "./styles.tsx";
 import { Icon } from "../../icon.tsx";
-import { File } from "lucide";
+import Park from "lucide/dist/esm/icons/park.mjs";
 
 export const Editor = clientEntry(
   import.meta.url,
@@ -35,7 +36,7 @@ export const Editor = clientEntry(
 
       let response = await fetch(routes.editor.listFiles.href());
       files = parse(projectFiles, await response.json()).filter((filePath) =>
-        filePath.endsWith(".json"),
+        filePath.endsWith(".scene"),
       );
 
       handle.update();
@@ -48,12 +49,12 @@ export const Editor = clientEntry(
         <div
           mix={css({
             display: "grid",
-            gridTemplateColumns: "24rem minmax(0, 1fr)",
+            gridTemplateColumns: "minmax(0, 1fr)",
             gridTemplateRows: "auto auto minmax(0, 1fr)",
             gridTemplateAreas: `
-              "header header"
-              "files tabs"
-              "files tabContent"
+              "header"
+              "tabs"
+              "tabContent"
             `,
             height: "100vh",
             overflow: "hidden",
@@ -66,12 +67,19 @@ export const Editor = clientEntry(
               flexDirection: "row",
               justifyContent: "space-between",
               alignItems: "center",
-              overflow: "hidden",
-              padding: "1rem",
+              overflow: "visible",
+              padding: "0.5rem 1rem",
             })}
           >
-            <span>Left</span>
-            <span>Search</span>
+            <span></span>
+            <Search
+              items={files}
+              onSelect={(file) => {
+                if (!tabs.includes(file)) tabs.push(file);
+                selectedTab = file;
+                handle.update();
+              }}
+            />
             <div
               mix={[
                 css({
@@ -88,33 +96,6 @@ export const Editor = clientEntry(
 
           <div
             mix={css({
-              gridArea: "files",
-              display: "flex",
-              flexDirection: "column",
-              minHeight: 0,
-              overflow: "auto",
-              padding: "1rem",
-            })}
-          >
-            {files.map((file) => (
-              <button
-                mix={[
-                  treeRow,
-                  on("click", () => {
-                    if (!tabs.includes(file)) tabs.push(file);
-                    selectedTab = file;
-                    handle.update();
-                  }),
-                ]}
-              >
-                <Icon icon={File} />
-                {file}
-              </button>
-            ))}
-          </div>
-
-          <div
-            mix={css({
               gridArea: "tabs",
               display: "flex",
               flexDirection: "row",
@@ -123,9 +104,9 @@ export const Editor = clientEntry(
               position: "relative",
               zIndex: 1,
               overflow: "auto",
-              padding: "1rem",
               background: "#121213",
-              gap: "0.35rem",
+              padding: "0rem 0rem 0.5rem 0.5rem",
+              gap: "0.25rem"
             })}
           >
             {tabs.map((tab) => (
@@ -137,6 +118,10 @@ export const Editor = clientEntry(
                     width: "auto",
                     flex: "0 0 auto",
                     minHeight: "min-content",
+                    paddingRight: "0.5rem",
+                    "&[aria-current='true']": {
+                      fontVariationSettings: '"GRAD" 150',
+                    },
                   }),
                   on("click", () => {
                     if (selectedTab === tab) return;
@@ -145,7 +130,7 @@ export const Editor = clientEntry(
                   }),
                 ]}
               >
-                <Icon icon={File} />
+                <Icon icon={Park} />
                 {tab}
               </button>
             ))}
@@ -158,6 +143,7 @@ export const Editor = clientEntry(
               minHeight: 0,
               overflow: "hidden",
               isolation: "isolate",
+              borderTop: "1px solid var(--line)",
             })}
           >
             {selectedTab && (

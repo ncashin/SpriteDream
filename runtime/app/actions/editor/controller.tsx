@@ -1,7 +1,8 @@
+import { parseSafe } from "remix/data-schema";
 import { createController } from "remix/router";
 
 import { Document } from "../document.tsx";
-import { FileViewer } from "./file-viewer.tsx";
+import { FileViewer, supportedFileType } from "./file-viewer.tsx";
 import { editorRoutes } from "./routes.ts";
 
 const skip = new Set(["node_modules", ".git"]);
@@ -67,7 +68,11 @@ export default createController(editorRoutes, {
         return new Response("Not Found", { status: 404 });
       }
 
-      const content = <FileViewer file={{ path: filePath, content: text }} />;
+      const extension = filePath.split(".").pop();
+      const type = parseSafe(supportedFileType, extension);
+      if (!type.success) return new Response("Unsupported File Type", { status: 415 });
+
+      const content = <FileViewer file={{ type: type.value, path: filePath, content: text }} />;
       const isFrameRequest = context.request.headers.get("X-Remix-Frame") === "true";
       if (isFrameRequest) return context.render(content);
 

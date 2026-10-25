@@ -3,6 +3,8 @@ import type { Handle } from "remix/component";
 import { enum_, parseSafe } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 
+import { SceneViewer } from "./scene-viewer.tsx";
+
 export const supportedFileType = enum_(["scene", "json", "ts", "tsx"] as const);
 export type SupportedFileType = InferOutput<typeof supportedFileType>;
 
@@ -22,7 +24,8 @@ export function FileViewer(handle: Handle<{ file: ProjectFile }>) {
 
     switch (file.type) {
       case "scene":
-        
+        const parsedContent = JSON.parse(content);
+        return <SceneViewer scene={parsedContent} />;
       case "json":
       case "ts":
       case "tsx":
