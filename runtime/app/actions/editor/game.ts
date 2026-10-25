@@ -1,6 +1,6 @@
 import { contains, lookupBoundingBox } from "../../utilities/bounding-box.ts";
 import { isObject } from "../../utilities/is-object.ts";
-import { filterScene } from "../../utilities/scene.ts";
+import { diffScene, filterScene } from "../../utilities/scene.ts";
 import type { SceneContext } from "./scene-viewer.tsx";
 import { selectObjects, selectedObjects } from "../../utilities/selected-objects.ts";
 import { colliderTrait } from "../../utilities/physics.ts";
@@ -10,8 +10,10 @@ import { textTrait } from "../../utilities/viewport/draw-text.ts";
 import { frameTrait } from "../../utilities/viewport/frame.tsx";
 import { createViewport } from "../../utilities/viewport/viewport.ts";
 
-export function game({ canvas, scene, signal }: SceneContext) {
+export function game({ canvas, scene, signal, onPatch }: SceneContext) {
   if (!scene || signal.aborted) return;
+
+  let previous = structuredClone(scene);
 
   const updateLoop = createUpdateLoop();
   const viewport = createViewport(canvas, {
@@ -51,6 +53,11 @@ export function game({ canvas, scene, signal }: SceneContext) {
     for (const object of selectedObjects) {
       viewport.drawBoundingBox(object);
     }
+
+    const patch = diffScene(previous, scene);
+    if (patch.length === 0) return;
+    previous = structuredClone(scene);
+    onPatch(patch);
   });
 
   updateLoop.start();

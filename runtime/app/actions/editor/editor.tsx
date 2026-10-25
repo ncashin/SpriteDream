@@ -7,21 +7,12 @@ import { routes } from "../../routes.ts";
 import { getRoom, type Room } from "../../room/room-module.ts";
 import { createHotkey } from "../../utilities/hotkey.ts";
 import { projectFiles } from "./routes.ts";
-import { FileViewer, fileBody, fileUnsaved } from "./file-viewer.tsx";
+import { FileViewer } from "./file-viewer.tsx";
 import type { OpenFile } from "./file-viewer.tsx";
 import { Search } from "./search.tsx";
 import { faceFor } from "./ui/blobs.tsx";
 import { lightText, treeRow } from "./styles.tsx";
 
-const dirtyMark = css({
-  color: "color-mix(in srgb, var(--text) 55%, transparent)",
-  fontSize: "11px",
-  fontWeight: 450,
-});
-
-const dirtyMarkHidden = css({
-  display: "none",
-});
 import { Icon } from "../../icon.tsx";
 import Park from "lucide/dist/esm/icons/park.mjs";
 import Plus from "lucide/dist/esm/icons/plus.mjs";
@@ -43,37 +34,40 @@ export const Editor = clientEntry(
         return;
       }
 
-      const response = await fetch(routes.editor.file.href({ filePath: path }), {
-        headers: { accept: "text/plain" },
-      });
+      const response = await fetch(routes.editor.file.href({ filePath: path }));
       if (!response.ok) return;
-      const text = await response.text();
-      const file: OpenFile = { path, saved: text, text };
-      if (path.endsWith(".scene")) {
-        file.scene = JSON.parse(text);
-        file.saved = JSON.stringify(file.scene);
-      }
+      const name = path.split("/").pop() ?? path;
+      const type = response.headers.get("content-type") ?? "";
+      const file: OpenFile = {
+        path,
+        file: new File([await response.arrayBuffer()], name, { type }),
+        dirtyFlag: false,
+      };
       openFiles.push(file);
       selectedTab = file;
       handle.update();
     }
 
-    async function save(file: OpenFile | undefined) {
-      if (!file) return;
-      const response = await fetch(routes.editor.saveFile.href({ filePath: file.path }), {
-        method: "PUT",
-        body: fileBody(file),
-        headers: { "content-type": "text/plain;charset=utf-8" },
-      });
+    async function save(file: OpenFile) {
+      const response = await fetch(
+        routes.editor.saveFile.href({ filePath: file.path }),
+        {
+          method: "PUT",
+          body: file.file,
+          headers: { "content-type": file.file.type || "application/octet-stream" },
+        },
+      );
+
       if (!response.ok) return;
-      file.saved = file.scene ? JSON.stringify(file.scene) : file.text;
+      file.dirtyFlag = false;
       handle.update();
     }
 
     createHotkey(
       {
         "mod+s": () => {
-          void save(selectedTab);
+          if(!selectedTab) return;
+          save(selectedTab);
         },
       },
       { signal: handle.signal, allowWhileTyping: true },
@@ -93,9 +87,7 @@ export const Editor = clientEntry(
       });
 
       let response = await fetch(routes.editor.listFiles.href());
-      files = parse(projectFiles, await response.json()).filter((filePath) =>
-        filePath.endsWith(".scene"),
-      );
+      files = parse(projectFiles, await response.json());
 
       handle.update();
     });
@@ -187,13 +179,7 @@ export const Editor = clientEntry(
                 ]}
               >
                 <Icon icon={Park} />
-                {tab.path}
-                <span
-                  aria-hidden={fileUnsaved(tab) ? undefined : true}
-                  mix={[dirtyMark, !fileUnsaved(tab) && dirtyMarkHidden]}
-                >
-                  Unsaved
-                </span>
+                {tab.dirtyFlag ? `${tab.path} •` : tab.path}
               </button>
             ))}
             <button
@@ -225,19 +211,20 @@ export const Editor = clientEntry(
               borderTop: "1px solid var(--line)",
             })}
           >
-            {openFiles.map((tab) => (
+            {selectedTab && (
               <div
-                key={tab.path}
                 mix={css({
                   position: "absolute",
                   inset: 0,
-                  visibility: selectedTab === tab ? "visible" : "hidden",
-                  pointerEvents: selectedTab === tab ? "auto" : "none",
                 })}
               >
-                <FileViewer file={tab} onEdit={() => handle.update()} />
+                <FileViewer
+                  key={selectedTab.path}
+                  file={selectedTab}
+                  onEdit={() => handle.update()}
+                />
               </div>
-            ))}
+            )}
           </div>
         </div>
       );

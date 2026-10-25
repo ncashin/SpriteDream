@@ -1,18 +1,20 @@
 import { css, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-import type { SceneNode } from "../../utilities/scene.ts";
+import type { SceneNode, ScenePatch } from "../../utilities/scene.ts";
 
 export type SceneContext = {
   canvas: HTMLCanvasElement;
   scene: SceneNode;
   signal: AbortSignal;
+  onPatch: (patch: ScenePatch) => void;
 };
 
 export function SceneViewer(
   handle: Handle<{
     scene: SceneNode;
     onMount: (context: SceneContext) => void | Promise<void>;
+    onPatch: (patch: ScenePatch) => void;
   }>,
 ) {
   return () => (
@@ -32,7 +34,12 @@ export function SceneViewer(
           if (!(node instanceof HTMLCanvasElement)) return;
           if (node.dataset.mounted === "true") return;
           node.dataset.mounted = "true";
-          void handle.props.onMount({ canvas: node, scene: handle.props.scene, signal });
+          void handle.props.onMount({
+            canvas: node,
+            scene: handle.props.scene,
+            signal,
+            onPatch: handle.props.onPatch,
+          });
         }),
       ]}
     />

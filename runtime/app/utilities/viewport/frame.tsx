@@ -53,8 +53,6 @@ export function drawFrame(
     drawComponentKey(frame, "frame"),
     worldMatrix.multiply(placed),
     <div
-      data-scene-object={path}
-      data-frame-passthrough={playing ? undefined : ""}
       mix={[
         css({
           boxSizing: "border-box",
