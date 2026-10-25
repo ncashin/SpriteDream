@@ -75,7 +75,8 @@ function abortWhenDisconnected(canvas: HTMLCanvasElement) {
 async function mountGame(canvas: HTMLCanvasElement) {
   const signal = abortWhenDisconnected(canvas);
 
-  const updateLoop = createUpdateLoop({ signal });
+  const updateLoop = createUpdateLoop();
+  signal.addEventListener("abort", () => updateLoop.destroy());
 
   const input = createInputMap(
     {
@@ -225,7 +226,6 @@ async function mountGame(canvas: HTMLCanvasElement) {
 
   let sentSelection = "";
   const editorViewport = createViewport(canvas, {
-    signal,
     onWorldHover(point) {
       canvas.style.cursor = objectAtPoint(point) ? "pointer" : "";
     },
@@ -234,6 +234,7 @@ async function mountGame(canvas: HTMLCanvasElement) {
       selectObjects(node === undefined ? [] : [node]);
     },
   });
+  signal.addEventListener("abort", () => editorViewport.destroy());
 
   updateLoop.onUpdate(() => {
     editorViewport.beginDrawing();

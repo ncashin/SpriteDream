@@ -3,14 +3,7 @@ import type { Handle } from "remix/component";
 import { enum_, parseSafe } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 
-import { filterScene, type SceneNode } from "../../utilities/scene.ts";
-import { selectedObjects } from "../../utilities/selected-objects.ts";
-import { colliderTrait } from "../../utilities/physics.ts";
-import { createUpdateLoop } from "../../utilities/update-loop.ts";
-import { imageTrait } from "../../utilities/viewport/draw-image.ts";
-import { textTrait } from "../../utilities/viewport/draw-text.ts";
-import { frameTrait } from "../../utilities/viewport/frame.tsx";
-import { createViewport } from "../../utilities/viewport/viewport.ts";
+import { game } from "./game.ts";
 import { SceneViewer } from "./scene-viewer.tsx";
 
 export const supportedFileType = enum_(["scene", "json", "ts", "tsx"] as const);
@@ -42,40 +35,7 @@ export const FileViewer = clientEntry(
               onSave={(next) => {
                 content = next;
               }}
-              onMount={(canvas, scene) => {
-                if (!scene) return;
-                const updateLoop = createUpdateLoop({ signal: handle.signal });
-                const viewport = createViewport(canvas, {
-                  signal: handle.signal,
-                });
-
-                updateLoop.onUpdate(() => {
-                  viewport.beginDrawing();
-
-                  for (const image of filterScene(scene, imageTrait)) {
-                    viewport.drawImage(image);
-                  }
-
-                  for (const text of filterScene(scene, textTrait)) {
-                    viewport.drawText(text);
-                  }
-
-                  for (const frame of filterScene(scene, frameTrait)) {
-                    viewport.drawFrame(frame);
-                  }
-
-                  for (const collider of filterScene(scene, colliderTrait)) {
-                    viewport.drawPhysicsCollider(collider);
-                  }
-
-                  for (const object of selectedObjects) {
-                    viewport.drawBoundingBox(object);
-                  }
-                });
-
-                if (handle.signal.aborted) return;
-                updateLoop.start();
-              }}
+              onMount={game}
             />
           );
         case "json":

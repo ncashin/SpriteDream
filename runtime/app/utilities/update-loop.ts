@@ -4,13 +4,13 @@ export type UpdateCallback = (frameInfo: FrameInfo) => void;
 
 export type UpdateLoop = {
   start: () => void;
-  stop: () => void;
+  destroy: () => void;
   onUpdate: (listener: UpdateCallback) => UpdateCallback;
   removeUpdate: (listener: UpdateCallback) => void;
   listeners: Set<UpdateCallback>;
 };
 
-export const createUpdateLoop = (options?: { signal?: AbortSignal }): UpdateLoop => {
+export const createUpdateLoop = (): UpdateLoop => {
   const listeners = new Set<UpdateCallback>();
   let running = false;
   let lastTimestamp = 0;
@@ -39,8 +39,9 @@ export const createUpdateLoop = (options?: { signal?: AbortSignal }): UpdateLoop
     if (running) frame = requestAnimationFrame(tick);
   };
 
-  const stop = () => {
+  const destroy = () => {
     running = false;
+    listeners.clear();
     if (!frame) return;
     cancelAnimationFrame(frame);
     frame = 0;
@@ -55,7 +56,5 @@ export const createUpdateLoop = (options?: { signal?: AbortSignal }): UpdateLoop
     listeners.delete(listener);
   };
 
-  options?.signal?.addEventListener("abort", stop);
-
-  return { start, stop, onUpdate, removeUpdate, listeners };
+  return { start, destroy, onUpdate, removeUpdate, listeners };
 };

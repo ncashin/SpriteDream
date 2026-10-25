@@ -8,7 +8,6 @@ export function curryViewportEventListeners(
   viewportWithTransforms: ViewportWithTransforms,
   options?: ViewportOptions,
 ) {
-  const signal = options?.signal;
   const canvas = viewportWithTransforms.state.canvas;
   let drag: {
     id: number;
@@ -107,13 +106,24 @@ export function curryViewportEventListeners(
     );
   }
 
-  canvas.addEventListener("pointerdown", onPointerDown, { signal });
-  canvas.addEventListener("pointermove", onPointerMove, { signal });
-  canvas.addEventListener("pointerup", onPointerUp, { signal });
-  canvas.addEventListener("pointercancel", onPointerCancel, { signal });
-  canvas.addEventListener("pointerleave", onPointerLeave, { signal });
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointermove", onPointerMove);
+  canvas.addEventListener("pointerup", onPointerUp);
+  canvas.addEventListener("pointercancel", onPointerCancel);
+  canvas.addEventListener("pointerleave", onPointerLeave);
   const wheelSurface = canvas.parentElement ?? canvas;
-  wheelSurface.addEventListener("wheel", onWheel, { passive: false, signal });
-  wheelSurface.addEventListener("pointerdown", trackCursor, { signal });
-  wheelSurface.addEventListener("pointermove", trackCursor, { signal });
+  wheelSurface.addEventListener("wheel", onWheel, { passive: false });
+  wheelSurface.addEventListener("pointerdown", trackCursor);
+  wheelSurface.addEventListener("pointermove", trackCursor);
+
+  return () => {
+    canvas.removeEventListener("pointerdown", onPointerDown);
+    canvas.removeEventListener("pointermove", onPointerMove);
+    canvas.removeEventListener("pointerup", onPointerUp);
+    canvas.removeEventListener("pointercancel", onPointerCancel);
+    canvas.removeEventListener("pointerleave", onPointerLeave);
+    wheelSurface.removeEventListener("wheel", onWheel);
+    wheelSurface.removeEventListener("pointerdown", trackCursor);
+    wheelSurface.removeEventListener("pointermove", trackCursor);
+  };
 }

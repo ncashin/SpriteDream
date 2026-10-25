@@ -24,7 +24,6 @@ export {
 export type WorldPoint = { x: number; y: number };
 
 export type ViewportOptions = {
-  signal?: AbortSignal;
   onWorldHover?: (point: WorldPoint) => void;
   onWorldClick?: (point: WorldPoint) => void;
 };
@@ -57,14 +56,14 @@ export function createViewport(canvas: HTMLCanvasElement, options?: ViewportOpti
       drawComponent(viewport, key, transform, node);
     },
   };
-  curryViewportEventListeners(viewport, options);
+  const removeListeners = curryViewportEventListeners(viewport, options);
 
-  const signal = options?.signal;
-  signal?.addEventListener("abort", () => {
+  function destroy() {
+    removeListeners();
     releaseViewportTransforms(transforms);
     drawComponent.dispose();
     drawCursor.dispose();
-  });
+  }
 
   function beginDrawing() {
     fitCanvas(state.canvas);
@@ -115,6 +114,7 @@ export function createViewport(canvas: HTMLCanvasElement, options?: ViewportOpti
     drawCursor(point: WorldPoint, id: string, look?: WorldPoint) {
       drawCursor(viewport, point, id, look);
     },
+    destroy,
   };
 }
 
