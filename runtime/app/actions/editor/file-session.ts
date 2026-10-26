@@ -31,7 +31,7 @@ export type FileSession = {
   isHost(): boolean;
   open(path: string): Promise<SharedFile | undefined>;
   save(path: string): Promise<void>;
-  commitText(path: string, next: string): void;
+  write(path: string, next: string | Uint8Array): void;
   subscribeFile(path: string, listener: () => void): () => void;
   subscribeFileList(listener: () => void): () => void;
 };
@@ -179,12 +179,14 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
     });
   }
 
-  function putBlob(path: string, mime: string, bytes: Uint8Array) {
+  function putBlob(path: string, mime: string, bytes: Uint8Array, markDirty = false) {
     const existing = files[path];
 
     if (existing?.kind === "blob") {
+      const changed = !sameBytes(existing.bytes, bytes);
       existing.mime = mime;
       existing.bytes = bytes;
+      if (changed && markDirty) existing.dirty = true;
       notify(path);
       return existing;
     }
@@ -335,7 +337,7 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
     const file =
       message.kind === "text"
         ? putText(message.path, message.mime, bytes)
-        : putBlob(message.path, message.mime, bytes);
+        : putBlob(message.path, message.mime, bytes, true);
 
     settle(message.path, file);
   });
@@ -418,30 +420,37 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
       }
     },
 
-    commitText(path, next) {
+    write(path, next) {
       const file = files[path];
-      if (!file || file.kind !== "text") return;
+      if (!file) return;
 
+      if (file.kind === "blob") {
+        const bytes = typeof next === "string" ? new TextEncoder().encode(next) : next;
+        if (sameBytes(file.bytes, bytes)) return;
+
+        file.bytes = bytes;
+        setDirty(path, true);
+        sendState(file);
+        return;
+      }
+
+      const text = typeof next === "string" ? next : new TextDecoder().decode(next);
       const previous = file.text.toString();
-      if (previous === next) return;
+      if (previous === text) return;
 
       let start = 0;
 
-      while (
-        start < previous.length &&
-        start < next.length &&
-        previous[start] === next[start]
-      ) {
+      while (start < previous.length && start < text.length && previous[start] === text[start]) {
         start++;
       }
 
       let endPrevious = previous.length;
-      let endNext = next.length;
+      let endNext = text.length;
 
       while (
         endPrevious > start &&
         endNext > start &&
-        previous[endPrevious - 1] === next[endNext - 1]
+        previous[endPrevious - 1] === text[endNext - 1]
       ) {
         endPrevious--;
         endNext--;
@@ -452,7 +461,7 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
           file.text.delete(start, endPrevious - start);
         }
 
-        const insert = next.slice(start, endNext);
+        const insert = text.slice(start, endNext);
 
         if (insert) {
           file.text.insert(start, insert);

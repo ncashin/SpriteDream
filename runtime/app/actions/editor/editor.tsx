@@ -22,37 +22,23 @@ export const Editor = clientEntry(
   function Editor(handle: Handle) {
     let room: SceneRoom;
     let fileSession: FileSession;
-    const viewing: Record<string, { path: string; dirty: boolean }> = {};
+    let remoteSelectedTabs: { id: string; path: string; dirty: boolean }[] =
+      [];
 
-    let announced = false;
-
-    function publishViewing() {
+    function broadcastSelectedTab() {
       if (!room) return;
 
       const path = selectedTab?.path;
       if (path) {
-        announced = true;
         room.send({
           messageType: "viewing",
           path,
-          dirty: selectedTab?.sharedFile.dirty,
+          dirty: selectedTab.sharedFile.dirty,
         });
         return;
       }
 
-      if (!announced) return;
-      announced = false;
       room.send({ messageType: "viewing", path: undefined, dirty: undefined });
-    }
-
-    function viewersFor(path: string) {
-      if (!room) return [];
-
-      const ids: string[] = [];
-      for (const id of Object.keys(viewing)) {
-        if (viewing[id]?.path === path && room.people[id]) ids.push(id);
-      }
-      return ids;
     }
 
     handle.queueTask(async () => {
@@ -60,6 +46,7 @@ export const Editor = clientEntry(
 
       room = await joinRoom(handle.signal, union([gameMessage, editorMessage]));
       if (handle.signal.aborted) return;
+
       fileSession = createFileSession(room, handle.signal);
       handle.signal.addEventListener(
         "abort",
@@ -67,22 +54,31 @@ export const Editor = clientEntry(
       );
 
       room.onMessageType("onPersonJoin", (message) => {
-        if (message.id !== room.you.id) publishViewing();
+        if (message.id !== room.you.id && selectedTab) broadcastSelectedTab();
         handle.update();
       });
 
       room.onMessageType("onPersonLeave", (message) => {
-        delete viewing[message.id];
+        const index = remoteSelectedTabs.findIndex(
+          (tab) => tab.id === message.id,
+        );
+        if (index !== -1) remoteSelectedTabs.splice(index, 1);
         handle.update();
       });
 
       room.onMessageType("viewing", (message) => {
         if (message.sentBy === room.you.id) return;
 
-        if (message.path) {
-          viewing[message.sentBy] = { path: message.path, dirty: message.dirty === true };
-        } else delete viewing[message.sentBy];
-
+        const index = remoteSelectedTabs.findIndex(
+          (tab) => tab.id === message.sentBy,
+        );
+        if (index !== -1) remoteSelectedTabs.splice(index, 1);
+        if (message.path)
+          remoteSelectedTabs.push({
+            id: message.sentBy,
+            path: message.path,
+            dirty: message.dirty === true,
+          });
         handle.update();
       });
 
@@ -91,29 +87,6 @@ export const Editor = clientEntry(
 
     let tabs: EditorTab[] = [];
     let selectedTab: EditorTab | undefined;
-
-    function closeFile(tab: EditorTab) {
-      const index = tabs.indexOf(tab);
-      if (index === -1) return;
-
-      tab.unsubscribe();
-      tabs.splice(index, 1);
-
-      if (selectedTab === tab) {
-        selectedTab = tabs[index] ?? tabs[index - 1];
-        publishViewing();
-      }
-
-      handle.update();
-    }
-
-    function selectTab(tab: EditorTab) {
-      if (selectedTab === tab) return;
-      selectedTab = tab;
-      publishViewing();
-      handle.update();
-    }
-
     async function openFile(path: string) {
       if (!fileSession) return;
 
@@ -130,50 +103,48 @@ export const Editor = clientEntry(
         selectTab(already);
         return;
       }
-      const unsubscribe = fileSession.subscribeFile(path, () => handle.update());
-      handle.signal.addEventListener("abort", unsubscribe);
-
       const tab: EditorTab = {
         path,
         sharedFile,
-        unsubscribe,
       };
 
       tabs.push(tab);
       selectedTab = tab;
-      publishViewing();
+      broadcastSelectedTab();
+      handle.update();
+    }
+    function closeFile(tab: EditorTab) {
+      const index = tabs.indexOf(tab);
+      if (index === -1) return;
+
+      tabs.splice(index, 1);
+
+      if (selectedTab === tab) {
+        selectedTab = tabs[index] ?? tabs[index - 1];
+        broadcastSelectedTab();
+      }
+
+      handle.update();
+    }
+    function selectTab(tab: EditorTab) {
+      if (selectedTab === tab) return;
+      selectedTab = tab;
+      broadcastSelectedTab();
       handle.update();
     }
 
     createHotkey(
       {
         "mod+s": () => {
-          if (!selectedTab) return;
-          fileSession.save(selectedTab.path);
+          if (!selectedTab?.sharedFile.dirty) return;
+          void fileSession.save(selectedTab.path).then(() => {
+            broadcastSelectedTab();
+            handle.update();
+          });
         },
       },
       { signal: handle.signal, allowWhileTyping: true },
     );
-
-    function remoteTabs(openTabs: EditorTab[]) {
-      const byPath = new Map<string, { path: string; dirty: boolean; viewers: string[] }>();
-
-      for (const [id, view] of Object.entries(viewing)) {
-        if (!room?.people[id]) continue;
-        if (openTabs.some((tab) => tab.path === view.path)) continue;
-
-        const info = byPath.get(view.path) ?? {
-          path: view.path,
-          viewers: [],
-          dirty: false,
-        };
-        info.viewers.push(id);
-        if (view.dirty) info.dirty = true;
-        byPath.set(view.path, info);
-      }
-
-      return [...byPath.values()].sort((a, b) => a.path.localeCompare(b.path));
-    }
 
     return () => {
       if (!room || !fileSession) return <p role="status">Loading…</p>;
@@ -235,21 +206,32 @@ export const Editor = clientEntry(
                 key={tab.path}
                 tab={{ path: tab.path, dirty: tab.sharedFile.dirty }}
                 selected={selectedTab === tab}
-                viewers={viewersFor(tab.path)}
+                viewers={remoteSelectedTabs
+                  .filter(
+                    (remote) =>
+                      remote.path === tab.path && room.people[remote.id],
+                  )
+                  .map((remote) => remote.id)}
                 onClick={() => selectTab(tab)}
                 onClose={() => closeFile(tab)}
               />
             ))}
-            {remoteTabs(tabs).map((tab) => (
-              <FileTab
-                key={tab.path}
-                tab={tab}
-                viewers={tab.viewers}
-                onClick={() => {
-                  void openFile(tab.path);
-                }}
-              />
-            ))}
+            {remoteSelectedTabs
+              .filter(
+                (remote) =>
+                  room.people[remote.id] &&
+                  !tabs.some((tab) => tab.path === remote.path),
+              )
+              .map((remote) => (
+                <FileTab
+                  key={remote.id}
+                  tab={{ path: remote.path, dirty: remote.dirty }}
+                  viewers={[remote.id]}
+                  onClick={() => {
+                    void openFile(remote.path);
+                  }}
+                />
+              ))}
             <button
               type="button"
               aria-label="Open File"
@@ -291,7 +273,10 @@ export const Editor = clientEntry(
                   file={selectedTab}
                   room={room}
                   session={fileSession}
-                  onEdit={() => handle.update()}
+                  onEdit={() => {
+                    handle.update();
+                    broadcastSelectedTab();
+                  }}
                 />
               </div>
             )}

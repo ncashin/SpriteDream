@@ -22,7 +22,7 @@ export const assets = createAssetServer({
     "app/room/protocol.ts",
     "app/room/room.tsx",
     "app/icon.tsx",
-    "app/**/public/**",
+    "app/entry.ts",
     "game/**",
   ],
   allowPackages: ["remix", "lucide", "planck", "yjs"],
@@ -40,6 +40,6 @@ export const assets = createAssetServer({
   scripts: { loaders: isHMR ? [componentHmr()] : undefined },
 });
 
-const entry = "app/actions/public/entry.ts";
+const entry = "app/entry.ts";
 
 export const scriptEntry = await assets.getScriptEntry(entry);

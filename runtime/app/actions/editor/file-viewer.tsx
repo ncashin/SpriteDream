@@ -26,7 +26,6 @@ export type SupportedFileType = InferOutput<typeof supportedFileType>;
 export type EditorTab = {
   path: string;
   sharedFile: SharedFile;
-  unsubscribe: () => void;
 };
 
 function objectUrl(file: SharedBlob) {
@@ -64,7 +63,7 @@ export function FileViewer(
           document={{
             read: () => shared.text.toString(),
             write(text) {
-              session.commitText(file.path, text);
+              session.write(file.path, text);
               onEdit?.();
             },
             subscribe: (listener) => session.subscribeFile(file.path, listener),
@@ -102,7 +101,7 @@ export function FileViewer(
               width: "100%",
             }),
             on("input", (event) => {
-              session.commitText(file.path, event.currentTarget.value);
+              session.write(file.path, event.currentTarget.value);
               onEdit?.();
               handle.update();
             }),

@@ -5,7 +5,7 @@ import {
 } from 'remix/multiple-import-maps-polyfill'
 import { run } from 'remix/component'
 
-import { setAppFrame } from '../../utilities/viewport/draw-component.ts'
+import { setAppFrame } from './utilities/viewport/draw-component.ts'
 
 const app = run({
   async loadModule(moduleUrl, exportName) {
