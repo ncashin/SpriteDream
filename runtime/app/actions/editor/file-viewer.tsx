@@ -13,6 +13,7 @@ export const supportedFileType = enum_([
   "json",
   "ts",
   "tsx",
+  "md",
   "png",
   "jpg",
   "jpeg",
@@ -66,17 +67,18 @@ export function FileViewer(
               session.commitText(file.path, text);
               onEdit?.();
             },
-            subscribe: (listener) => session.subscribe(file.path, listener),
+            subscribe: (listener) => session.subscribeFile(file.path, listener),
           }}
         />
       );
     }
     case "json":
     case "ts":
-    case "tsx": {
+    case "tsx":
+    case "md": {
       if (file.sharedFile.kind !== "text") return () => <>{file.path}</>;
       const shared = file.sharedFile;
-      const unsubscribe = session.subscribe(file.path, () => handle.update());
+      const unsubscribe = session.subscribeFile(file.path, () => handle.update());
       handle.signal.addEventListener("abort", unsubscribe);
 
       return () => (
@@ -117,7 +119,7 @@ export function FileViewer(
       if (file.sharedFile.kind !== "blob") return () => <>{file.path}</>;
       const shared = file.sharedFile;
       let url = objectUrl(shared);
-      const unsubscribe = session.subscribe(file.path, () => {
+      const unsubscribe = session.subscribeFile(file.path, () => {
         URL.revokeObjectURL(url);
         url = objectUrl(shared);
         handle.update();

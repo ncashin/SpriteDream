@@ -1,4 +1,4 @@
-import { enum_, literal, object, optional, string, variant } from "remix/data-schema";
+import { boolean, enum_, literal, object, optional, string, variant } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 
 export const editorMessage = variant("messageType", {
@@ -18,12 +18,17 @@ export const editorMessage = variant("messageType", {
   }),
   fileUpdate: object({
     messageType: literal("fileUpdate"),
-    path: optional(string()),
+    path: string(),
     update: string(),
   }),
   fileMissing: object({
     messageType: literal("fileMissing"),
     path: string(),
+  }),
+  viewing: object({
+    messageType: literal("viewing"),
+    path: optional(string()),
+    dirty: optional(boolean()),
   }),
 });
 

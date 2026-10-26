@@ -5,7 +5,7 @@ import { routes } from "../../routes.ts";
 import { projectFiles } from "./routes.ts";
 import type { SceneRoom } from "./scene-viewer.tsx";
 
-const textExtensions = new Set(["scene", "json", "ts", "tsx"]);
+const textExtensions = new Set(["scene", "json", "ts", "tsx", "md"]);
 
 export type SharedText = {
   kind: "text";
@@ -32,8 +32,8 @@ export type FileSession = {
   open(path: string): Promise<SharedFile | undefined>;
   save(path: string): Promise<void>;
   commitText(path: string, next: string): void;
-  subscribe(path: string, listener: () => void): () => void;
-  subscribeFiles(listener: () => void): () => void;
+  subscribeFile(path: string, listener: () => void): () => void;
+  subscribeFileList(listener: () => void): () => void;
 };
 
 function isTextPath(path: string) {
@@ -81,9 +81,6 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
   const fileListListeners = new Set<() => void>();
   let listed: string[] = [];
 
-  const meta = new Y.Doc();
-  const dirtyMap = meta.getMap<boolean>("dirty");
-
   function isHost() {
     return Object.keys(room.people)[0] === room.you.id;
   }
@@ -97,44 +94,26 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
     }
   }
 
-  function dirtyFor(path: string) {
-    return dirtyMap.get(path) === true;
-  }
-
-  function syncDirty(path: string) {
-    const file = files[path];
-    if (!file) return;
-
-    const dirty = dirtyFor(path);
-    if (file.dirty === dirty) return;
-
-    file.dirty = dirty;
-    notify(path);
-  }
-
   function setDirty(path: string, dirty: boolean) {
-    if ((dirtyMap.get(path) === true) === dirty) return;
-    dirtyMap.set(path, dirty);
+    const file = files[path];
+    if (!file || file.dirty === dirty) return;
+
+    if (file.kind === "blob") {
+      file.dirty = dirty;
+      notify(path);
+      return;
+    }
+
+    file.doc.getMap<boolean>("flags").set("dirty", dirty);
   }
 
-  function sendUpdate(update: Uint8Array, path?: string) {
+  function sendUpdate(path: string, update: Uint8Array) {
     room.send({
       messageType: "fileUpdate",
       path,
       update: toBase64(update),
     });
   }
-
-  meta.on("update", (update, origin) => {
-    if (origin === "remote") return;
-    sendUpdate(update);
-  });
-
-  dirtyMap.observe((event) => {
-    for (const path of event.keysChanged) {
-      syncDirty(path);
-    }
-  });
 
   function settle(path: string, file: SharedFile | undefined) {
     const resolve = resolvers[path];
@@ -159,9 +138,19 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
   });
 
   function bind(file: SharedText) {
+    const flags = file.doc.getMap<boolean>("flags");
+
     file.doc.on("update", (update, origin) => {
       if (origin === "remote") return;
-      sendUpdate(update, file.path);
+      sendUpdate(file.path, update);
+    });
+
+    flags.observe(() => {
+      const dirty = flags.get("dirty") === true;
+      if (file.dirty === dirty) return;
+
+      file.dirty = dirty;
+      notify(file.path);
     });
 
     file.text.observe(() => {
@@ -204,7 +193,7 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
       kind: "blob",
       path,
       mime,
-      dirty: dirtyFor(path),
+      dirty: false,
       bytes,
     };
 
@@ -224,7 +213,7 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
         kind: "text",
         path,
         mime,
-        dirty: dirtyFor(path),
+        dirty: false,
         doc,
         text,
       };
@@ -319,8 +308,6 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
   room.onMessageType("requestFiles", (message) => {
     if (message.sentBy === room.you.id || !isHost()) return;
 
-    sendUpdate(Y.encodeStateAsUpdate(meta));
-
     for (const file of Object.values(files)) {
       sendState(file);
     }
@@ -336,8 +323,6 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
         room.send({ messageType: "fileMissing", path: message.path });
         return;
       }
-
-      sendUpdate(Y.encodeStateAsUpdate(meta));
 
       sendState(file);
     });
@@ -358,17 +343,10 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
   room.onMessageType("fileUpdate", (message) => {
     if (message.sentBy === room.you.id) return;
 
-    const update = fromBase64(message.update);
-
-    if (message.path === undefined) {
-      Y.applyUpdate(meta, update, "remote");
-      return;
-    }
-
     const file = files[message.path];
     if (!file || file.kind !== "text") return;
 
-    Y.applyUpdate(file.doc, update, "remote");
+    Y.applyUpdate(file.doc, fromBase64(message.update), "remote");
   });
 
   room.onMessageType("fileMissing", (message) => {
@@ -402,14 +380,14 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
       if (!file || !file.dirty || signal.aborted) return;
 
       let savedText: string | undefined;
-      let savedBytes: Uint8Array | undefined;
+      let savedBytes: Uint8Array<ArrayBuffer> | undefined;
       let body: Blob;
 
       if (file.kind === "text") {
         savedText = file.text.toString();
         body = new Blob([savedText], { type: file.mime || "text/plain" });
       } else {
-        savedBytes = Uint8Array.from(file.bytes);
+        savedBytes = file.bytes.slice();
         body = new Blob([savedBytes], { type: file.mime || "application/octet-stream" });
       }
 
@@ -479,12 +457,12 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
         if (insert) {
           file.text.insert(start, insert);
         }
-      });
 
-      setDirty(path, true);
+        setDirty(path, true);
+      });
     },
 
-    subscribe(path, listener) {
+    subscribeFile(path, listener) {
       let group = fileListeners[path];
 
       if (!group) {
@@ -499,7 +477,7 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
       };
     },
 
-    subscribeFiles(listener) {
+    subscribeFileList(listener) {
       fileListListeners.add(listener);
 
       return () => {

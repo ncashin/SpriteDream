@@ -30,15 +30,14 @@ export function game({
   let sentY = 0;
 
   function applyDocument() {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(document.read());
-    } catch {
-      return;
-    }
+    const parsed = JSON.parse(document.read());
+
     const patch = diffScene(scene, parsed);
+
     if (patch.length === 0) return;
+
     applyScenePatch(patch, scene);
+    
     previous = structuredClone(scene);
   }
 
@@ -55,6 +54,16 @@ export function game({
       return;
     }
     cursors[message.sentBy] = { x: message.x, y: message.y };
+  });
+
+  room.onMessageType("onPersonLeave", (message) => {
+    delete cursors[message.id];
+  });
+
+  room.onMessageType("viewing", (message) => {
+    if (message.sentBy === room.you.id) return;
+    if (message.path === sceneKey) return;
+    delete cursors[message.sentBy];
   });
 
   const updateLoop = createUpdateLoop();

@@ -1,5 +1,4 @@
-import { clientEntry, css } from "remix/component";
-import { on, type Handle } from "remix/component";
+import { clientEntry, css, type Handle } from "remix/component";
 
 import { union } from "remix/data-schema";
 
@@ -11,20 +10,50 @@ import type { SceneRoom } from "./scene-viewer.tsx";
 import { createHotkey } from "../../utilities/hotkey.ts";
 import { FileViewer, type EditorTab } from "./file-viewer.tsx";
 import { Search } from "./search.tsx";
-import { faceFor } from "./ui/blobs.tsx";
+import { FileTab } from "./ui/FileTab.tsx";
+import { RoomDisplay } from "./ui/room-display.tsx";
 import { lightText, treeRow } from "./styles.tsx";
 
 import { Icon } from "../../icon.tsx";
-import Circle from "lucide/dist/esm/icons/circle.mjs";
-import Park from "lucide/dist/esm/icons/park.mjs";
 import Plus from "lucide/dist/esm/icons/plus.mjs";
-import X from "lucide/dist/esm/icons/x.mjs";
 
 export const Editor = clientEntry(
   import.meta.url,
   function Editor(handle: Handle) {
     let room: SceneRoom;
     let fileSession: FileSession;
+    const viewing: Record<string, { path: string; dirty: boolean }> = {};
+
+    let announced = false;
+
+    function publishViewing() {
+      if (!room) return;
+
+      const path = selectedTab?.path;
+      if (path) {
+        announced = true;
+        room.send({
+          messageType: "viewing",
+          path,
+          dirty: selectedTab?.sharedFile.dirty,
+        });
+        return;
+      }
+
+      if (!announced) return;
+      announced = false;
+      room.send({ messageType: "viewing", path: undefined, dirty: undefined });
+    }
+
+    function viewersFor(path: string) {
+      if (!room) return [];
+
+      const ids: string[] = [];
+      for (const id of Object.keys(viewing)) {
+        if (viewing[id]?.path === path && room.people[id]) ids.push(id);
+      }
+      return ids;
+    }
 
     handle.queueTask(async () => {
       if (handle.signal.aborted) return;
@@ -34,14 +63,26 @@ export const Editor = clientEntry(
       fileSession = createFileSession(room, handle.signal);
       handle.signal.addEventListener(
         "abort",
-        fileSession.subscribeFiles(() => handle.update()),
+        fileSession.subscribeFileList(() => handle.update()),
       );
 
-      room.onMessageType("onPersonJoin", () => {
+      room.onMessageType("onPersonJoin", (message) => {
+        if (message.id !== room.you.id) publishViewing();
         handle.update();
       });
 
-      room.onMessageType("onPersonLeave", () => {
+      room.onMessageType("onPersonLeave", (message) => {
+        delete viewing[message.id];
+        handle.update();
+      });
+
+      room.onMessageType("viewing", (message) => {
+        if (message.sentBy === room.you.id) return;
+
+        if (message.path) {
+          viewing[message.sentBy] = { path: message.path, dirty: message.dirty === true };
+        } else delete viewing[message.sentBy];
+
         handle.update();
       });
 
@@ -60,32 +101,36 @@ export const Editor = clientEntry(
 
       if (selectedTab === tab) {
         selectedTab = tabs[index] ?? tabs[index - 1];
+        publishViewing();
       }
 
+      handle.update();
+    }
+
+    function selectTab(tab: EditorTab) {
+      if (selectedTab === tab) return;
+      selectedTab = tab;
+      publishViewing();
       handle.update();
     }
 
     async function openFile(path: string) {
       if (!fileSession) return;
 
-      // Tab already exists select
       const existing = tabs.find((tab) => tab.path === path);
       if (existing) {
-        selectedTab = existing;
-        handle.update();
+        selectTab(existing);
         return;
       }
 
-      // if not open from session
       const sharedFile = await fileSession.open(path);
       if (!sharedFile || handle.signal.aborted) return;
       const already = tabs.find((tab) => tab.path === path);
       if (already) {
-        selectedTab = already;
-        handle.update();
+        selectTab(already);
         return;
       }
-      const unsubscribe = fileSession.subscribe(path, () => handle.update());
+      const unsubscribe = fileSession.subscribeFile(path, () => handle.update());
       handle.signal.addEventListener("abort", unsubscribe);
 
       const tab: EditorTab = {
@@ -96,7 +141,7 @@ export const Editor = clientEntry(
 
       tabs.push(tab);
       selectedTab = tab;
-      
+      publishViewing();
       handle.update();
     }
 
@@ -109,6 +154,26 @@ export const Editor = clientEntry(
       },
       { signal: handle.signal, allowWhileTyping: true },
     );
+
+    function remoteTabs(openTabs: EditorTab[]) {
+      const byPath = new Map<string, { path: string; dirty: boolean; viewers: string[] }>();
+
+      for (const [id, view] of Object.entries(viewing)) {
+        if (!room?.people[id]) continue;
+        if (openTabs.some((tab) => tab.path === view.path)) continue;
+
+        const info = byPath.get(view.path) ?? {
+          path: view.path,
+          viewers: [],
+          dirty: false,
+        };
+        info.viewers.push(id);
+        if (view.dirty) info.dirty = true;
+        byPath.set(view.path, info);
+      }
+
+      return [...byPath.values()].sort((a, b) => a.path.localeCompare(b.path));
+    }
 
     return () => {
       if (!room || !fileSession) return <p role="status">Loading…</p>;
@@ -146,18 +211,7 @@ export const Editor = clientEntry(
                 void openFile(file);
               }}
             />
-            <div
-              mix={[
-                css({
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  overflow: "hidden",
-                }),
-              ]}
-            >
-              {Object.values(room.people).map((id) => faceFor(id))}
-            </div>
+            <RoomDisplay room={room} />
           </header>
 
           <div
@@ -177,53 +231,24 @@ export const Editor = clientEntry(
             })}
           >
             {tabs.map((tab) => (
-              <div
-                role="tab"
-                tabIndex={0}
-                aria-selected={selectedTab === tab}
-                aria-current={selectedTab === tab ? "true" : undefined}
-                data-dirty={tab.sharedFile.dirty ? "" : undefined}
-                mix={[
-                  treeRow,
-                  tabStyle,
-                  on("click", () => {
-                    if (selectedTab === tab) return;
-                    selectedTab = tab;
-                    handle.update();
-                  }),
-                  on("keydown", (event) => {
-                    if (event.target !== event.currentTarget) return;
-                    if (event.key !== "Enter" && event.key !== " ") return;
-                    event.preventDefault();
-                    if (selectedTab === tab) return;
-                    selectedTab = tab;
-                    handle.update();
-                  }),
-                ]}
-              >
-                <Icon icon={Park} />
-                {tab.path}
-                <button
-                  type="button"
-                  aria-label={`Close ${tab.path}`}
-                  mix={[
-                    tabClose,
-                    on("click", (event) => {
-                      event.stopPropagation();
-                      closeFile(tab);
-                    }),
-                  ]}
-                >
-                  <span>
-                    <Icon icon={X} />
-                  </span>
-                  {tab.sharedFile.dirty ? (
-                    <span>
-                      <Icon icon={Circle} />
-                    </span>
-                  ) : null}
-                </button>
-              </div>
+              <FileTab
+                key={tab.path}
+                tab={{ path: tab.path, dirty: tab.sharedFile.dirty }}
+                selected={selectedTab === tab}
+                viewers={viewersFor(tab.path)}
+                onClick={() => selectTab(tab)}
+                onClose={() => closeFile(tab)}
+              />
+            ))}
+            {remoteTabs(tabs).map((tab) => (
+              <FileTab
+                key={tab.path}
+                tab={tab}
+                viewers={tab.viewers}
+                onClick={() => {
+                  void openFile(tab.path);
+                }}
+              />
             ))}
             <button
               type="button"
@@ -276,60 +301,3 @@ export const Editor = clientEntry(
     };
   },
 );
-
-const tabStyle = css({
-  width: "auto",
-  flex: "0 0 auto",
-  minHeight: "min-content",
-  paddingRight: "0.25rem",
-  "&[aria-current='true']": {
-    fontVariationSettings: '"GRAD" 400',
-  },
-  "&[data-dirty] > button": {
-    visibility: "visible",
-  },
-});
-
-const tabClose = css({
-  display: "inline-grid",
-  placeItems: "center",
-  flex: "0 0 auto",
-  width: "1.25rem",
-  height: "1.25rem",
-  margin: 0,
-  padding: 0,
-  border: "none",
-  borderRadius: "4px",
-  background: "transparent",
-  color: "inherit",
-  font: "inherit",
-  lineHeight: 0,
-  cursor: "pointer",
-  "& > span": {
-    gridArea: "1 / 1",
-    display: "none",
-  },
-  "& > span:first-child": {
-    display: "inline-flex",
-  },
-  "[data-dirty] > & > span:first-child": {
-    display: "none",
-  },
-  "[data-dirty] > & > span:last-child": {
-    display: "inline-flex",
-  },
-  "[data-dirty]:hover > & > span:first-child, [data-dirty]:focus-within > & > span:first-child": {
-    display: "inline-flex",
-  },
-  "[data-dirty]:hover > & > span:last-child, [data-dirty]:focus-within > & > span:last-child": {
-    display: "none",
-  },
-  "[data-dirty] > & > span:last-child svg": {
-    fill: "currentColor",
-    stroke: "none",
-    transform: "scale(0.45)",
-  },
-  "&:hover": {
-    backgroundColor: "var(--hover)",
-  },
-});
