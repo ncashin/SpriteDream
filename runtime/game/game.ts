@@ -19,14 +19,34 @@ export function game({
   room,
   sceneKey,
   signal,
-  onPatch,
+  document,
 }: SceneContext) {
   if (!scene || signal.aborted) return;
 
   let previous = structuredClone(scene);
+  let writing = false;
   const cursors: Record<string, { x: number; y: number }> = {};
   let sentX = 0;
   let sentY = 0;
+
+  function applyDocument() {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(document.read());
+    } catch {
+      return;
+    }
+    const patch = diffScene(scene, parsed);
+    if (patch.length === 0) return;
+    applyScenePatch(patch, scene);
+    previous = structuredClone(scene);
+  }
+
+  const unsubscribe = document.subscribe(() => {
+    if (writing) return;
+    applyDocument();
+  });
+  signal.addEventListener("abort", unsubscribe);
 
   room.onMessageType("cursor", (message) => {
     if (message.sentBy === room.you.id) return;
@@ -35,13 +55,6 @@ export function game({
       return;
     }
     cursors[message.sentBy] = { x: message.x, y: message.y };
-  });
-
-  room.onMessageType("scenePatch", (message) => {
-    if (message.sceneKey !== sceneKey || message.patch.length === 0) return;
-    applyScenePatch(message.patch, scene);
-    applyScenePatch(message.patch, previous);
-    onPatch(message.patch);
   });
 
   const updateLoop = createUpdateLoop();
@@ -103,12 +116,9 @@ export function game({
     const patch = diffScene(previous, scene);
     if (patch.length === 0) return;
     previous = structuredClone(scene);
-    onPatch(patch);
-    room.send({
-      messageType: "scenePatch",
-      sceneKey,
-      patch,
-    });
+    writing = true;
+    document.write(`${JSON.stringify(scene, null, 2)}\n`);
+    writing = false;
   });
 
   updateLoop.start();

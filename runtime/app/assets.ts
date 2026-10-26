@@ -25,7 +25,7 @@ export const assets = createAssetServer({
     "app/**/public/**",
     "game/**",
   ],
-  allowPackages: ["remix", "lucide", "planck"],
+  allowPackages: ["remix", "lucide", "planck", "yjs"],
   denyFiles: ["app/**/*.test.*"],
   sourceMaps: isDevelopment ? "external" : undefined,
   minify: !isDevelopment,

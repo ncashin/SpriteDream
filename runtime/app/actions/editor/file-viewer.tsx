@@ -3,8 +3,9 @@ import type { Handle } from "remix/component";
 import { enum_, parseSafe } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 
-import type { SceneNode, ScenePatch } from "../../utilities/scene.ts";
+import type { SceneNode } from "../../utilities/scene.ts";
 import { game } from "../../../game/game.ts";
+import type { FileSession, SharedBlob, SharedFile } from "./file-session.ts";
 import { SceneViewer, type SceneRoom } from "./scene-viewer.tsx";
 
 export const supportedFileType = enum_([
@@ -21,95 +22,91 @@ export const supportedFileType = enum_([
 ] as const);
 export type SupportedFileType = InferOutput<typeof supportedFileType>;
 
-export type OpenFile = {
+export type EditorTab = {
   path: string;
-  file: File;
-  dirtyFlag: boolean;
+  sharedFile: SharedFile;
+  unsubscribe: () => void;
 };
 
-function write(file: OpenFile, contents: BlobPart[]) {
-  file.file = new File(contents, file.file.name, { type: file.file.type });
-  file.dirtyFlag = true;
+function objectUrl(file: SharedBlob) {
+  const copy = new Uint8Array(file.bytes.byteLength);
+  copy.set(file.bytes);
+  return URL.createObjectURL(new Blob([copy], { type: file.mime }));
 }
 
-export function FileViewer(handle: Handle<{ file: OpenFile; room: SceneRoom; onEdit?: (patch?: ScenePatch) => void }>) {
-  const { file, onEdit } = handle.props;
+export function FileViewer(
+  handle: Handle<{
+    file: EditorTab;
+    room: SceneRoom;
+    session: FileSession;
+    onEdit?: () => void;
+  }>,
+) {
+  const { file, onEdit, session } = handle.props;
   const extension = file.path.split(".").pop()?.toLowerCase();
   const fileType = parseSafe(supportedFileType, extension);
   if (!fileType.success) return () => <>{file.path}</>;
 
   switch (fileType.value) {
     case "scene": {
-      let scene: SceneNode | undefined;
+      if (file.sharedFile.kind !== "text") return () => <>{file.path}</>;
+      const shared = file.sharedFile;
+      const scene = JSON.parse(shared.text.toString());
 
-      handle.queueTask(async () => {
-        if (scene || handle.signal.aborted) return;
-        scene = JSON.parse(await file.file.text());
-        handle.update();
-      });
-
-      return () => {
-        if (!scene) return null;
-        return (
-          <SceneViewer
-            key={file.path}
-            scene={scene}
-            room={handle.props.room}
-            sceneKey={file.path}
-            onMount={game}
-            onPatch={(patch) => {
-              write(file, [`${JSON.stringify(scene, null, 2)}\n`]);
-              onEdit?.(patch);
-            }}
-          />
-        );
-      };
+      return () => (
+        <SceneViewer
+          key={file.path}
+          scene={scene}
+          room={handle.props.room}
+          sceneKey={file.path}
+          onMount={game}
+          document={{
+            read: () => shared.text.toString(),
+            write(text) {
+              session.commitText(file.path, text);
+              onEdit?.();
+            },
+            subscribe: (listener) => session.subscribe(file.path, listener),
+          }}
+        />
+      );
     }
     case "json":
     case "ts":
     case "tsx": {
-      let text = "";
-      let ready = false;
+      if (file.sharedFile.kind !== "text") return () => <>{file.path}</>;
+      const shared = file.sharedFile;
+      const unsubscribe = session.subscribe(file.path, () => handle.update());
+      handle.signal.addEventListener("abort", unsubscribe);
 
-      handle.queueTask(async () => {
-        if (ready || handle.signal.aborted) return;
-        text = await file.file.text();
-        ready = true;
-        handle.update();
-      });
-
-      return () => {
-        if (!ready) return null;
-        return (
-          <textarea
-            spellCheck={false}
-            value={text}
-            mix={[
-              css({
-                boxSizing: "border-box",
-                border: "none",
-                background: "transparent",
-                color: "inherit",
-                font: "inherit",
-                height: "100%",
-                margin: 0,
-                outline: "none",
-                overflow: "auto",
-                padding: "1rem",
-                resize: "none",
-                whiteSpace: "pre",
-                width: "100%",
-              }),
-              on("input", (event) => {
-                text = event.currentTarget.value;
-                write(file, [text]);
-                onEdit?.();
-                handle.update();
-              }),
-            ]}
-          />
-        );
-      };
+      return () => (
+        <textarea
+          spellCheck={false}
+          value={shared.text.toString()}
+          mix={[
+            css({
+              boxSizing: "border-box",
+              border: "none",
+              background: "transparent",
+              color: "inherit",
+              font: "inherit",
+              height: "100%",
+              margin: 0,
+              outline: "none",
+              overflow: "auto",
+              padding: "1rem",
+              resize: "none",
+              whiteSpace: "pre",
+              width: "100%",
+            }),
+            on("input", (event) => {
+              session.commitText(file.path, event.currentTarget.value);
+              onEdit?.();
+              handle.update();
+            }),
+          ]}
+        />
+      );
     }
     case "png":
     case "jpg":
@@ -117,8 +114,18 @@ export function FileViewer(handle: Handle<{ file: OpenFile; room: SceneRoom; onE
     case "gif":
     case "webp":
     case "svg": {
-      const url = URL.createObjectURL(file.file);
-      handle.signal.addEventListener("abort", () => URL.revokeObjectURL(url));
+      if (file.sharedFile.kind !== "blob") return () => <>{file.path}</>;
+      const shared = file.sharedFile;
+      let url = objectUrl(shared);
+      const unsubscribe = session.subscribe(file.path, () => {
+        URL.revokeObjectURL(url);
+        url = objectUrl(shared);
+        handle.update();
+      });
+      handle.signal.addEventListener("abort", () => {
+        unsubscribe();
+        URL.revokeObjectURL(url);
+      });
 
       return () => (
         <img
