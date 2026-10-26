@@ -273,8 +273,7 @@ const box = css({
 
 const field = css({
   alignItems: "center",
-  background: "var(--hover)",
-  backdropFilter: "blur(12px)",
+  background: "#232324",
   border: "none",
   borderRadius: "0.6em",
   boxSizing: "border-box",
@@ -331,8 +330,7 @@ const kbd = css({
 });
 
 const drawer = css({
-  background: "var(--hover)",
-  backdropFilter: "blur(12px)",
+  background: "#232324",
   borderRadius: "0 0 0.6em 0.6em",
   left: 0,
   opacity: 0,

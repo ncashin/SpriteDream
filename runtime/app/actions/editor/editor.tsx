@@ -145,7 +145,7 @@ export const Editor = clientEntry(
                 }),
               ]}
             >
-              {Object.values(room.people).map((person) => faceFor(person.id))}
+              {Object.values(room.people).map((id) => faceFor(id))}
             </div>
           </header>
 

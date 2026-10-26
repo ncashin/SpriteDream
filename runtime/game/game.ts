@@ -1,6 +1,6 @@
 import { contains, lookupBoundingBox } from "../app/utilities/bounding-box.ts";
 import { isObject } from "../app/utilities/is-object.ts";
-import { diffScene, filterScene } from "../app/utilities/scene.ts";
+import { applyScenePatch, diffScene, filterScene } from "../app/utilities/scene.ts";
 import type { SceneContext } from "../app/actions/editor/scene-viewer.tsx";
 import {
   selectObjects,
@@ -29,12 +29,19 @@ export function game({
   let sentY = 0;
 
   room.onMessageType("cursor", (message) => {
-    if (message.id === room.you.id) return;
+    if (message.sentBy === room.you.id) return;
     if (message.sceneKey !== sceneKey) {
-      delete cursors[message.id];
+      delete cursors[message.sentBy];
       return;
     }
-    cursors[message.id] = { x: message.x, y: message.y };
+    cursors[message.sentBy] = { x: message.x, y: message.y };
+  });
+
+  room.onMessageType("scenePatch", (message) => {
+    if (message.sceneKey !== sceneKey || message.patch.length === 0) return;
+    applyScenePatch(message.patch, scene);
+    applyScenePatch(message.patch, previous);
+    onPatch(message.patch);
   });
 
   const updateLoop = createUpdateLoop();
@@ -87,7 +94,6 @@ export function game({
       sentY = y;
       room.send({
         messageType: "cursor",
-        id: room.you.id,
         sceneKey,
         x,
         y,
@@ -98,6 +104,11 @@ export function game({
     if (patch.length === 0) return;
     previous = structuredClone(scene);
     onPatch(patch);
+    room.send({
+      messageType: "scenePatch",
+      sceneKey,
+      patch,
+    });
   });
 
   updateLoop.start();

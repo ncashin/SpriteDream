@@ -210,8 +210,7 @@ const slot = css({
 });
 
 const panel = css({
-  background: "var(--hover)",
-  backdropFilter: "blur(12px)",
+  background: "#232324",
   borderRadius: "0.6em",
   fontSize: "13px",
   position: "relative",
@@ -252,8 +251,7 @@ const inputStyle = css({
 });
 
 const list = css({
-  background: "var(--hover)",
-  backdropFilter: "blur(12px)",
+  background: "#232324",
   borderRadius: "0 0 0.6em 0.6em",
   borderTop: "1px solid var(--line)",
   left: 0,

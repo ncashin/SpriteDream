@@ -3,9 +3,10 @@ import { randomUUID } from "node:crypto";
 import { parse } from "remix/data-schema";
 import { WebSocketServer, type WebSocket } from "ws";
 
-import { roomMessage, type Person, type RoomMessage } from "./protocol.ts";
+import { roomMessage, type RoomMessage } from "./protocol.ts";
 
-type Member = Person & {
+type Member = {
+  id: string;
   socket: WebSocket;
   quiet: boolean;
 };
@@ -72,7 +73,7 @@ export async function attachRoom(server: http.Server) {
     send(socket, {
       messageType: "onRoomJoin",
       id: person.id,
-      people: [...people.values()].map((member) => ({ id: member.id })),
+      people: [...people.values()].map((member) => member.id),
     });
 
     for (const member of people.values()) {
@@ -85,18 +86,13 @@ export async function attachRoom(server: http.Server) {
       person.quiet = false;
 
       const text = raw.toString();
-      let json: unknown;
-      try {
-        json = JSON.parse(text);
-      } catch {
-        return;
-      }
-      if (typeof json !== "object" || json === null || Array.isArray(json)) return;
+      const json = JSON.parse(text);
 
       const messageType = (json as { messageType?: unknown }).messageType;
-      if (typeof messageType !== "string" || roomMessageTypes.has(messageType)) return;
+      if (typeof messageType === "string" && roomMessageTypes.has(messageType)) return;
 
-      broadcastRaw(text, socket);
+      const relay = { ...json, sentBy: person.id };
+      broadcastRaw(JSON.stringify(relay), socket);
     });
 
     socket.on("pong", () => {
