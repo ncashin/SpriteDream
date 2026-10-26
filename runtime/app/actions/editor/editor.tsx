@@ -10,12 +10,8 @@ import type { SceneRoom } from "./scene-viewer.tsx";
 import { createHotkey } from "../../utilities/hotkey.ts";
 import { FileViewer, type EditorTab } from "./file-viewer.tsx";
 import { Search } from "./search.tsx";
-import { FileTab } from "./ui/FileTab.tsx";
+import { FileTab } from "./FileTab.tsx";
 import { RoomDisplay } from "./ui/room-display.tsx";
-import { lightText, treeRow } from "./styles.tsx";
-
-import { Icon } from "../../icon.tsx";
-import Plus from "lucide/dist/esm/icons/plus.mjs";
 
 export const Editor = clientEntry(
   import.meta.url,
@@ -28,11 +24,10 @@ export const Editor = clientEntry(
     function broadcastSelectedTab() {
       if (!room) return;
 
-      const path = selectedTab?.path;
-      if (path) {
+      if (selectedTab) {
         room.send({
           messageType: "viewing",
-          path,
+          path: selectedTab.path,
           dirty: selectedTab.sharedFile.dirty,
         });
         return;
@@ -154,10 +149,9 @@ export const Editor = clientEntry(
           mix={css({
             display: "grid",
             gridTemplateColumns: "minmax(0, 1fr)",
-            gridTemplateRows: "auto auto minmax(0, 1fr)",
+            gridTemplateRows: "auto minmax(0, 1fr)",
             gridTemplateAreas: `
               "header"
-              "tabs"
               "tabContent"
             `,
             height: "100vh",
@@ -172,35 +166,22 @@ export const Editor = clientEntry(
               justifyContent: "space-between",
               alignItems: "center",
               overflow: "visible",
+              gap: "0.5rem",
               padding: "0.5rem 1rem",
             })}
           >
-            <span></span>
-            <Search
-              items={fileSession.files()}
-              onSelect={(file) => {
-                void openFile(file);
-              }}
-            />
-            <RoomDisplay room={room} />
-          </header>
-
-          <div
-            role="tablist"
-            mix={css({
-              gridArea: "tabs",
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              minWidth: 0,
-              position: "relative",
-              zIndex: 1,
-              overflow: "auto",
-              background: "#121213",
-              padding: "0rem 0rem 0.5rem 0.5rem",
-              gap: "0.25rem",
-            })}
-          >
+            <div
+              role="tablist"
+              mix={css({
+                display: "flex",
+                flex: "1 1 auto",
+                flexDirection: "row",
+                alignItems: "center",
+                minWidth: 0,
+                overflow: "auto",
+                gap: "0.25rem",
+              })}
+            >
             {tabs.map((tab) => (
               <FileTab
                 key={tab.path}
@@ -226,41 +207,39 @@ export const Editor = clientEntry(
                 <FileTab
                   key={remote.id}
                   tab={{ path: remote.path, dirty: remote.dirty }}
-                  viewers={[remote.id]}
                   onClick={() => {
                     void openFile(remote.path);
                   }}
                 />
               ))}
-            <button
-              type="button"
-              aria-label="Open File"
-              mix={[
-                treeRow,
-                lightText,
-                css({
-                  width: "auto",
-                  flex: "0 0 auto",
-                  minHeight: "min-content",
-                  paddingRight: "0.375rem",
-                }),
-              ]}
-            >
-              Open File
-              <Icon icon={Plus} />
-            </button>
-          </div>
+            </div>
+            <Search
+              items={fileSession.files()}
+              onSelect={(file) => {
+                void openFile(file);
+              }}
+            />
+            <RoomDisplay room={room} />
+          </header>
           <div
             mix={css({
               gridArea: "tabContent",
-              position: "relative",
               minWidth: 0,
               minHeight: 0,
-              overflow: "hidden",
-              isolation: "isolate",
-              borderTop: "1px solid var(--line)",
+              padding: "0 0.5rem 0.5rem",
             })}
           >
+            <div
+              mix={css({
+                position: "relative",
+                height: "100%",
+                overflow: "hidden",
+                isolation: "isolate",
+                borderRadius: "0.625rem",
+                backgroundColor: "var(--menu)",
+                border: "1px solid var(--line)",
+              })}
+            >
             {selectedTab && (
               <div
                 mix={css({
@@ -280,6 +259,7 @@ export const Editor = clientEntry(
                 />
               </div>
             )}
+            </div>
           </div>
         </div>
       );

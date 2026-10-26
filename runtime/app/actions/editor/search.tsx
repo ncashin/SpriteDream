@@ -1,9 +1,9 @@
-import Park from "lucide/dist/esm/icons/park.mjs";
 import SearchIcon from "lucide/dist/esm/icons/search.mjs";
 import { css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../icon.tsx";
+import { FileIcon } from "./FileIcon.tsx";
 import { createHotkey } from "../../utilities/hotkey.ts";
 
 const LIST_ID = "editor-search-list";
@@ -190,8 +190,9 @@ export function Search(handle: Handle<{ items: string[]; onSelect: (item: string
                       }),
                     ]}
                   >
-                    <Icon icon={Park} size={14} />
-                    {item}
+                    <FileIcon path={item} size={14} />
+                    <span mix={name}>{item.split("/").pop()}</span>
+                    <span mix={path}>{item.slice(0, item.lastIndexOf("/"))}</span>
                   </li>
                 ))
               )}
@@ -272,6 +273,21 @@ const option = css({
   display: "flex",
   gap: "0.25rem",
   padding: "0.25rem 0.5rem",
+});
+
+const name = css({
+  flex: "0 0 auto",
+  minWidth: 0,
+});
+
+const path = css({
+  color: "var(--text-muted)",
+  flex: "1 1 auto",
+  minWidth: 0,
+  overflow: "hidden",
+  textAlign: "right",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
 const active = css({

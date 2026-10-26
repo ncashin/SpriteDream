@@ -3,9 +3,9 @@ import { css, on, type Handle } from "remix/component";
 import { Icon } from "../../../icon.tsx";
 import { treeRow } from "../styles.tsx";
 import { faceFor } from "./blobs.tsx";
+import { FileIcon } from "../FileIcon.tsx";
 
 import Circle from "lucide/dist/esm/icons/circle.mjs";
-import Park from "lucide/dist/esm/icons/park.mjs";
 import X from "lucide/dist/esm/icons/x.mjs";
 
 type FileTabProps = {
@@ -49,8 +49,10 @@ export function FileTab(handle: Handle<FileTabProps>) {
             ))}
           </span>
         )}
-        <Icon icon={Park} />
-        {path}
+        <FileIcon path={path} />
+        <span mix={tabLabel} title={path}>
+          {path.split("/").pop()}
+        </span>
         {onClose ? (
           <button
             type="button"
@@ -85,10 +87,15 @@ export function FileTab(handle: Handle<FileTabProps>) {
 }
 
 const tabStyle = css({
-  width: "auto",
-  flex: "0 0 auto",
-  minHeight: "min-content",
-  paddingRight: "1.75rem",
+  width: "max-content",
+  maxWidth: "14rem",
+  flex: "0 1 auto",
+  minWidth: 0,
+  boxSizing: "border-box",
+  fontSize: "13px",
+  lineHeight: 1.35,
+  borderRadius: "0.6em",
+  padding: "0.45em 1.75rem 0.45em 0.55em",
   position: "relative",
   "&[aria-selected='true']": {
     backgroundColor: "var(--selected)",
@@ -102,6 +109,13 @@ const tabStyle = css({
   "&[data-dirty] > button": {
     visibility: "visible",
   },
+});
+
+const tabLabel = css({
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
 const tabFaces = css({

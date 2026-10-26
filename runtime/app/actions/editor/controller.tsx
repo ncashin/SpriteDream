@@ -29,7 +29,12 @@ async function listProjectFiles() {
     }
   }
 
-  walk(root);
+  try {
+    walk(resolve(root, "testFiles"));
+  } catch {
+    return [];
+  }
+
   files.sort();
   return files;
 }
