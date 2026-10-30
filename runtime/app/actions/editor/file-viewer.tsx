@@ -3,7 +3,6 @@ import type { Handle } from "remix/component";
 import { enum_, parseSafe } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 
-import type { SceneNode } from "../../utilities/scene.ts";
 import { game } from "../../../game/game.ts";
 import type { FileSession, SharedBlob, SharedFile } from "./file-session.ts";
 import { SceneViewer, type SceneRoom } from "./scene-viewer.tsx";
@@ -11,6 +10,7 @@ import { SceneViewer, type SceneRoom } from "./scene-viewer.tsx";
 export const supportedFileType = enum_([
   "scene",
   "json",
+  "js",
   "ts",
   "tsx",
   "md",
@@ -45,7 +45,7 @@ export function FileViewer(
   const { file, onEdit, session } = handle.props;
   const extension = file.path.split(".").pop()?.toLowerCase();
   const fileType = parseSafe(supportedFileType, extension);
-  if (!fileType.success) return () => <>{file.path}</>;
+  if (!fileType.success) return () => <>File Type Not Supported</>;
 
   switch (fileType.value) {
     case "scene": {
@@ -72,6 +72,7 @@ export function FileViewer(
       );
     }
     case "json":
+    case "js":
     case "ts":
     case "tsx":
     case "md": {

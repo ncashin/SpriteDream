@@ -4,7 +4,7 @@ import { routes } from "../../routes.ts";
 
 declare global {
   interface Window {
-    spritedream?: {
+    spriteDream: {
       openFolder(): Promise<string | null>;
     };
   }
@@ -12,18 +12,10 @@ declare global {
 
 export const Welcome = clientEntry(import.meta.url, function Welcome(_handle: Handle) {
   async function openFolder() {
-    const directory = await window.spritedream?.openFolder();
+    const directory = await window.spriteDream.openFolder();
     if (!directory) return;
 
-    const response = await fetch(routes.welcome.open.href(), {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ directory }),
-    });
-    if (!response.ok) return;
-
-    const opened = (await response.json()) as { href?: string };
-    if (opened.href) window.location.assign(opened.href);
+    window.location.assign(routes.editor.index.href({ project: directory }));
   }
 
   return () => (

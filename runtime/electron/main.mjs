@@ -4,37 +4,41 @@ import { spawn } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { listProjectFiles, projectDirectory, readProjectFile, writeProjectFile } from './project-files.mjs'
+import { listProjectFiles, readProjectFile, writeProjectFile } from './project-files.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const port = process.env.ELECTRON_PORT ?? '44200'
 const url = `http://127.0.0.1:${port}/`
 
-const server = spawn('node', ['--import', 'remix/node-tsx', 'server.ts'], {
+// Electron and the system Node (here v26) ship different V8 serializer versions.
+// `serialization: 'advanced'` is required for Uint8Array file bodies, so the
+// server has to run on Electron's Node or the IPC channel dies on the first message.
+const server = spawn(process.execPath, ['--import', 'remix/node-tsx', 'server.ts'], {
   cwd: root,
-  env: { ...process.env, PORT: port },
+  env: { ...process.env, PORT: port, ELECTRON_RUN_AS_NODE: '1' },
   stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
   serialization: 'advanced',
 })
 
 server.on('message', (message) => {
-  if (message?.type === 'project-directory') {
-    server.send({ directory: projectDirectory(message.directory) })
-    return
-  }
-
   if (message?.type === 'list-files') {
-    server.send({ files: listProjectFiles(message.directory) })
+    server.send({ type: 'list-files', files: listProjectFiles(message.project) })
     return
   }
 
   if (message?.type === 'read-file') {
-    server.send({ body: readProjectFile(message.directory, message.filePath) })
+    server.send({
+      type: 'read-file',
+      body: readProjectFile(message.project, message.filePath),
+    })
     return
   }
 
   if (message?.type === 'write-file') {
-    server.send({ ok: writeProjectFile(message.directory, message.filePath, message.body) })
+    server.send({
+      type: 'write-file',
+      ok: writeProjectFile(message.project, message.filePath, message.body),
+    })
   }
 })
 

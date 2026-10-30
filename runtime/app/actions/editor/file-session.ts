@@ -1,10 +1,11 @@
-import { parse } from "remix/data-schema";
+import { array, parse, string } from "remix/data-schema";
 import * as Y from "yjs";
 
-import { projectFiles } from "./routes.ts";
 import type { SceneRoom } from "./scene-viewer.tsx";
 
-const textExtensions = new Set(["scene", "json", "ts", "tsx", "md"]);
+const projectFiles = array(string());
+
+const textExtensions = new Set(["scene", "json", "js", "ts", "tsx", "md"]);
 
 export type SharedText = {
   kind: "text";
@@ -249,7 +250,7 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal, baseURL:
 
   async function readFile(path: string) {
     try {
-      const response = await fetch(new URL(`file/${path}`, baseURL), { signal });
+      const response = await fetch(new URL(path, baseURL), { signal });
 
       if (!response.ok || signal.aborted) return;
 
@@ -391,7 +392,7 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal, baseURL:
       }
 
       try {
-        const response = await fetch(new URL(`file/${path}`, baseURL), {
+        const response = await fetch(new URL(path, baseURL), {
           method: "PUT",
           body,
           signal,

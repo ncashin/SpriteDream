@@ -1,10 +1,12 @@
-import { get, route } from 'remix/routes'
-
-import { editorRoutes } from './actions/editor/routes.ts'
-import { welcomeRoutes } from './actions/welcome/routes.ts'
+import { get, put, route } from 'remix/routes'
 
 export const routes = route({
   assets: get('/assets/*path'),
-  welcome: welcomeRoutes,
-  editor: route('/:project', editorRoutes),
+  index: get('/'),
+  editor: route('/:project', {
+    index: get('/'),
+    listFiles: get('/files'),
+    getFile: get('/*filePath'),
+    saveFile: put('/*filePath'),
+  }),
 })
