@@ -1,6 +1,6 @@
 import { css, type Handle } from "remix/component";
 
-import { faceFor } from "./blobs.tsx";
+import { faceFor } from "./ui/blobs.tsx";
 
 type RoomDisplayProps = {
   room: {

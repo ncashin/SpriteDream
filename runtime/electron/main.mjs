@@ -13,17 +13,26 @@ const server = spawn('node', ['--import', 'remix/node-tsx', 'server.ts'], {
   stdio: 'inherit',
 })
 
-app.on('before-quit', () => server.kill('SIGTERM'))
-app.on('window-all-closed', () => app.quit())
-
-await app.whenReady()
-while (true) {
-  try {
-    await fetch(url)
-    break
-  } catch {
-    await new Promise((resolve) => setTimeout(resolve, 50))
-  }
+function createWindow() {
+  const window = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 16, y: 14 },
+  })
+  window.loadURL(url)
 }
 
-new BrowserWindow({ width: 1280, height: 800 }).loadURL(url)
+app.whenReady().then(() => {
+  createWindow()
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('before-quit', () => server.kill('SIGTERM'))

@@ -11,7 +11,7 @@ import { createHotkey } from "../../utilities/hotkey.ts";
 import { FileViewer, type EditorTab } from "./file-viewer.tsx";
 import { Search } from "./search.tsx";
 import { FileTab } from "./FileTab.tsx";
-import { RoomDisplay } from "./ui/room-display.tsx";
+import { RoomDisplay } from "./room-display.tsx";
 
 export const Editor = clientEntry(
   import.meta.url,
@@ -167,7 +167,8 @@ export const Editor = clientEntry(
               alignItems: "center",
               overflow: "visible",
               gap: "0.5rem",
-              padding: "0.5rem 1rem",
+              padding: "0.5rem 1rem 0.5rem 5rem",
+              WebkitAppRegion: "drag",
             })}
           >
             <div
@@ -180,6 +181,7 @@ export const Editor = clientEntry(
                 minWidth: 0,
                 overflow: "auto",
                 gap: "0.25rem",
+                WebkitAppRegion: "no-drag",
               })}
             >
             {tabs.map((tab) => (
@@ -213,13 +215,15 @@ export const Editor = clientEntry(
                 />
               ))}
             </div>
-            <Search
-              items={fileSession.files()}
-              onSelect={(file) => {
-                void openFile(file);
-              }}
-            />
-            <RoomDisplay room={room} />
+            <div mix={css({ display: "flex", alignItems: "center", gap: "0.5rem", WebkitAppRegion: "no-drag" })}>
+              <Search
+                items={fileSession.files()}
+                onSelect={(file) => {
+                  void openFile(file);
+                }}
+              />
+              <RoomDisplay room={room} />
+            </div>
           </header>
           <div
             mix={css({
