@@ -1,72 +1,57 @@
-import { openLazyFile, writeFile } from "remix/fs";
+import { isAbsolute } from "node:path";
 import { createFileResponse } from "remix/response/file";
 import { createController } from "remix/router";
 
-import { editorRoutes } from "./routes.ts";
+import { routes } from "../../routes.ts";
+import { Document } from "../document.tsx";
+import { Editor } from "./editor.tsx";
+import { listProjectFiles, projectDirectory, readProjectFile, writeProjectFile } from "./project-files.ts";
 
-const skip = new Set(["node_modules", ".git"]);
-
-async function listProjectFiles() {
-  const { readdirSync } = await import("node:fs");
-  const { relative, resolve, sep } = await import("node:path");
-  const root = resolve(".");
-  const files: string[] = [];
-
-  function walk(directory: string) {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      if (entry.name.startsWith(".") || skip.has(entry.name)) continue;
-
-      const path = resolve(directory, entry.name);
-
-      if (entry.isDirectory()) {
-        walk(path);
-        continue;
-      }
-
-      if (!entry.isFile()) continue;
-
-      files.push(relative(root, path).split(sep).join("/"));
-    }
-  }
-
+function requestedDirectory(project: string) {
   try {
-    walk(resolve(root, "testFiles"));
+    const directory = decodeURIComponent(project);
+    if (!isAbsolute(directory)) return;
+    return directory;
   } catch {
-    return [];
-  }
-
-  files.sort();
-  return files;
-}
-
-async function projectFilePath(filePath: string) {
-  const { relative, resolve, sep } = await import("node:path");
-  const root = resolve(".");
-  const target = resolve(root, filePath);
-  const fromRoot = relative(root, target);
-
-  if (fromRoot.startsWith("..") || fromRoot === "" || fromRoot.split(sep).includes("..")) {
     return;
   }
-
-  return target;
 }
 
-export default createController(editorRoutes, {
+export default createController(routes.editor, {
   actions: {
-    async listFiles() {
-      return Response.json(await listProjectFiles());
+    async index(context) {
+      const requested = requestedDirectory(context.params.project);
+      const directory = requested && (await projectDirectory(requested));
+      if (!directory) return new Response("Not Found", { status: 404 });
+
+      return context.render(
+        <Document>
+          <Editor />
+        </Document>,
+      );
+    },
+    async listFiles(context) {
+      const requested = requestedDirectory(context.params.project);
+      const directory = requested && (await projectDirectory(requested));
+      if (!directory) return new Response("Not Found", { status: 404 });
+
+      return Response.json(await listProjectFiles(directory));
     },
     async file(context) {
       const param = context.params.filePath;
       const filePath = Array.isArray(param) ? param.join("/") : param;
       if (!filePath) return new Response("Not Found", { status: 404 });
 
-      const target = await projectFilePath(filePath);
-      if (!target) return new Response("Not Found", { status: 404 });
+      const requested = requestedDirectory(context.params.project);
+      const directory = requested && (await projectDirectory(requested));
+      if (!directory) return new Response("Not Found", { status: 404 });
+
+      const body = await readProjectFile(directory, filePath);
+      if (!body) return new Response("Not Found", { status: 404 });
 
       try {
-        return await createFileResponse(openLazyFile(target), context.request);
+        const name = filePath.split("/").pop() ?? filePath;
+        return await createFileResponse(new File([body], name), context.request);
       } catch {
         return new Response("Not Found", { status: 404 });
       }
@@ -76,17 +61,16 @@ export default createController(editorRoutes, {
       const filePath = Array.isArray(param) ? param.join("/") : param;
       if (!filePath) return new Response("Not Found", { status: 404 });
 
-      const target = await projectFilePath(filePath);
-      if (!target) return new Response("Not Found", { status: 404 });
+      const requested = requestedDirectory(context.params.project);
+      const directory = requested && (await projectDirectory(requested));
+      if (!directory) return new Response("Not Found", { status: 404 });
 
-      try {
-        const type = context.request.headers.get("content-type") ?? "";
-        const name = filePath.split("/").pop() ?? filePath;
-        const file = new File([await context.request.arrayBuffer()], name, { type });
-        await writeFile(target, file);
-      } catch {
-        return new Response("Not Found", { status: 404 });
-      }
+      const wrote = await writeProjectFile(
+        directory,
+        filePath,
+        new Uint8Array(await context.request.arrayBuffer()),
+      );
+      if (!wrote) return new Response("Not Found", { status: 404 });
 
       return new Response(null, { status: 204 });
     },

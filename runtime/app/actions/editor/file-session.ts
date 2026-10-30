@@ -1,7 +1,6 @@
 import { parse } from "remix/data-schema";
 import * as Y from "yjs";
 
-import { routes } from "../../routes.ts";
 import { projectFiles } from "./routes.ts";
 import type { SceneRoom } from "./scene-viewer.tsx";
 
@@ -73,7 +72,7 @@ function fromBase64(value: string) {
   return bytes;
 }
 
-export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSession {
+export function createFileSession(room: SceneRoom, signal: AbortSignal, baseURL: URL): FileSession {
   const files: Record<string, SharedFile> = {};
   const loading: Record<string, Promise<SharedFile | undefined>> = {};
   const resolvers: Record<string, (file: SharedFile | undefined) => void> = {};
@@ -235,7 +234,7 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
 
   async function loadListedFiles() {
     try {
-      const response = await fetch(routes.editor.listFiles.href(), { signal });
+      const response = await fetch(new URL("files", baseURL), { signal });
       if (!response.ok || signal.aborted) return;
 
       listed = parse(projectFiles, await response.json());
@@ -250,9 +249,7 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
 
   async function readFile(path: string) {
     try {
-      const response = await fetch(routes.editor.file.href({ filePath: path }), {
-        signal,
-      });
+      const response = await fetch(new URL(`file/${path}`, baseURL), { signal });
 
       if (!response.ok || signal.aborted) return;
 
@@ -394,7 +391,7 @@ export function createFileSession(room: SceneRoom, signal: AbortSignal): FileSes
       }
 
       try {
-        const response = await fetch(routes.editor.saveFile.href({ filePath: path }), {
+        const response = await fetch(new URL(`file/${path}`, baseURL), {
           method: "PUT",
           body,
           signal,

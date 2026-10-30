@@ -42,7 +42,9 @@ export const Editor = clientEntry(
       room = await joinRoom(handle.signal, union([gameMessage, editorMessage]));
       if (handle.signal.aborted) return;
 
-      fileSession = createFileSession(room, handle.signal);
+      const baseURL = new URL(globalThis.location.href);
+      if (!baseURL.pathname.endsWith("/")) baseURL.pathname += "/";
+      fileSession = createFileSession(room, handle.signal, baseURL);
       handle.signal.addEventListener(
         "abort",
         fileSession.subscribeFileList(() => handle.update()),

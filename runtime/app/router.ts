@@ -1,11 +1,10 @@
 import { createRouter, type MiddlewareContext } from 'remix/router'
-import { route } from 'remix/routes'
 import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 
 import controller from './actions/controller.tsx'
 import editorController from './actions/editor/controller.tsx'
-import { editorRoutes } from './actions/editor/routes.ts'
+import welcomeController from './actions/welcome/controller.tsx'
 import { assets } from './assets.ts'
 import { routes } from './routes.ts'
 
@@ -23,4 +22,5 @@ export const router = createRouter<AppContext>({
 })
 
 router.map(routes, controller)
-router.map(route('/editor', editorRoutes), editorController)
+router.map(routes.welcome, welcomeController)
+router.map(routes.editor, editorController)
