@@ -1,13 +1,18 @@
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject } from 'cloudflare:workers';
+import { parse, parseSafe, union } from 'remix/data-schema';
 
-const roomMessageTypes = new Set(["onRoomJoin", "onPersonJoin", "onPersonLeave"]);
+import { editorMessage } from '../../runtime/app/actions/editor/protocol.ts';
+import { gameMessage } from '../../runtime/game/protocol.ts';
+import { roomMessage, type RoomMessage } from '../../runtime/room/protocol.ts';
+
+const relayedMessage = union([gameMessage, editorMessage]);
 
 type Session = {
 	id: string;
 };
 
-function send(socket: WebSocket, message: unknown) {
-	socket.send(JSON.stringify(message));
+function send(socket: WebSocket, message: RoomMessage) {
+	socket.send(JSON.stringify(parse(roomMessage, message)));
 }
 
 /** One Durable Object coordinates the people in a single multiplayer room. */
@@ -23,13 +28,13 @@ export class Room extends DurableObject<Env> {
 			if (attachment) this.sessions.set(socket, attachment);
 		}
 
-		this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
+		this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
 	}
 
 	async fetch(request: Request): Promise<Response> {
-		const upgrade = request.headers.get("Upgrade");
-		if (upgrade !== "websocket") {
-			return new Response("Expected Upgrade: websocket", { status: 426 });
+		const upgrade = request.headers.get('Upgrade');
+		if (upgrade !== 'websocket') {
+			return new Response('Expected Upgrade: websocket', { status: 426 });
 		}
 
 		const pair = new WebSocketPair();
@@ -41,30 +46,33 @@ export class Room extends DurableObject<Env> {
 		this.sessions.set(server, person);
 
 		const people = [...this.sessions.values()].map((member) => member.id);
-		send(server, { messageType: "onRoomJoin", id: person.id, people });
+		send(server, { messageType: 'onRoomJoin', id: person.id, people });
 		for (const id of people) {
-			send(server, { messageType: "onPersonJoin", id });
+			send(server, { messageType: 'onPersonJoin', id });
 		}
-		this.broadcast({ messageType: "onPersonJoin", id: person.id }, server);
+		this.broadcast({ messageType: 'onPersonJoin', id: person.id }, server);
 
 		return new Response(null, { status: 101, webSocket: client });
 	}
 
 	async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer) {
-		const text = typeof message === "string" ? message : new TextDecoder().decode(message);
-		let json: { messageType?: unknown };
+		const text = typeof message === 'string' ? message : new TextDecoder().decode(message);
+		let json: unknown;
 		try {
-			json = JSON.parse(text) as { messageType?: unknown };
+			json = JSON.parse(text);
 		} catch {
 			return;
 		}
 
-		if (typeof json.messageType === "string" && roomMessageTypes.has(json.messageType)) return;
+		if (parseSafe(roomMessage, json).success) return;
+
+		const relayed = parseSafe(relayedMessage, json);
+		if (!relayed.success) return;
 
 		const person = this.sessions.get(socket);
 		if (!person) return;
 
-		this.broadcast({ ...json, sentBy: person.id }, socket);
+		this.broadcastRaw({ ...relayed.value, sentBy: person.id }, socket);
 	}
 
 	async webSocketClose(socket: WebSocket, code: number, reason: string) {
@@ -74,17 +82,24 @@ export class Room extends DurableObject<Env> {
 
 	async webSocketError(socket: WebSocket) {
 		this.leave(socket);
-		socket.close(1011, "error");
+		socket.close(1011, 'error');
 	}
 
 	private leave(socket: WebSocket) {
 		const person = this.sessions.get(socket);
 		if (!person) return;
 		this.sessions.delete(socket);
-		this.broadcast({ messageType: "onPersonLeave", id: person.id });
+		this.broadcast({ messageType: 'onPersonLeave', id: person.id });
 	}
 
-	private broadcast(message: unknown, except?: WebSocket) {
+	private broadcast(message: RoomMessage, except?: WebSocket) {
+		for (const socket of this.sessions.keys()) {
+			if (socket === except) continue;
+			send(socket, message);
+		}
+	}
+
+	private broadcastRaw(message: unknown, except?: WebSocket) {
 		const data = JSON.stringify(message);
 		for (const socket of this.sessions.keys()) {
 			if (socket === except) continue;
@@ -98,7 +113,7 @@ export default {
 		const url = new URL(request.url);
 		const match = url.pathname.match(/^\/room\/([^/]+)\/?$/);
 		if (!match) {
-			return new Response("Open a WebSocket at /room/<name>", { status: 404 });
+			return new Response('Open a WebSocket at /room/<name>', { status: 404 });
 		}
 
 		const room = env.ROOM.getByName(decodeURIComponent(match[1]));
