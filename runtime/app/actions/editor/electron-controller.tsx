@@ -14,7 +14,7 @@ export default createController(routes.editor, {
 
       return context.render(
         <Document>
-          <Editor />
+          <Editor project={context.params.project} />
         </Document>,
       );
     },

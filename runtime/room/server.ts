@@ -12,13 +12,13 @@ type Member = {
 };
 
 const sockets = new WebSocketServer({ noServer: true });
-const people = new Map<WebSocket, Member>();
+const rooms = new Map<string, Map<WebSocket, Member>>();
 
 function send(socket: WebSocket, message: RoomMessage) {
   socket.send(JSON.stringify(parse(roomMessage, message)));
 }
 
-function broadcast(message: RoomMessage, except?: WebSocket) {
+function broadcast(people: Map<WebSocket, Member>, message: RoomMessage, except?: WebSocket) {
   for (const person of people.values()) {
     if (person.socket === except) continue;
     send(person.socket, message);
@@ -27,7 +27,7 @@ function broadcast(message: RoomMessage, except?: WebSocket) {
 
 const roomMessageTypes = new Set(["onRoomJoin", "onPersonJoin", "onPersonLeave"]);
 
-function broadcastRaw(data: string, except?: WebSocket) {
+function broadcastRaw(people: Map<WebSocket, Member>, data: string, except?: WebSocket) {
   for (const person of people.values()) {
     if (person.socket === except) continue;
     person.socket.send(data);
@@ -35,15 +35,17 @@ function broadcastRaw(data: string, except?: WebSocket) {
 }
 
 setInterval(() => {
-  for (const person of people.values()) {
-    if (person.quiet) {
-      people.delete(person.socket);
-      person.socket.terminate();
-      broadcast({ messageType: "onPersonLeave", id: person.id });
-      continue;
+  for (const people of rooms.values()) {
+    for (const person of people.values()) {
+      if (person.quiet) {
+        people.delete(person.socket);
+        person.socket.terminate();
+        broadcast(people, { messageType: "onPersonLeave", id: person.id });
+        continue;
+      }
+      person.quiet = true;
+      person.socket.ping();
     }
-    person.quiet = true;
-    person.socket.ping();
   }
 }, 15000);
 
@@ -55,17 +57,25 @@ export async function attachRoom(server: http.Server) {
     }
 
     const url = new URL(request.url, "http://localhost");
-    if (url.pathname !== "/room") {
+    const match = url.pathname.match(/^\/room\/([^/]+)\/?$/);
+    if (!match) {
       socket.destroy();
       return;
     }
 
+    const name = decodeURIComponent(match[1]);
+    let people = rooms.get(name);
+    if (!people) {
+      people = new Map();
+      rooms.set(name, people);
+    }
+
     sockets.handleUpgrade(request, socket, head, (webSocket) => {
-      sockets.emit("connection", webSocket, request);
+      sockets.emit("connection", webSocket, people);
     });
   });
 
-  sockets.on("connection", (socket) => {
+  sockets.on("connection", (socket, people: Map<WebSocket, Member>) => {
     const person: Member = { id: randomUUID(), socket, quiet: false };
 
     people.set(socket, person);
@@ -80,7 +90,7 @@ export async function attachRoom(server: http.Server) {
       send(socket, { messageType: "onPersonJoin", id: member.id });
     }
 
-    broadcast({ messageType: "onPersonJoin", id: person.id }, socket);
+    broadcast(people, { messageType: "onPersonJoin", id: person.id }, socket);
 
     socket.on("message", (raw) => {
       person.quiet = false;
@@ -92,7 +102,7 @@ export async function attachRoom(server: http.Server) {
       if (typeof messageType === "string" && roomMessageTypes.has(messageType)) return;
 
       const relay = { ...json, sentBy: person.id };
-      broadcastRaw(JSON.stringify(relay), socket);
+      broadcastRaw(people, JSON.stringify(relay), socket);
     });
 
     socket.on("pong", () => {
@@ -103,7 +113,7 @@ export async function attachRoom(server: http.Server) {
       const member = people.get(socket);
       if (!member) return;
       people.delete(socket);
-      broadcast({ messageType: "onPersonLeave", id: member.id });
+      broadcast(people, { messageType: "onPersonLeave", id: member.id });
     });
     
     socket.on("error", () => {

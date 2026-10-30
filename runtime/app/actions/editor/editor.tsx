@@ -15,7 +15,7 @@ import { RoomDisplay } from "./room-display.tsx";
 
 export const Editor = clientEntry(
   import.meta.url,
-  function Editor(handle: Handle) {
+  function Editor(handle: Handle<{ project: string }>) {
     let room: SceneRoom;
     let fileSession: FileSession;
     let remoteSelectedTabs: { id: string; path: string; dirty: boolean }[] =
@@ -39,7 +39,7 @@ export const Editor = clientEntry(
     handle.queueTask(async () => {
       if (handle.signal.aborted) return;
 
-      room = await joinRoom(handle.signal, union([gameMessage, editorMessage]));
+      room = await joinRoom(handle.props.project, handle.signal, union([gameMessage, editorMessage]));
       if (handle.signal.aborted) return;
 
       const baseURL = new URL(globalThis.location.href);

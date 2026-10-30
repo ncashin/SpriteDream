@@ -27,11 +27,12 @@ export type Room<message extends ProtocolMessage = RoomMessage> = {
 };
 
 export function joinRoom<protocol extends Schema<any, ProtocolMessage>>(
+  name: string,
   signal: AbortSignal,
   protocol: protocol,
 ): Promise<Room<RoomMessage | InferOutput<protocol>>> {
   const socket = new WebSocket(
-    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/room`,
+    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/room/${encodeURIComponent(name)}`,
   );
 
   const people: Record<string, string> = {};
