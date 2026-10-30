@@ -1,4 +1,4 @@
-import { blobBody, blobColor, blinkPhase, blinkScale, clampGaze, cursorEyeLeft, cursorEyeRight, cursorSymbol, GAZE_LOOK, gazePivot, gazePivotBack, ink } from "../../actions/editor/ui/blobs.tsx";
+import { blobBody, blobColor, blinkPhase, blinkScale, clampGaze, cursorEye, cursorEyeLeft, cursorEyeRight, GAZE_LOOK, gazePivot, gazePivotBack } from "../../actions/editor/ui/blobs.tsx";
 import type { WorldPoint } from "./viewport.ts";
 import type { ViewportWithTransforms } from "./viewportTransforms.ts";
 
@@ -73,10 +73,13 @@ export function createDrawCursor(canvas: HTMLCanvasElement): DrawCursor {
     const gaze = canvas.ownerDocument.createElementNS(svgNS, "g");
     gaze.dataset.gaze = "";
     for (const shift of [cursorEyeLeft, cursorEyeRight]) {
-      const eye = canvas.ownerDocument.createElementNS(svgNS, "path");
+      const eye = canvas.ownerDocument.createElementNS(svgNS, "image");
       eye.dataset.eye = "";
-      eye.setAttribute("fill", ink);
-      eye.setAttribute("fill-rule", "evenodd");
+      eye.setAttribute("href", "/faces/eyes/circle.svg");
+      eye.setAttribute("x", "-8");
+      eye.setAttribute("y", "-8");
+      eye.setAttribute("width", "16");
+      eye.setAttribute("height", "16");
       eye.setAttribute("transform", shift);
       gaze.append(eye);
     }
@@ -143,8 +146,8 @@ export function createDrawCursor(canvas: HTMLCanvasElement): DrawCursor {
       body.setAttribute("d", shape);
       body.setAttribute("fill", blobColor(id));
       cursor.dataset.phase = String(blinkPhase(id));
-      const symbol = cursorSymbol(id);
-      for (const eye of cursor.querySelectorAll("[data-eye]")) eye.setAttribute("d", symbol);
+      const eye = cursorEye(id);
+      for (const node of cursor.querySelectorAll("[data-eye]")) node.setAttribute("href", eye);
     }
     const previousX = Number(cursor.dataset.x ?? screen.x);
     const previousY = Number(cursor.dataset.y ?? screen.y);

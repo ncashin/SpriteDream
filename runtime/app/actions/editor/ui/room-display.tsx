@@ -1,10 +1,15 @@
 import { css, type Handle } from "remix/component";
 
-import type { Room } from "../../../room/room.tsx";
 import { faceFor } from "./blobs.tsx";
 
 type RoomDisplayProps = {
-  room: Room;
+  room: {
+    people: Record<string, string>;
+    onMessageType(
+      type: "onPersonJoin" | "onPersonLeave",
+      listener: () => void,
+    ): () => boolean;
+  };
 };
 
 export function RoomDisplay(handle: Handle<RoomDisplayProps>) {

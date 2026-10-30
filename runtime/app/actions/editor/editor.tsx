@@ -3,7 +3,7 @@ import { clientEntry, css, type Handle } from "remix/component";
 import { union } from "remix/data-schema";
 
 import { gameMessage } from "../../../game/protocol.ts";
-import { joinRoom } from "../../room/room.tsx";
+import { joinRoom } from "../../../room/room.tsx";
 import { createFileSession, type FileSession } from "./file-session.ts";
 import { editorMessage } from "./protocol.ts";
 import type { SceneRoom } from "./scene-viewer.tsx";

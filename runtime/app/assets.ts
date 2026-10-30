@@ -13,14 +13,15 @@ export const assets = createAssetServer({
     app: "app",
     npm: "node_modules",
     game: "game",
+    room: "room",
   },
 
   allowFiles: [
     "app/routes.ts",
     "app/utilities/**",
     "app/actions/editor/**",
-    "app/room/protocol.ts",
-    "app/room/room.tsx",
+    "room/protocol.ts",
+    "room/room.tsx",
     "app/icon.tsx",
     "app/entry.ts",
     "game/**",

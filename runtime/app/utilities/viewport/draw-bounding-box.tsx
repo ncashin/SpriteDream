@@ -29,10 +29,14 @@ const BOUNDS_COLOR = "var(--bounds-color, #7dd3fc)";
 const cornerHandles = ["northWest", "northEast", "southEast", "southWest"] as const satisfies readonly ResizeHandle[];
 const edgeHandles = ["north", "east", "south", "west"] as const satisfies readonly ResizeHandle[];
 
-// macOS-style cursors. Files live in public/cursors.
-const CURSOR_OUTLINE = `fill="#000" stroke="#fff" stroke-width="2" stroke-miterlimit="10" paint-order="stroke fill"`;
-const RESIZE_CURSOR = `<path ${CURSOR_OUTLINE} d="M5.41 12L9 8.41V11h6V8.41L18.59 12 15 15.59V13H9v2.59Z"/>`;
-const ROTATE_CURSOR = `<path ${CURSOR_OUTLINE} d="M15 7.5V4.91L18.59 8.5 15 12.09V9.5A5.5 5.5 0 0 0 9.5 15h2.59L8.5 18.59 4.91 15H7.5A7.5 7.5 0 0 1 15 7.5Z"/>`;
+const resizeCursorFiles = [
+  "/cursors/ew-resize.svg",
+  "/cursors/nwse-resize.svg",
+  "/cursors/ns-resize.svg",
+  "/cursors/nesw-resize.svg",
+];
+const rotateCursorFile = cursorFile("/cursors/rotate.svg");
+const rotateCircleCursor = cursorFile("/cursors/rotate-circle.svg");
 
 const frameCss = css({
   position: "relative",
@@ -308,7 +312,6 @@ function RotationControl(
   let drag: {
     pointerId: number;
     style: HTMLStyleElement;
-    corner: (typeof cornerHandles)[number];
     angle: number;
     a: number;
     b: number;
@@ -334,7 +337,6 @@ function RotationControl(
     const dy = point.y - bounds.transform.f;
     if (dx * dx + dy * dy < 1) return;
     rotateBoundingBox(bounds, Math.atan2(dy, dx) - drag.angle, drag);
-    drag.style.textContent = cursorStyle(rotateCursor(bounds.transform, drag.corner));
   }
 
   handle.signal.addEventListener("abort", () => stop());
@@ -349,7 +351,7 @@ function RotationControl(
             key={name}
             style={{
               ...rotationZoneStyle(name, width, height, zoom),
-              cursor: rotateCursor(handle.props.bounds.transform, name),
+              cursor: rotateCursorFile,
             }}
             mix={[
               rotationCss,
@@ -362,11 +364,10 @@ function RotationControl(
                 if (!origin) return;
                 const { bounds } = handle.props;
                 const style = document.createElement("style");
-                style.textContent = cursorStyle(rotateCursor(bounds.transform, name));
+                style.textContent = cursorStyle(rotateCircleCursor);
                 document.head.append(style);
                 drag = {
                   pointerId: event.pointerId,
-                  corner: name,
                   style,
                   angle: Math.atan2(origin.y - bounds.transform.f, origin.x - bounds.transform.e),
                   a: bounds.transform.a,
@@ -485,20 +486,13 @@ function screenAngle(transform: DOMMatrix, direction: { x: number; y: number }) 
 }
 
 function resizeCursor(transform: DOMMatrix, direction: { x: number; y: number }) {
-  return svgCursor(RESIZE_CURSOR, screenAngle(transform, direction));
+  const degrees = ((screenAngle(transform, direction) * 180) / Math.PI + 360) % 180;
+  const file = resizeCursorFiles[Math.round(degrees / 45) % resizeCursorFiles.length];
+  return cursorFile(file ?? resizeCursorFiles[0]);
 }
 
-function rotateCursor(transform: DOMMatrix, corner: (typeof cornerHandles)[number]) {
-  return svgCursor(
-    ROTATE_CURSOR,
-    screenAngle(transform, resizeDirections[corner]) + (3 * Math.PI) / 4,
-  );
-}
-
-function svgCursor(body: string, radians: number) {
-  const degrees = Math.round((radians * 180) / Math.PI);
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><defs><filter id='shadow' x='-50%' y='-50%' width='200%' height='200%'><feDropShadow dx='0' dy='1' stdDeviation='0.6' flood-color='black' flood-opacity='0.45'/></filter></defs><g filter='url(#shadow)'><g transform='rotate(${degrees} 12 12)'>${body}</g></g></svg>`;
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 12 12, auto`;
+function cursorFile(file: string) {
+  return `url("${file}") 12 12, auto`;
 }
 
 function cursorStyle(cursor: string) {

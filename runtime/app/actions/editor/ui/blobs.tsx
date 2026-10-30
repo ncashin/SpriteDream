@@ -2,13 +2,14 @@ import { css } from "remix/component";
 
 const colors = ["#f43f5e", "#f59e0b", "#22c55e", "#38bdf8", "#a78bfa", "#fb7185"];
 
-const symbols = {
-  "+": "M-2.2-6.4h4.4V-2.2H6.4v4.4H2.2V6.4h-4.4V2.2H-6.4v-4.4h4.2z",
-  x: "M-4.6-7.4-7.4-4.6-2.8 0-7.4 4.6-4.6 7.4 0 2.8 4.6 7.4 7.4 4.6 2.8 0 7.4-4.6 4.6-7.4 0-2.8z",
-  "-": "M-6.4-2.15h12.8v4.3h-12.8z",
+const eyes = {
+  "+": "/faces/eyes/plus.svg",
+  x: "/faces/eyes/x.svg",
+  "-": "/faces/eyes/dash.svg",
+  o: "/faces/eyes/circle.svg",
 } as const;
 
-const symbolOrder = ["+", "x", "-"] as const;
+const eyeOrder = ["+", "x", "-", "o"] as const;
 
 const bodies = {
   circle: "M50 4a46 46 0 1 0 0.01 0",
@@ -18,7 +19,6 @@ const bodies = {
 
 const bodyOrder = ["circle", "heart", "hexagon"] as const;
 
-export const ink = "#000";
 export const GAZE_LOOK = 8;
 const GAZE_UP = 1.5;
 export const eyeSize = 1.85;
@@ -35,8 +35,8 @@ export function blobColor(id: string) {
   return colors[total];
 }
 
-export function cursorSymbol(id: string) {
-  return symbols[symbolOrder[hash(id) % symbolOrder.length]];
+export function cursorEye(id: string) {
+  return eyes[eyeOrder[hash(id) % eyeOrder.length]];
 }
 
 export function blobBody(id: string) {
@@ -44,14 +44,14 @@ export function blobBody(id: string) {
 }
 
 export function faceFor(id: string) {
-  const eyes = cursorSymbol(id);
+  const eye = cursorEye(id);
   const body = blobBody(id);
   return (
     <svg viewBox="0 0 100 100" aria-hidden="true" mix={face}>
       <path d={body} fill={blobColor(id)} />
       <g data-gaze="">
-        <path d={eyes} fill={ink} fill-rule="evenodd" transform={cursorEyeLeft} />
-        <path d={eyes} fill={ink} fill-rule="evenodd" transform={cursorEyeRight} />
+        <image href={eye} x="-8" y="-8" width="16" height="16" transform={cursorEyeLeft} />
+        <image href={eye} x="-8" y="-8" width="16" height="16" transform={cursorEyeRight} />
       </g>
     </svg>
   );

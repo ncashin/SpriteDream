@@ -2,8 +2,8 @@ import { css, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
 import type { GameMessage } from "../../../game/protocol.ts";
-import type { RoomMessage } from "../../room/protocol.ts";
-import type { Room } from "../../room/room.tsx";
+import type { RoomMessage } from "../../../room/protocol.ts";
+import type { Room } from "../../../room/room.tsx";
 import type { SceneNode } from "../../utilities/scene.ts";
 import type { EditorMessage } from "./protocol.ts";
 

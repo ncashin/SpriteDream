@@ -17,12 +17,5 @@ export default createController(routes, {
         </Document>,
       )
     },
-    mario(context) {
-      return context.render(
-        <Document title="Mario">
-          <img src="/mario.png" alt="Mario" />
-        </Document>,
-      )
-    },
   },
 })
