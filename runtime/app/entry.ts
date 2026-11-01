@@ -5,8 +5,6 @@ import {
 } from 'remix/multiple-import-maps-polyfill'
 import { run } from 'remix/component'
 
-import { setAppFrame } from './utilities/viewport/draw-component.ts'
-
 const app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await importModule(moduleUrl)
@@ -23,8 +21,6 @@ const app = run({
     return []
   },
 })
-
-setAppFrame(app.frames.top)
 
 await app.ready()
 document.documentElement.dataset.ready = ""

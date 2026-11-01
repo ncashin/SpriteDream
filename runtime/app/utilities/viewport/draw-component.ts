@@ -1,11 +1,5 @@
 import { createRoot } from "remix/component";
-import type { FrameHandle, RemixNode, VirtualRoot } from "remix/component";
-
-let appFrame: FrameHandle | undefined;
-
-export function setAppFrame(frame: FrameHandle) {
-  appFrame = frame;
-}
+import type { RemixNode, VirtualRoot } from "remix/component";
 
 import type { ViewportWithTransforms } from "./viewportTransforms.ts";
 
@@ -90,7 +84,7 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
     host.style.pointerEvents = "none";
     host.style.visibility = "hidden";
     layer.append(host);
-    return { host, root: createRoot(host, appFrame ? { frame: appFrame } : undefined), placed: false };
+    return { host, root: createRoot(host), placed: false };
   }
 
   function slotFor(key: object | string) {
@@ -104,7 +98,7 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
   function release(key: object | string, slot: Slot) {
     clearSlot(slot);
     slot.root.dispose();
-    slot.root = createRoot(slot.host, appFrame ? { frame: appFrame } : undefined);
+    slot.root = createRoot(slot.host);
     slots.delete(key);
     pool.push(slot);
   }

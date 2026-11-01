@@ -14,7 +14,7 @@ export default createController(routes.editor, {
 
       return context.render(
         <Document>
-          <Editor project={context.params.project} />
+          <Editor project={context.params.project} roomURL={process.env.ROOM_URL} />
         </Document>,
       );
     },

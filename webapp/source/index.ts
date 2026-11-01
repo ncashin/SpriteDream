@@ -6,10 +6,6 @@ type Session = {
 	id: string;
 };
 
-function send(socket: WebSocket, message: unknown) {
-	socket.send(JSON.stringify(message));
-}
-
 /** One Durable Object coordinates the people in a single multiplayer room. */
 export class Room extends DurableObject<Env> {
 	sessions: Map<WebSocket, Session>;
@@ -41,10 +37,7 @@ export class Room extends DurableObject<Env> {
 		this.sessions.set(server, person);
 
 		const people = [...this.sessions.values()].map((member) => member.id);
-		send(server, { messageType: "onRoomJoin", id: person.id, people });
-		for (const id of people) {
-			send(server, { messageType: "onPersonJoin", id });
-		}
+		this.sendTo(server, JSON.stringify({ messageType: "onRoomJoin", id: person.id, people }));
 		this.broadcast({ messageType: "onPersonJoin", id: person.id }, server);
 
 		return new Response(null, { status: 101, webSocket: client });
@@ -86,9 +79,20 @@ export class Room extends DurableObject<Env> {
 
 	private broadcast(message: unknown, except?: WebSocket) {
 		const data = JSON.stringify(message);
-		for (const socket of this.sessions.keys()) {
+		for (const socket of [...this.sessions.keys()]) {
 			if (socket === except) continue;
+			this.sendTo(socket, data);
+		}
+	}
+
+	private sendTo(socket: WebSocket, data: string) {
+		try {
 			socket.send(data);
+		} catch {
+			const person = this.sessions.get(socket);
+			this.sessions.delete(socket);
+			if (!person) return;
+			this.broadcast({ messageType: "onPersonLeave", id: person.id });
 		}
 	}
 }

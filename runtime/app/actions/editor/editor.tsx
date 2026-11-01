@@ -12,12 +12,16 @@ import { FileViewer, type EditorTab } from "./file-viewer.tsx";
 import { Search } from "./search.tsx";
 import { FileTab } from "./FileTab.tsx";
 import { RoomDisplay } from "./room-display.tsx";
+import { Button } from "./ui/button.tsx";
 
 export const Editor = clientEntry(
   import.meta.url,
-  function Editor(handle: Handle<{ project: string }>) {
+  function Editor(handle: Handle<{ project: string; roomURL?: string }>) {
     let room: SceneRoom;
     let fileSession: FileSession;
+    let roomError: string | undefined;
+    let useProdRoom = false;
+    let roomConnection: AbortController | undefined;
     let remoteSelectedTabs: { id: string; path: string; dirty: boolean }[] =
       [];
 
@@ -36,19 +40,48 @@ export const Editor = clientEntry(
       room.send({ messageType: "viewing", path: undefined, dirty: undefined });
     }
 
-    handle.queueTask(async () => {
+    let tabs: EditorTab[] = [];
+    let selectedTab: EditorTab | undefined;
+
+    async function connectRoom() {
       if (handle.signal.aborted) return;
 
-      room = await joinRoom(handle.props.project, handle.signal, union([gameMessage, editorMessage]));
-      if (handle.signal.aborted) return;
+      roomConnection?.abort();
+      room?.cleanup();
+      const connection = new AbortController();
+      roomConnection = connection;
+      handle.signal.addEventListener("abort", () => connection.abort(), { once: true });
+
+      room = undefined!;
+      fileSession = undefined!;
+      roomError = undefined;
+      tabs = [];
+      selectedTab = undefined;
+      remoteSelectedTabs = [];
+      handle.update();
+
+      try {
+        room = await joinRoom(
+          handle.props.project,
+          connection.signal,
+          union([gameMessage, editorMessage]),
+          useProdRoom ? handle.props.roomURL : undefined,
+        );
+      } catch (error) {
+        if (connection.signal.aborted || handle.signal.aborted) return;
+        roomError = error instanceof Error ? error.message : "Room connection failed";
+        handle.update();
+        return;
+      }
+      if (connection.signal.aborted || roomConnection !== connection) {
+        room.cleanup();
+        return;
+      }
 
       const baseURL = new URL(globalThis.location.href);
       if (!baseURL.pathname.endsWith("/")) baseURL.pathname += "/";
-      fileSession = createFileSession(room, handle.signal, baseURL);
-      handle.signal.addEventListener(
-        "abort",
-        fileSession.subscribeFileList(() => handle.update()),
-      );
+      fileSession = createFileSession(room, connection.signal, baseURL);
+      connection.signal.addEventListener("abort", fileSession.subscribeFileList(() => handle.update()));
 
       room.onMessageType("onPersonJoin", (message) => {
         if (message.id !== room.you.id && selectedTab) broadcastSelectedTab();
@@ -80,10 +113,11 @@ export const Editor = clientEntry(
       });
 
       handle.update();
-    });
+    }
 
-    let tabs: EditorTab[] = [];
-    let selectedTab: EditorTab | undefined;
+    handle.queueTask(() => {
+      void connectRoom();
+    });
     async function openFile(path: string) {
       if (!fileSession) return;
 
@@ -143,8 +177,37 @@ export const Editor = clientEntry(
       { signal: handle.signal, allowWhileTyping: true },
     );
 
+    function roomBackendButton() {
+      return (
+        <Button
+          mix={css({ marginLeft: 0 })}
+          pressed={useProdRoom}
+          label={
+            handle.props.roomURL
+              ? useProdRoom
+                ? "Using production room"
+                : "Using local room"
+              : "Set ROOM_URL in runtime/.env to use the production room"
+          }
+          onClick={() => {
+            if (!handle.props.roomURL) return;
+            useProdRoom = !useProdRoom;
+            void connectRoom();
+          }}
+        >
+          {useProdRoom ? "Prod" : "Local"}
+        </Button>
+      );
+    }
+
     return () => {
-      if (!room || !fileSession) return <p role="status">Loading…</p>;
+      if (!room || !fileSession)
+        return (
+          <p role="status" mix={css({ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 1rem" })}>
+            {roomError ?? "Loading…"}
+            {roomBackendButton()}
+          </p>
+        );
 
       return (
         <div
@@ -224,6 +287,7 @@ export const Editor = clientEntry(
                   void openFile(file);
                 }}
               />
+              {roomBackendButton()}
               <RoomDisplay room={room} />
             </div>
           </header>

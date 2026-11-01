@@ -26,14 +26,27 @@ export type Room<message extends ProtocolMessage = RoomMessage> = {
   cleanup(): void;
 };
 
+export function roomSocketURL(name: string, roomURL?: string) {
+  const path = `/room/${encodeURIComponent(name)}`;
+  if (!roomURL) {
+    return `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}${path}`;
+  }
+
+  const url = new URL(roomURL);
+  url.protocol = url.protocol === "https:" ? "wss:" : url.protocol === "http:" ? "ws:" : url.protocol;
+  url.pathname = path;
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
 export function joinRoom<protocol extends Schema<any, ProtocolMessage>>(
   name: string,
   signal: AbortSignal,
   protocol: protocol,
+  roomURL?: string,
 ): Promise<Room<RoomMessage | InferOutput<protocol>>> {
-  const socket = new WebSocket(
-    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/room/${encodeURIComponent(name)}`,
-  );
+  const socket = new WebSocket(roomSocketURL(name, roomURL));
 
   const people: Record<string, string> = {};
 
@@ -50,15 +63,28 @@ export function joinRoom<protocol extends Schema<any, ProtocolMessage>>(
   const cleanup = () => socket.close();
 
   return new Promise((resolve, reject) => {
-    if (signal.aborted) {
+    let settled = false;
+    const fail = (error: unknown) => {
+      if (settled) return;
+      settled = true;
       cleanup();
-      reject(signal.reason);
+      reject(error);
+    };
+
+    if (signal.aborted) {
+      fail(signal.reason);
       return;
     }
     signal.addEventListener("abort", () => {
-      cleanup();
-      reject(signal.reason);
+      fail(signal.reason);
     });
+
+    socket.onerror = () => {
+      fail(new Error("Room connection failed"));
+    };
+    socket.onclose = () => {
+      fail(new Error("Room connection closed"));
+    };
 
     socket.onmessage = (event) => {
       const messageJSON = JSON.parse(event.data);
@@ -78,6 +104,7 @@ export function joinRoom<protocol extends Schema<any, ProtocolMessage>>(
         case "onRoomJoin":
           for (const id of message.people) people[id] = id;
 
+          settled = true;
           resolve({
             you: { id: message.id },
 

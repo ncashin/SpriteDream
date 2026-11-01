@@ -1,6 +1,28 @@
 import 'geometry-interfaces'
+import { existsSync, readFileSync } from 'node:fs'
 import * as http from 'node:http'
+import { fileURLToPath } from 'node:url'
 import { createRequestListener } from 'remix/node-fetch-server'
+
+const envFile = fileURLToPath(new URL('./.env', import.meta.url))
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, 'utf8').split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const separator = trimmed.indexOf('=')
+    if (separator === -1) continue
+    const key = trimmed.slice(0, separator).trim()
+    if (!key || process.env[key] !== undefined) continue
+    let value = trimmed.slice(separator + 1).trim()
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+    process.env[key] = value
+  }
+}
 
 import { attachRoom } from './room/server.ts'
 import { router } from './app/router.ts'
