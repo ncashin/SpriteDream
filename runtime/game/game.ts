@@ -1,7 +1,7 @@
 import { contains, lookupBoundingBox } from "../app/utilities/bounding-box.ts";
 import { isObject } from "../app/utilities/is-object.ts";
 import { applyScenePatch, diffScene, filterScene } from "../app/utilities/scene.ts";
-import type { SceneContext } from "../app/actions/editor/scene-viewer.tsx";
+import type { SceneContext } from "../app/actions/editor/sceneViewer/scene-viewer.tsx";
 import { colliderTrait } from "../app/utilities/physics.ts";
 import { createUpdateLoop } from "../app/utilities/update-loop.ts";
 import { imageTrait } from "../app/utilities/viewport/draw-image.ts";

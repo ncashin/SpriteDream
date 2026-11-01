@@ -6,7 +6,7 @@ import type { Handle } from "remix/component";
 
 import { Icon } from "../../../../icon.tsx";
 import { treeRow } from "../../styles.tsx";
-import { Button } from "../button.tsx";
+import { Button } from "../../ui/button.tsx";
 import {
   chevronOpen,
   childrenClip,

@@ -27,7 +27,9 @@ export function SceneSidebar(handle: Handle<{ scene: SceneNode }>) {
         mix={sceneSidebar}
         style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}
       >
-        <HierarchyTree object={handle.props.scene} />
+        <div id="scene-tree">
+          <HierarchyTree object={handle.props.scene} />
+        </div>
         <SelectedObjectTree collapsed={collapsed} scene={handle.props.scene} />
       </aside>
     );

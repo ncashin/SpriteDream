@@ -6,7 +6,7 @@ import type { Handle } from "remix/component";
 import { Icon } from "../../../../icon.tsx";
 import type { SceneNode } from "../../../../utilities/scene.ts";
 import { isMatrix, transform } from "../../../../utilities/viewport/transform.ts";
-import { Button } from "../button.tsx";
+import { Button } from "../../ui/button.tsx";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { ColorInput, parseHexColor } from "./input/color-input.tsx";
 import { MatrixInput } from "./matrix-input.tsx";

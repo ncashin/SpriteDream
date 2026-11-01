@@ -16,7 +16,7 @@ import "../../../../utilities/physics.ts";
 import "../../../../utilities/viewport/draw-image.ts";
 import "../../../../utilities/viewport/frame.tsx";
 import { createMatrix, isMatrix } from "../../../../utilities/viewport/transform.ts";
-import { Button } from "../button.tsx";
+import { Button } from "../../ui/button.tsx";
 import { treeRow } from "../../styles.tsx";
 import { Dropdown, type DropdownItem } from "../dropdown.tsx";
 import { AutoSizeInput } from "./auto-size-input.tsx";

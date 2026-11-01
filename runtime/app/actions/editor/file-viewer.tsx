@@ -5,7 +5,7 @@ import type { InferOutput } from "remix/data-schema";
 
 import { game } from "../../../game/game.ts";
 import type { FileSession, SharedBlob, SharedFile } from "./file-session.ts";
-import { SceneViewer, type SceneRoom } from "./scene-viewer.tsx";
+import { SceneViewer, type SceneRoom } from "./sceneViewer/scene-viewer.tsx";
 
 export const supportedFileType = enum_([
   "scene",

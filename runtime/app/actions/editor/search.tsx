@@ -17,8 +17,10 @@ export function Search(handle: Handle<{ items: string[]; onSelect: (item: string
   function focusSearch() {
     open = true;
     handle.update();
-    input?.focus();
-    input?.select();
+    handle.queueTask(() => {
+      input?.focus();
+      input?.select();
+    });
   }
 
   function onCommandP(event: KeyboardEvent) {
@@ -91,10 +93,37 @@ export function Search(handle: Handle<{ items: string[]; onSelect: (item: string
       handle.update();
     }
 
+    if (!open) return <></>;
+
     return (
-      <div mix={slot}>
-        <div mix={[panel, open && panelOpen]}>
-          <label mix={field}>
+      <div
+        mix={css({
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "min(36rem, calc(100vw - 2rem))",
+          zIndex: 4,
+          WebkitAppRegion: "no-drag",
+        })}
+      >
+        <div
+          mix={css({
+            background: "#232324",
+            borderRadius: "0.6em 0.6em 0 0",
+            fontSize: "13px",
+            position: "relative",
+            width: "100%",
+          })}
+        >
+          <label
+            mix={css({
+              alignItems: "center",
+              display: "flex",
+              gap: "0.3em",
+              padding: "0.45em 0.55em",
+            })}
+          >
             <Icon icon={SearchIcon} size={14} />
             <input
               type="text"
@@ -109,7 +138,19 @@ export function Search(handle: Handle<{ items: string[]; onSelect: (item: string
               spellcheck={false}
               value={query}
               mix={[
-                inputStyle,
+                css({
+                  background: "transparent",
+                  border: "none",
+                  color: "inherit",
+                  flex: 1,
+                  font: "inherit",
+                  minWidth: 0,
+                  outline: "none",
+                  padding: 0,
+                  "&::placeholder": {
+                    color: "var(--text-muted)",
+                  },
+                }),
                 ref((node) => {
                   input = node instanceof HTMLInputElement ? node : null;
                 }),
@@ -160,15 +201,41 @@ export function Search(handle: Handle<{ items: string[]; onSelect: (item: string
               ]}
             />
             {query === "" && (
-              <kbd aria-hidden="true" mix={kbd}>
+              <kbd
+                aria-hidden="true"
+                mix={css({
+                  flex: "0 0 auto",
+                  font: "inherit",
+                  lineHeight: "inherit",
+                  color: "var(--text-muted)",
+                })}
+              >
                 ⌘P
               </kbd>
             )}
           </label>
           {open && (
-            <ul id={LIST_ID} role="listbox" aria-label="Search results" mix={list}>
+            <ul
+              id={LIST_ID}
+              role="listbox"
+              aria-label="Search results"
+              mix={css({
+                background: "#232324",
+                borderRadius: "0 0 0.6em 0.6em",
+                borderTop: "1px solid var(--line)",
+                left: 0,
+                listStyle: "none",
+                margin: 0,
+                maxHeight: "16rem",
+                overflow: "auto",
+                padding: "0.25rem",
+                position: "absolute",
+                right: 0,
+                top: "100%",
+              })}
+            >
               {items.length === 0 ? (
-                <li mix={empty}>No matches</li>
+                <li mix={css({ color: "var(--text-muted)", padding: "0.25rem 0.5rem" })}>No matches</li>
               ) : (
                 items.map((item, itemIndex) => (
                   <li
@@ -177,8 +244,15 @@ export function Search(handle: Handle<{ items: string[]; onSelect: (item: string
                     role="option"
                     aria-selected={itemIndex === index}
                     mix={[
-                      option,
-                      itemIndex === index && active,
+                      css({
+                        alignItems: "center",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        display: "flex",
+                        gap: "0.5rem",
+                        padding: "0.25rem 0.65rem 0.25rem 0.5rem",
+                      }),
+                      itemIndex === index && css({ background: "var(--hover)" }),
                       on("pointerdown", (event) => {
                         event.preventDefault();
                         select(item);
@@ -191,8 +265,23 @@ export function Search(handle: Handle<{ items: string[]; onSelect: (item: string
                     ]}
                   >
                     <FileIcon path={item} size={14} />
-                    <span mix={name}>{item.split("/").pop()}</span>
-                    <span mix={path}>{item.slice(0, item.lastIndexOf("/"))}</span>
+                    <span mix={css({ flex: "0 0 auto" })}>{item.split("/").pop()}</span>
+                    <span
+                      mix={css({
+                        color: "var(--text-muted)",
+                        direction: "rtl",
+                        marginLeft: "auto",
+                        minWidth: 0,
+                        overflow: "hidden",
+                        textAlign: "left",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      })}
+                    >
+                      <bdi>
+                        {item.includes("/") ? item.slice(0, item.lastIndexOf("/") + 1) : ""}
+                      </bdi>
+                    </span>
                   </li>
                 ))
               )}
@@ -201,100 +290,5 @@ export function Search(handle: Handle<{ items: string[]; onSelect: (item: string
         </div>
       </div>
     );
-  };
+    };
 }
-
-const slot = css({
-  position: "relative",
-  width: "28rem",
-  zIndex: 4,
-});
-
-const panel = css({
-  background: "#232324",
-  borderRadius: "0.6em",
-  fontSize: "13px",
-  position: "relative",
-  width: "100%",
-});
-
-const panelOpen = css({
-  borderBottomLeftRadius: 0,
-  borderBottomRightRadius: 0,
-});
-
-const field = css({
-  alignItems: "center",
-  display: "flex",
-  gap: "0.3em",
-  padding: "0.45em 0.55em",
-});
-
-const kbd = css({
-  flex: "0 0 auto",
-  font: "inherit",
-  lineHeight: "inherit",
-  color: "var(--text-muted)",
-});
-
-const inputStyle = css({
-  background: "transparent",
-  border: "none",
-  color: "inherit",
-  flex: 1,
-  font: "inherit",
-  minWidth: 0,
-  outline: "none",
-  padding: 0,
-  "&::placeholder": {
-    color: "var(--text-muted)",
-  },
-});
-
-const list = css({
-  background: "#232324",
-  borderRadius: "0 0 0.6em 0.6em",
-  borderTop: "1px solid var(--line)",
-  left: 0,
-  listStyle: "none",
-  margin: 0,
-  maxHeight: "16rem",
-  overflow: "auto",
-  padding: "0.25rem",
-  position: "absolute",
-  right: 0,
-  top: "100%",
-});
-
-const option = css({
-  alignItems: "center",
-  borderRadius: "6px",
-  cursor: "pointer",
-  display: "flex",
-  gap: "0.25rem",
-  padding: "0.25rem 0.5rem",
-});
-
-const name = css({
-  flex: "0 0 auto",
-  minWidth: 0,
-});
-
-const path = css({
-  color: "var(--text-muted)",
-  flex: "1 1 auto",
-  minWidth: 0,
-  overflow: "hidden",
-  textAlign: "right",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-});
-
-const active = css({
-  background: "var(--hover)",
-});
-
-const empty = css({
-  color: "var(--text-muted)",
-  padding: "0.25rem 0.5rem",
-});

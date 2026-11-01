@@ -1,14 +1,14 @@
 import { css, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-import type { GameMessage } from "../../../game/protocol.ts";
-import type { RoomMessage } from "../../../room/protocol.ts";
-import type { Room } from "../../../room/room.tsx";
-import type { SceneNode } from "../../utilities/scene.ts";
-import { currySelection, type Selection as SelectionAPI } from "../../utilities/selection.ts";
-import type { EditorMessage } from "./protocol.ts";
-import { Selection } from "./ui/selection.tsx";
-import { SceneSidebar } from "./ui/scene-sidebar.tsx";
+import type { GameMessage } from "../../../../game/protocol.ts";
+import type { RoomMessage } from "../../../../room/protocol.ts";
+import type { Room } from "../../../../room/room.tsx";
+import type { SceneNode } from "../../../utilities/scene.ts";
+import { currySelection, type Selection as SelectionAPI } from "../../../utilities/selection.ts";
+import type { EditorMessage } from "../protocol.ts";
+import { Selection } from "./selection.tsx";
+import { SceneSidebar } from "./scene-sidebar.tsx";
 
 export type SceneRoom = Room<RoomMessage | GameMessage | EditorMessage>;
 

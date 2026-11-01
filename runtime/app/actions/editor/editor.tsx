@@ -6,7 +6,7 @@ import { gameMessage } from "../../../game/protocol.ts";
 import { joinRoom } from "../../../room/room.tsx";
 import { createFileSession, type FileSession } from "./file-session.ts";
 import { editorMessage } from "./protocol.ts";
-import type { SceneRoom } from "./scene-viewer.tsx";
+import type { SceneRoom } from "./sceneViewer/scene-viewer.tsx";
 import { createHotkey } from "../../utilities/hotkey.ts";
 import { FileViewer, type EditorTab } from "./file-viewer.tsx";
 import { Search } from "./search.tsx";
@@ -164,6 +164,19 @@ export const Editor = clientEntry(
       handle.update();
     }
 
+    let trafficLights = false;
+    if (typeof window !== "undefined" && window.spriteDream?.windowChrome) {
+      void window.spriteDream.windowChrome().then((chrome) => {
+        trafficLights = chrome.trafficLights;
+        handle.update();
+      });
+      const stopChrome = window.spriteDream.onWindowChrome((chrome) => {
+        trafficLights = chrome.trafficLights;
+        handle.update();
+      });
+      handle.signal.addEventListener("abort", stopChrome);
+    }
+
     createHotkey(
       {
         "mod+s": () => {
@@ -228,11 +241,12 @@ export const Editor = clientEntry(
               gridArea: "header",
               display: "flex",
               flexDirection: "row",
+              position: "relative",
               justifyContent: "space-between",
               alignItems: "center",
               overflow: "visible",
               gap: "0.5rem",
-              padding: "0.5rem 1rem 0.5rem 5rem",
+              padding: trafficLights ? "0.5rem 1rem 0.5rem 5.25rem" : "0.5rem 1rem",
               WebkitAppRegion: "drag",
             })}
           >
@@ -280,13 +294,13 @@ export const Editor = clientEntry(
                 />
               ))}
             </div>
+            <Search
+              items={fileSession.files()}
+              onSelect={(file) => {
+                void openFile(file);
+              }}
+            />
             <div mix={css({ display: "flex", alignItems: "center", gap: "0.5rem", WebkitAppRegion: "no-drag" })}>
-              <Search
-                items={fileSession.files()}
-                onSelect={(file) => {
-                  void openFile(file);
-                }}
-              />
               {roomBackendButton()}
               <RoomDisplay room={room} />
             </div>

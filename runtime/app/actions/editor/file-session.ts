@@ -1,7 +1,7 @@
 import { array, parse, string } from "remix/data-schema";
 import * as Y from "yjs";
 
-import type { SceneRoom } from "./scene-viewer.tsx";
+import type { SceneRoom } from "./sceneViewer/scene-viewer.tsx";
 
 const projectFiles = array(string());
 

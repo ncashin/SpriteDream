@@ -11,7 +11,7 @@ import type { Selection as SelectionApi } from "../../../../utilities/selection.
 import { Selection } from "../selection.tsx";
 import { parentObject, setObjectParent } from "../../../../utilities/viewport/transform.ts";
 import { treeRow } from "../../styles.tsx";
-import { Button } from "../button.tsx";
+import { Button } from "../../ui/button.tsx";
 import { AutoSizeInput } from "./auto-size-input.tsx";
 import { renameKey, watchSelection } from "./object-tree.tsx";
 import {
@@ -41,11 +41,11 @@ export function HierarchyTree(handle: Handle<{ object: SceneNode }>) {
       const nodes = hierarchy(root);
 
       return (
-        <div>
+        <>
           {nodes.map((node) => (
             <HierarchyBranch key={node.name} node={node} root={root} depth={0} />
           ))}
-        </div>
+        </>
       );
     };
 }

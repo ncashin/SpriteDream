@@ -7,6 +7,8 @@ declare global {
     spriteDream: {
       openFolder(): Promise<string | null>;
       openTestFiles(): Promise<string>;
+      windowChrome(): Promise<{ trafficLights: boolean }>;
+      onWindowChrome(callback: (chrome: { trafficLights: boolean }) => void): () => void;
     };
   }
 }

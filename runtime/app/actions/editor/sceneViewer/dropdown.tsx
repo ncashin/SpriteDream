@@ -5,7 +5,7 @@ import { css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../../icon.tsx";
-import { Button } from "./button.tsx";
+import { Button } from "../ui/button.tsx";
 import { iconButton } from "./tree/tree.ts";
 
 export type DropdownItem = {
