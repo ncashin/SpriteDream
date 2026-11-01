@@ -8,6 +8,7 @@ import type { SharedBlob, SharedFile } from "./file-session.ts";
 import { FileSessionProvider } from "./file-session-provider.tsx";
 import { RoomProvider } from "./room-provider.tsx";
 import { SceneViewer } from "./sceneViewer/scene-viewer.tsx";
+import type { EditorTab } from "./editor.tsx";
 
 export const supportedFileType = enum_([
   "scene",
@@ -24,11 +25,6 @@ export const supportedFileType = enum_([
   "svg",
 ] as const);
 export type SupportedFileType = InferOutput<typeof supportedFileType>;
-
-export type EditorTab = {
-  path: string;
-  sharedFile: SharedFile;
-};
 
 function objectUrl(file: SharedBlob) {
   const copy = new Uint8Array(file.bytes.byteLength);

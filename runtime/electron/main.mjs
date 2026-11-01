@@ -56,17 +56,6 @@ ipcMain.handle('open-folder', async (event) => {
 
 ipcMain.handle('open-test-files', () => realpathSync(resolve(root, 'testFiles')))
 
-function windowChrome(window) {
-  return {
-    trafficLights: process.platform === 'darwin' && !window.isFullScreen(),
-  }
-}
-
-ipcMain.handle('window-chrome', (event) => {
-  const window = BrowserWindow.fromWebContents(event.sender)
-  return window ? windowChrome(window) : { trafficLights: false }
-})
-
 function waitForServer() {
   return new Promise((resolve) => {
     const attempt = () => {
@@ -87,6 +76,7 @@ function createWindow() {
     height: 800,
     backgroundColor: '#121213',
     titleBarStyle: 'hidden',
+    titleBarOverlay: true,
     trafficLightPosition: { x: 16, y: 14 },
     webPreferences: {
       preload: resolve(root, 'electron/preload.cjs'),
@@ -97,11 +87,6 @@ function createWindow() {
   window.webContents.on('did-fail-load', () => {
     setTimeout(() => window.loadURL(url), 150)
   })
-  const sendChrome = () => {
-    window.webContents.send('window-chrome', windowChrome(window))
-  }
-  window.on('enter-full-screen', sendChrome)
-  window.on('leave-full-screen', sendChrome)
   window.loadURL(url)
 }
 
