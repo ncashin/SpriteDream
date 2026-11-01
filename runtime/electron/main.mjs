@@ -1,10 +1,10 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { realpathSync } from 'node:fs'
 import { spawn } from 'node:child_process'
+import { Worker } from 'node:worker_threads'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { agentEditCount } from './agent-changes.mjs'
 import { listProjectFiles, readProjectFile, writeProjectFile } from './project-files.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -19,6 +19,17 @@ const server = spawn(process.execPath, ['--import', 'remix/node-tsx', 'server.ts
   env: { ...process.env, PORT: port, ELECTRON_RUN_AS_NODE: '1' },
   stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
   serialization: 'advanced',
+})
+
+const agentWorker = new Worker(new URL('./agent-changes-worker.mjs', import.meta.url))
+let agentRequestId = 0
+const agentRequests = new Map()
+
+agentWorker.on('message', (message) => {
+  const respond = agentRequests.get(message.id)
+  if (!respond) return
+  agentRequests.delete(message.id)
+  respond(message.count)
 })
 
 server.on('message', (message) => {
@@ -44,10 +55,9 @@ server.on('message', (message) => {
   }
 
   if (message?.type === 'agent-changes') {
-    agentEditCount(message.project).then(
-      (count) => server.send({ type: 'agent-changes', count }),
-      () => server.send({ type: 'agent-changes', count: 0 }),
-    )
+    const id = ++agentRequestId
+    agentRequests.set(id, (count) => server.send({ type: 'agent-changes', count }))
+    agentWorker.postMessage({ id, directory: message.project })
   }
 })
 
@@ -62,8 +72,6 @@ ipcMain.handle('open-folder', async (event) => {
 
   return realpathSync(selected)
 })
-
-ipcMain.handle('open-test-files', () => realpathSync(resolve(root, 'testFiles')))
 
 function waitForServer() {
   return new Promise((resolve) => {
@@ -112,4 +120,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('before-quit', () => server.kill('SIGTERM'))
+app.on('before-quit', () => {
+  void agentWorker.terminate()
+  server.kill('SIGTERM')
+})

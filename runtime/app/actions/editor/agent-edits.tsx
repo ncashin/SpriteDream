@@ -26,11 +26,18 @@ export function AgentEdits(handle: Handle<{ project: string }>) {
     }
   }
 
-  const timer = setInterval(() => {
-    void refresh();
-  }, 2000);
-  handle.signal.addEventListener("abort", () => clearInterval(timer));
-  void refresh();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  async function poll() {
+    await refresh();
+    if (handle.signal.aborted) return;
+    timer = setTimeout(() => {
+      void poll();
+    }, 2000);
+  }
+
+  handle.signal.addEventListener("abort", () => clearTimeout(timer));
+  void poll();
 
   return () => (
     <div title="Agent file edits since this project opened" mix={badge}>

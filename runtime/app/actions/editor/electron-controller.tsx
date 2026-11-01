@@ -1,6 +1,7 @@
 import { createFileResponse } from "remix/response/file";
 import { createController } from "remix/router";
 
+import { rememberProject } from "../../data/projects.ts";
 import { routes } from "../../routes.ts";
 import { Document } from "../document.tsx";
 import { electronRequest } from "./electronIPC.ts";
@@ -8,9 +9,11 @@ import { Editor } from "./editor.tsx";
 
 export default createController(routes.editor, {
   actions: {
-    index(context) {
+    async index(context) {
       if (!context.params.project)
         return new Response("Not Found", { status: 404 });
+
+      await rememberProject(context.database, context.params.project);
 
       return context.render(
         <Document>

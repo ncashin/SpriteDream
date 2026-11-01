@@ -1,6 +1,7 @@
 import { createController } from 'remix/router'
 
 import { assets } from '../assets.ts'
+import { projects } from '../data/tables.ts'
 import { routes } from '../routes.ts'
 import { Document } from './document.tsx'
 import { Welcome } from './welcome/welcome.tsx'
@@ -10,10 +11,14 @@ export default createController(routes, {
     async assets(context) {
       return (await assets.fetch(context.request)) ?? new Response('Not Found', { status: 404 })
     },
-    index(context) {
+    async index(context) {
+      const savedProjects = await context.database.findMany(projects, {
+        orderBy: [['last_opened', 'desc']],
+      })
+
       return context.render(
         <Document title="SpriteDream">
-          <Welcome />
+          <Welcome projects={savedProjects} />
         </Document>,
       )
     },

@@ -6,6 +6,7 @@ import { defaultRoots, discoverSessions, loadSessionFromPath } from '@razroo/iso
 import { projectDirectory } from './project-files.mjs'
 
 const openedAt = new Map()
+const countedSessions = new Map()
 
 function insideProject(folder, filePath) {
   if (typeof filePath !== 'string' || filePath === '') return false
@@ -61,6 +62,29 @@ async function openCodeSessionsChangedSince(since) {
   })
 }
 
+function editsInSession(path, folder, since, harness) {
+  let mtimeMs = 0
+  try {
+    mtimeMs = statSync(path).mtimeMs
+  } catch {
+    countedSessions.delete(path)
+    return 0
+  }
+
+  const cached = countedSessions.get(path)
+  if (cached && cached.mtimeMs === mtimeMs && cached.since === since && cached.folder === folder) {
+    return cached.count
+  }
+
+  const count = countEdits(
+    harness ? loadSessionFromPath(path, harness) : loadSessionFromPath(path),
+    folder,
+    since,
+  )
+  countedSessions.set(path, { mtimeMs, since, folder, count })
+  return count
+}
+
 function countEdits(session, folder, since) {
   let count = 0
 
@@ -87,7 +111,7 @@ export async function agentEditCount(directory) {
 
   for (const path of transcriptsChangedSince(since)) {
     try {
-      count += countEdits(loadSessionFromPath(path), folder, since)
+      count += editsInSession(path, folder, since)
     } catch {
       // A transcript iso-trace cannot parse yet is skipped.
     }
@@ -95,7 +119,7 @@ export async function agentEditCount(directory) {
 
   for (const ref of await openCodeSessionsChangedSince(since)) {
     try {
-      count += countEdits(loadSessionFromPath(ref.source.path, 'opencode'), folder, since)
+      count += editsInSession(ref.source.path, folder, since, 'opencode')
     } catch {
       // A session iso-trace cannot parse yet is skipped.
     }
