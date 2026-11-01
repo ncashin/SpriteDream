@@ -159,7 +159,7 @@ function EditorWorkspace(handle: Handle) {
       mix={css({
         display: "grid",
         gridTemplateColumns: "minmax(0, 1fr)",
-        gridTemplateRows: "auto minmax(0, 1fr)",
+        gridTemplateRows: "3rem minmax(0, 1fr)",
         gridTemplateAreas: `
               "header"
               "tabContent"
@@ -176,6 +176,8 @@ function EditorWorkspace(handle: Handle) {
           position: "relative",
           justifyContent: "space-between",
           alignItems: "center",
+          height: "3rem",
+          boxSizing: "border-box",
           overflow: "visible",
           gap: "0.5rem",
           padding: "0.5rem 1rem 0.5rem calc(1rem + env(titlebar-area-x, 0))",
@@ -210,21 +212,6 @@ function EditorWorkspace(handle: Handle) {
               onClose={() => closeTab(tab)}
             />
           ))}
-          {remoteSelectedTabs
-            .filter(
-              (remote) =>
-                room.people[remote.id] &&
-                !openTabs.some((tab) => tab.path === remote.path),
-            )
-            .map((remote) => (
-              <FileTab
-                key={remote.id}
-                tab={{ path: remote.path, dirty: remote.dirty }}
-                onClick={() => {
-                  void openTab(remote.path);
-                }}
-              />
-            ))}
         </div>
         <Search
           items={fileSession.files()}
@@ -240,7 +227,12 @@ function EditorWorkspace(handle: Handle) {
             WebkitAppRegion: "no-drag",
           })}
         >
-          <RoomDisplay />
+          <RoomDisplay
+            remotes={remoteSelectedTabs.filter((remote) => room.people[remote.id])}
+            onOpen={(path) => {
+              void openTab(path);
+            }}
+          />
         </div>
       </header>
       <div
