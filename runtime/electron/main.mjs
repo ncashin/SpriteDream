@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { agentEditCount } from './agent-changes.mjs'
 import { listProjectFiles, readProjectFile, writeProjectFile } from './project-files.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -39,6 +40,14 @@ server.on('message', (message) => {
       type: 'write-file',
       ok: writeProjectFile(message.project, message.filePath, message.body),
     })
+    return
+  }
+
+  if (message?.type === 'agent-changes') {
+    agentEditCount(message.project).then(
+      (count) => server.send({ type: 'agent-changes', count }),
+      () => server.send({ type: 'agent-changes', count: 0 }),
+    )
   }
 })
 

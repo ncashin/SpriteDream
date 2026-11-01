@@ -18,6 +18,13 @@ export default createController(routes.editor, {
         </Document>,
       );
     },
+    async agentChanges(context) {
+      const project = context.params.project;
+      if (!project) return new Response("Not Found", { status: 404 });
+
+      const electronResponse = await electronRequest({ type: "agent-changes", project });
+      return Response.json({ count: electronResponse.count });
+    },
     async listFiles(context) {
       const project = context.params.project;
       if (!project) return new Response("Not Found", { status: 404 });

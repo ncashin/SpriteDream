@@ -9,6 +9,7 @@ import { FileViewer } from "./file-viewer.tsx";
 import { FileSessionProvider } from "./file-session-provider.tsx";
 import { Search } from "./search.tsx";
 import { FileTab } from "./FileTab.tsx";
+import { AgentEdits } from "./agent-edits.tsx";
 import { RoomDisplay } from "./room-display.tsx";
 import { RoomProvider } from "./room-provider.tsx";
 import type { SharedFile } from "./file-session.ts";
@@ -23,7 +24,7 @@ export const Editor = clientEntry(
         protocol={union([gameMessage, editorMessage])}
       >
         <FileSessionProvider>
-          <EditorWorkspace />
+          <EditorWorkspace project={handle.props.project} />
         </FileSessionProvider>
       </RoomProvider>
     );
@@ -40,7 +41,7 @@ export type RemoteEditorTab = {
   dirty: boolean;
 };
 
-function EditorWorkspace(handle: Handle) {
+function EditorWorkspace(handle: Handle<{ project: string }>) {
   const { room } = handle.context.get(RoomProvider);
   const fileSession = handle.context.get(FileSessionProvider);
 
@@ -227,6 +228,7 @@ function EditorWorkspace(handle: Handle) {
             WebkitAppRegion: "no-drag",
           })}
         >
+          <AgentEdits project={handle.props.project} />
           <RoomDisplay
             remotes={remoteSelectedTabs.filter((remote) => room.people[remote.id])}
             onOpen={(path) => {

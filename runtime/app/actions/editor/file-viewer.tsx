@@ -1,10 +1,11 @@
-import { css, on } from "remix/component";
+import { css } from "remix/component";
 import type { Handle } from "remix/component";
 import { enum_, parseSafe } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 
 import { game } from "../../../game/game.ts";
-import type { SharedBlob, SharedFile } from "./file-session.ts";
+import { CodeViewer } from "./code-viewer.tsx";
+import type { SharedBlob } from "./file-session.ts";
 import { FileSessionProvider } from "./file-session-provider.tsx";
 import { RoomProvider } from "./room-provider.tsx";
 import { SceneViewer } from "./sceneViewer/scene-viewer.tsx";
@@ -76,36 +77,9 @@ export function FileViewer(
     case "md": {
       if (file.sharedFile.kind !== "text") return () => <>{file.path}</>;
       const shared = file.sharedFile;
-      const unsubscribe = session.subscribeFile(file.path, () => handle.update());
-      handle.signal.addEventListener("abort", unsubscribe);
 
       return () => (
-        <textarea
-          spellCheck={false}
-          value={shared.text.toString()}
-          mix={[
-            css({
-              boxSizing: "border-box",
-              border: "none",
-              background: "transparent",
-              color: "inherit",
-              font: "inherit",
-              height: "100%",
-              margin: 0,
-              outline: "none",
-              overflow: "auto",
-              padding: "1rem",
-              resize: "none",
-              whiteSpace: "pre",
-              width: "100%",
-            }),
-            on("input", (event) => {
-              session.write(file.path, event.currentTarget.value);
-              onEdit?.();
-              handle.update();
-            }),
-          ]}
-        />
+        <CodeViewer key={file.path} path={file.path} text={shared.text} onEdit={onEdit} />
       );
     }
     case "png":

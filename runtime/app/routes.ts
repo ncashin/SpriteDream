@@ -6,6 +6,7 @@ export const routes = route({
   editor: route('/:project', {
     index: get('/'),
     listFiles: get('/files'),
+    agentChanges: get('/agent-changes'),
     getFile: get('/*filePath'),
     saveFile: put('/*filePath'),
   }),

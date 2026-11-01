@@ -3,6 +3,7 @@ import {
   boolean,
   instanceof_,
   literal,
+  number,
   object,
   optional,
   parseSafe,
@@ -27,6 +28,10 @@ const ipcRequest = variant("type", {
     filePath: string(),
     body: instanceof_(Uint8Array),
   }),
+  "agent-changes": object({
+    type: literal("agent-changes"),
+    project: string(),
+  }),
 });
 
 const ipcResponse = variant("type", {
@@ -42,6 +47,10 @@ const ipcResponse = variant("type", {
     type: literal("write-file"),
     ok: boolean(),
   }),
+  "agent-changes": object({
+    type: literal("agent-changes"),
+    count: number(),
+  }),
 });
 
 type IPCRequest = InferOutput<typeof ipcRequest>;
@@ -55,23 +64,35 @@ function isResponse<MessageType extends IPCRequest["type"]>(
   return value.type === type;
 }
 
+let pending: Promise<unknown> = Promise.resolve();
+
 export function electronRequest<T extends IPCRequest["type"]>(
   message: Extract<IPCRequest, { type: T }>,
 ): Promise<ResponseFor<T>> {
-  return new Promise((resolve, reject) => {
-    process.on("message", function onMessage(value) {
-      process.off("message", onMessage);
+  const request = pending.then(
+    () =>
+      new Promise<ResponseFor<T>>((resolve, reject) => {
+        process.on("message", function onMessage(value) {
+          process.off("message", onMessage);
 
-      const parsed = parseSafe(ipcResponse, value);
+          const parsed = parseSafe(ipcResponse, value);
 
-      if (!parsed.success || !isResponse(parsed.value, message.type)) {
-        reject(new Error("Invalid IPC response"));
-        return;
-      }
+          if (!parsed.success || !isResponse(parsed.value, message.type)) {
+            reject(new Error("Invalid IPC response"));
+            return;
+          }
 
-      resolve(parsed.value);
-    });
+          resolve(parsed.value);
+        });
 
-    process.send?.(message);
-  });
+        process.send?.(message);
+      }),
+  );
+
+  pending = request.then(
+    () => undefined,
+    () => undefined,
+  );
+
+  return request;
 }
