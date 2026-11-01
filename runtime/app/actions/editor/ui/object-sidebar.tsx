@@ -27,7 +27,7 @@ export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar
     return (
       <aside id="object-view" inert={collapsed} mix={panel}>
         <div mix={column}>
-          {active ? (
+          {active && (
             <div mix={tree}>
               <div aria-hidden="true" mix={topCover} />
               <ObjectTree
@@ -37,7 +37,7 @@ export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar
                 parent={entry?.parent}
               />
             </div>
-          ) : null}
+          )}
         </div>
       </aside>
     );

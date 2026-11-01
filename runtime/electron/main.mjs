@@ -54,6 +54,8 @@ ipcMain.handle('open-folder', async (event) => {
   return realpathSync(selected)
 })
 
+ipcMain.handle('open-test-files', () => realpathSync(resolve(root, 'testFiles')))
+
 function waitForServer() {
   return new Promise((resolve) => {
     const attempt = () => {

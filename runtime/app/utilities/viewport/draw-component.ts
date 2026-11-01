@@ -36,11 +36,26 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
 
   let layer = canvas.ownerDocument.createElement("div");
   layer.style.position = "absolute";
-  layer.style.inset = "0";
   layer.style.overflow = "hidden";
   layer.style.pointerEvents = "none";
   layer.style.zIndex = "1";
   canvas.after(layer);
+
+  function placeLayer() {
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    if (getComputedStyle(parent).position === "static") parent.style.position = "relative";
+    const parentRect = parent.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
+    layer.style.left = `${rect.left - parentRect.left + parent.scrollLeft}px`;
+    layer.style.top = `${rect.top - parentRect.top + parent.scrollTop}px`;
+    layer.style.width = `${rect.width}px`;
+    layer.style.height = `${rect.height}px`;
+  }
+
+  placeLayer();
+  const resizeObserver = new ResizeObserver(placeLayer);
+  resizeObserver.observe(canvas);
 
   const passthrough = canvas.ownerDocument.createElement("style");
   passthrough.textContent = `[data-alt-pointer-passthrough], [data-alt-pointer-passthrough] * { pointer-events: none !important; }`;
@@ -119,6 +134,7 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
     if (disposed) return;
     if (!open) {
       open = true;
+      placeLayer();
       seen = [];
       epoch += 1;
       let drawn = epoch;
@@ -168,6 +184,7 @@ export function createDrawComponent(canvas: HTMLCanvasElement): DrawComponent {
     view?.removeEventListener("keyup", onAltKey);
     view?.removeEventListener("blur", clearAltPassthrough);
     passthrough.remove();
+    resizeObserver.disconnect();
     layer.remove();
   };
 

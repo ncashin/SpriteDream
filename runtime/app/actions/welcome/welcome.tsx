@@ -6,6 +6,7 @@ declare global {
   interface Window {
     spriteDream: {
       openFolder(): Promise<string | null>;
+      openTestFiles(): Promise<string>;
     };
   }
 }
@@ -17,6 +18,22 @@ export const Welcome = clientEntry(import.meta.url, function Welcome(_handle: Ha
 
     window.location.assign(routes.editor.index.href({ project: directory }));
   }
+
+  async function openTestFiles() {
+    const directory = await window.spriteDream.openTestFiles();
+    window.location.assign(routes.editor.index.href({ project: directory }));
+  }
+
+  const buttonStyle = css({
+    padding: "0.55rem 0.75rem",
+    border: 0,
+    borderRadius: "0.4rem",
+    background: "transparent",
+    color: "inherit",
+    font: "inherit",
+    cursor: "pointer",
+    ":hover": { background: "var(--hover)" },
+  });
 
   return () => (
     <main
@@ -36,19 +53,21 @@ export const Welcome = clientEntry(import.meta.url, function Welcome(_handle: Ha
           on("click", () => {
             void openFolder();
           }),
-          css({
-            padding: "0.55rem 0.75rem",
-            border: 0,
-            borderRadius: "0.4rem",
-            background: "transparent",
-            color: "inherit",
-            font: "inherit",
-            cursor: "pointer",
-            ":hover": { background: "var(--hover)" },
-          }),
+          buttonStyle,
         ]}
       >
         Open Folder
+      </button>
+      <button
+        type="button"
+        mix={[
+          on("click", () => {
+            void openTestFiles();
+          }),
+          buttonStyle,
+        ]}
+      >
+        Open Test Files
       </button>
     </main>
   );
