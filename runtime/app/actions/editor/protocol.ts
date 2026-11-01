@@ -1,4 +1,4 @@
-import { boolean, enum_, literal, object, optional, string, variant } from "remix/data-schema";
+import { boolean, enum_, literal, number, object, optional, string, variant } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 
 export const editorMessage = variant("messageType", {
@@ -29,6 +29,12 @@ export const editorMessage = variant("messageType", {
     messageType: literal("selectedTab"),
     path: optional(string()),
     dirty: optional(boolean()),
+  }),
+  cursor: object({
+    messageType: literal("cursor"),
+    path: string(),
+    x: number(),
+    y: number(),
   }),
 });
 

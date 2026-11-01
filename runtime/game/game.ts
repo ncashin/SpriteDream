@@ -12,19 +12,15 @@ import { createViewport } from "../app/utilities/viewport/viewport.ts";
 export function game({
   canvas,
   scene,
-  room,
-  sceneKey,
   signal,
   document,
   selection,
+  presence,
 }: SceneContext) {
   if (!scene || signal.aborted) return;
 
   let previous = structuredClone(scene);
   let writing = false;
-  const cursors: Record<string, { x: number; y: number }> = {};
-  let sentX = 0;
-  let sentY = 0;
 
   function applyDocument() {
     const parsed = JSON.parse(document.read());
@@ -44,27 +40,11 @@ export function game({
   });
   signal.addEventListener("abort", unsubscribe);
 
-  room.onMessageType("cursor", (message) => {
-    if (message.sentBy === room.you.id) return;
-    if (message.sceneKey !== sceneKey) {
-      delete cursors[message.sentBy];
-      return;
-    }
-    cursors[message.sentBy] = { x: message.x, y: message.y };
-  });
-
-  room.onMessageType("onPersonLeave", (message) => {
-    delete cursors[message.id];
-  });
-
-  room.onMessageType("selectedTab", (message) => {
-    if (message.sentBy === room.you.id) return;
-    if (message.path === sceneKey) return;
-    delete cursors[message.sentBy];
-  });
-
   const updateLoop = createUpdateLoop();
   const viewport = createViewport(canvas, {
+    onWorldHover(point) {
+      presence.sendCursor(point);
+    },
     onWorldClick(point) {
       const hit = Object.values(scene).findLast((object) => {
         if (!isObject(object)) return false;
@@ -102,21 +82,10 @@ export function game({
       viewport.drawBoundingBox(object);
     }
 
-    for (const id in cursors) {
-      const point = cursors[id];
-      if (point) viewport.drawCursor(point, id);
-    }
-
-    const { x, y } = viewport.state.cursorPoint;
-    if (x !== sentX || y !== sentY) {
-      sentX = x;
-      sentY = y;
-      room.send({
-        messageType: "cursor",
-        sceneKey,
-        x,
-        y,
-      });
+    for (const id in presence.cursors) {
+      const point = presence.cursors[id];
+      if (!point) continue;
+      viewport.drawCursor(point, id);
     }
 
     const patch = diffScene(previous, scene);

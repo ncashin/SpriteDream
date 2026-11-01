@@ -1,7 +1,6 @@
 import { css, type Handle, type RemixNode } from "remix/component";
 import type { Schema } from "remix/data-schema";
 
-import type { GameMessage } from "../../../game/protocol.ts";
 import { joinRoom } from "../../../room/room.tsx";
 import type { EditorMessage } from "./protocol.ts";
 import type { SceneRoom } from "./sceneViewer/scene-viewer.tsx";
@@ -18,7 +17,7 @@ export function RoomProvider(
     {
       roomName: string;
       roomURL?: string;
-      protocol: Schema<any, GameMessage | EditorMessage>;
+      protocol: Schema<any, EditorMessage>;
       children?: RemixNode;
     },
     RoomState

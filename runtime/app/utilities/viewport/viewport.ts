@@ -3,8 +3,8 @@ import type { RemixNode } from "remix/component";
 import type { Collider } from "../physics.ts";
 import type { SceneNode } from "../scene.ts";
 import { createDrawComponent } from "./draw-component.ts";
-import { drawBoundingBox } from "./draw-bounding-box.tsx";
 import { createDrawCursor } from "./draw-cursor.ts";
+import { drawBoundingBox } from "./draw-bounding-box.tsx";
 import { type Image, drawImage } from "./draw-image.ts";
 import { type Text, drawText } from "./draw-text.ts";
 import { type FrameObject, drawFrame } from "./frame.tsx";
@@ -48,7 +48,9 @@ export function createViewport(canvas: HTMLCanvasElement, options?: ViewportOpti
 
   const transforms = curryViewportTransforms(state);
   const drawComponent = createDrawComponent(canvas);
-  const drawCursor = createDrawCursor(canvas);
+  const parent = canvas.parentElement;
+  if (!parent) throw new Error("Canvas has no parent element");
+  const drawCursor = createDrawCursor(parent);
   const viewport = {
     state,
     ...transforms,
@@ -88,6 +90,7 @@ export function createViewport(canvas: HTMLCanvasElement, options?: ViewportOpti
       matrix.e * ratio,
       matrix.f * ratio,
     );
+    drawCursor.frame();
   }
 
   return {
@@ -111,8 +114,8 @@ export function createViewport(canvas: HTMLCanvasElement, options?: ViewportOpti
     drawPhysicsCollider(object: Collider) {
       drawPhysicsCollider(viewport, object);
     },
-    drawCursor(point: WorldPoint, id: string, look?: WorldPoint) {
-      drawCursor(viewport, point, id, look);
+    drawCursor(point: WorldPoint, id: string) {
+      drawCursor(transforms.worldToScreen(point.x, point.y), id);
     },
     destroy,
   };

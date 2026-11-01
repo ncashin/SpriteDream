@@ -1,16 +1,16 @@
 import { css, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-import type { GameMessage } from "../../../../game/protocol.ts";
 import type { RoomMessage } from "../../../../room/protocol.ts";
 import type { Room } from "../../../../room/room.tsx";
 import type { SceneNode } from "../../../utilities/scene.ts";
 import { currySelection, type Selection as SelectionAPI } from "../../../utilities/selection.ts";
 import type { EditorMessage } from "../protocol.ts";
+import { PresenceProvider, type Presence } from "../presence-provider.tsx";
 import { Selection } from "./selection.tsx";
 import { SceneSidebar } from "./scene-sidebar.tsx";
 
-export type SceneRoom = Room<RoomMessage | GameMessage | EditorMessage>;
+export type SceneRoom = Room<RoomMessage | EditorMessage>;
 
 export type SceneDocument = {
   read(): string;
@@ -26,6 +26,7 @@ export type SceneContext = {
   signal: AbortSignal;
   document: SceneDocument;
   selection: SelectionAPI;
+  presence: Presence;
 };
 
 export function SceneViewer(
@@ -38,6 +39,7 @@ export function SceneViewer(
   }>,
 ) {
   const selection = currySelection();
+  const presence = handle.context.get(PresenceProvider);
 
   return () => (
     <Selection value={selection}>
@@ -52,14 +54,21 @@ export function SceneViewer(
         })}
       >
         <SceneSidebar scene={handle.props.scene} />
+        <div
+          mix={css({
+            position: "relative",
+            flex: "1 1 auto",
+            minWidth: 0,
+            height: "100%",
+          })}
+        >
         <canvas
           aria-label="Scene view"
           tabIndex={-1}
           mix={[
             css({
               display: "block",
-              flex: "1 1 auto",
-              minWidth: 0,
+              width: "100%",
               height: "100%",
               touchAction: "none",
               background: "#1c1c1e",
@@ -77,10 +86,12 @@ export function SceneViewer(
                 signal,
                 document: handle.props.document,
                 selection,
+                presence,
               });
             }),
           ]}
         />
+        </div>
       </div>
     </Selection>
   );

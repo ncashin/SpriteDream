@@ -1,7 +1,5 @@
 import { clientEntry, css, type Handle } from "remix/component";
-import { union } from "remix/data-schema";
 
-import { gameMessage } from "../../../game/protocol.ts";
 import { editorMessage } from "./protocol.ts";
 
 import { createHotkey } from "../../utilities/hotkey.ts";
@@ -21,7 +19,7 @@ export const Editor = clientEntry(
       <RoomProvider
         roomName={handle.props.project}
         roomURL={handle.props.roomURL}
-        protocol={union([gameMessage, editorMessage])}
+        protocol={editorMessage}
       >
         <FileSessionProvider>
           <EditorWorkspace project={handle.props.project} />

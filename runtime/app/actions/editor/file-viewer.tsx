@@ -7,6 +7,7 @@ import { game } from "../../../game/game.ts";
 import { CodeViewer } from "./code-viewer.tsx";
 import type { SharedBlob } from "./file-session.ts";
 import { FileSessionProvider } from "./file-session-provider.tsx";
+import { PresenceProvider } from "./presence-provider.tsx";
 import { RoomProvider } from "./room-provider.tsx";
 import { SceneViewer } from "./sceneViewer/scene-viewer.tsx";
 import type { EditorTab } from "./editor.tsx";
@@ -53,21 +54,23 @@ export function FileViewer(
       const scene = JSON.parse(shared.text.toString());
 
       return () => (
-        <SceneViewer
-          key={file.path}
-          scene={scene}
-          room={room}
-          sceneKey={file.path}
-          onMount={game}
-          document={{
-            read: () => shared.text.toString(),
-            write(text) {
-              session.write(file.path, text);
-              onEdit?.();
-            },
-            subscribe: (listener) => session.subscribeFile(file.path, listener),
-          }}
-        />
+        <PresenceProvider path={file.path} draw={false}>
+          <SceneViewer
+            key={file.path}
+            scene={scene}
+            room={room}
+            sceneKey={file.path}
+            onMount={game}
+            document={{
+              read: () => shared.text.toString(),
+              write(text) {
+                session.write(file.path, text);
+                onEdit?.();
+              },
+              subscribe: (listener) => session.subscribeFile(file.path, listener),
+            }}
+          />
+        </PresenceProvider>
       );
     }
     case "json":
@@ -79,7 +82,9 @@ export function FileViewer(
       const shared = file.sharedFile;
 
       return () => (
-        <CodeViewer key={file.path} path={file.path} text={shared.text} onEdit={onEdit} />
+        <PresenceProvider path={file.path}>
+          <CodeViewer key={file.path} path={file.path} text={shared.text} onEdit={onEdit} />
+        </PresenceProvider>
       );
     }
     case "png":
@@ -102,16 +107,18 @@ export function FileViewer(
       });
 
       return () => (
-        <img
-          alt={file.path}
-          src={url}
-          mix={css({
-            display: "block",
-            maxWidth: "100%",
-            maxHeight: "100%",
-            objectFit: "contain",
-          })}
-        />
+        <PresenceProvider path={file.path}>
+          <img
+            alt={file.path}
+            src={url}
+            mix={css({
+              display: "block",
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+            })}
+          />
+        </PresenceProvider>
       );
     }
   }
