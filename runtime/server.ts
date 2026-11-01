@@ -24,6 +24,7 @@ if (existsSync(envFile)) {
   }
 }
 
+import { db, migrateDatabase } from './app/database.ts'
 import { attachRoom } from './room/server.ts'
 import { router } from './app/router.ts'
 
@@ -34,15 +35,17 @@ const hmrProxyPort = process.env.HMR_PROXY_PORT
 const isHmr = process.env.REMIX_NODE_HMR === '1'
 
 const server = http.createServer(createRequestListener(router.fetch, { trustProxy: isHmr }))
-attachRoom(server).then(() => {
-  server.listen(port, () => {
-    if (isHmr) {
-      import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
-    }
+migrateDatabase()
+  .then(() => attachRoom(server))
+  .then(() => {
+    server.listen(port, () => {
+      if (isHmr) {
+        import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
+      }
 
-    console.log(`Server listening on http://localhost:${hmrProxyPort ?? port}`)
+      console.log(`Server listening on http://localhost:${hmrProxyPort ?? port}`)
+    })
   })
-})
 
 let shuttingDown = false
 
@@ -52,7 +55,9 @@ function shutdown() {
   }
 
   shuttingDown = true
-  server.close(() => process.exit(0))
+  server.close(() => {
+    void db.close().finally(() => process.exit(0))
+  })
   server.closeAllConnections()
 }
 
