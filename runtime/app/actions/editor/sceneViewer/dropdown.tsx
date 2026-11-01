@@ -2,7 +2,7 @@ import type { IconNode } from "lucide";
 import Plus from "lucide/dist/esm/icons/plus.mjs";
 import SearchIcon from "lucide/dist/esm/icons/search.mjs";
 import { css, on, ref } from "remix/component";
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { Icon } from "../../../icon.tsx";
 import { Button } from "../ui/button.tsx";
@@ -15,7 +15,15 @@ export type DropdownItem = {
 };
 
 export function Dropdown(
-  handle: Handle<{ label: string; text?: string; icon?: IconNode; size?: "small" | "default"; items: DropdownItem[] }>,
+  handle: Handle<{
+    label: string;
+    text?: string;
+    icon?: IconNode;
+    size?: "small" | "default";
+    items: DropdownItem[];
+    searchable?: boolean;
+    children?: RemixNode;
+  }>,
 ) {
   let open = false;
   let query = "";
@@ -48,13 +56,38 @@ export function Dropdown(
   }
 
   return () => {
-    const { label, text, icon = Plus, size = "small" } = handle.props;
-    const items = handle.props.items.filter((item) => matches(item.label));
+    const { label, text, icon = Plus, size = "small", searchable = true, children } = handle.props;
+    const items = searchable ? handle.props.items.filter((item) => matches(item.label)) : handle.props.items;
     const itemButtons: HTMLButtonElement[] = [];
 
     return (
       <>
-        {text ? (
+        {children ? (
+          <button
+            type="button"
+            aria-label={label}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            mix={[
+              trigger,
+              ref((node) => {
+                button = node instanceof HTMLButtonElement ? node : null;
+              }),
+              on("click", (event) => {
+                event.stopPropagation();
+                if (!menu) return;
+                if (menu.matches(":popover-open")) {
+                  menu.hidePopover();
+                  return;
+                }
+                menu.showPopover();
+                place();
+              }),
+            ]}
+          >
+            {children}
+          </button>
+        ) : text ? (
           <Button
             size={size}
             muted
@@ -124,7 +157,8 @@ export function Dropdown(
               const next = event.newState === "open";
               if (next) {
                 place();
-                input?.focus();
+                if (searchable) input?.focus();
+                else itemButtons[0]?.focus();
               } else {
                 query = "";
               }
@@ -135,41 +169,43 @@ export function Dropdown(
           ]}
         >
           <div mix={menuList}>
-            <div mix={searchBox}>
-              <label mix={searchField}>
-                <Icon icon={SearchIcon} size={14} />
-                <input
-                  type="text"
-                  aria-label="Search"
-                  autocomplete="off"
-                  placeholder="Search"
-                  spellcheck={false}
-                  value={query}
-                  mix={[
-                    searchInput,
-                    ref((node) => {
-                      input = node instanceof HTMLInputElement ? node : null;
-                    }),
-                    on("input", (event) => {
-                      query = event.currentTarget.value;
-                      handle.update();
-                      requestAnimationFrame(place);
-                    }),
-                    on("keydown", (event) => {
-                      if (event.key === "ArrowDown") {
+            {searchable ? (
+              <div mix={searchBox}>
+                <label mix={searchField}>
+                  <Icon icon={SearchIcon} size={14} />
+                  <input
+                    type="text"
+                    aria-label="Search"
+                    autocomplete="off"
+                    placeholder="Search"
+                    spellcheck={false}
+                    value={query}
+                    mix={[
+                      searchInput,
+                      ref((node) => {
+                        input = node instanceof HTMLInputElement ? node : null;
+                      }),
+                      on("input", (event) => {
+                        query = event.currentTarget.value;
+                        handle.update();
+                        requestAnimationFrame(place);
+                      }),
+                      on("keydown", (event) => {
+                        if (event.key === "ArrowDown") {
+                          event.preventDefault();
+                          itemButtons[0]?.focus();
+                          return;
+                        }
+                        const first = items[0];
+                        if (event.key !== "Enter" || !first) return;
                         event.preventDefault();
-                        itemButtons[0]?.focus();
-                        return;
-                      }
-                      const first = items[0];
-                      if (event.key !== "Enter" || !first) return;
-                      event.preventDefault();
-                      choose(first);
-                    }),
-                  ]}
-                />
-              </label>
-            </div>
+                        choose(first);
+                      }),
+                    ]}
+                  />
+                </label>
+              </div>
+            ) : null}
             {items.length > 0 ? (
               items.map((item, index) => (
                 <button
@@ -193,7 +229,9 @@ export function Dropdown(
                       }
                       if (event.key !== "ArrowUp") return;
                       event.preventDefault();
-                      if (index === 0) input?.focus();
+                      if (index === 0) {
+                        if (searchable) input?.focus();
+                      }
                       else itemButtons[index - 1]?.focus();
                     }),
                   ]}
@@ -211,6 +249,16 @@ export function Dropdown(
     );
   };
 }
+
+const trigger = css({
+  appearance: "none",
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  display: "inline-flex",
+  margin: 0,
+  padding: 0,
+});
 
 const menuStyle = css({
   background: "var(--menu)",

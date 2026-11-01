@@ -25,8 +25,8 @@ export const editorMessage = variant("messageType", {
     messageType: literal("fileMissing"),
     path: string(),
   }),
-  viewing: object({
-    messageType: literal("viewing"),
+  selectedTab: object({
+    messageType: literal("selectedTab"),
     path: optional(string()),
     dirty: optional(boolean()),
   }),

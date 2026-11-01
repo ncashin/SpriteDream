@@ -73,7 +73,7 @@ function fromBase64(value: string) {
   return bytes;
 }
 
-export function createFileSession(room: SceneRoom, signal: AbortSignal, baseURL: URL): FileSession {
+export function createFileSession(room: SceneRoom, baseURL: URL, signal: AbortSignal): FileSession {
   const files: Record<string, SharedFile> = {};
   const loading: Record<string, Promise<SharedFile | undefined>> = {};
   const resolvers: Record<string, (file: SharedFile | undefined) => void> = {};

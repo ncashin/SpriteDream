@@ -57,7 +57,7 @@ export function game({
     delete cursors[message.id];
   });
 
-  room.onMessageType("viewing", (message) => {
+  room.onMessageType("selectedTab", (message) => {
     if (message.sentBy === room.you.id) return;
     if (message.path === sceneKey) return;
     delete cursors[message.sentBy];

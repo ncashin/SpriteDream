@@ -4,8 +4,10 @@ import { enum_, parseSafe } from "remix/data-schema";
 import type { InferOutput } from "remix/data-schema";
 
 import { game } from "../../../game/game.ts";
-import type { FileSession, SharedBlob, SharedFile } from "./file-session.ts";
-import { SceneViewer, type SceneRoom } from "./sceneViewer/scene-viewer.tsx";
+import type { SharedBlob, SharedFile } from "./file-session.ts";
+import { FileSessionProvider } from "./file-session-provider.tsx";
+import { RoomProvider } from "./room-provider.tsx";
+import { SceneViewer } from "./sceneViewer/scene-viewer.tsx";
 
 export const supportedFileType = enum_([
   "scene",
@@ -37,12 +39,12 @@ function objectUrl(file: SharedBlob) {
 export function FileViewer(
   handle: Handle<{
     file: EditorTab;
-    room: SceneRoom;
-    session: FileSession;
     onEdit?: () => void;
   }>,
 ) {
-  const { file, onEdit, session } = handle.props;
+  const { file, onEdit } = handle.props;
+  const { room } = handle.context.get(RoomProvider);
+  const session = handle.context.get(FileSessionProvider);
   const extension = file.path.split(".").pop()?.toLowerCase();
   const fileType = parseSafe(supportedFileType, extension);
   if (!fileType.success) return () => <>File Type Not Supported</>;
@@ -57,7 +59,7 @@ export function FileViewer(
         <SceneViewer
           key={file.path}
           scene={scene}
-          room={handle.props.room}
+          room={room}
           sceneKey={file.path}
           onMount={game}
           document={{
