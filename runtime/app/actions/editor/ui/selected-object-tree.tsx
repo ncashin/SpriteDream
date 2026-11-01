@@ -1,24 +1,16 @@
-import { clientEntry, css } from "remix/component";
+import { css } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { isObject } from "../../../utilities/is-object.ts";
 import type { SceneNode } from "../../../utilities/scene.ts";
 import { Selection } from "./selection.tsx";
-import { ObjectTree } from "./tree/object-tree.tsx";
+import { ObjectTree, watchSelection } from "./tree/object-tree.tsx";
 
-export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar(handle: Handle<{ collapsed?: boolean; scene: SceneNode }>) {
+export function SelectedObjectTree(handle: Handle<{ collapsed?: boolean; scene: SceneNode }>) {
   const selection = handle.context.get(Selection);
   if (!selection) throw new Error("Selection context is missing");
   let active: SceneNode | undefined;
-
-  if (typeof requestAnimationFrame === "function") {
-    let frame = requestAnimationFrame(function tick() {
-      if (handle.signal.aborted) return;
-      handle.update();
-      frame = requestAnimationFrame(tick);
-    });
-    handle.signal.addEventListener("abort", () => cancelAnimationFrame(frame));
-  }
+  watchSelection(handle);
 
   return () => {
     const selected = selection.selected;
@@ -45,7 +37,7 @@ export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar
       </aside>
     );
   };
-});
+}
 
 function findEntry(root: SceneNode, target: SceneNode): { parent: SceneNode; key: string } | undefined {
   for (const [key, value] of Object.entries(root)) {

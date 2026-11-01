@@ -8,7 +8,7 @@ import type { SceneNode } from "../../utilities/scene.ts";
 import { currySelection, type Selection as SelectionAPI } from "../../utilities/selection.ts";
 import type { EditorMessage } from "./protocol.ts";
 import { Selection } from "./ui/selection.tsx";
-import { Sidebar } from "./ui/scene-sidebar.tsx";
+import { SceneSidebar } from "./ui/scene-sidebar.tsx";
 
 export type SceneRoom = Room<RoomMessage | GameMessage | EditorMessage>;
 
@@ -51,7 +51,7 @@ export function SceneViewer(
           minHeight: 0,
         })}
       >
-        <Sidebar scene={handle.props.scene} />
+        <SceneSidebar scene={handle.props.scene} />
         <canvas
           aria-label="Scene view"
           tabIndex={-1}

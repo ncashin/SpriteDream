@@ -1,7 +1,7 @@
 import Box from "lucide/dist/esm/icons/box.mjs";
 import ChevronRight from "lucide/dist/esm/icons/chevron-right.mjs";
 import Trash from "lucide/dist/esm/icons/trash.mjs";
-import { clientEntry, css, on } from "remix/component";
+import { css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../../../icon.tsx";
@@ -13,7 +13,7 @@ import { parentObject, setObjectParent } from "../../../../utilities/viewport/tr
 import { treeRow } from "../../styles.tsx";
 import { Button } from "../button.tsx";
 import { AutoSizeInput } from "./auto-size-input.tsx";
-import { renameKey } from "./object-tree.tsx";
+import { renameKey, watchSelection } from "./object-tree.tsx";
 import {
   chevronOpen,
   childrenClip,
@@ -33,19 +33,8 @@ type HierarchyNode = {
   children: HierarchyNode[];
 };
 
-export const HierarchyTree = clientEntry(
-  import.meta.url,
-  function HierarchyTree(handle: Handle<{ object: SceneNode }>) {
-    if (typeof requestAnimationFrame === "function") {
-      let frame = requestAnimationFrame(function tick() {
-        if (handle.signal.aborted) return;
-        handle.update();
-        frame = requestAnimationFrame(tick);
-      });
-      handle.signal.addEventListener("abort", () =>
-        cancelAnimationFrame(frame),
-      );
-    }
+export function HierarchyTree(handle: Handle<{ object: SceneNode }>) {
+    watchSelection(handle);
 
     return () => {
       const root = handle.props.object;
@@ -59,8 +48,7 @@ export const HierarchyTree = clientEntry(
         </div>
       );
     };
-  },
-);
+}
 
 function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode; depth: number }>) {
   const selection = handle.context.get(Selection);

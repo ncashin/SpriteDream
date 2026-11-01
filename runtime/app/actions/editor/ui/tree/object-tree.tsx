@@ -3,7 +3,7 @@ import Box from "lucide/dist/esm/icons/box.mjs";
 import ChevronRight from "lucide/dist/esm/icons/chevron-right.mjs";
 import Braces from "lucide/dist/esm/icons/braces.mjs";
 import Trash from "lucide/dist/esm/icons/trash.mjs";
-import { clientEntry, css, on } from "remix/component";
+import { css, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 import { Icon } from "../../../../icon.tsx";
@@ -34,19 +34,10 @@ import {
   stickyHeader,
 } from "./tree.ts";
 
-export const ObjectTree = clientEntry(
-  import.meta.url,
-  function ObjectTree(handle: Handle<{ object: SceneNode; name?: string; parent?: SceneNode }>) {
+export function ObjectTree(handle: Handle<{ object: SceneNode; name?: string; parent?: SceneNode }>) {
     const selection = handle.context.get(Selection);
     if (!selection) throw new Error("Selection context is missing");
-    if (typeof requestAnimationFrame === "function") {
-      let frame = requestAnimationFrame(function tick() {
-        if (handle.signal.aborted) return;
-        handle.update();
-        frame = requestAnimationFrame(tick);
-      });
-      handle.signal.addEventListener("abort", () => cancelAnimationFrame(frame));
-    }
+    watchSelection(handle);
 
     return () => {
       const { object, name, parent } = handle.props;
@@ -73,8 +64,7 @@ export const ObjectTree = clientEntry(
         />
       );
     };
-  },
-);
+}
 
 function SceneNodeList(handle: Handle<{ object: SceneNode; depth?: number }>) {
   return () => {
@@ -206,7 +196,6 @@ function Branch(
           aria-expanded={!collapsed}
           mix={[
             treeRow,
-            row,
             expandable,
             on("click", (event) => {
               const target = event.target instanceof Element ? event.target : null;
@@ -277,6 +266,18 @@ function isIconNode(value: unknown): value is IconNode {
       (part) => Array.isArray(part) && typeof part[0] === "string" && isObject(part[1]),
     )
   );
+}
+
+export function watchSelection(handle: Handle) {
+  handle.queueTask(() => {
+    if (typeof requestAnimationFrame !== "function" || handle.signal.aborted) return;
+    let frame = requestAnimationFrame(function tick() {
+      if (handle.signal.aborted) return;
+      handle.update();
+      frame = requestAnimationFrame(tick);
+    });
+    handle.signal.addEventListener("abort", () => cancelAnimationFrame(frame));
+  });
 }
 
 export function renameKey(object: SceneNode, from: string, to: string) {

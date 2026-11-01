@@ -1,16 +1,14 @@
-import { clientEntry, css } from "remix/component";
+import { css } from "remix/component";
 import type { Handle } from "remix/component";
 
 import type { SceneNode } from "../../../utilities/scene.ts";
 import { HierarchyTree } from "./tree/hierarchy-tree.tsx";
-import { ObjectSidebar } from "./object-sidebar.tsx";
+import { SelectedObjectTree } from "./selected-object-tree.tsx";
 
 const SIDEBAR_WIDTH = "20rem";
 const SIDEBAR_MOTION = "200ms cubic-bezier(0.4, 0, 0.2, 1)";
 
-export const Sidebar = clientEntry(
-  import.meta.url,
-  function Sidebar(handle: Handle<{ scene: SceneNode }>) {
+export function SceneSidebar(handle: Handle<{ scene: SceneNode }>) {
     let collapsed = false;
     if (typeof window !== "undefined") {
       window.addEventListener(
@@ -30,11 +28,10 @@ export const Sidebar = clientEntry(
         style={{ width: collapsed ? "0rem" : SIDEBAR_WIDTH }}
       >
         <HierarchyTree object={handle.props.scene} />
-        <ObjectSidebar collapsed={collapsed} scene={handle.props.scene} />
+        <SelectedObjectTree collapsed={collapsed} scene={handle.props.scene} />
       </aside>
     );
-  },
-);
+}
 
 const sceneSidebar = css({
   boxSizing: "border-box",
