@@ -7,11 +7,8 @@ import type { Handle } from "remix/component";
 import { Icon } from "../../../../icon.tsx";
 import { isObject } from "../../../../utilities/is-object.ts";
 import type { SceneNode } from "../../../../utilities/scene.ts";
-import {
-  deselectObject,
-  selectObjects,
-  selectedObjects,
-} from "../../../../utilities/selected-objects.ts";
+import type { Selection as SelectionApi } from "../../../../utilities/selection.ts";
+import { Selection } from "../selection.tsx";
 import { parentObject, setObjectParent } from "../../../../utilities/viewport/transform.ts";
 import { treeRow } from "../../styles.tsx";
 import { Button } from "../button.tsx";
@@ -66,6 +63,8 @@ export const HierarchyTree = clientEntry(
 );
 
 function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode; depth: number }>) {
+  const selection = handle.context.get(Selection);
+  if (!selection) throw new Error("Selection context is missing");
   let collapsed = false;
   let wasSelected = false;
   let name = handle.props.node.name;
@@ -75,7 +74,7 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode; 
     const { root, depth } = handle.props;
     const hasChildren = children.length > 0;
 
-    const isSelected = selectedObjects.has(object);
+    const isSelected = selection.selected.has(object);
     if (isSelected && !wasSelected && collapsed) collapsed = false;
     wasSelected = isSelected;
     const open = !collapsed || forcedOpen.has(name);
@@ -100,7 +99,7 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode; 
             on("pointerdown", (event) => {
               const target = event.target instanceof Element ? event.target : null;
               if (event.button !== 0 || target?.closest("button, input")) return;
-              trackDrag(event, name, object, root);
+              trackDrag(event, name, object, root, selection);
             }),
             on("click", (event) => {
               if (suppressClick) {
@@ -109,7 +108,7 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode; 
               }
               const target = event.target instanceof Element ? event.target : null;
               if (target?.closest("button, input")) return;
-              selectObjects([object]);
+              selection.selectObjects([object]);
               if (isSelected && hasChildren) {
                 collapsed = !collapsed;
                 if (collapsed) forcedOpen.delete(name);
@@ -128,7 +127,7 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode; 
               placeholder="object"
               label="Object"
               onPointerDown={() => {
-                selectObjects([object]);
+                selection.selectObjects([object]);
                 handle.update();
               }}
               onCommit={(next) => {
@@ -144,7 +143,7 @@ function HierarchyBranch(handle: Handle<{ node: HierarchyNode; root: SceneNode; 
             label={`Delete ${name}`}
             onClick={(event) => {
               event.stopPropagation();
-              removeNode(handle.props.node, root);
+              removeNode(handle.props.node, root, selection);
               handle.update();
             }}
           >
@@ -174,7 +173,13 @@ let dropTarget: { name: string; position: DropPosition } | null = null;
 let suppressClick = false;
 const forcedOpen = new Set<string>();
 
-function trackDrag(event: PointerEvent, name: string, object: SceneNode, root: SceneNode) {
+function trackDrag(
+  event: PointerEvent,
+  name: string,
+  object: SceneNode,
+  root: SceneNode,
+  selection: SelectionApi,
+) {
   const pointerId = event.pointerId;
   const originX = event.clientX;
   const originY = event.clientY;
@@ -187,7 +192,7 @@ function trackDrag(event: PointerEvent, name: string, object: SceneNode, root: S
       active = true;
       suppressClick = true;
       dragSource = { name, object };
-      selectObjects([object]);
+      selection.selectObjects([object]);
     }
     dropTarget = dropAt(next.clientX, next.clientY, name, root);
   };
@@ -334,9 +339,9 @@ function renameNode(root: SceneNode, from: string, to: string) {
   }
 }
 
-function removeNode(node: HierarchyNode, root: SceneNode) {
-  deselectObject(node.object);
-  for (const child of node.children) removeNode(child, root);
+function removeNode(node: HierarchyNode, root: SceneNode, selection: SelectionApi) {
+  selection.deselectObject(node.object);
+  for (const child of node.children) removeNode(child, root, selection);
   delete root[node.name];
 }
 

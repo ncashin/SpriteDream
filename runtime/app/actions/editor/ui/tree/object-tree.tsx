@@ -9,7 +9,7 @@ import type { Handle } from "remix/component";
 import { Icon } from "../../../../icon.tsx";
 import { isObject } from "../../../../utilities/is-object.ts";
 import type { SceneNode } from "../../../../utilities/scene.ts";
-import { deselectObject, selectedObjects } from "../../../../utilities/selected-objects.ts";
+import { Selection } from "../selection.tsx";
 import { applyTrait, traits } from "../../../../utilities/trait/trait.ts";
 import { textTrait } from "../../../../utilities/viewport/draw-text.ts";
 import "../../../../utilities/physics.ts";
@@ -37,6 +37,8 @@ import {
 export const ObjectTree = clientEntry(
   import.meta.url,
   function ObjectTree(handle: Handle<{ object: SceneNode; name?: string; parent?: SceneNode }>) {
+    const selection = handle.context.get(Selection);
+    if (!selection) throw new Error("Selection context is missing");
     if (typeof requestAnimationFrame === "function") {
       let frame = requestAnimationFrame(function tick() {
         if (handle.signal.aborted) return;
@@ -64,7 +66,7 @@ export const ObjectTree = clientEntry(
             handle.update();
           }}
           onDelete={() => {
-            deselectObject(object);
+            selection.deselectObject(object);
             delete parent[name];
             handle.update();
           }}
@@ -182,6 +184,8 @@ function Branch(
     onDelete: () => void;
   }>,
 ) {
+  const selection = handle.context.get(Selection);
+  if (!selection) throw new Error("Selection context is missing");
   let collapsed = isEmpty(handle.props.object);
   let empty = collapsed;
 
@@ -193,7 +197,7 @@ function Branch(
       empty = nowEmpty;
     }
 
-    const isSelected = selectedObjects.has(object);
+    const isSelected = selection.selected.has(object);
     return (
       <>
         <div style={{ "--tree-depth": String(depth) }} mix={[rowShell, stickyHeader]}>

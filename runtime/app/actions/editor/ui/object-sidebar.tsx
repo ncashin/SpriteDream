@@ -3,10 +3,12 @@ import type { Handle } from "remix/component";
 
 import { isObject } from "../../../utilities/is-object.ts";
 import type { SceneNode } from "../../../utilities/scene.ts";
-import { selectedObjects } from "../../../utilities/selected-objects.ts";
+import { Selection } from "./selection.tsx";
 import { ObjectTree } from "./tree/object-tree.tsx";
 
 export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar(handle: Handle<{ collapsed?: boolean; scene: SceneNode }>) {
+  const selection = handle.context.get(Selection);
+  if (!selection) throw new Error("Selection context is missing");
   let active: SceneNode | undefined;
 
   if (typeof requestAnimationFrame === "function") {
@@ -19,7 +21,8 @@ export const ObjectSidebar = clientEntry(import.meta.url, function ObjectSidebar
   }
 
   return () => {
-    if (!active || !selectedObjects.has(active)) active = selectedObjects.values().next().value;
+    const selected = selection.selected;
+    if (!active || !selected.has(active)) active = selected.values().next().value;
     const entry = active ? findEntry(handle.props.scene, active) : undefined;
 
     const collapsed = handle.props.collapsed === true;

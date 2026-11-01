@@ -2,10 +2,6 @@ import { contains, lookupBoundingBox } from "../app/utilities/bounding-box.ts";
 import { isObject } from "../app/utilities/is-object.ts";
 import { applyScenePatch, diffScene, filterScene } from "../app/utilities/scene.ts";
 import type { SceneContext } from "../app/actions/editor/scene-viewer.tsx";
-import {
-  selectObjects,
-  selectedObjects,
-} from "../app/utilities/selected-objects.ts";
 import { colliderTrait } from "../app/utilities/physics.ts";
 import { createUpdateLoop } from "../app/utilities/update-loop.ts";
 import { imageTrait } from "../app/utilities/viewport/draw-image.ts";
@@ -20,6 +16,7 @@ export function game({
   sceneKey,
   signal,
   document,
+  selection,
 }: SceneContext) {
   if (!scene || signal.aborted) return;
 
@@ -74,7 +71,7 @@ export function game({
         const bounds = lookupBoundingBox(object);
         return bounds !== undefined && contains(bounds, point);
       });
-      selectObjects(hit ? [hit] : []);
+      selection.selectObjects(hit ? [hit] : []);
     },
   });
   signal.addEventListener("abort", () => {
@@ -101,7 +98,7 @@ export function game({
       viewport.drawPhysicsCollider(collider);
     }
 
-    for (const object of selectedObjects) {
+    for (const object of selection.selected) {
       viewport.drawBoundingBox(object);
     }
 
