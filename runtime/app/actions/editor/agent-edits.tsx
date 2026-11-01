@@ -35,7 +35,6 @@ export function AgentEdits(handle: Handle<{ project: string }>) {
   return () => (
     <div title="Agent file edits since this project opened" mix={badge}>
       <img src="/icons/cursor-icon.png" alt="" mix={avatar} />
-      <span>{count}</span>
     </div>
   );
 }

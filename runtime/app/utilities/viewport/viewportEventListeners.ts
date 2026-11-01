@@ -40,10 +40,7 @@ export function curryViewportEventListeners(
   }
 
   function onPointerMove(event: PointerEvent) {
-    if (!drag || drag.id !== event.pointerId) {
-      if (onCanvasSurface(event)) updateHover(event);
-      return;
-    }
+    if (!drag || drag.id !== event.pointerId) return;
     if (!drag.moved) {
       const dx = event.clientX - drag.originX;
       const dy = event.clientY - drag.originY;
@@ -100,10 +97,10 @@ export function curryViewportEventListeners(
   }
 
   function trackCursor(event: PointerEvent) {
-    viewportWithTransforms.state.cursorPoint = viewportWithTransforms.screenToWorld(
-      event.clientX,
-      event.clientY,
-    );
+    const point = viewportWithTransforms.screenToWorld(event.clientX, event.clientY);
+    viewportWithTransforms.state.cursorPoint = point;
+    if (drag) return;
+    options?.onWorldHover?.(point);
   }
 
   canvas.addEventListener("pointerdown", onPointerDown);

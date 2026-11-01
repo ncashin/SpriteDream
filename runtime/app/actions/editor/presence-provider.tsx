@@ -9,8 +9,11 @@ export type CursorPoint = { x: number; y: number };
 export type Presence = {
   path: string;
   cursors: Record<string, CursorPoint>;
+  selections: Record<string, unknown>;
   sendCursor(point: CursorPoint): void;
   clearCursor(): void;
+  setSelection(value: unknown): void;
+  clearSelection(): void;
   subscribe(listener: () => void): () => void;
 };
 
@@ -22,6 +25,7 @@ export function PresenceProvider(
 ) {
   const { room } = handle.context.get(RoomProvider);
   const cursors: Record<string, CursorPoint> = {};
+  const selections: Record<string, unknown> = {};
   const listeners = new Set<() => void>();
 
   function notify() {
@@ -29,8 +33,11 @@ export function PresenceProvider(
   }
 
   function forget(id: string) {
-    if (!cursors[id]) return;
+    const hadCursor = id in cursors;
+    const hadSelection = id in selections;
+    if (!hadCursor && !hadSelection) return;
     delete cursors[id];
+    delete selections[id];
     notify();
   }
 
@@ -51,14 +58,30 @@ export function PresenceProvider(
     if (message.path === handle.props.path) return;
     forget(message.sentBy);
   });
+  const stopSelection = room.onMessageType("selection", (message) => {
+    if (message.sentBy === room.you.id) return;
+    if (message.path !== handle.props.path || message.value == null) {
+      if (!(message.sentBy in selections)) return;
+      delete selections[message.sentBy];
+      notify();
+      return;
+    }
+    selections[message.sentBy] = message.value;
+    notify();
+  });
 
   function clearCursor() {
     room.send({ messageType: "cursor", path: "", x: 0, y: 0 });
   }
 
+  function clearSelection() {
+    room.send({ messageType: "selection", path: handle.props.path, value: null });
+  }
+
   handle.context.set({
     path: handle.props.path,
     cursors,
+    selections,
     sendCursor(point) {
       room.send({
         messageType: "cursor",
@@ -68,6 +91,14 @@ export function PresenceProvider(
       });
     },
     clearCursor,
+    setSelection(value) {
+      room.send({
+        messageType: "selection",
+        path: handle.props.path,
+        value,
+      });
+    },
+    clearSelection,
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -78,7 +109,9 @@ export function PresenceProvider(
     stopCursor();
     stopLeave();
     stopTab();
+    stopSelection();
     clearCursor();
+    clearSelection();
   });
 
   return () => (
